@@ -2,25 +2,35 @@ syntax = "proto2";
 
 message Request {
 	enum Type {
-		PING        = 0;
-		SMT_COMMAND = 1;
-		CLIENT_QUIT = 2;
+		PING          = 0;
+		SMTLIB_SCRIPT = 1;
+		CLIENT_QUIT   = 2;
 	}
-	required Type   type        = 1;
-	optional string smt_command = 2;
+	required Type   type  = 1;
+	optional bytes  stdin = 2;
+}
+
+message CmdResult {
+	required int32 status = 1;
+	required bytes stdout = 2;
+	required bytes stderr = 3;
 }
 
 message Reply {
 	enum Type {
-		PONG      = 0;
-		SMT_REPLY = 1;
-		ERROR     = 2;
+		PONG         = 0;
+		SMTLIB_REPLY = 1;
+		ERROR        = 2;
 	}
-	required Type   type      = 1;
-	required int32  status    = 2;
-	optional string error_msg = 3;
-	optional string smt_reply = 4;
-	optional string smt_err   = 5;
+	enum Code {
+		IDLE        = 0;
+		BUSY        = 1;
+		UNKNOWN_REQ = 2;
+	}
+	required Type      type      = 1;
+	optional Code      code      = 2;
+	optional string    error_msg = 3;
+	optional CmdResult cmd       = 4;
 }
 
 message Smlp {
