@@ -2,4 +2,4 @@
 .PHONY: all
 
 all: protocol.pb
-	protoc --python_out=. $<
+	protoc --python_out=smlp/ $<
