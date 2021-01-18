@@ -2,7 +2,27 @@
 
 from smlp.comm import *
 
-import asyncio, argparse, sys, logging
+import asyncio, argparse, sys, logging, shlex, heapq
+
+from typing import Mapping, Sequence, Tuple, Any
+from dataclasses import dataclass, field
+
+import code, traceback, signal
+
+def debug(sig, frame):
+    """Interrupt running process, and provide a python prompt for
+    interactive debugging."""
+    d={'_frame':frame}         # Allow access to frame object.
+    d.update(frame.f_globals)  # Unless shadowed by global
+    d.update(frame.f_locals)
+
+    i = code.InteractiveConsole(d)
+    message  = "Signal received : entering python shell.\nTraceback:\n"
+    message += ''.join(traceback.format_stack(frame))
+    i.interact(message)
+
+def listen():
+    signal.signal(signal.SIGUSR1, debug)  # Register handler
 
 HOST = None
 PORT = 1337
@@ -13,8 +33,6 @@ def distribute(pool, config=None):
 	host = config.get('host', HOST)
 	port = config.get('port', PORT)
 	return server(host, port, pool)
-
-import shlex
 
 def parse_args(argv):
 	class LogLevel(argparse.Action):
@@ -60,10 +78,10 @@ class StoredPool(Pool):
 				return pr
 			self._parent.push(pr.id, self._db[pr.id])
 
-	def push(self, prid, result):
+	def push(self, pr, result):
 		if result is not None:
-			self._db[prid] = result
-		self._parent.push(prid, result)
+			self._db[pr.id] = result
+		self._parent.push(pr, result)
 
 	def wait_empty(self):
 		return self._parent.wait_empty()
@@ -75,8 +93,6 @@ class UNSAT:
 class SAT:
 	def __init__(self, model=None):
 		self.model = model
-
-from typing import Mapping, Sequence, Tuple
 
 # assumes LC_ALL=*.UTF-8
 def smtlib2_instance(logic : str,
@@ -144,19 +160,109 @@ async def threshold1(solver, smlp, th, prec):
 			yield hi
 		ex = ex.exclude(hi)
 
-
 if __name__ == "__main__":
+	# python-3.8: creating 10^6 futures from asyncio.get_event_loop():
+	#             time: 1.6sec, memory: 152M
+	#             [None for i in range(1000000)]:
+	#             .15sec, 22.5M
+	#          -> per .create_future(): 1.45µs, 136 bytes
+
+	listen()
+
+	class MsgHandleRecv:
+		def handle_recv(msg_id, res):
+			log.debug('request got reply: %s', res)
+			assert res.version == VERSION
+			assert res.msg_id == msg_id
+			assert res.HasField('reply')
+			assert not res.HasField('request')
+			handle_reply(res.reply)
+
+	class CmdHandleReply:
+		def handle_reply(rep):
+			assert rep.type == rep.Type.SMTLIB_REPLY
+			handle_command(rep.cmd)
+
+	class SaneHandleCmd:
+		def handle_sane_command(conn, script, cmd):
+			if cmd.status == 0:
+				handle_stdout(cmd.stdout)
+			else:
+				raise CalledProcessError(returncode=cmd.status,
+				                         cmd=(conn, script),
+				                         output=cmd.stdout,
+				                         stderr=cmd.stderr)
+
+	class SmtlibHandleStdout:
+		def handle_stdout(result):
+			sat_res, _, model = result.partition(b'\n')
+			assert sat_res in (b'sat', b'unsat', b'unknown')
+			m = smtlib_script_parse(model)
+			#logging.info('result for id %s is %s with model %s',
+			#             prid, sat_res, m)
+			handle_result(sat_res, m)
+
+	class Z3HandleCmd:
+		def handle_z3_command(conn, script, cmd):
+			if cmd.status == 1 and cmd.stderr == b'':
+				try:
+					handle_stdout(cmd.stdout)
+				except:
+					pass
+			handle_stdout(handle_command(conn, script, cmd))
+
+	@dataclass(order=True)
+	class Item:
+		priority : Any
+		id       : Any=field(compare=False)
+		instance : bytes=field(compare=False)
+		# type probably asyncio.Future, but depends on the event
+		# loop implementation
+		reply    : Any=field(compare=False)
+
+		# TODO: replace this method further down the protocol stack
+		def handle_result(self, res):
+			self.reply.set_result(res)
+
 	class TestPool(Pool):
 		def __init__(self, loop):
-			self.queue = ['']
+			self.heap = [Item(priority=(0,),id=('',),instance=b'',
+			                  reply=loop.create_future()),]
+			inst = smtlib2_instance('QF_LRA',
+			                        { 'x': 'Real', 'y': 'Real' }, {},
+			                        ['(> x y)', '(> x y)'], True)
+			self.heap.append(Item(priority=(1,), id=('test',),
+			                      instance=inst,
+			                      reply=loop.create_future()))
+			heapq.heapify(self.heap)
 			self.empty = loop.create_future()
 
 		async def pop(self):
+			while len(self.heap) > 0:
+				item = heapq.heappop(self.heap)
+				if item.reply.done():
+					continue
+				return item
 			# notify self.wait_empty()
 			self.empty.set_result(None)
 
+		def push(self, item, result):
+			if item.id == ('test',):
+				sat_res, _, model = result.partition(b'\n')
+				logging.info('result for id %s is %s with model %s', item.id,
+					     sat_res, smtlib_script_parse(model))
+				assert sat_res in (b'sat', b'unsat', b'unknown')
+
 		async def wait_empty(self):
 			await self.empty
+
+		async def solve(self, prio, prid, instance : bytes):
+			fut = self._loop.create_future()
+			heapq.heappush(self.heap, Item(priority=prio, id=prid,
+			                               instance=instance,
+			                               reply=fut))
+			stdout = await fut
+			return stdout
 
 	try:
 		args = parse_args(sys.argv)

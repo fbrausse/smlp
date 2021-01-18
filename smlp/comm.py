@@ -13,11 +13,11 @@ except:
 
 from subprocess import CalledProcessError
 
+from .protocol import pb_pb2 as proto
+
 # semantics of asyncio.get_event_loop() (and other async-related things)
 # are different for <python-3.6
 assert platform.python_version_tuple() >= ('3','6')
-
-from .protocol import pb_pb2 as proto
 
 VERSION = 1
 
@@ -54,7 +54,10 @@ class Connection:
 				if s.HasField('reply'):
 					fut = self._pending[s.msg_id]
 					del self._pending[s.msg_id]
-					fut.set_result(s)
+					try:
+						fut.set_result(s)
+					except BaseException as ex:
+						fut.set_exception(ex)
 				if s.HasField('request'):
 					loop.create_task(handle_request(self, s.msg_id, s.request))
 			self.log.info('rd_msg_dipatch fini')
@@ -103,17 +106,31 @@ class Connection:
 
 	# this is dangerous: can lead to blow up of write buffer if not occasionally
 	# .wait_wr_drain()
-	def _send_request(self, req):
+	def _send_request(self, req, fut=None):
 		loop = asyncio.get_event_loop()
-		fut = loop.create_future()
+		if fut is None:
+			fut = loop.create_future()
 		msg_id = self._next_id()
 		self._pending[msg_id] = fut
 		s = proto.Smlp(version=VERSION, msg_id=msg_id, request=req)
 		self._wr_msg_nowait(s.SerializeToString())
+
+		set_result = fut.set_result
+		log = self.log
+
+		def _request_fut_set_result(fut, res):
+			log.debug('request got reply: %s', res)
+			assert res.version == VERSION
+			assert res.msg_id == msg_id
+			assert res.HasField('reply')
+			assert not res.HasField('request')
+			set_result(res.reply)
+
+		fut.set_result = functools.partial(_request_fut_set_result, fut)
 		return fut, msg_id
 
-	async def wait_send_request(self, req):
-		fut, msg_id = self._send_request(req)
+	async def wait_send_request(self, req, fut=None):
+		fut, msg_id = self._send_request(req, fut=fut)
 		await self.wait_wr_drain()
 		return fut, msg_id
 
@@ -127,33 +144,62 @@ class Connection:
 		if len(v) > 0:
 			await asyncio.wait(v)
 
-	async def request_wait_reply(self, req):
-		fut, msg_id = await self.wait_send_request(req)
+	async def request_wait_reply(self, req, fut=None):
+		fut, msg_id = await self.wait_send_request(req, fut=fut)
 		await fut
-		s = fut.result()
-		self.log.info('request got reply: %s', s)
-		assert s.version == VERSION
-		assert s.msg_id == msg_id
-		assert s.HasField('reply')
-		assert not s.HasField('request')
-		return s.reply
+		reply = fut.result()
+		return reply
+	#	#s = fut.result()
+	#	#self.log.info('request got reply: %s', s)
+	#	#assert s.version == VERSION
+	#	#assert s.msg_id == msg_id
+	#	#assert s.HasField('reply')
+	#	#assert not s.HasField('request')
+	#	#return s.reply
 
 
-async def smtlib_script_request(conn, script):
-	req = proto.Request(stdin=script)
-	req.type = req.Type.SMTLIB_SCRIPT
-	rep = await conn.request_wait_reply(req)
+
+def sane_cmd_handle_result(conn, script, rep):
 	assert rep.type == rep.Type.SMTLIB_REPLY
 	if rep.cmd.status == 0:
 		return rep.cmd.stdout
-	raise CalledProcessError(returncode=rep.cmd.status, cmd=(conn, script),
-	                         output=rep.cmd.stdout, stderr=rep.cmd.stderr)
+	else:
+		raise CalledProcessError(returncode=rep.cmd.status,
+		                         cmd=(conn, script),
+		                         output=rep.cmd.stdout,
+		                         stderr=rep.cmd.stderr)
+
+async def smtlib_script_request(conn, script, fut):
+	req = proto.Request(stdin=script)
+	req.type = req.Type.SMTLIB_SCRIPT
+
+	def _smtlib_fut_set_result(set_result, rep):
+		set_result(sane_cmd_handle_result(conn, script, rep))
+ 
+	fut.set_result = functools.partial(_smtlib_fut_set_result, fut.set_result)
+
+	fut, _ = await conn.wait_send_request(req, fut=fut)
+
+	return fut
+
+async def smtlib_script_wait_request(conn, script, fut=None):
+	if fut is None:
+		fut = asyncio.get_event_loop().create_future()
+	fut = await smtlib_script_request(conn, script, fut=fut)
+	return await fut
+
+#	rep = await conn.request_wait_reply(req, fut=fut)
+#	assert rep.type == rep.Type.SMTLIB_REPLY
+#	if rep.cmd.status == 0:
+#		return rep.cmd.stdout
+#	raise CalledProcessError(returncode=rep.cmd.status, cmd=(conn, script),
+#	                         output=rep.cmd.stdout, stderr=rep.cmd.stderr)
 
 async def smtlib_name(conn):
-	return await smtlib_script_request(conn, b'(get-info :name)')
+	return await smtlib_script_wait_request(conn, b'(get-info :name)')
 
 async def smtlib_version(conn):
-	return await smtlib_script_request(conn, b'(get-info :version)')
+	return await smtlib_script_wait_request(conn, b'(get-info :version)')
 
 
 class Pool:
@@ -162,7 +208,7 @@ class Pool:
 		pass
 
 	# called by the Server; if result is None, an exception occurred
-	def push(self, prid, result):
+	def push(self, pr, result):
 		pass
 
 	async def wait_empty(self):
@@ -173,8 +219,58 @@ class ConnectedWorker:
 	def __init__(self, worker):
 		self.conn = worker
 
-	
 
+
+def smtlib_tokenize(s):
+	i = 0
+	while i < len(s):
+		c = s[i:i+1]
+		if c in b' \t\r\n\f\v':
+			i += 1
+		elif c in b'()':
+			yield c
+			i += 1
+		elif c == b'"':
+			j = i + 1
+			while True:
+				assert j < len(s)
+				if s[j:j+1] == b'"':
+					break
+				j += 1
+			j += 1
+			yield s[i:j]
+			i = j
+		else:
+			j = i + 1
+			while True:
+				assert j < len(s)
+				if s[j:j+1] in b' \t\r\n\f\v()"':
+					break
+				j += 1
+			yield s[i:j]
+			i = j
+
+def smtlib_script_parse_sexpr1(toks):
+	try:
+		#word = next(toks)
+		#assert word[0:1] not in b'()"0123456789'
+		s = []
+		while True:
+			t = next(toks)
+			if t == b')':
+				break
+			s.append(t if t != b'(' else smtlib_script_parse_sexpr1(toks))
+		return s
+	except StopIteration:
+		assert False
+
+def smtlib_script_parse(s):
+	r = []
+	toks = smtlib_tokenize(s)
+	for lparen in toks:
+		assert lparen == b'('
+		r.append(smtlib_script_parse_sexpr1(toks))
+	return r
 
 class Server:
 	def __init__(self, pool):
@@ -192,8 +288,8 @@ class Server:
 			return
 
 		try:
-			nv = await smtlib_script_request(worker,
-			                                 b'(get-info :name)(get-info :version)')
+			nv = await smtlib_script_wait_request(worker,
+			                                      b'(get-info :name)(get-info :version)')
 		except CalledProcessError as e:
 			worker.log.critical('worker\'s SMT command fails smtlib2 sanity check, ' +
 			                    'disconnecting: ' +
@@ -201,20 +297,35 @@ class Server:
 			                    e.returncode, e.cmd[1], e.stdout, e.stderr)
 			await worker.wait_send_request(proto.Request(type=proto.Request.Type.CLIENT_QUIT))
 			return
+		smtlib_nv = smtlib_script_parse(nv)
+		worker.log.info('client runs %s version %s', smtlib_nv[0][1].decode(), smtlib_nv[1][1].decode())
 
-		worker.log.info('client runs %s', nv)
 		while True:
 			pr = await self._pool.pop()
 			if pr is None:
 				break
 			worker.log.info('submitting instance %s', pr.id)
+			fut = await smtlib_script_request(worker, pr.instance, fut=pr.reply)
+			# workers can only handle one smtlib script request at
+			# any point in time, so we can just as well wait for its
+			# result here before submitting the next instance
 			try:
-				res = await smtlib_script_request(worker, pr.instance)
+				if smtlib_nv[0][1] == b'"Z3"':
+					try:
+						res = await fut
+					except CalledProcessError as e:
+						if e.returncode == 1 and e.stderr == b'':
+							res = e.stdout
+						else:
+							raise
+				else:
+					res = await fut
 			except:
 				worker.log.exception('error computing instance %s', pr.id)
 				res = None
-			worker.log.info('got result for instance %s', pr.id)
-			self._pool.push(pr.id, res)
+			worker.log.info('got result %s for instance %s', res, pr.id)
+			self._pool.push(pr, res)
+
 		worker.log.info('pool empty, closing connection')
 
 	async def accepted(self, rd, wr):
@@ -363,5 +474,10 @@ def run1(task, loop=None):
 		loop.run_until_complete(loop.shutdown_asyncgens())
 		#loop.close()
 
-__all__ = [Pool.__name__, server.__name__, client.__name__, run1.__name__]
-
+__all__ = [ Pool.__name__
+          , server.__name__
+          , client.__name__
+          , run1.__name__
+          , smtlib_script_parse.__name__
+          , 'VERSION'
+          ]
