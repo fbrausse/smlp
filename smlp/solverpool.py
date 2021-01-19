@@ -40,43 +40,50 @@ class SAT:
 	def __init__(self, model=None):
 		self.model = model
 
-# assumes LC_ALL=*.UTF-8
-def smtlib2(logic : str,
-            cnst_decls : Mapping[str, str], # name -> type
-            cnst_defs : Mapping[str, Tuple[str,str]], # name -> (type, term)
-            assert_terms : Sequence[str], # term
-            need_model : bool,
-            timeout : int=None) -> bytes:
-	r = ''
-	r += '(set-option :print-success false)\n'
-	if timeout is not None:
-		r += '(set-option :timeout %s)\n' % timeout
-	if need_model:
-		r += '(set-option :produce-models true)\n'
-	r += '(set-logic %s)\n' % logic
-	for n,ty in cnst_decls.items():
-		r += '(declare-fun %s () %s)\n' % (n,ty)
-	for n,(ty,tm) in cnst_defs.items():
-		r += '(define-fun %s () %s %s)\n' % (n,ty,tm)
-	for tm in assert_terms:
-		r += '(assert %s)\n' % tm
-	r += '(check-sat)\n'
-	if need_model:
-		r += '(get-model)\n'
-	r += '(exit)'
-	return r.encode()
+@dataclass
+class Smtlib2:
+	logic : str
+	cnst_decls : Mapping[str, str] # name -> type
+	cnst_defs : Mapping[str, Tuple[str,str]] # name -> (type, term)
+	assert_terms : Sequence[str] # term
+	need_model : bool
+	timeout : int=None
+
+	# assumes LC_ALL=*.UTF-8
+	def format(self) -> bytes:
+		r = ''
+
+		r += '(set-option :print-success false)\n'
+		if self.timeout is not None:
+			r += '(set-option :timeout %s)\n' % self.timeout
+		if self.need_model:
+			r += '(set-option :produce-models true)\n'
+		r += '(set-logic %s)\n' % self.logic
+		for n,ty in self.cnst_decls.items():
+			r += '(declare-fun %s () %s)\n' % (n,ty)
+		for n,(ty,tm) in self.cnst_defs.items():
+			r += '(define-fun %s () %s %s)\n' % (n,ty,tm)
+		for tm in self.assert_terms:
+			r += '(assert %s)\n' % tm
+		r += '(check-sat)\n'
+		if self.need_model:
+			r += '(get-model)\n'
+		r += '(exit)'
+
+		return r.encode()
 
 class Item:
 	# 'reply' type probably asyncio.Future, but depends on the event
 	# loop implementation
-	def __init__(self, id : Any, instance : bytes, reply : Any):
+	def __init__(self, id : Any, instance : Smtlib2, reply : Any):
 		self.id = id
 		self.instance = instance
 		self.reply = reply
+		self.reply.handle_smtlib_replies = self.handle_smtlib_replies
 
 	def handle_smtlib_replies(self, parser):
 		sat_res = parser.sat_result()
-		model = parser.model()
+		model = parser.model() if self.instance.need_model else None
 		logging.info('result for id %s is %s with model %s',
 		             self.id, sat_res, model)
 		res = { b'sat'    : lambda: SAT(model),
@@ -109,9 +116,6 @@ class TestPool(Pool):
 				self.any.clear()
 			if item.reply.done():
 				continue
-			item.reply.handle_smtlib_replies = (
-				item.handle_smtlib_replies if item.id != ('',)
-				else lambda parser: item.reply.set_result(None))
 			return item
 		# notify self.wait_empty()
 		#self.empty.set_result(None)
@@ -119,7 +123,7 @@ class TestPool(Pool):
 	async def wait_empty(self):
 		await self.empty
 
-	async def solve(self, prio, prid, instance : bytes):
+	async def solve(self, prio, prid, instance : Smtlib2):
 		loop = asyncio.get_event_loop()
 		fut = loop.create_future()
 		item = Item(prid, instance, fut)
@@ -137,5 +141,5 @@ async def run_solver(host, port, solve_specific):
 __all__ = [run_solver.__name__
           ,SAT.__name__
           ,UNSAT.__name__
-          ,smtlib2.__name__
+          ,Smtlib2.__name__
           ]

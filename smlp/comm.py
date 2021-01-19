@@ -344,7 +344,7 @@ class Server:
 			pr.reply.handle_stdout = functools.partial(
 				handle_smtlib_stdout, pr.reply, pr.id,
 				stdout_parser)
-			fut = await smtlib_script_request(worker, pr.instance,
+			fut = await smtlib_script_request(worker, pr.instance.format(),
 			                                  fut=pr.reply,
 			                                  handle_command=handle_command)
 			# workers can only handle one smtlib script request at
@@ -352,10 +352,9 @@ class Server:
 			# result here before submitting the next instance
 			try:
 				res = await fut
+				worker.log.info('got result %s for instance %s', res, pr.id)
 			except:
 				worker.log.exception('error computing instance %s', pr.id)
-				res = None
-			worker.log.info('got result %s for instance %s', res, pr.id)
 
 		worker.log.info('pool empty, closing connection')
 

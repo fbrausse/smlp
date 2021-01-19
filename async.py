@@ -5,7 +5,7 @@
 
 from smlp import *
 
-import asyncio, argparse, sys, logging, shlex, heapq, functools, time
+import asyncio, argparse, sys, logging, shlex, functools, time
 
 import code, traceback, signal
 
@@ -108,16 +108,20 @@ async def threshold1(solver, smlp, th, prec):
 #async def solve_shai(solver, spec, path):
 #	pass
 
+def QF_NRA(cnst_decls, cnst_defs, asserts, need_model, timeout=None):
+	return Smtlib2('QF_NRA', cnst_decls, cnst_defs, asserts, need_model,
+	               timeout=timeout)
+
 async def solve_specific(solver):
 	a, b = await asyncio.gather(
-		solver.solve((1,), ('',), b''),
+		solver.solve((1,), ('',), QF_NRA({}, {}, [], False)),
 		solver.solve((0,), ('test',),
-		             smtlib2('QF_NRA', { 'x': 'Real', 'y': 'Real' }, {},
-		                     ['(> x y)', '(< (* y x) y)'], True #, timeout=1
-		                    )),
+		             QF_NRA({ 'x': 'Real', 'y': 'Real' }, {},
+		                    ['(> x y)', '(< (* y x) y)'], True #, timeout=1
+		                   )),
 		return_exceptions=True
 	)
-	c = await solver.solve((0,), ('',), b'')
+	c = await solver.solve((0,), ('',), QF_NRA({}, {}, [], False))
 
 async def main():
 	try:
