@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from smlp.comm import *
+#from smlp.comm import client # , run1
+#from smlp.solverpool import *
 
-import asyncio, argparse, sys, logging, shlex, heapq
+from smlp import *
 
-from typing import Mapping, Sequence, Tuple, Any
-from dataclasses import dataclass, field
+import asyncio, argparse, sys, logging, shlex, heapq, functools, time
 
 import code, traceback, signal
 
@@ -65,61 +65,6 @@ class Instance:
 		self.codom = None
 		self.obj = None
 
-# forwarding Pool; uses a database object to cache/persist results
-class StoredPool(Pool):
-	def __init__(self, parent, db):
-		self._parent = parent
-		self._db = db
-
-	async def pop(self):
-		while True:
-			pr = await self._parent.pop()
-			if pr is None or pr.id not in self._db:
-				return pr
-			self._parent.push(pr.id, self._db[pr.id])
-
-	def push(self, pr, result):
-		if result is not None:
-			self._db[pr.id] = result
-		self._parent.push(pr, result)
-
-	def wait_empty(self):
-		return self._parent.wait_empty()
-
-
-class UNSAT:
-	pass
-
-class SAT:
-	def __init__(self, model=None):
-		self.model = model
-
-# assumes LC_ALL=*.UTF-8
-def smtlib2_instance(logic : str,
-                     cnst_decls : Mapping[str, str], # name -> type
-                     cnst_defs : Mapping[str, Tuple[str,str]], # name -> (type, term)
-                     assert_terms : Sequence[str], # term
-                     need_model : bool,
-                     timeout : int=None) -> bytes:
-	r = ''
-	r += '(set-option :print-success false)\n'
-	if timeout is not None:
-		r += '(set-option :timeout %s)\n' % timeout
-	if need_model:
-		r += '(set-option :produce-models true)\n'
-	r += '(set-logic %s)\n' % logic
-	for n,ty in cnst_decls.items():
-		r += '(declare-fun %s () %s)\n' % (n,ty)
-	for n,(ty,tm) in cnst_defs.items():
-		r += '(define-fun %s () %s %s)\n' % (n,ty,tm)
-	for tm in assert_terms:
-		r += '(assert %s)\n' % tm
-	r += '(check-sat)\n'
-	if need_model:
-		r += '(get-model)\n'
-	r += '(exit)'
-	return r.encode()
-
 class SMLP:
 	def __init__(self, config_decls, input_decls, eta, theta, phi):
 		self.configs = config_decls
@@ -160,6 +105,38 @@ async def threshold1(solver, smlp, th, prec):
 			yield hi
 		ex = ex.exclude(hi)
 
+#async def solve_shai(solver, spec, path):
+#	pass
+
+async def solve_specific(solver):
+	a, b = await asyncio.gather(
+		solver.solve((1,), ('',), b''),
+		solver.solve((0,), ('test',),
+		             smtlib2('QF_NRA', { 'x': 'Real', 'y': 'Real' }, {},
+		                     ['(> x y)', '(< (* y x) y)'], True #, timeout=1
+		                    )),
+		return_exceptions=True
+	)
+	c = await solver.solve((0,), ('',), b'')
+
+async def main():
+	try:
+		args = parse_args(sys.argv)
+	except ValueError as e:
+		print('error:', e, file=sys.stderr)
+		return 1
+
+	if args.client is not None:
+		await client(args.host, args.port, args.client)
+	else:
+		#pool = TestPool(loop)
+		#sol  = solve_instance(pool)
+		#coro = server(args.host, args.port, StoredPool(pool, dict()))
+		#coro = asyncio.gather(coro, sol)
+		await run_solver(args.host, args.port, solve_specific)
+
+	return 0
+
 if __name__ == "__main__":
 	# python-3.8: creating 10^6 futures from asyncio.get_event_loop():
 	#             time: 1.6sec, memory: 152M
@@ -167,119 +144,10 @@ if __name__ == "__main__":
 	#             .15sec, 22.5M
 	#          -> per .create_future(): 1.45µs, 136 bytes
 
-	listen()
+	listen() # for debugging
 
-	class MsgHandleRecv:
-		def handle_recv(msg_id, res):
-			log.debug('request got reply: %s', res)
-			assert res.version == VERSION
-			assert res.msg_id == msg_id
-			assert res.HasField('reply')
-			assert not res.HasField('request')
-			handle_reply(res.reply)
+	##task = asyncio.ensure_future(coro) # loop.create_task(coro)
+	#task = coro
 
-	class CmdHandleReply:
-		def handle_reply(rep):
-			assert rep.type == rep.Type.SMTLIB_REPLY
-			handle_command(rep.cmd)
-
-	class SaneHandleCmd:
-		def handle_sane_command(conn, script, cmd):
-			if cmd.status == 0:
-				handle_stdout(cmd.stdout)
-			else:
-				raise CalledProcessError(returncode=cmd.status,
-				                         cmd=(conn, script),
-				                         output=cmd.stdout,
-				                         stderr=cmd.stderr)
-
-	class SmtlibHandleStdout:
-		def handle_stdout(result):
-			sat_res, _, model = result.partition(b'\n')
-			assert sat_res in (b'sat', b'unsat', b'unknown')
-			m = smtlib_script_parse(model)
-			#logging.info('result for id %s is %s with model %s',
-			#             prid, sat_res, m)
-			handle_result(sat_res, m)
-
-	class Z3HandleCmd:
-		def handle_z3_command(conn, script, cmd):
-			if cmd.status == 1 and cmd.stderr == b'':
-				try:
-					handle_stdout(cmd.stdout)
-				except:
-					pass
-			handle_stdout(handle_command(conn, script, cmd))
-
-	@dataclass(order=True)
-	class Item:
-		priority : Any
-		id       : Any=field(compare=False)
-		instance : bytes=field(compare=False)
-		# type probably asyncio.Future, but depends on the event
-		# loop implementation
-		reply    : Any=field(compare=False)
-
-		# TODO: replace this method further down the protocol stack
-		def handle_result(self, res):
-			self.reply.set_result(res)
-
-	class TestPool(Pool):
-		def __init__(self, loop):
-			self.heap = [Item(priority=(0,),id=('',),instance=b'',
-			                  reply=loop.create_future()),]
-			inst = smtlib2_instance('QF_LRA',
-			                        { 'x': 'Real', 'y': 'Real' }, {},
-			                        ['(> x y)', '(> x y)'], True)
-			self.heap.append(Item(priority=(1,), id=('test',),
-			                      instance=inst,
-			                      reply=loop.create_future()))
-			heapq.heapify(self.heap)
-			self.empty = loop.create_future()
-
-		async def pop(self):
-			while len(self.heap) > 0:
-				item = heapq.heappop(self.heap)
-				if item.reply.done():
-					continue
-				return item
-			# notify self.wait_empty()
-			self.empty.set_result(None)
-
-		def push(self, item, result):
-			if item.id == ('test',):
-				sat_res, _, model = result.partition(b'\n')
-				logging.info('result for id %s is %s with model %s', item.id,
-					     sat_res, smtlib_script_parse(model))
-				assert sat_res in (b'sat', b'unsat', b'unknown')
-
-		async def wait_empty(self):
-			await self.empty
-
-		async def solve(self, prio, prid, instance : bytes):
-			fut = self._loop.create_future()
-			heapq.heappush(self.heap, Item(priority=prio, id=prid,
-			                               instance=instance,
-			                               reply=fut))
-			stdout = await fut
-			return stdout
-
-	try:
-		args = parse_args(sys.argv)
-	except ValueError as e:
-		print('error:', e, file=sys.stderr)
-		sys.exit(1)
-
-	loop = asyncio.get_event_loop()
-
-	if args.client is not None:
-		coro = client(args.host, args.port, args.client)
-	else:
-		pool = TestPool(loop)
-		pool = StoredPool(pool, dict())
-		coro = server(args.host, args.port, pool)
-
-	#task = asyncio.ensure_future(coro) # loop.create_task(coro)
-	task = coro
-
-	run1(task, loop=loop)
+	#run1(task, loop=loop)
+	sys.exit(run1(main()))

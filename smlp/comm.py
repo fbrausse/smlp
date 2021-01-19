@@ -55,7 +55,7 @@ class Connection:
 					fut = self._pending[s.msg_id]
 					del self._pending[s.msg_id]
 					try:
-						fut.set_result(s)
+						fut.handle_recv(s)
 					except BaseException as ex:
 						fut.set_exception(ex)
 				if s.HasField('request'):
@@ -86,7 +86,7 @@ class Connection:
 	def _wr_msg_nowait(self, msg):
 		self._wr.write(len(msg).to_bytes(4, 'big'))
 		self._wr.write(msg)
-		self.log.info('sent msg %s', msg)
+		self.log.debug('sent msg %s', msg)
 
 	async def wait_wr_drain(self):
 		await self._wr.drain()
@@ -110,23 +110,22 @@ class Connection:
 		loop = asyncio.get_event_loop()
 		if fut is None:
 			fut = loop.create_future()
+			fut.handle_reply = fut.set_result
 		msg_id = self._next_id()
 		self._pending[msg_id] = fut
 		s = proto.Smlp(version=VERSION, msg_id=msg_id, request=req)
 		self._wr_msg_nowait(s.SerializeToString())
 
-		set_result = fut.set_result
-		log = self.log
-
-		def _request_fut_set_result(fut, res):
-			log.debug('request got reply: %s', res)
+		def _request_handle_reply(msg_id, fut, res):
+			self.log.debug('request got reply: %s', res)
 			assert res.version == VERSION
 			assert res.msg_id == msg_id
 			assert res.HasField('reply')
 			assert not res.HasField('request')
-			set_result(res.reply)
+			fut.handle_reply(res.reply)
 
-		fut.set_result = functools.partial(_request_fut_set_result, fut)
+		fut.handle_recv = functools.partial(_request_handle_reply, msg_id, fut)
+
 		return fut, msg_id
 
 	async def wait_send_request(self, req, fut=None):
@@ -157,26 +156,62 @@ class Connection:
 	#	#assert not s.HasField('request')
 	#	#return s.reply
 
+class SaneStdoutParser:
+	def __init__(self, replies):
+		self.replies = replies
 
+	def sat_result(self):
+		return next(self.replies)
 
-def sane_cmd_handle_result(conn, script, rep):
-	assert rep.type == rep.Type.SMTLIB_REPLY
-	if rep.cmd.status == 0:
-		return rep.cmd.stdout
+	def model(self):
+		return next(self.replies)
+
+	def remaining(self):
+		return list(self.replies)
+
+class YicesStdoutParser(SaneStdoutParser):
+	def model(self):
+		return list(self.replies)
+
+def handle_smtlib_stdout(fut, prid, parser, stdout):
+	logging.debug('stdout for id %s: %s', prid, stdout)
+	a = time.perf_counter()
+	p = parser(filter(lambda w: w != b'unsupported',
+	                  smtlib_script_parse(stdout)))
+	fut.handle_smtlib_replies(p)
+	assert len(p.remaining()) == 0
+	logging.info('parsed replies in %g sec', time.perf_counter()-a)
+
+def handle_sane_command(conn, script, fut, cmd):
+	logging.debug('handle_sane_command')
+	if cmd.status == 0:
+		fut.handle_stdout(cmd.stdout)
 	else:
-		raise CalledProcessError(returncode=rep.cmd.status,
+		raise CalledProcessError(returncode=cmd.status,
 		                         cmd=(conn, script),
-		                         output=rep.cmd.stdout,
-		                         stderr=rep.cmd.stderr)
+		                         output=cmd.stdout,
+		                         stderr=cmd.stderr)
 
-async def smtlib_script_request(conn, script, fut):
+def handle_z3_command(conn, script, fut, cmd):
+	logging.debug('handle_z3_command')
+	if cmd.status == 1 and cmd.stderr == b'':
+		try:
+			fut.handle_stdout(cmd.stdout)
+			return
+		except BaseException as e:
+			conn.log.exception('z3 exit code 1 handler: %s', e)
+	handle_sane_command(conn, script, fut, cmd)
+
+def handle_reply(fut, rep):
+	assert rep.type == rep.Type.SMTLIB_REPLY
+	fut.handle_command(rep.cmd)
+
+async def smtlib_script_request(conn, script, fut, handle_command = handle_sane_command):
 	req = proto.Request(stdin=script)
 	req.type = req.Type.SMTLIB_SCRIPT
 
-	def _smtlib_fut_set_result(set_result, rep):
-		set_result(sane_cmd_handle_result(conn, script, rep))
- 
-	fut.set_result = functools.partial(_smtlib_fut_set_result, fut.set_result)
+	fut.handle_reply = functools.partial(handle_reply, fut)
+	fut.handle_command = functools.partial(handle_command, conn, script, fut)
 
 	fut, _ = await conn.wait_send_request(req, fut=fut)
 
@@ -185,6 +220,7 @@ async def smtlib_script_request(conn, script, fut):
 async def smtlib_script_wait_request(conn, script, fut=None):
 	if fut is None:
 		fut = asyncio.get_event_loop().create_future()
+		fut.handle_stdout = fut.set_result
 	fut = await smtlib_script_request(conn, script, fut=fut)
 	return await fut
 
@@ -205,10 +241,6 @@ async def smtlib_version(conn):
 class Pool:
 	# returns either a pair (prid,instance) or None to signify end-of-problem
 	async def pop(self):
-		pass
-
-	# called by the Server; if result is None, an exception occurred
-	def push(self, pr, result):
 		pass
 
 	async def wait_empty(self):
@@ -252,8 +284,6 @@ def smtlib_tokenize(s):
 
 def smtlib_script_parse_sexpr1(toks):
 	try:
-		#word = next(toks)
-		#assert word[0:1] not in b'()"0123456789'
 		s = []
 		while True:
 			t = next(toks)
@@ -265,12 +295,9 @@ def smtlib_script_parse_sexpr1(toks):
 		assert False
 
 def smtlib_script_parse(s):
-	r = []
 	toks = smtlib_tokenize(s)
-	for lparen in toks:
-		assert lparen == b'('
-		r.append(smtlib_script_parse_sexpr1(toks))
-	return r
+	for t in toks:
+		yield t if t != b'(' else smtlib_script_parse_sexpr1(toks)
 
 class Server:
 	def __init__(self, pool):
@@ -295,36 +322,40 @@ class Server:
 			                    'disconnecting: ' +
 			                    'exited with %d on input %s, stdout: %s, stderr: %s',
 			                    e.returncode, e.cmd[1], e.stdout, e.stderr)
-			await worker.wait_send_request(proto.Request(type=proto.Request.Type.CLIENT_QUIT))
+			await worker.wait_send_request(
+					proto.Request(type=proto.Request.Type.CLIENT_QUIT))
 			return
-		smtlib_nv = smtlib_script_parse(nv)
-		worker.log.info('client runs %s version %s', smtlib_nv[0][1].decode(), smtlib_nv[1][1].decode())
+		smtlib_nv = [w for w in smtlib_script_parse(nv)]
+		worker.log.info('client runs %s version %s',
+		                smtlib_nv[0][1].decode(),
+		                smtlib_nv[1][1].decode())
+
+		handle_command = (handle_z3_command if smtlib_nv[0][1] == b'"Z3"'
+		                  else handle_sane_command)
+
+		stdout_parser = (YicesStdoutParser if smtlib_nv[0][1] == b'"Yices"'
+		                 else SaneStdoutParser)
 
 		while True:
 			pr = await self._pool.pop()
 			if pr is None:
 				break
 			worker.log.info('submitting instance %s', pr.id)
-			fut = await smtlib_script_request(worker, pr.instance, fut=pr.reply)
+			pr.reply.handle_stdout = functools.partial(
+				handle_smtlib_stdout, pr.reply, pr.id,
+				stdout_parser)
+			fut = await smtlib_script_request(worker, pr.instance,
+			                                  fut=pr.reply,
+			                                  handle_command=handle_command)
 			# workers can only handle one smtlib script request at
 			# any point in time, so we can just as well wait for its
 			# result here before submitting the next instance
 			try:
-				if smtlib_nv[0][1] == b'"Z3"':
-					try:
-						res = await fut
-					except CalledProcessError as e:
-						if e.returncode == 1 and e.stderr == b'':
-							res = e.stdout
-						else:
-							raise
-				else:
-					res = await fut
+				res = await fut
 			except:
 				worker.log.exception('error computing instance %s', pr.id)
 				res = None
 			worker.log.info('got result %s for instance %s', res, pr.id)
-			self._pool.push(pr, res)
 
 		worker.log.info('pool empty, closing connection')
 
@@ -418,6 +449,18 @@ async def server(host, port, pool):
 	server.close()
 	await server.wait_closed()
 
+async def server2(host, port, pool):
+	server = await asyncio.start_server(Server(pool).accepted, host, port)
+	logging.info('server listening on %s',
+	             ', '.join(map(lambda s: fmt_address(s.getsockname()),
+	                           server.sockets)))
+	return server
+	#async with server:
+	#	await server.serve_forever()
+	await pool.wait_empty()
+	server.close()
+	await server.wait_closed()
+
 async def client(host, port, args):
 	logging.info('client args: %s', args)
 	try:
@@ -454,14 +497,18 @@ def run1(task, loop=None):
 
 	try:
 		loop.run_until_complete(task)
+		ret = 0
 	except as_CancelledError:
 		# from client
 		logging.info('as cancelled, aborting...')
+		ret = 3
 	except cf_CancelledError:
 		# from sighandler
 		logging.info('cf cancelled, aborting...')
+		ret = 3
 	except:
 		logging.exception("error")
+		ret = 4
 	finally:
 		# workaround server's accept task not being cleaned up on cancel leading
 		# to:
@@ -474,8 +521,10 @@ def run1(task, loop=None):
 		loop.run_until_complete(loop.shutdown_asyncgens())
 		#loop.close()
 
+	return ret
+
 __all__ = [ Pool.__name__
-          , server.__name__
+          , server2.__name__
           , client.__name__
           , run1.__name__
           , smtlib_script_parse.__name__
