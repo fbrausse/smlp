@@ -110,11 +110,12 @@ class TestPool(Pool):
 	async def pop(self):
 		while True:
 			await self.any.wait()
-			assert len(self.heap) > 0
-			item = heapq.heappop(self.heap).item
+			item = None
+			if len(self.heap) > 0:
+				item = heapq.heappop(self.heap).item
 			if len(self.heap) == 0:
 				self.any.clear()
-			if item.reply.done():
+			if item is None or item.reply.done():
 				continue
 			return item
 		# notify self.wait_empty()
@@ -123,14 +124,15 @@ class TestPool(Pool):
 	async def wait_empty(self):
 		await self.empty
 
-	async def solve(self, prio, prid, instance : Smtlib2):
+	def solve(self, prio, prid, instance : Smtlib2):
 		loop = asyncio.get_event_loop()
 		fut = loop.create_future()
 		item = Item(prid, instance, fut)
 		heapq.heappush(self.heap, PrItem(prio, item))
 		self.any.set()
-		res = await fut
-		return res
+		return fut
+		#res = await fut
+		#return res
 
 async def run_solver(host, port, solve_specific):
 	loop = asyncio.get_event_loop()

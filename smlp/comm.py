@@ -37,29 +37,35 @@ class Connection:
 
 		async def rd_msg_dispatch():
 			while not rd.at_eof():
-				self.log.debug('rd_msg_dispatch 1')
-				n = await rd.read(4)
-				if len(n) == 0:
-					logging.warning('rd_msg_dispatch: eof, why?')
-					break
-				self.log.debug('rd_msg_dispatch 2: %s', n)
-				n = int.from_bytes(n, 'big')
-				msg = await rd.read(n)
-				if len(msg) != n:
-					self.log.critical('short read, possibly not synchronized comms, aborting...')
-					break
-				s = proto.Smlp.FromString(msg)
-				self.log.debug('rd_msg_dispatch 3: %s', s)
-				assert s.version == VERSION
-				if s.HasField('reply'):
-					fut = self._pending[s.msg_id]
-					del self._pending[s.msg_id]
-					try:
-						fut.handle_recv(s)
-					except BaseException as ex:
-						fut.set_exception(ex)
-				if s.HasField('request'):
-					loop.create_task(handle_request(self, s.msg_id, s.request))
+				try:
+					self.log.debug('rd_msg_dispatch 1')
+					n = await rd.read(4)
+					if len(n) == 0:
+						logging.warning('rd_msg_dispatch: eof, why?')
+						break
+					self.log.debug('rd_msg_dispatch 2: %s', n)
+					n = int.from_bytes(n, 'big')
+					msg = await rd.read(n)
+					if len(msg) != n:
+						self.log.critical('short read, possibly not synchronized comms, aborting...')
+						break
+					s = proto.Smlp.FromString(msg)
+					#self.log.debug('rd_msg_dispatch 3: %s', s)
+					assert s.version == VERSION
+					if s.HasField('reply'):
+						fut = self._pending[s.msg_id]
+						del self._pending[s.msg_id]
+						try:
+							fut.handle_recv(s)
+						except BaseException as ex:
+							fut.set_exception(ex)
+					if s.HasField('request'):
+						loop.create_task(handle_request(self, s.msg_id, s.request))
+				except as_CancelledError:
+					self.log.info('rd_msg_dispatch cancelled')
+					raise
+				except:
+					self.log.exception('rd_msg_dispatch exception')
 			self.log.info('rd_msg_dipatch fini')
 
 		self._rd_msg_task = loop.create_task(rd_msg_dispatch())
@@ -158,7 +164,7 @@ class Connection:
 
 class SaneStdoutParser:
 	def __init__(self, replies):
-		self.replies = replies
+		self.replies = filter(lambda w: w != b'unsupported', replies)
 
 	def sat_result(self):
 		return next(self.replies)
@@ -176,11 +182,12 @@ class YicesStdoutParser(SaneStdoutParser):
 def handle_smtlib_stdout(fut, prid, parser, stdout):
 	logging.debug('stdout for id %s: %s', prid, stdout)
 	a = time.perf_counter()
-	p = parser(filter(lambda w: w != b'unsupported',
-	                  smtlib_script_parse(stdout)))
-	fut.handle_smtlib_replies(p)
-	assert len(p.remaining()) == 0
-	logging.info('parsed replies in %g sec', time.perf_counter()-a)
+	try:
+		p = parser(smtlib_script_parse(stdout))
+		fut.handle_smtlib_replies(p)
+		assert len(p.remaining()) == 0
+	finally:
+		logging.info('parsed replies in %g sec', time.perf_counter()-a)
 
 def handle_sane_command(conn, script, fut, cmd):
 	logging.debug('handle_sane_command')
