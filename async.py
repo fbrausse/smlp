@@ -105,23 +105,28 @@ async def threshold1(solver, smlp, th, prec):
 			yield hi
 		ex = ex.exclude(hi)
 
+
+
 #async def solve_shai(solver, spec, path):
 #	pass
 
-def QF_NRA(cnst_decls, cnst_defs, asserts, need_model, timeout=None):
-	return Smtlib2('QF_NRA', cnst_decls, cnst_defs, asserts, need_model,
-	               timeout=timeout)
-
 async def solve_specific(solver):
+	x = numeric(Real, 'x')
+	y = numeric(Real, 'y')
+	xy = y * x
+	xyy = y * xy
 	a, b = await asyncio.gather(
 		solver.solve((1,), ('',), QF_NRA({}, {}, [], False)),
 		solver.solve((0,), ('test',),
-		             QF_NRA({ 'x': 'Real', 'y': 'Real' }, {},
-		                    ['(> x y)', '(< (* y x) y)'], True #, timeout=1
+		             QF_NRA({ d.sym: d.ty.__name__ for d in (x,y) }, {},
+		                    [(x > y)  #'(> x y)'
+		                    , (xy < xyy + xyy) #'(< (* y x) y)'
+		                    ], True #, timeout=1
 		                   )),
 		return_exceptions=True
 	)
 	c = await solver.solve((0,), ('',), QF_NRA({}, {}, [], False))
+	return 42
 
 async def main():
 	try:

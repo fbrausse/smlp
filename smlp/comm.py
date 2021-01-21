@@ -163,7 +163,8 @@ class Connection:
 	#	#return s.reply
 
 class SaneStdoutParser:
-	def __init__(self, replies):
+	def __init__(self, cnst_decls, replies):
+		self.cnst_decls = cnst_decls
 		self.replies = filter(lambda w: w != b'unsupported', replies)
 
 	def sat_result(self):
@@ -177,13 +178,19 @@ class SaneStdoutParser:
 
 class YicesStdoutParser(SaneStdoutParser):
 	def model(self):
-		return list(self.replies)
+		def mkdef(lst):
+			eq, var, tm = lst
+			assert eq == b'='
+			ty = self.cnst_decls[var.decode()].encode()
+			return [b'define-fun',var,[],ty,tm]
 
-def handle_smtlib_stdout(fut, prid, parser, stdout):
+		return [b'model'] + list(map(mkdef, self.replies))
+
+def handle_smtlib_stdout(fut, prid, parser, cnst_decls, stdout):
 	logging.debug('stdout for id %s: %s', prid, stdout)
 	a = time.perf_counter()
 	try:
-		p = parser(smtlib_script_parse(stdout))
+		p = parser(cnst_decls, smtlib_script_parse(stdout))
 		fut.handle_smtlib_replies(p)
 		assert len(p.remaining()) == 0
 	finally:
@@ -194,6 +201,8 @@ def handle_sane_command(conn, script, fut, cmd):
 	if cmd.status == 0:
 		fut.handle_stdout(cmd.stdout)
 	else:
+		conn.log.critical('error running script: exit code %d, stdout: %s, stderr: %s',
+		                  cmd.status, cmd.stdout, cmd.stderr)
 		raise CalledProcessError(returncode=cmd.status,
 		                         cmd=(conn, script),
 		                         output=cmd.stdout,
@@ -248,9 +257,6 @@ async def smtlib_version(conn):
 class Pool:
 	# returns either a pair (prid,instance) or None to signify end-of-problem
 	async def pop(self):
-		pass
-
-	async def wait_empty(self):
 		pass
 
 
@@ -350,7 +356,7 @@ class Server:
 			worker.log.info('submitting instance %s', pr.id)
 			pr.reply.handle_stdout = functools.partial(
 				handle_smtlib_stdout, pr.reply, pr.id,
-				stdout_parser)
+				stdout_parser, pr.instance.cnst_decls)
 			fut = await smtlib_script_request(worker, pr.instance.format(),
 			                                  fut=pr.reply,
 			                                  handle_command=handle_command)
@@ -443,29 +449,17 @@ class Client:
 		await conn.wait_send_reply(msg_id, r)
 
 
-# precondition: pool not empty
-async def server(host, port, pool):
-	server = await asyncio.start_server(Server(pool).accepted, host, port)
-	logging.info('server listening on %s',
-	             ', '.join(map(lambda s: fmt_address(s.getsockname()),
-	                           server.sockets)))
-	#async with server:
-	#	await server.serve_forever()
-	await pool.wait_empty()
-	server.close()
-	await server.wait_closed()
-
 async def server2(host, port, pool):
 	server = await asyncio.start_server(Server(pool).accepted, host, port)
 	logging.info('server listening on %s',
 	             ', '.join(map(lambda s: fmt_address(s.getsockname()),
 	                           server.sockets)))
 	return server
-	#async with server:
-	#	await server.serve_forever()
-	await pool.wait_empty()
-	server.close()
-	await server.wait_closed()
+	##async with server:
+	##	await server.serve_forever()
+	#await pool.wait_empty()
+	#server.close()
+	#await server.wait_closed()
 
 async def client(host, port, args):
 	logging.info('client args: %s', args)

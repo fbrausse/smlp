@@ -29,9 +29,6 @@ class StoredPool(Pool):
 				pr.reply.add_done_callback(functools.partial(self._done_cb, pr.id))
 			return pr
 
-	def wait_empty(self):
-		return self._parent.wait_empty()
-
 
 class UNSAT:
 	pass
@@ -104,8 +101,7 @@ class PrItem:
 class TestPool(Pool):
 	def __init__(self, loop):
 		self.heap = []
-		self.any   = asyncio.Event()
-		self.empty = loop.create_future()
+		self.any  = asyncio.Event()
 
 	async def pop(self):
 		while True:
@@ -118,11 +114,6 @@ class TestPool(Pool):
 			if item is None or item.reply.done():
 				continue
 			return item
-		# notify self.wait_empty()
-		#self.empty.set_result(None)
-
-	async def wait_empty(self):
-		await self.empty
 
 	def solve(self, prio, prid, instance : Smtlib2):
 		loop = asyncio.get_event_loop()
