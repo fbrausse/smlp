@@ -3,7 +3,7 @@ from .solverpool import Smtlib2
 
 from functools import partial as bind
 
-import time, logging
+import time, logging, pysmt
 
 def par_dag(a, dag):
 	for i,b in enumerate(a.children):
@@ -28,6 +28,7 @@ def daggify(a):
 			return '(let ((%s %s)) %s)' % (self.sym, self.tm, self.a)
 
 	# ordering important!
+	par = {}
 	n = 0
 	for v in dag.values():
 		if len(v) <= 1:
@@ -46,7 +47,8 @@ def daggify(a):
 def QF_NRA(cnst_decls, cnst_defs, asserts, need_model, timeout=None):
 	a = time.perf_counter()
 	r = Smtlib2('QF_NRA', cnst_decls, cnst_defs,
-	            [repr(daggify(a)) for a in asserts], need_model,
+	            [repr(a) # repr(daggify(a))
+	             for a in asserts], need_model,
 	            timeout=timeout)
 	logging.info('QF_NRA took %s sec', time.perf_counter() - a)
 	return r

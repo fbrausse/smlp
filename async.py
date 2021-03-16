@@ -106,7 +106,6 @@ async def threshold1(solver, smlp, th, prec):
 		ex = ex.exclude(hi)
 
 
-
 #async def solve_shai(solver, spec, path):
 #	pass
 
@@ -120,7 +119,7 @@ async def solve_specific(solver):
 		solver.solve((0,), ('test',),
 		             QF_NRA({ d.sym: d.ty.__name__ for d in (x,y) }, {},
 		                    [(x > y)  #'(> x y)'
-		                    , (xy < xyy + xyy) #'(< (* y x) y)'
+		                    , (xy > xyy + xyy) #'(< (* y x) y)'
 		                    ], True #, timeout=1
 		                   )),
 		return_exceptions=True
@@ -132,8 +131,10 @@ async def main():
 	try:
 		args = parse_args(sys.argv)
 	except ValueError as e:
-		print('error:', e, file=sys.stderr)
+		print('option error:', e, file=sys.stderr)
 		return 1
+	except SystemExit: # thrown when passing e.g. "-h"
+		return 0
 
 	if args.client is not None:
 		await client(args.host, args.port, args.client)
