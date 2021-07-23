@@ -60,7 +60,7 @@ static void spec_cols2safe(size_t *cols, char *is_int,
 		        json_object_get_string(type),
 		        idx);*/
 		int is_resp = !strcmp("response", type->s.begin);
-		int is_cat  = !strcmp("category", type->s.begin);
+		int is_cat  = !strcmp("categorical", type->s.begin);
 		if ((idx < 0) != (is_resp || is_cat))
 			fprintf(stderr, "error: %s: idx: %zd, is response: %d, is cat: %d\n",
 			        label->s.begin, idx, is_resp, is_cat);

@@ -25,10 +25,10 @@ with open(args.spec, 'r') as f:
 
 data = pd.read_csv(args.data).drop_duplicates()
 if args.features is None:
-	features = [s['label'] for s in spec if s['type'] == 'category']
+	features = [s['label'] for s in spec if s['type'] == 'categorical']
 else:
 	features = args.features.split(',')
-	assert all(any(s['label'] == f and s['type'] == 'category' for s in spec)
+	assert all(any(s['label'] == f and s['type'] == 'categorical' for s in spec)
 	           for f in features)
 cati = [i for i in range(len(spec)) if spec[i]["label"] in features]
 cati.sort()
@@ -46,7 +46,7 @@ for idx, catv in zip(itertools.count(), itertools.product(*[spec[i]["range"] for
 	].to_csv(os.path.join(d, 'data.csv'), index=False)
 	with open(os.path.join(d, 'data.spec'), 'w') as f:
 		json.dump(sp, f)
-	with open(os.path.join(d, 'category'), 'w') as f:
+	with open(os.path.join(d, 'categorical'), 'w') as f:
 		json.dump(cats, f)
 	with open(os.path.join(d, 'params.mk'), 'w') as f:
 		for it in cats.items():

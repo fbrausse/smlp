@@ -91,7 +91,7 @@ def get_response_features(df, input_names, resp_names):
 def get_radii(spec, center):
 	abs_radii = []
 	for s,c in zip(spec, center):
-		if s['type'] == 'category':
+		if s['type'] == 'categorical':
 			abs_radii.append(0)
 			continue
 		if 'rad-rel' in s and c != 0:
@@ -118,7 +118,7 @@ def scaler_from_bounds(spec, bnds):
 
 def io_scalers(spec, gen, bnds):
 	si = scaler_from_bounds([s for s in spec
-	                         if s['type'] in ('category', 'knob')],
+	                         if s['type'] in ('categorical', 'knob')],
 	                        bnds)
 	so = scaler_from_bounds([s for s in spec
 	                         if s['type'] == 'response'

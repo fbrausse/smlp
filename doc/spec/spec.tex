@@ -112,7 +112,7 @@ A feature $f_i$ with the identity embedding $e_i:x\mapsto x$ is described by
 	$\begin{cases}
 		\spec{knob}     & \text{if}~i\in K \\
 		\spec{input}    & \text{if}~i\in I~\text{and}~V_i~\text{is infinite} \\
-		\spec{category} & \text{if}~i\in I~\text{and}~V_i~\text{is finite} \\
+		\spec{categorical} & \text{if}~i\in I~\text{and}~V_i~\text{is finite} \\
 		\spec{response} & \text{if}~i\in R
 	\end{cases}$
 
@@ -164,7 +164,7 @@ Any parts of this specification language marked in \spec{blue} are subject to ch
 \item\label{it:Timing}
 	{\footnotesize\verb!{ "label": "Timing",    "type": "input",    "range": "int", "rad-abs": 5 }!}
 \item\label{it:Byte}
-	{\footnotesize\verb!{ "label": "Byte",      "type": "category", "range": [0,1,2,3,4,5,6,7] }!}
+	{\footnotesize\verb!{ "label": "Byte",      "type": "categorical", "range": [0,1,2,3,4,5,6,7] }!}
 \item\label{it:gain}
 	{\footnotesize\verb!{ "label": "TXEQ_GAIN", "type": "knob",     "range": "float", "safe": [1,2,3], "rad-rel": 0.1 }!}
 \item\label{it:delta}

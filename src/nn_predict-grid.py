@@ -128,7 +128,7 @@ def main(argv):
 	                              if args.values is None
 	                              else pd.read_csv(args.values)[[
 	                                  s['label'] for s in spec
-	                                  if s['type'] in ('knob','category')
+	                                  if s['type'] in ('knob','categorical')
 	                              ]]),
 	                             abs_t, log=log)
 

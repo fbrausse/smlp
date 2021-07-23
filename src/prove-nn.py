@@ -391,7 +391,7 @@ class Rad(Command):
 		sub_args = []
 		self.bnds = {} # strictness is lost
 		for s,v in zip(spec, in_vars):
-			if s['type'] == 'category' or s['type'] == 'input':
+			if s['type'] == 'categorical' or s['type'] == 'input':
 				continue
 			try:
 				def is_zero(val):
@@ -478,7 +478,7 @@ class Exclude(Command):
 		super().__init__(Exclude.LABEL,
 		                 *[i_star[v] if s['type'] != 'input' else None
 		                   for s,v in zip(spec, in_vars)
-		                   if s['type'] != 'category'])
+		                   if s['type'] != 'categorical'])
 		self._in_vars = in_vars
 		self._radius = radius
 
@@ -529,7 +529,7 @@ class Instance:
 
 		with open(spec_path, 'r') as f:
 			all_spec = json.load(f, parse_float=Fraction)
-			self.spec = [s for s in all_spec if s['type'] in ['category','knob','input']]
+			self.spec = [s for s in all_spec if s['type'] in ['categorical','knob','input']]
 			del all_spec
 
 		assert(type(self.spec) == list)
@@ -553,7 +553,7 @@ class Instance:
 				objective = self.gen['response'][0]
 			if objective is not None:
 				cd = CD(objective, spec_path, data_path,
-						[s['label'] for s in self.spec if s['type'] != 'category'],
+						[s['label'] for s in self.spec if s['type'] != 'categorical'],
 						bnds=(None if self.T_resp_bounds is None else
 						      [self.T_resp_bounds[r][v]
 						       for r in self.gen['response']
@@ -567,7 +567,7 @@ class Instance:
 				self.counter_ex_finders.append(('data',
 					lambda solver, i_star, obj_term, in_vars, threshold, output=None:
 						ex_data_counter_example([
-							i_star[v] for s,v in zip(self.spec, in_vars) if s['type'] != 'category'
+							i_star[v] for s,v in zip(self.spec, in_vars) if s['type'] != 'categorical'
 						], threshold)))
 			else:
 				log(1, 'WARNING: > 1 responses unsupported for data-check, skipping...')
@@ -659,7 +659,7 @@ class Instance:
 
 	@property
 	def cati(self):
-		return [i for i,s in enumerate(self.spec) if s['type'] == 'category']
+		return [i for i,s in enumerate(self.spec) if s['type'] == 'categorical']
 
 	def denorm_for(self, b):
 		return input_scaler(self.gen, b).denorm
@@ -766,7 +766,7 @@ class Instance:
 		acq_func = "gp_hedge" # {'LCB', 'EI', 'PI', 'gp_hedge', 'EIps', 'PIps'}
 		dims = []
 		for i,s in zip(range(n), self.spec):
-			assert s['type'] not in ('category', 'input')
+			assert s['type'] not in ('categorical', 'input')
 			z3_ctor = self.var_ctor(i)
 			if z3_ctor == Int:
 				dt = skopt.space.space.Integer
@@ -1122,7 +1122,7 @@ def main(argv):
 
 	with open(args.spec, 'r') as spec_file:
 		all_spec = json.load(spec_file, parse_float=Fraction)
-		spec = [s for s in all_spec if s['type'] in ['category','knob','input']]
+		spec = [s for s in all_spec if s['type'] in ['categorical','knob','input']]
 		del all_spec
 
 	assert(type(spec) == list)
