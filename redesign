@@ -1,0 +1,65 @@
+Hi Konstantin,
+
+the following deficiencies of smlp-0.1 have become appearant:
+
+a) partitioning the Shai instance into multiple searches for thresholds
+b) scheduling threshold searches to cores/nodes
+c) a priori fixed granularity for threshold searches
+d) collecting results and keeping track of identity of regions
+e) dynamic control of instances to be solved based on external input
+f) keeping the current state in text files inside a rigid directory tree
+g) extracting incomplete results (aka approximations) from the current
+   state
+
+There may be more.
+
+So far, I've been working around all of these by creating Makefiles and
+shell scripts, both of which are hard to maintain any time Shai's setup
+changes, because the invariants change and there is no central piece
+of code maintaining any of them.
+
+A suggestion to address all of these concerns would be to create some
+server-client protocol instead: server distributes solver tasks and
+provides control functionality, clients solve the tasks.
+
+Specifically, the server would be in charge of a-g) while the clients
+just solve one existential SMT instance, have no persistent state and
+communicate back the result. At that point the server can decide what
+to do with it, e.g., refine granularity and generate new tasks or move
+to another region or sub-instance. These decisions would then be local
+for the concrete instance as well as local in time, but can be based on
+the overall state of approximating the entire solution, as well as on
+optional user input.
+
+I am not sure, yet, whether Shai's CH=0 and CH=1 should be handled by
+one server or by two.
+
+Assuming there is no fundamental issue with the described partitioning,
+there is the question on what to use to make that work, both on a
+design level as well as on the technical level.
+
+At this point it seems clear to me that clients need to be run on more
+than just a single machine. This is a solved problem, in fact, there
+are so many solutions to it, that I do not have a clear overview. I
+know MPI (Message Passing Interface), but there seem to be others
+(e.g., Spark, Chapel) besides the core OS IPC functionality accessible
+via, e.g., Python's multiprocessing module.
+
+I think we spoke about this kind of parallelization before at some
+point. Do you see any kind of problem with this general approach?
+
+Would a split of the server into
+
+1) take care of entire instance and user I/O by directing 2)
+2) approximate the uppper or lower treshold for an \exists\forall
+   instance up to arbitrary accuracy using the clients from above
+
+be more useful? At least that way we could continue to call the
+combination of 2) with the SMT clients "smlp", while 1) would constitute
+the Shai frontend. However, the time-locality for choosing the search
+direction would be gone again or would need to be replaced by some other
+protocol.
+
+What's your take on the split and moving the main loop into the server?
+
+Franz
