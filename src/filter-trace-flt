@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from fractions import Fraction
+import sys
+print("%g" % Fraction(sys.argv[1]))

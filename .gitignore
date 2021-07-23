@@ -1,0 +1,6 @@
+# kjson installed files
+/include/kjson.h
+/include/kjson.hh
+/lib/pkgconfig/kjson.pc
+/lib/libkjson.a
+/lib/libkjson.so

@@ -1,0 +1,70 @@
+Using an SLES system freshly installed from
+<https://updates.suse.com/SUSE/Products/SLE-SERVER/12-SP4/x86_64/iso/SLE-12-SP4-Server-DVD-x86_64-GM-DVD1.iso?R7RaGhrXfYeGmmo4m5EbBS6YqGf82A0_oYIUgGAVH0F9n4RO8YVniZ22BJnwa0zfoA3W-e6z9LgZ8g-_Bnv5AkvpMEu3AdRPERaa0cOY0JotYkJjcB_DaamXZtDlyEdexJYqjehES3i3gKrOW0U6PEWFk0nRvvT1NBe-5Zrg6K8WjT7l85QF-QUXtlkRn6wey_s>
+and once installing a C compiler:
+
+~> sudo zypper in gcc g++
+
+proceed with these commands as a regular user without root access:
+
+# we are going to install everything into ~/.local/ -- the same path pip uses
+~> echo 'export PATH=$HOME/.local/bin:$PATH' >> .bashrc
+~> echo 'export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH' >> .bashrc
+~> echo 'export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$PKG_CONFIG_PATH' >> .bashrc
+~> . .bashrc
+
+# install python-3.6 (includes pip)
+#  install zlib (required by pip)
+~> wget https://zlib.net/zlib-1.2.11.tar.gz
+~> tar xvfz zlib-1.2.11.tar.gz
+~> cd zlib-1.2.11
+~/zlib-1.2.11> ./configure --prefix=$HOME/.local
+~/zlib-1.2.11> make -j2
+~/zlib-1.2.11> make install
+~/zlib-1.2.11> cd ..
+~> rm -r zlib-1.2.11{,.tar.gz}
+#  conclude installing zlib
+
+#  install openssl (required for ssl python module by pip)
+~> wget https://www.openssl.org/source/old/1.1.1/openssl-1.1.1f.tar.gz
+~> tar xvfz openssl-1.1.1f.tar.gz
+~> cd openssl-1.1.1f
+~/openssl-1.1.1f> ./config --prefix=$HOME/.local CPPFLAGS=-I$HOME/.local/include LDFLAGS=-L$HOME/.local/lib
+~/openssl-1.1.1f> make -j2
+~/openssl-1.1.1f> make install
+~/openssl-1.1.1f> cd ..
+~> rm -r openssl-1.1.1f{,.tar.gz}
+#  conclude installing openssl
+
+~> wget https://www.python.org/ftp/python/3.6.11/Python-3.6.11.tgz
+~> tar xvfz Python-3.6.11.tgz
+~> cd Python-3.6.11
+~/Python-3.6.11> ./configure --prefix=$HOME/.local CPPFLAGS=-I$HOME/.local/include LDFLAGS=-L$HOME/.local/lib
+~/Python-3.6.11> make -j2
+~/Python-3.6.11> make install
+~/Python-3.6.11> cd ..
+~> rm -r Python-3.6.11{,.tgz}
+# conclude installing python-3.6
+
+# install z3 with python bindings
+~> wget https://github.com/Z3Prover/z3/archive/z3-4.8.8.tar.gz
+~> tar xvfz z3-4.8.8.tar.gz
+~> cd z3-z3-4.8.8
+~/z3-z3-4.8.8> CPPFLAGS=-I$HOME/.local/include LDFLAGS=-L$HOME/.local/lib ./configure --python --prefix=$HOME/.local --pypkgdir=$HOME/.local/lib/python3.6
+~/z3-z3-4.8.8> cd build
+~/z3-z3-4.8.8/build> make -j2
+~/z3-z3-4.8.8/build> make install
+~/z3-z3-4.8.8/build> cd ..
+~> rm -r z3-4.8.8.tar.gz z3-z3-4.8.8
+# conclude installing z3
+
+# install python dependencies of smlprover
+~> pip3 install -U pip
+~> pip3 install 'tensorflow<2.2'
+~> pip3 install seaborn
+~> pip3 install 'scikit-learn==0.20.4'
+~> pip3 install -U 'pandas==0.24.2'
+# conclude installing python dependencies of smlprover
+
+~> tar xvfz smlprover-0.1rc4.tar.gz
+~> cd smlprover-0.1rc4
+~/smlprover-0.1rc4> make -j2

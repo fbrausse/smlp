@@ -1,0 +1,3 @@
+[submodule "ext/kjson"]
+	path = ext/kjson
+	url = https://github.com/fbrausse/kjson.git

@@ -1,0 +1,67 @@
+2021-07-24: 0.2 (d433705..)
+---------------------------
+* Pareto-approximation pre/post processing:
+  - keep intermediate files searchmax%.safe.csv for analysis
+  - accept partial matches when joining
+  - de-duplicate projected datasets by symlinks
+  - only train using unique entries from datasets
+* major changes to solver, including Bayesian optimization
+  - add partial grid support via "-P"
+  - learn complex objectives not supported by Z3 by pre-evaluating
+  - add support for whole-dataset derived information (such as time windows)
+  - support zero radius meaning equality on any type
+  - add support for BO to find candidates and counter-examples
+* tooling
+  - SMLP libs/executables movable by leveraging rpath relative to exec
+  - restrict C to valid C++ subset
+* deps
+  - support seaborn-0.11.x
+
+2020-07-24: 0.1rc5
+------------------
+* fix for changed path of libcheck-data.so
+* avoid default usage of "unbuffer" if found in PATH due to a bug in connection
+  with abnormal termination of its child
+* clarify SLES 12 SP 4 build instructions
+
+2020-07-22: 0.1rc4
+------------------
+* build fixes for gcc < 4.9 and for clang
+* update kjson
+* restructure top-level directory to be more UNIX conformant
+* add rudimentary installation instructions for SLES 12 SP 4
+
+2020-07-19: 0.1rc3
+------------------
+* switched from json-c to kjson as a C JSON parser
+* bundled kjson-0.1.3 (source: <https://github.com/fbrausse/kjson>)
+* "make" in top-level installs bundled software to ease building smlp
+* added some sanity checks for libcheck-data.so
+* added more tested package versions to documentation
+* minor fixes in build process
+
+2020-07-16: 0.1rc2
+------------------
+* build using "make" instead of "make -C src"
+* compat:
+  - fix "make: command: Command not found"
+  - support gcc-4.7.x: __thread instead of _Thread_local
+  - support old glibc which #define's strtok_r
+
+2020-07-15: 0.1rc1
+------------------
+* README: use "gmake"
+* smlp-mrc.sh -h and doc/doc.pdf document influential environment variables
+* "pkg-config" is optional now if json-c is installed in the default libdir
+* add top-level Makefile building src/ and doc/
+
+2020-07-10: 0.1rc0
+------------------
+* doc updates regarding preparation and prerequisites
+* respect more exit codes
+* default to "python3" instead of "python" command
+* default to "bash" in Makefiles
+* default to "gmake" instead of "make"
+* existence of "unbuffer" command optional
+
+2020-07-10: 0.1beta1
