@@ -37,9 +37,9 @@ def parse_args(argv):
 	                    'is missing, 0]')
 	p.add_argument('-B', '--data-bounds', default=None, type=str, metavar='DBOUNDS',
 	               help='path to data_bounds file to amend the bounds determined from SPEC')
-	p.add_argument('-C', '--check-safe', type=int, default=1000,
+	p.add_argument('-C', '--check-safe', type=int, default=0,
 	               help='Number of random samples to check for each SAFE config '+
-	                    'found [default: 1000]')
+	                    'found [default: 0]')
 	p.add_argument('-d', '--data', type=str,
 	               help='path to DATA.csv; check DATA for counter-examples to '+
 	                    'found regions')
