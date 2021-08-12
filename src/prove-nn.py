@@ -515,7 +515,8 @@ class MockModel(dict):
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)
 		s = Solver()
-		assert s.check() == sat # no model before check
+		res = s.check() # required to get a model for the empty formula
+		assert res == sat # no model before check
 		self._m = s.model() # can evaluate constants
 
 	def eval(self, expr):
