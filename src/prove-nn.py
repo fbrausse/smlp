@@ -19,6 +19,8 @@ import numpy as np
 from fractions import Fraction
 from decimal import Decimal
 import itertools, json
+from MarabouCommon import Variable
+from MarabouSolver import MarabouSolver
 
 from common import *
 from checkdata import CD
@@ -27,6 +29,7 @@ from solvepar import SOLVERS, run_solvers
 import skopt
 from scipy.interpolate import interp1d
 
+ms = MarabouSolver()
 
 def parse_args(argv):
 	p = argparse.ArgumentParser(prog=argv[0])
@@ -149,7 +152,6 @@ def sequential_nn_to_terms(model, inputs, ctx=None,
 		# weights are [[w1_1,..,w1_6],[w20_1,..,w20_6]]
 		last_layer = [activation(layer_func(last_layer, w, b), ctx=ctx)
 		              for w,b in zip(weights.transpose(), biases.transpose())]
-
 	return last_layer
 
 
@@ -238,15 +240,18 @@ class BoundInput(Command):
 		self._spec = spec
 
 	def run(self, solver):
+		ms.reset()
 		for v,s,b in zip(self._in_vars, self._spec, self.args):
 			if b is not None:
 				if self.label == 'min':
 					log(2, 'bounded:', b, " <= '%s'" % s['label'])
 					solver.add(b <= v)
+					ms.add(b <= v)
 				else:
 					assert self.label == 'max'
 					log(2, 'bounded:', "'%s' <=" % s['label'], b)
 					solver.add(v <= b)
+					ms.add(b >= v)
 		return None
 
 
@@ -260,6 +265,7 @@ class Cat(Command):
 	def run(self, solver):
 		log(1, '--------', self.args, '--------')
 		solver.add([self._in_vars[i] == w for i,w in zip(self._cati, self.args)])
+		ms.add([self._in_vars[i] == w for i,w in zip(self._cati, self.args)])
 		return None
 
 
@@ -273,8 +279,28 @@ class Solve:
 		if self._output is not None:
 			with open(self._output, 'w') as f:
 				f.write(solver.sexpr())
-		res, self.t = timed(solver.check)
+		
+		now = datetime.datetime.now()
+		r, m = ms.solve(solver)
+		self.t = (datetime.datetime.now() - now).total_seconds()
+		print("Marabou took {0} seconds".format(self.t))
+
+		res = None
+		accuracy = 0.2
+
+		if r == True:
+			for i in range(len(self._in_vars)):
+				print(self._in_vars[i] == ms.variables[i].bounds.denorm(m[i]))
+				solver.add(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
+							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)))
+
+			res, self.t = timed(solver.check)
+			#res = z3.z3.CheckSatResult(Z3_L_TRUE)
+		elif r == False:
+			res = z3.z3.CheckSatResult(Z3_L_FALSE)
+		
 		log(3, 'Z3 stats:', solver.statistics())
+		#print(solver.statistics())
 		if res == unknown:
 			log(1, 'unknown because', solver.reason_unknown()) # Ctrl-C -> 'cancelled'
 			snd = solver.reason_unknown()
@@ -304,6 +330,7 @@ class Grid(Command):
 		for s,v in zip(self._spec, self._in_vars):
 			if 'safe' in s and s['type'] != 'input':
 				solver.add(Or([v == w for w in s['safe']]))
+				ms.add(Or([v == w for w in s['safe']]))
 		return None
 
 
@@ -332,6 +359,11 @@ class List(Command):
 			     for s,v in zip(self._spec, self._in_vars)])
 			for row in self._list.iterrows()
 		]))
+		ms.add(Or([
+			And([((v == cnst_ctor(s)(row[1][s['label']])) if s['label'] in row[1] else True)
+			     for s,v in zip(self._spec, self._in_vars)])
+			for row in self._list.iterrows()
+		]))
 
 
 class SafePoint(Solve, Command):
@@ -348,6 +380,7 @@ class SafePoint(Solve, Command):
 		st = self.args[0]
 		log(1, 'solving >=', st, '...')
 		solver.add(in_threshold_area(self._obj_term, st))
+		ms.add_safepoint(st)
 		out = self.solve(solver)
 		log(1, 'candidate', candidate_idx, '->', out[0], 'in', self.t, 'sec')
 		return out
@@ -381,6 +414,16 @@ class Rad(Command):
 			d = to_real(v - c) / to_real(c)
 			return And(get_lo(s)(-e, d), get_hi(s)(d, e))
 
+		def rel_err_mar(v,c,e,s):
+			d = to_real(v) 
+			return And(get_lo(s)(to_real(-e * c + c), d), get_hi(s)(d, to_real(e * c + c)))
+
+		def abs_err_mar(v,c,e,s):
+			if e == 0:
+				return v == c
+			d = v
+			return And(get_lo(s)(-e + c, d), get_hi(s)(d, e + c))			
+
 		def abs_err(v,c,e,s):
 			if e == 0:
 				return v == c
@@ -388,6 +431,7 @@ class Rad(Command):
 			return And(get_lo(s)(-e, d), get_hi(s)(d, e))
 
 		self._c = []
+		self._cmar = []
 		sub_args = []
 		self.bnds = {} # strictness is lost
 		for s,v in zip(spec, in_vars):
@@ -402,6 +446,8 @@ class Rad(Command):
 				if 'rad-rel' in s and not is_zero(i_star[v]):
 					e = s['rad-rel'] * (1+delta)
 					t, c, rng = ('rel', rel_err(v, i_star[v], e, s), '%g%%' % (e*100))
+					_, cmar, _ = ('rel', rel_err_mar(v, i_star[v], e, s), '%g%%' % (e*100))
+
 					a = i_star.eval((1-e) * to_real(i_star[v])).as_fraction()
 					b = i_star.eval((1+e) * to_real(i_star[v])).as_fraction()
 					self.bnds[s['label']] = {
@@ -415,6 +461,8 @@ class Rad(Command):
 						t, e = 'rel', s['rad-rel']
 					e = e * (1+delta)
 					c, rng = (abs_err(v, i_star[v], e, s), '%g' % e)
+					cmar, _ = (abs_err_mar(v, i_star[v], e, s), '%g' % e)
+
 					self.bnds[s['label']] = {
 						'min': i_star.eval((-e) + to_real(i_star[v])).as_fraction(),
 						'max': i_star.eval((+e) + to_real(i_star[v])).as_fraction(),
@@ -423,6 +471,7 @@ class Rad(Command):
 				raise
 			sub_args.append(t + str(e))
 			self._c.append((c, rng))
+			self._cmar.append((cmar, rng))
 		super().__init__(Rad.LABEL, *sub_args)
 		self._i_star = i_star
 		self._in_vars = in_vars
@@ -438,6 +487,10 @@ class Rad(Command):
 			log(2, "restricting var '%s' to" % s['label'],
 				approx(self._i_star[v], 7), '+/-', rng)
 			solver.add(c)
+
+		for v, s, (c, rng) in zip(self._in_vars, self._spec, self._cmar):
+			ms.add(c)
+
 		return None
 
 	def constraints(self):
@@ -458,6 +511,7 @@ class CounterExample(Solve, Command):
 		threshold = self.args[0]
 		log(1, 'solving safe <', threshold, 'with eps ...')
 		solver.add(self._obj_term < threshold)
+		ms.add_counterexample(threshold)
 		out = self.solve(solver)
 		log(1, '->', out[0], 'in', self.t, 'sec')
 		return out
@@ -487,12 +541,16 @@ class Exclude(Command):
 			log(1, 'excluding candidate', candidate_idx)
 			solver.add(Or([v != w for v,w in zip(self._in_vars, self.args)
 			               if w is not None]))
+			ms.add(Or([v != w for v,w in zip(self._in_vars, self.args)
+			               if w is not None]))
+			
 		else:
 			log(1, 'excluding candidate', candidate_idx,
-			       'via region around counter example'
-			       #[Not(c) for c in self._radius.constraints()]
+			       'via region around counter example',
+			       [Not(c) for c in self._radius.constraints()]
 			   )
 			solver.add(Not(And(*[c for c in self._radius.constraints()])))
+			ms.add(Not(And(*[c for c in self._radius.constraints()])))
 
 
 class Simple(Command):
@@ -535,7 +593,7 @@ class Instance:
 		assert(type(self.spec) == list)
 
 		assert max(len(w) for w in model.layers[0].get_weights()[0].transpose()) == len(self.spec)
-
+		
 		self.model = model
 		self.gen = gen
 		self.data_bounds = data_bounds
@@ -562,6 +620,7 @@ class Instance:
 					n_fail, n_ok = cd.check([v.as_long() for v in asgn], # TODO: Fraction support
 					                        threshold)
 					log(2,'data in ball: %d fail, %d ok' % (n_fail, n_ok))
+					print('data in ball: %d fail, %d ok' % (n_fail, n_ok))
 					y = None # TODO: counter-example value
 					return sat if n_fail > 0 else unsat, None, y
 				self.counter_ex_finders.append(('data',
@@ -696,6 +755,7 @@ class Instance:
 			obj_scaler = MinMax(*obj_range(self.gen, self.T_resp_bounds)).norm
 			log(1, 'obj_scaler: post pre denorm on', self.gen['response'],
 				   '/ post norm on ', self.gen['objective'])
+				   
 		return obj_scaler(obj_term)
 
 
@@ -713,7 +773,11 @@ class Instance:
 		solver = Solver(ctx=ctx)
 		Vars(self.spec)(solver)
 		for i,v in enumerate(in_vars):
+
+			# normalization of input variables
 			solver.add(self.denorm_for(self.data_bounds[self.spec[i]['label']])(normalized_inputs[i]) == v)
+
+			
 		for which in ('min','max'):
 			BoundInput(in_vars, self.spec,
 			           self.input_bounds if self.use_input_bounds else {},
@@ -828,8 +892,10 @@ class Instance:
 		                                  'a init_solver()',
 		                                  lambda *args: log(2, *args))
 		#for catv in itertools.product(*[spec[i]['range'] for i in cati]):
-		Cat(in_vars, self.cati, catv)(solver)
 
+		ms.reset()
+
+		Cat(in_vars, self.cati, catv)(solver)
 		Grid(in_vars, self.spec)(solver)
 
 		if bo_cad is None:
@@ -844,9 +910,13 @@ class Instance:
 			log(1, 'excluding', excluded[catv])
 			solver.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
 			             for e in excluded[catv]])
+			ms.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
+			             for e in excluded[catv]])						 
 		if catv in excluded_safe:
 			log(1, 'excluding safe', excluded_safe[catv])
 			solver.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
+			             for e in excluded_safe[catv]])
+			ms.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
 			             for e in excluded_safe[catv]])
 
 		if extra_eta is not None:
@@ -1113,6 +1183,7 @@ def excluded_by_trace(inst, trace_path, trace_exclude_safe):
 def main(argv):
 	args = parse_args(argv)
 	global log
+	ms.convert_to_pb(args.nn_model,".")
 
 	def log(lvl, *v):
 		if lvl > args.verbose:
@@ -1201,7 +1272,10 @@ def main(argv):
 	inst = Instance(args.spec, load_model(args.nn_model), model_gen, data_bounds,
 	                args.bounds is not None, bounds, resp_bounds, T_resp_bounds,
 	                args.data, args.bo_cex)
-
+	
+	ms.initialize(args.spec)
+	ms.add_bounds(bounds)
+	
 	excluded = {} # dict from catv -> [[x1,x2,...,xn], ...]
 	if args.trace_exclude is not None and os.path.exists(args.trace_exclude):
 		excluded = excluded_by_trace(inst, args.trace_exclude, args.trace_exclude_safe)
