@@ -634,7 +634,7 @@ class Instance:
 
 	def mock_model(self, in_vars, x):
 		return MockModel([(v, self.cnst_ctor(i)(toz3compat(x[i])))
-		                 for i,v in enumerate(in_vars)])
+		                  for i,v in enumerate(in_vars)])
 
 	def var_ctor(self, i):
 		if self.spec[i]['range'] == 'int':
@@ -1165,7 +1165,7 @@ def main(argv):
 		if args.data_bounds is None:
 			print('error: NN expects normalized inputs, require bounds via param "-B"',
 				  file=sys.stderr)
-			sys.exit(1)
+			return 1
 		for s in spec:
 			if s['type'] == 'input':
 				continue
@@ -1174,14 +1174,14 @@ def main(argv):
 			except KeyError:
 				print("error: no bounds provided for variable '%s'" % s['label'],
 				      file=sys.stderr)
-				sys.exit(1)
+				return 1
 			try:
 				b['min'], b['max'] = b['min'], b['max']
 			except KeyError:
 				print(("error: bounds for variable '%s' do not include both, "+
 				       "'min' and 'max'") % s['label'],
 				      file=sys.stderr)
-				sys.exit(1)
+				return 1
 
 	# NN model produces output normed with resp_bounds
 	# T_resp_bounds relate to the thresholds T and ST
@@ -1286,13 +1286,13 @@ def main(argv):
 
 	except KeyboardInterrupt:
 		log(1,'cancelled')
-		sys.exit(1)
+		return 1
 
-	sys.exit(0 if all(safe_n[catv] >= args.n
-	                  for catv in itertools.product(*[spec[i]['range']
-	                                                  for i in inst.cati]))
-	         else 0)
+	return (0 if all(safe_n[catv] >= args.n
+	                 for catv in itertools.product(*[spec[i]['range']
+	                                                 for i in inst.cati]))
+	        else 0)
 
 
 if __name__ == "__main__":
-	main(sys.argv)
+	sys.exit(main(sys.argv))
