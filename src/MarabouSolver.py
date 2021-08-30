@@ -10,6 +10,7 @@ from typing import Dict, Tuple
 from common import MinMax
 import z3
 from fractions import Fraction
+import numpy as np
 
 from enum import Enum
 import json
@@ -18,7 +19,7 @@ from MarabouCommon import *
 
 class MarabouSolver():
 
-    def __init__(self,epsilon=1e-5):
+    def __init__(self):
         
         # MarabouNetwork containing network instance
         self.network = None
@@ -35,15 +36,13 @@ class MarabouSolver():
         # List of MarabouCommon.Equation currently applied to network query
         self.equations = set()
 
-        # Error variable bounding around excluded values,
-        # e.g. var != val -> And(var >= val + epsilon, var <= val - epsilon)
-        self.epsilon = epsilon
 
         # List of variables 
         self.variables = []
 
         self.model_file_path = "./"
         self.log_path = "marabou.log"
+        self.record_path = "marabou.check"
 
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
@@ -52,8 +51,11 @@ class MarabouSolver():
     def log(self,v):
         with open(self.log_path,"a") as f:
             f.write(str(v) + "\n")
-
             
+    def record(self,v):
+        with open(self.record_path,"a") as f:
+            f.write(str(v) + "\n")
+
     # Convert h5 to pb model which is necessary for the 
     def convert_to_pb(self, input_model_file_path: str, output_model_file_path: str):
         model = tf.keras.models.load_model(input_model_file_path)
@@ -202,8 +204,8 @@ class MarabouSolver():
                 # Remove == constraint from disjunction if exists and replace with epsilon bounded region
                 self.disjunctions[parts[0]].remove(["{0} {1} {2}".format(self.variables[self.variables.index(parts[0])].index,
                                                                          "==",str(float(parts[2])))])
-                self.disjunctions[parts[0]].append([Equation(var, ">=", float(parts[2]) + self.epsilon),
-                                                    Equation(var, "<=", float(parts[2]) - self.epsilon)])
+                self.disjunctions[parts[0]].append([Equation(var, ">=", np.nextafter(float(parts[2]), np.inf)),
+                                                    Equation(var, "<=", np.nextafter(float(parts[2]), -np.inf))])
 
 
         print("Disjunction added")
@@ -232,6 +234,14 @@ class MarabouSolver():
             lhs = c[:location]
             rhs = c[location + size:]
 
+            if rhs.replace(" ", "") in self.bounds.keys():
+                lhs, rhs = rhs, lhs
+
+                if op == ">=":
+                    op = "<="
+                elif op == "<=":
+                    op = ">="
+
             # Check if lhs of equation is var or rhs is 
             if lhs.replace(" ","") in self.bounds.keys():
 
@@ -240,35 +250,27 @@ class MarabouSolver():
 
                 # Add epsilon if necessary
                 if add_epsilon:
-                    scalar += self.epsilon
+                    np.nextafter(scalar,np.inf)
 
                 addend = lhs.replace(" ","")
 
-                # Set upperbound on variable and add equation
-                self.network.setUpperBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(float(scalar)))
-                
-                self.equations.add(Equation(
-                        self.bounds[addend],op,self.bounds[str(addend)].bounds.norm(float(scalar))
+                if op == "<=":
+
+                    # Set upperbound on variable and add equation
+                    self.network.setUpperBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(float(scalar)))
+                    
+                    self.equations.add(Equation(
+                            self.bounds[addend],op,self.bounds[str(addend)].bounds.norm(float(scalar))
+                        )
                     )
-                )
-            elif rhs.replace(" ","") in self.bounds.keys():
-
-                # Evaluate numeric expression 
-                scalar = eval(lhs)
-                addend = rhs.replace(" ","")
-
-                # Add epsilon if necessary
-                if add_epsilon:
-                    scalar -= self.epsilon
-
-                # Set upperbound on variable and add equation
-                self.network.setLowerBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(float(scalar)))
-                self.equations.add(Equation(
-                        self.bounds[addend],
-                        op,
-                        self.bounds[str(addend)].bounds.norm(float(scalar))
-                    )
-                )
+                else:
+                    # Set upperbound on variable and add equation
+                    self.network.setLowerBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(float(scalar)))
+                    
+                    self.equations.add(Equation(
+                            self.bounds[addend],op,self.bounds[str(addend)].bounds.norm(float(scalar))
+                        )
+                    )                
             else:
                 print("unknown constant")
                 exit(-1)
@@ -298,6 +300,10 @@ class MarabouSolver():
         # Apply disjunctions
         self.apply_disjunctions()
 
+        ipq = self.network.getMarabouQuery()
+        Marabou.solve_query(ipq)
+        ipq.dump()
+        #x = input()
         # check z3 and marabou for consistency -> log file
         self.check(solver)
 
@@ -306,17 +312,17 @@ class MarabouSolver():
         # options
         options = Marabou.createOptions(snc=True, numWorkers=4, verbosity=0)
 
-        b = self.network.solve(options=options)
+        b, stats = self.network.solve(options=options)
         print("Marabou solved ")
         
         # unsat
-        if len(b[0]) == 0:
+        if len(b) == 0:
             return False, None
         else: # sat
             for i in range(len(self.bounds.keys())):
-                print("Var {0} has value {1}".format(i, self.variables[i].bounds.denorm(b[0][i])))
+                print("Var {0} has value {1}".format(i, self.variables[i].bounds.denorm(b[i])))
 
-            return True, b[0]
+            return True, b
 
     # rearrage all equations to be 
     # sum(c * x) = scalar
@@ -339,7 +345,7 @@ class MarabouSolver():
     def add_counterexample(self, th):
         print("Adding counterexample")
         self.network.setLowerBound(self.network.outputVars[0][0], 0)
-        self.network.setUpperBound(self.network.outputVars[0][0], float(th))
-        self.equations.add("Output <= {0}".format(th))
+        self.network.setUpperBound(self.network.outputVars[0][0], np.nextafter(float(th), -np.inf))
+        self.equations.add("Output < {0}".format(th))
         self.equations.add("Output >= 0.0")
     

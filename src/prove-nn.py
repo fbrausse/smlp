@@ -29,6 +29,8 @@ from solvepar import SOLVERS, run_solvers
 import skopt
 from scipy.interpolate import interp1d
 
+import MarabouCommon
+
 ms = MarabouSolver()
 
 def parse_args(argv):
@@ -286,19 +288,30 @@ class Solve:
 		print("Marabou took {0} seconds".format(self.t))
 
 		res = None
+		accuracy_enabled = True
 		accuracy = 0.2
 
-		if r == True:
+		if r == True and accuracy_enabled:
 			for i in range(len(self._in_vars)):
-				print(self._in_vars[i] == ms.variables[i].bounds.denorm(m[i]))
-				solver.add(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
-							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)))
-
-			res, self.t = timed(solver.check)
-			#res = z3.z3.CheckSatResult(Z3_L_TRUE)
-		elif r == False:
-			res = z3.z3.CheckSatResult(Z3_L_FALSE)
+				if ms.variables[i].type == MarabouCommon.Variable.Type.Real:
+					solver.add(Or(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
+							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)),
+							self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] - accuracy),
+							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] + accuracy)))
 		
+
+
+		res, self.t = timed(solver.check)
+		o = "$ "
+
+		if not ((r == True and res == sat) or (r == False and res == unsat)):
+			o += "not "
+			x = input()
+
+		o += "consistent, r == {0}, res == {1}".format(r, res)
+		ms.log(o)
+
+
 		log(3, 'Z3 stats:', solver.statistics())
 		#print(solver.statistics())
 		if res == unknown:
