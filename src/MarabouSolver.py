@@ -34,7 +34,7 @@ class MarabouSolver():
         self.unprocessed_eq = []
 
         # List of MarabouCommon.Equation currently applied to network query
-        self.equations = set()
+        self.equations = list()
 
 
         # List of variables 
@@ -46,15 +46,25 @@ class MarabouSolver():
 
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
-        self.int_enable = False
+        self.int_enable = True
+
+        self.pre_ipq = None
 
     def log(self,v):
         with open(self.log_path,"a") as f:
             f.write(str(v) + "\n")
             
+
+    def eval(self, point):
+        #x = 0
+        self.network.evaluateWithMarabou(point, filename="marabou.eval")
+
     def record(self,v):
         with open(self.record_path,"a") as f:
             f.write(str(v) + "\n")
+
+    def dump(self):
+        self.pre_ipq.dump()
 
     # Convert h5 to pb model which is necessary for the 
     def convert_to_pb(self, input_model_file_path: str, output_model_file_path: str):
@@ -80,6 +90,7 @@ class MarabouSolver():
 
         # Current equations (not including network)
         self.log("\n equations: \n")
+        
         for equation in self.equations:
             self.log(equation)
 
@@ -109,6 +120,7 @@ class MarabouSolver():
     # Adds bounds 0 <= x <= 1
     def add_bounds(self,bounds):
         i = 0
+
         for key in bounds.keys():
             if key in self.variables:
                 continue
@@ -122,9 +134,16 @@ class MarabouSolver():
                     i, type,MinMax(bounds[key]['min'],bounds[key]['max']), key)
                 )
 
+            self.log("Variable ({}) min: {}, max: {}, range: {}".format(key,
+            self.variables[i].bounds.min,
+            self.variables[i].bounds.max
+            ,self.variables[i].bounds.range))
+
             self.bounds[key] = self.variables[i]
 
             i += 1
+
+        self.bounds["Output"] = Variable(i, Variable.Type.Real,MinMax(0,1), "Output")
 
 
         del self.all_spec
@@ -140,14 +159,14 @@ class MarabouSolver():
 
     # Apply disjunctions that were added
     def apply_disjunctions(self):
-        disjunctions = []
 
         # Loop input variables 
         for var in self.disjunctions.keys():
+            disjunctions = []
+            flat = []
 
             # Loop through each Disjunction
             for disjunction in self.disjunctions[var]:
-                
                 # Loop through each conjunction of MarabouCommon.Equations
                 for equation in disjunction:
 
@@ -162,12 +181,13 @@ class MarabouSolver():
 
                     eq.addAddend(1, equation.lhs().index)
                     eq.setScalar(equation.lhs().bounds.norm(float(equation.rhs())))
-                    self.equations.add(equation)
 
                     disjunctions.append([eq])
+                    flat.append(equation)
+            self.equations.append("Or(\n" + ''.join(str(e) + ",\n" for e in flat) + ")")
 
         # Add disjunction constraint to network
-        self.network.addDisjunctionConstraint(disjunctions)
+            self.network.addDisjunctionConstraint(disjunctions)
 
         print("Disjunctions applied")
 
@@ -187,7 +207,7 @@ class MarabouSolver():
             
             # Cannot find variable in input variables
             if var_index == -1:
-                print("incorrect format or variable not formed: {1}".format(parts))
+                self.log("incorrect format or variable not formed: {1}".format(parts))
                 exit(-1)
 
             var = self.variables[var_index]
@@ -247,32 +267,42 @@ class MarabouSolver():
 
                 # Evaluate numeric expression 
                 scalar = eval(rhs)
+                #self.log("{} {} {}".format(lhs,op,scalar))
+                #self.log(self.bounds[str(lhs.replace(" ",""))].bounds.norm(float(scalar)))
+                #self.log("min: {}, max: {}, range: {}\n".format(self.bounds[str(lhs.replace(" ",""))].bounds.min,
+                                                        #self.bounds[str(lhs.replace(" ",""))].bounds.max, 
+                                                        #self.bounds[str(lhs.replace(" ",""))].bounds.range))
 
-                # Add epsilon if necessary
-                if add_epsilon:
-                    np.nextafter(scalar,np.inf)
+
 
                 addend = lhs.replace(" ","")
 
                 if op == "<=":
 
+                    if add_epsilon:
+                        scalar = np.nextafter(scalar,-np.inf)
+                        
+
                     # Set upperbound on variable and add equation
-                    self.network.setUpperBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(float(scalar)))
+                    self.network.setUpperBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(scalar))
                     
-                    self.equations.add(Equation(
-                            self.bounds[addend],op,self.bounds[str(addend)].bounds.norm(float(scalar))
+                    self.equations.append(Equation(
+                            self.bounds[addend],op,scalar)
                         )
-                    )
+                    
                 else:
+
+                    if add_epsilon:
+                        scalar = np.nextafter(scalar,np.inf)
                     # Set upperbound on variable and add equation
-                    self.network.setLowerBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(float(scalar)))
+                    self.network.setLowerBound(self.bounds[addend].index, self.bounds[str(addend)].bounds.norm(scalar))
                     
-                    self.equations.add(Equation(
-                            self.bounds[addend],op,self.bounds[str(addend)].bounds.norm(float(scalar))
-                        )
-                    )                
+                    self.equations.append(Equation(
+                            self.bounds[addend],op,(scalar)
+                        ))
+                                    
             else:
-                print("unknown constant")
+                self.log("unknown constant {0}".format(c))
                 exit(-1)
 
     # Solve query returns -> (Bool (sat or unsat), Model)
@@ -284,6 +314,7 @@ class MarabouSolver():
             
             # Sometimes there will be an empty list, just remove it
             if type(ls) == list:
+                self.log(ls)
                 continue
 
             if type(ls) == z3.z3.BoolRef:
@@ -300,9 +331,16 @@ class MarabouSolver():
         # Apply disjunctions
         self.apply_disjunctions()
 
+        for inputB in self.network.inputVars[0][0]:
+            if self.network.upperBounds[inputB] >= 1.0:
+                self.network.setUpperBound(inputB, 1.0)
+            if self.network.lowerBounds[inputB] <= 0.0:
+                self.network.setLowerBound(inputB, 0)
+
         ipq = self.network.getMarabouQuery()
         Marabou.solve_query(ipq)
-        ipq.dump()
+        self.pre_ipq = ipq
+        #ipq.dump()
         #x = input()
         # check z3 and marabou for consistency -> log file
         self.check(solver)
@@ -312,16 +350,29 @@ class MarabouSolver():
         # options
         options = Marabou.createOptions(snc=True, numWorkers=4, verbosity=0)
 
+        
+
         b, stats = self.network.solve(options=options)
         print("Marabou solved ")
+
+        self.log("Lower bounds")
         
+        for i in range(len(self.bounds.keys()) - 1):
+            self.log("{0} -> {1}".format(self.variables[i].name, self.variables[i].bounds.denorm(self.network.lowerBounds[i])))
+        self.log("-" * 20)
+
+        self.log("Upper bounds")
+        for i in range(len(self.bounds.keys()) - 1):
+            self.log("{0} -> {1}".format(self.variables[i].name, self.variables[i].bounds.denorm(self.network.upperBounds[i])))
+
+        self.log("-" * 20)
         # unsat
         if len(b) == 0:
             return False, None
         else: # sat
-            for i in range(len(self.bounds.keys())):
-                print("Var {0} has value {1}".format(i, self.variables[i].bounds.denorm(b[i])))
-
+            for i in range(len(self.bounds.keys()) - 1):
+                self.log("{0} -> {1}".format(self.variables[i].name, self.variables[i].bounds.denorm(b[i])))
+            self.log("{0} -> {1}".format("Output", b[len(b)-1]))
             return True, b
 
     # rearrage all equations to be 
@@ -338,14 +389,11 @@ class MarabouSolver():
         print("Adding safepoint")
         self.network.setLowerBound(self.network.outputVars[0][0], float(th))
         self.network.setUpperBound(self.network.outputVars[0][0], 1.)
-        self.equations.add("Output >= {0}".format(th))
-        self.equations.add("Output <= 1.0")
+        self.equations.append(Equation(self.bounds["Output"],">=",(float(th))))
 
     # Applies <= threhshold for counter examples
     def add_counterexample(self, th):
         print("Adding counterexample")
         self.network.setLowerBound(self.network.outputVars[0][0], 0)
         self.network.setUpperBound(self.network.outputVars[0][0], np.nextafter(float(th), -np.inf))
-        self.equations.add("Output < {0}".format(th))
-        self.equations.add("Output >= 0.0")
-    
+        self.equations.append(Equation(self.bounds["Output"],"<=",np.nextafter(float(th), -np.inf)))

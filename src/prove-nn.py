@@ -242,7 +242,6 @@ class BoundInput(Command):
 		self._spec = spec
 
 	def run(self, solver):
-		ms.reset()
 		for v,s,b in zip(self._in_vars, self._spec, self.args):
 			if b is not None:
 				if self.label == 'min':
@@ -284,34 +283,79 @@ class Solve:
 		
 		now = datetime.datetime.now()
 		r, m = ms.solve(solver)
+		
+		#print(solver.help())
+		#x = input()
+
 		self.t = (datetime.datetime.now() - now).total_seconds()
 		print("Marabou took {0} seconds".format(self.t))
 
-		res = None
-		accuracy_enabled = True
-		accuracy = 0.2
+		res = unsat
+		accuracy_enabled = False
+		accuracy = 0.05
+
+		set_option('verbose',2)
 
 		if r == True and accuracy_enabled:
 			for i in range(len(self._in_vars)):
 				if ms.variables[i].type == MarabouCommon.Variable.Type.Real:
-					solver.add(Or(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
-							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)),
-							self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] - accuracy),
-							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] + accuracy)))
+					#solver.add(Or(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
+					#		self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)),
+				#			self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] - accuracy),
+				#			self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] + accuracy)))
+					solver.add(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
+							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)))
+				#elif ms.variables[i].type == MarabouCommon.Varable.Type.Int:
+					#solver.add(self._in_vars[i])
+		
 		
 
-
 		res, self.t = timed(solver.check)
-		o = "$ "
+		
 
 		if not ((r == True and res == sat) or (r == False and res == unsat)):
-			o += "not "
+			ms.log("$ n, r == {0}, res == {1}".format(r, res))
+
+			if res == sat:
+				m = solver.model()
+				l = []
+				for d in m:
+					if type(m[d]) == IntNumRef:
+						ms.log("{0} -> {1}".format(d, m[d].as_long()))
+					elif type(m[d]) == RatNumRef:
+						ms.log("{0} -> {1}".format(d, m[d].as_decimal(16)))
+					
+					if str(d)[0] == "n" and str(d)[1] == "_":
+						print(type(m[d]))
+
+
+						if type(m[d]) == IntNumRef:
+							l.append(m[d])
+						elif type(m[d]) == RatNumRef:
+							if '?' in m[d].as_decimal(16):
+								l.append(m[d])
+							else:
+								l.append(m[d])
+				
+
+
+			else:
+				for i in range(len(self._in_vars)):
+					solver.add(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
+							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)))
+				_, _ = timed(solver.check)
+				ms.log(solver.unsat_core())
+			ms.dump()
+			ms.log(solver.sexpr())
+			print("Conflict")
+
 			x = input()
+		else:
+			ms.log("$ y, r == {0}, res == {1}".format(r, res))
+			#x = input()
+		
 
-		o += "consistent, r == {0}, res == {1}".format(r, res)
-		ms.log(o)
-
-
+		
 		log(3, 'Z3 stats:', solver.statistics())
 		#print(solver.statistics())
 		if res == unknown:
@@ -383,6 +427,7 @@ class SafePoint(Solve, Command):
 	LABEL = 'a'
 	def __init__(self, in_vars, spec, obj_term, safe_threshold, output):
 		Command.__init__(self, SafePoint.LABEL, safe_threshold)
+		ms.reset()
 		Solve.__init__(self, (output + '-' + SafePoint.LABEL if output is not None else None),
 		               obj_term, in_vars)
 		self._in_vars = in_vars
@@ -428,14 +473,14 @@ class Rad(Command):
 			return And(get_lo(s)(-e, d), get_hi(s)(d, e))
 
 		def rel_err_mar(v,c,e,s):
-			d = to_real(v) 
-			return And(get_lo(s)(to_real(-e * c + c), d), get_hi(s)(d, to_real(e * c + c)))
+			d = v
+			return And(get_lo(s)(to_real(-e * to_real(c) + c), d), get_hi(s)(d, to_real(e * to_real(c) + c)))
 
 		def abs_err_mar(v,c,e,s):
 			if e == 0:
 				return v == c
 			d = v
-			return And(get_lo(s)(-e + c, d), get_hi(s)(d, e + c))			
+			return And(get_lo(s)(-e + c, d), get_hi(s)(d, e + c))		
 
 		def abs_err(v,c,e,s):
 			if e == 0:
@@ -502,6 +547,7 @@ class Rad(Command):
 			solver.add(c)
 
 		for v, s, (c, rng) in zip(self._in_vars, self._spec, self._cmar):
+
 			ms.add(c)
 
 		return None
@@ -515,6 +561,7 @@ class CounterExample(Solve, Command):
 	LABEL = 'b'
 	def __init__(self, obj_term, threshold, output, in_vars):
 		Command.__init__(self, CounterExample.LABEL, threshold)
+		ms.reset()
 		Solve.__init__(self,
 		               None if output is None else output + '-' + CounterExample.LABEL,
 		               obj_term, in_vars)
@@ -789,7 +836,6 @@ class Instance:
 
 			# normalization of input variables
 			solver.add(self.denorm_for(self.data_bounds[self.spec[i]['label']])(normalized_inputs[i]) == v)
-
 			
 		for which in ('min','max'):
 			BoundInput(in_vars, self.spec,
@@ -906,7 +952,6 @@ class Instance:
 		                                  lambda *args: log(2, *args))
 		#for catv in itertools.product(*[spec[i]['range'] for i in cati]):
 
-		ms.reset()
 
 		Cat(in_vars, self.cati, catv)(solver)
 		Grid(in_vars, self.spec)(solver)
@@ -1219,11 +1264,18 @@ def main(argv):
 		for s in spec #if s['type'] != 'input' # if s['type'] == 'knob'
 	}
 	resp_bounds = None
+
+	ms.initialize(args.spec)
+	
+
 	if args.data_bounds is not None:
+		ms.log("Adding data bounds")
+		add = {}
 		with open(args.data_bounds, 'r') as f:
 			data_bounds = json.load(f, parse_float=Fraction)
 		for k,b in data_bounds.items():
 			if k in bounds:
+				add[k] = b
 				if 'min' in b:
 					bounds[k]['min'] = (min(bounds[k]['min'], b['min'])
 					                    if 'min' in bounds[k]
@@ -1236,6 +1288,8 @@ def main(argv):
 				if resp_bounds is None:
 					resp_bounds = {}
 				resp_bounds[k] = { m: v for m,v in b.items() if m in ('min','max') }
+		ms.add_bounds(add)
+
 	if args.bounds is not None:
 		for s in spec:
 			if s['label'] in bounds:
@@ -1286,9 +1340,7 @@ def main(argv):
 	                args.bounds is not None, bounds, resp_bounds, T_resp_bounds,
 	                args.data, args.bo_cex)
 	
-	ms.initialize(args.spec)
-	ms.add_bounds(bounds)
-	
+
 	excluded = {} # dict from catv -> [[x1,x2,...,xn], ...]
 	if args.trace_exclude is not None and os.path.exists(args.trace_exclude):
 		excluded = excluded_by_trace(inst, args.trace_exclude, args.trace_exclude_safe)

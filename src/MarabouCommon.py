@@ -99,6 +99,17 @@ class Equation:
     def __hash__(self) -> int:
         return hash(self.variable) * hash(self.operator) * int(self.scalar)
 
+    def __lt__   (self, o: object):
+
+        if type(o) == Equation:
+            if self.variable == o.variable:
+                if self.operator == o.operator:
+                    return self.scalar < o.scalar
+                else:
+                    return self.operator < o.operator
+            else:
+                return self.variable < o.variable
+
 # Class representing Variable
 class Variable:
 
@@ -126,3 +137,9 @@ class Variable:
 
     def __eq__(self, o: object) -> bool:
         return self.name == o
+
+    def __lt__(self, o:object) -> bool:
+        if self.name == "":
+            return self.index < o.index
+        else:
+            return self.name < o.name
