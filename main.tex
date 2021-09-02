@@ -1,0 +1,58 @@
+\documentclass[a4paper,parskip=half]{scrartcl}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,mathtools,amssymb,listingsutf8,xspace}
+\usepackage{geometry,hyperref,cleveref,xcolor}
+\usepackage[disable]{todonotes}
+
+\newcommand*\cmdstyle\texttt
+\newcommand*\file\cmdstyle
+\newcommand*\literalColor{blue}
+\newcommand*\cmd[1]{\cmdstyle{\textcolor{red!85!black}{#1}}}
+\newcommand*\cmdline[1]{\cmdstyle{\textcolor{green!70!black}\$ }\cmd{#1}}
+\newcommand*\literal[1]{\textcolor{\literalColor}{\cmdstyle{#1}}}
+\newcommand*\api[1]{\textcolor{purple}{\cmdstyle{#1}}}
+\newenvironment{cmdhelp}{\begin{quote}\footnotesize}{\end{quote}}
+
+\newcommand*\Solver{Symbolic Machine Learning Prover\xspace}
+\newcommand*\SolverAbbrvText{SMLP}
+\newcommand*\SolverAbbrv{\SolverAbbrvText\xspace}
+\newcommand*\SolverVersion{v0.1}
+
+\newcommand*\progmrc{smlp-mrc.sh}
+\newcommand*\provenn{prove-nn.py}
+\newcommand*\trainnn{train-nn.py}
+
+\begin{document}
+
+
+\subsection{Marabou coarse refinement}
+
+The marabou SMT-based tool is used to speed up queries by utilizing the reluplex algorithm. A python interface is supplied and the module is built from source to allow for customization. Whilst the source denotes an optional dependency on the 3rd party LP solver Gurobi for MILP solving, due to licensing constraints it is currently not used.
+
+\subsubsection{Building}
+
+Overall instructions can be found at https://github.com/NeuralNetworkVerification/Marabou using the latest version. This is built from source using the following set of commands:
+
+\begin{verbatim}
+cd path/to/marabou/repo/folder
+mkdir build 
+cd build
+cmake ..
+\end{verbatim}
+
+\subsubsection{Overall structure}
+
+A \verb+MarabouSolver+ object acts as a wrapper around a Marabou network, translating from the Z3 format. In general this is done through \verb+add+ similarily to a Z3 solver. The few exceptions to this require the use of specialized functions \verb+add_safepoint+ and \verb+add_counterexample+ which are necessary when dealing with constraints to output variables. After applying constraints to the network, the constraints and the internal representation of the Z3 query (sexpr format) are outputted to a log file to be compared. The satisfiability of the input query is then determined using Marabou snc mode enabled, this is not entirely necessary however it marginally speeds up query speeds. The output is returned along with a model, is it exists, after which bounds are added on the input variables to the Z3 solver if the output is satisfiable. Bounds are used rather than absolute values to account for the accumulation of rounding errors, as Marabou uses floating point format, and to account for integer values .The size of the bounds currently is an arbitrary value however this can be changed. Finally, Z3 checks the validity of the Marabou bounds and ultimately outputs whether the model is truly satisfiable or not, preserving the original functionality of the Z3 implementation. 
+For both finding a candidate and finding counter examples constraints on the output of the network are supplied and the solver is run. 
+
+\subsubsection{Current progress}
+
+Marabou and Z3 seem to have the same internal constraints applied and most of, if not all bugs, have been eliminated. The current major concerns surround edge cases of which the causes are yet to be determined. An example of this involved Marabou and Z3's disagreement of the existence of a counter example. Marabou cannot find a counter example whilst Z3 can find a counter example. When Z3's counter example is manually checked through the network the some constraints are seemingly violated. This is an ongoing issue. 
+
+When these situations do not occur roughly $0.1 \%$ of the Marabou queries are inconsistent with Z3, this does require further testing however. Lastly, the models discovered by Marabou are yet to be validated by Z3 at the end of execution - this is a on going milestone.
+
+
+
+
+\end{document}
