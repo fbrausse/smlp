@@ -324,31 +324,13 @@ class Solve:
 						ms.log("{0} -> {1}".format(d, m[d].as_long()))
 					elif type(m[d]) == RatNumRef:
 						ms.log("{0} -> {1}".format(d, m[d].as_decimal(16)))
-					
-					if str(d)[0] == "n" and str(d)[1] == "_":
-						print(type(m[d]))
-
-
-						if type(m[d]) == IntNumRef:
-							l.append(m[d])
-						elif type(m[d]) == RatNumRef:
-							if '?' in m[d].as_decimal(16):
-								l.append(m[d])
-							else:
-								l.append(m[d])
 				
 
 
 			else:
-				for i in range(len(self._in_vars)):
-					solver.add(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
-							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)))
-				_, _ = timed(solver.check)
 				ms.log(solver.unsat_core())
 			ms.dump()
-			ms.log(solver.sexpr())
 			print("Conflict")
-
 			x = input()
 		else:
 			ms.log("$ y, r == {0}, res == {1}".format(r, res))
@@ -426,8 +408,8 @@ class List(Command):
 class SafePoint(Solve, Command):
 	LABEL = 'a'
 	def __init__(self, in_vars, spec, obj_term, safe_threshold, output):
-		Command.__init__(self, SafePoint.LABEL, safe_threshold)
 		ms.reset()
+		Command.__init__(self, SafePoint.LABEL, safe_threshold)
 		Solve.__init__(self, (output + '-' + SafePoint.LABEL if output is not None else None),
 		               obj_term, in_vars)
 		self._in_vars = in_vars
@@ -560,8 +542,8 @@ class Rad(Command):
 class CounterExample(Solve, Command):
 	LABEL = 'b'
 	def __init__(self, obj_term, threshold, output, in_vars):
-		Command.__init__(self, CounterExample.LABEL, threshold)
 		ms.reset()
+		Command.__init__(self, CounterExample.LABEL, threshold)
 		Solve.__init__(self,
 		               None if output is None else output + '-' + CounterExample.LABEL,
 		               obj_term, in_vars)
@@ -797,12 +779,19 @@ class Instance:
 			obj_term = nn_terms[0]
 			if self.gen['pp']['response'] == 'min-max' and self.T_resp_bounds is self.resp_bounds:
 				obj_scaler = lambda x: x
+				obj_scaler_mar = lambda x: x
 				log(1, 'obj_scaler: id')
 			else:
 				def obj_scaler(x):
 					r = self.gen['objective']
 					y = response_scaler(self.gen, self.resp_bounds[r]).denorm(x)
 					return MinMax(*(self.T_resp_bounds[r][m] for m in ('min','max'))).norm(y)
+
+				def obj_scaler_mar(x):
+					r = self.gen['objective']
+					y = MinMax(*(self.T_resp_bounds[r][m] for m in ('min','max'))).denorm(x)
+					return response_scaler(self.gen, self.resp_bounds[r]).norm(y)
+
 				log(1, 'obj_scaler: post denorm/norm on "%s":' % self.gen['objective'],
 				       'denorm:', self.resp_bounds[self.gen['objective']],
 				       '/ norm: ', self.T_resp_bounds[self.gen['objective']])
@@ -813,9 +802,15 @@ class Instance:
 				                   response_scalers(self.gen, self.resp_bounds))
 			})
 			obj_scaler = MinMax(*obj_range(self.gen, self.T_resp_bounds)).norm
+			obj_scaler_mar = MinMax(*obj_range(self.gen, self.T_resp_bounds)).denorm
+
+
 			log(1, 'obj_scaler: post pre denorm on', self.gen['response'],
 				   '/ post norm on ', self.gen['objective'])
-				   
+
+			
+		ms.add_output_scaler(obj_scaler_mar)
+
 		return obj_scaler(obj_term)
 
 
