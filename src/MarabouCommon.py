@@ -143,3 +143,10 @@ class Variable:
             return self.index < o.index
         else:
             return self.name < o.name
+
+
+class StackQuery():
+
+    def __init__(self, disjunctions: dict, global_constraints: list):
+        self.disjunctions = disjunctions
+        self.constraints = global_constraints

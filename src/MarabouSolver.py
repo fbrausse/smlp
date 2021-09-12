@@ -45,12 +45,10 @@ class MarabouSolver():
 
         self.model_file_path = "./"
         self.log_path = "marabou.log"
-        self.record_path = "marabou.check"
 
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
         self.int_enable = False
-        self.log_enable = True
         
         # For normalizing the output of the network
         self.output_scaler = None
@@ -66,10 +64,6 @@ class MarabouSolver():
             f.write(str(v) + "\n")
             
 
-    def record(self,v):
-        with open(self.record_path,"a") as f:
-            f.write(str(v) + "\n")
-
     def dump(self):
         self.ipq_stack[-1].dump()
 
@@ -80,10 +74,6 @@ class MarabouSolver():
         self.network = Marabou.read_tf(self.model_file_path,modelType="savedModel_v2")
         ipq = self.network.getMarabouQuery()
         self.ipq_stack.append(ipq)
-
-        #for inputB in self.network.inputVars[0][0]:
-        #    self.network.setLowerBound(inputB, 0)
-        #    self.network.setUpperBound(inputB, 1.0)
         print("converted h5 to pb...")
 
     # initiliaze variable bounds and network
@@ -107,15 +97,6 @@ class MarabouSolver():
 
     # Reset the network to intial bounds and initialize network
     def reset(self):
-        #self.network = Marabou.read_tf(self.model_file_path,modelType="savedModel_v2")
-        #ipq = self.network.getMarabouQuery()
-        #self.ipq_stack.append(ipq)
-
-        # Default bounds for netwokr
-        #for inputB in self.network.inputVars[0][0]:
-        #    self.network.setLowerBound(inputB, 0)
-        #    self.network.setUpperBound(inputB, 1.0)
-
         self.log_equations.clear()
         self.disjunctions.clear()
 
@@ -195,6 +176,7 @@ class MarabouSolver():
 
                     disjunctions.append([eq])
                     flat.append(equation)
+
             self.log_equations.append("Or(\n" + ''.join(str(e) + ",\n" for e in flat) + ")")
 
             # Add disjunction constraint to network
@@ -320,15 +302,14 @@ class MarabouSolver():
     def solve(self, solver):
         self.log("Marabou is Solving ... ")
 
+        # Get query at top of the stack
         new_ipq = self.ipq_stack[-1]
         current_ipq = copy.copy(new_ipq)
-        current_ipq.dump()
-        print("Top of the stack")
-        #x = input("Top of stack")
 
         # Process equations
         for ls in self.unprocessed_eq:
             self.log(ls)
+
             # Sometimes there will be an empty list, just remove it
             if type(ls) == list:
                 continue
@@ -341,14 +322,11 @@ class MarabouSolver():
                 if str(ls.decl()) == ">=" or str(ls.decl()) == "<=":
                     self.add_constraints(["{0} {1} {2}".format(ls.children()[0], str(ls.decl()), ls.children()[1])], current_ipq)
 
-        current_ipq.dump()
-        print("To be pushed onto the stack")
-        #x = input("To be pushed onto stack")
-
         # Apply disjunctions
         self.apply_disjunctions(current_ipq)
-        current_ipq_t = copy.copy(current_ipq)
 
+        # Create query with threshold
+        current_ipq_t = copy.copy(current_ipq)
 
         # Add threshold
         if self.is_safe_point == True:
@@ -359,15 +337,10 @@ class MarabouSolver():
         # Clear equations
         self.unprocessed_eq.clear()
 
-        #ipq = self.network.getMarabouQuery()
         options = Marabou.createOptions(snc=True, verbosity=1)
-        
         b, stats = Marabou.solve_query(current_ipq_t, options=options)
         current_ipq_t.dump()
-        
-        print("Final query")
-        #x = input("Final query")
-        
+                
         # check z3 and marabou for consistency -> log file
         self.check(solver)
         self.log("stack size : {}".format(len(self.ipq_stack)))
@@ -451,14 +424,6 @@ class MarabouSolver():
 
         self.log_equations.append(Equation(self.bounds["Output"],"<=",th))
 
+    # Add output scaler to transform threshold upon application
     def add_output_scaler(self,output_scaler):
         self.output_scaler = output_scaler
-
-    def save_stack(self):
-        if not os.path.isdir('marabou_queries'):
-            os.mkdir('marabou_queries')
-
-        for i in range(len(self.ipq_stack)):
-            self.ipq_stack[i].dump()
-            print("Query {}".format(i + 1))
-            x = input()
