@@ -12,6 +12,8 @@ from common import MinMax
 import z3
 from fractions import Fraction
 import numpy as np
+import os
+import copy
 
 from enum import Enum
 import json
@@ -27,8 +29,6 @@ class MarabouSolver():
 
         # Dictionary containing variables 
         self.bounds = {}
-
-        # Dictionary containing MarabouCommon.Disjunction for each variable 
         self.disjunctions = dict()
 
         # List containing yet to be added equations and statements
@@ -50,32 +50,37 @@ class MarabouSolver():
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
         self.int_enable = False
-
-        self.pre_ipq = None
-
+        self.log_enable = True
+        
+        # For normalizing the output of the network
         self.output_scaler = None
+
+        # Stack for keeping ipq
+        self.ipq_stack = []
+        self.ipq_log_no = 0
+
+        
 
     def log(self,v):
         with open(self.log_path,"a") as f:
             f.write(str(v) + "\n")
             
 
-    def eval(self, point):
-        #x = 0
-        self.network.evaluateWithMarabou(point, filename="marabou.eval")
-
     def record(self,v):
         with open(self.record_path,"a") as f:
             f.write(str(v) + "\n")
 
     def dump(self):
-        self.pre_ipq.dump()
+        self.ipq_stack[-1].dump()
 
     # Convert h5 to pb model which is necessary for the 
     def convert_to_pb(self, input_model_file_path: str, output_model_file_path: str):
         model = tf.keras.models.load_model(input_model_file_path)
         tf.saved_model.save(model,output_model_file_path)
         self.network = Marabou.read_tf(self.model_file_path,modelType="savedModel_v2")
+        ipq = self.network.getMarabouQuery()
+        self.ipq_stack.append(ipq)
+
         #for inputB in self.network.inputVars[0][0]:
         #    self.network.setLowerBound(inputB, 0)
         #    self.network.setUpperBound(inputB, 1.0)
@@ -102,8 +107,9 @@ class MarabouSolver():
 
     # Reset the network to intial bounds and initialize network
     def reset(self):
-        self.network.clear()
-        self.network = Marabou.read_tf(self.model_file_path,modelType="savedModel_v2")
+        #self.network = Marabou.read_tf(self.model_file_path,modelType="savedModel_v2")
+        #ipq = self.network.getMarabouQuery()
+        #self.ipq_stack.append(ipq)
 
         # Default bounds for netwokr
         #for inputB in self.network.inputVars[0][0]:
@@ -163,7 +169,7 @@ class MarabouSolver():
                     min=variable.bounds.min, max=variable.bounds.max))
 
     # Apply disjunctions that were added
-    def apply_disjunctions(self):
+    def apply_disjunctions(self, ipq):
 
         # Loop input variables 
         for var in self.disjunctions.keys():
@@ -191,8 +197,8 @@ class MarabouSolver():
                     flat.append(equation)
             self.log_equations.append("Or(\n" + ''.join(str(e) + ",\n" for e in flat) + ")")
 
-        # Add disjunction constraint to network
-            self.network.addDisjunctionConstraint(disjunctions)
+            # Add disjunction constraint to network
+            MarabouCore.addDisjunctionConstraint(ipq,disjunctions)
 
         print("Disjunctions applied")
 
@@ -239,7 +245,7 @@ class MarabouSolver():
     # Not intended for use with "=="
     # Expects unnormalized scalars
     # Adds singular constraints in form {var} {op} {val}
-    def add_constraints(self, constraints):
+    def add_constraints(self, constraints, ipq):
         self.log("adding constraints")
         
         # Loop through input strings
@@ -279,12 +285,12 @@ class MarabouSolver():
                     if add_epsilon:
                         scalar = np.nextafter(scalar,-np.inf)
                         
-                    eq = MarabouUtils.Equation(MarabouCore.Equation.LE)
+                    eq = MarabouCore.Equation(MarabouCore.Equation.LE)
                     
                     eq.addAddend(1, self.bounds[addend].index)
                     eq.setScalar(self.bounds[addend].bounds.norm(scalar))
 
-                    self.network.addEquation(eq)
+                    ipq.addEquation(eq)
 
                     self.log_equations.append(Equation(
                             self.bounds[addend],op,scalar)
@@ -295,12 +301,12 @@ class MarabouSolver():
                     if add_epsilon:
                         scalar = np.nextafter(scalar,np.inf)
                     # Set upperbound on variable and add equation
-                    eq = MarabouUtils.Equation(MarabouCore.Equation.GE)
+                    eq = MarabouCore.Equation(MarabouCore.Equation.GE)
                     
                     eq.addAddend(1, self.bounds[addend].index)
                     eq.setScalar(self.bounds[addend].bounds.norm(scalar))
 
-                    self.network.addEquation(eq)
+                    ipq.addEquation(eq)
                     
                     self.log_equations.append(Equation(
                             self.bounds[addend],op,scalar
@@ -312,8 +318,13 @@ class MarabouSolver():
 
     # Solve query returns -> (Bool (sat or unsat), Model)
     def solve(self, solver):
-        print("Solving ... ")
         self.log("Marabou is Solving ... ")
+
+        new_ipq = self.ipq_stack[-1]
+        current_ipq = copy.copy(new_ipq)
+        current_ipq.dump()
+        print("Top of the stack")
+        #x = input("Top of stack")
 
         # Process equations
         for ls in self.unprocessed_eq:
@@ -326,42 +337,56 @@ class MarabouSolver():
                 if str(ls.decl()) == "Or":
                     self.add_disjunctions(ls.children())
                 if str(ls.decl()) == "And":
-                    self.add_constraints(ls.children())
+                    self.add_constraints(ls.children(),current_ipq)
                 if str(ls.decl()) == ">=" or str(ls.decl()) == "<=":
-                    self.add_constraints(["{0} {1} {2}".format(ls.children()[0], str(ls.decl()), ls.children()[1])])
-            
+                    self.add_constraints(["{0} {1} {2}".format(ls.children()[0], str(ls.decl()), ls.children()[1])], current_ipq)
 
-        # Clear equations
-        #self.unprocessed_eq.clear()
+        current_ipq.dump()
+        print("To be pushed onto the stack")
+        #x = input("To be pushed onto stack")
 
         # Apply disjunctions
-        self.apply_disjunctions()
+        self.apply_disjunctions(current_ipq)
+        current_ipq_t = copy.copy(current_ipq)
 
+
+        # Add threshold
         if self.is_safe_point == True:
-            self.apply_safepoint()
+            self.apply_safepoint(current_ipq_t)
         else:
-            self.apply_counterexample()
+            self.apply_counterexample(current_ipq_t)
+            
+        # Clear equations
+        self.unprocessed_eq.clear()
 
-        ipq = self.network.getMarabouQuery()
-        #Marabou.solve_query(ipq)
-        self.pre_ipq = ipq
-        ipq.dump()
-        #x = input()
+        #ipq = self.network.getMarabouQuery()
+        options = Marabou.createOptions(snc=True, verbosity=1)
+        
+        b, stats = Marabou.solve_query(current_ipq_t, options=options)
+        current_ipq_t.dump()
+        
+        print("Final query")
+        #x = input("Final query")
+        
         # check z3 and marabou for consistency -> log file
         self.check(solver)
+        self.log("stack size : {}".format(len(self.ipq_stack)))
 
-        print("Marabou is solving ... ")
+        
 
-        # options
-        #options = Marabou.createOptions(snc=True, numWorkers=4, verbosity=0)
-
-        b, stats = self.network.solve()#options=options)
-        print("Marabou solved ")
 
         # unsat
         if len(b) == 0:
+            if self.is_safe_point == False:
+                self.ipq_stack.pop()
+            else:
+                self.ipq_stack.append(current_ipq)
             return False, None
         else: # sat
+            if self.is_safe_point == True:
+                self.ipq_stack.append(current_ipq)
+
+            
             for i in range(len(self.bounds.keys()) - 1):
                 self.log("{0} -> {1}".format(self.variables[i].name, self.variables[i].bounds.denorm(b[i])))
             self.log("{0} -> {1}".format("Output", b[len(b)-1]))
@@ -369,7 +394,10 @@ class MarabouSolver():
 
     # rearrage all equations to be 
     # sum(c * x) = scalar
-    def add(self, *p):
+    def add(self, *p, log_str=""):
+        if len(log_str) != 0:
+            self.log(log_str)
+        
         if type(p) != z3.z3.BoolRef:
             for ps in p:
                 self.unprocessed_eq.append(ps)
@@ -377,48 +405,60 @@ class MarabouSolver():
             self.unprocessed_eq.append(p)
 
     def add_safepoint(self, th):
+        self.log("safepoint threshold added")
+
         self.is_safe_point = True
         self.threshold_value = th
 
     # Applies >= threshhold for safe point
-    def apply_safepoint(self):
+    def apply_safepoint(self, ipq):
         print("Adding safepoint")
         th = self.threshold_value
 
-        eq = MarabouUtils.Equation(MarabouCore.Equation.GE)
+        eq = MarabouCore.Equation(MarabouCore.Equation.GE)
         eq.addAddend(1, self.network.outputVars[0][0])
         eq.setScalar(self.output_scaler(float(th)))
-        self.network.addEquation(eq)
+        ipq.addEquation(eq)
 
-        eq = MarabouUtils.Equation(MarabouCore.Equation.LE)
+        eq = MarabouCore.Equation(MarabouCore.Equation.LE)
         eq.addAddend(1, self.network.outputVars[0][0])
         eq.setScalar(self.output_scaler(1.0))
-        self.network.addEquation(eq)
+        ipq.addEquation(eq)
 
         self.log_equations.append(Equation(self.bounds["Output"],">=",(float(th))))
 
     # Applies <= threhshold for counter examples
     def add_counterexample(self, th):
+        self.log("Counter example threshold added")
         self.is_safe_point = False
         self.threshold_value = th
 
-    def apply_counterexample(self):
+    def apply_counterexample(self, ipq):
         print("Adding counterexample")
         th = self.threshold_value
 
         th = np.nextafter(float(th), -np.inf)
 
-        eq = MarabouUtils.Equation(MarabouCore.Equation.LE)
+        eq = MarabouCore.Equation(MarabouCore.Equation.LE)
         eq.addAddend(1, self.network.outputVars[0][0])
         eq.setScalar(self.output_scaler(th))
-        self.network.addEquation(eq)
+        ipq.addEquation(eq)
 
-        eq = MarabouUtils.Equation(MarabouCore.Equation.GE)
+        eq = MarabouCore.Equation(MarabouCore.Equation.GE)
         eq.addAddend(1, self.network.outputVars[0][0])
         eq.setScalar(self.output_scaler(0.0))
-        self.network.addEquation(eq)
+        ipq.addEquation(eq)
 
         self.log_equations.append(Equation(self.bounds["Output"],"<=",th))
 
     def add_output_scaler(self,output_scaler):
         self.output_scaler = output_scaler
+
+    def save_stack(self):
+        if not os.path.isdir('marabou_queries'):
+            os.mkdir('marabou_queries')
+
+        for i in range(len(self.ipq_stack)):
+            self.ipq_stack[i].dump()
+            print("Query {}".format(i + 1))
+            x = input()

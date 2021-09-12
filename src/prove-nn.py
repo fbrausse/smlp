@@ -247,12 +247,12 @@ class BoundInput(Command):
 				if self.label == 'min':
 					log(2, 'bounded:', b, " <= '%s'" % s['label'])
 					solver.add(b <= v)
-					ms.add(b <= v)
+					ms.add(b <= v, log_str="Upper bound added")
 				else:
 					assert self.label == 'max'
 					log(2, 'bounded:', "'%s' <=" % s['label'], b)
 					solver.add(v <= b)
-					ms.add(b >= v)
+					ms.add(b >= v, log_str= "Lower bound added")
 		return None
 
 
@@ -266,7 +266,7 @@ class Cat(Command):
 	def run(self, solver):
 		log(1, '--------', self.args, '--------')
 		solver.add([self._in_vars[i] == w for i,w in zip(self._cati, self.args)])
-		ms.add([self._in_vars[i] == w for i,w in zip(self._cati, self.args)])
+		ms.add([self._in_vars[i] == w for i,w in zip(self._cati, self.args)], log_str="Cat")
 		return None
 
 
@@ -291,8 +291,9 @@ class Solve:
 		print("Marabou took {0} seconds".format(self.t))
 
 		res = unsat
-		accuracy_enabled = False
-		accuracy = 0.05
+		accuracy_enabled = True
+		accuracy = 0.2
+		temp_solver = solver
 
 		set_option('verbose',2)
 
@@ -301,16 +302,16 @@ class Solve:
 				if ms.variables[i].type == MarabouCommon.Variable.Type.Real:
 					#solver.add(Or(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
 					#		self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)),
-				#			self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] - accuracy),
-				#			self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] + accuracy)))
-					solver.add(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
+					#		self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] - accuracy),
+					#		self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] + accuracy)))
+					temp_solver.add(And(self._in_vars[i] <= ms.variables[i].bounds.denorm(m[i] + accuracy),
 							self._in_vars[i] >= ms.variables[i].bounds.denorm(m[i] - accuracy)))
 				#elif ms.variables[i].type == MarabouCommon.Varable.Type.Int:
 					#solver.add(self._in_vars[i])
 		
 		
 
-		res, self.t = timed(solver.check)
+		res, self.t = timed(temp_solver.check)
 		
 
 		if not ((r == True and res == sat) or (r == False and res == unsat)):
@@ -331,7 +332,10 @@ class Solve:
 				ms.log(solver.unsat_core())
 			ms.dump()
 			print("Conflict")
-			x = input()
+			#ms.save_stack()
+			#x = input()
+			res, self.t = timed(solver.check)
+
 		else:
 			ms.log("$ y, r == {0}, res == {1}".format(r, res))
 			#x = input()
@@ -369,7 +373,7 @@ class Grid(Command):
 		for s,v in zip(self._spec, self._in_vars):
 			if 'safe' in s and s['type'] != 'input':
 				solver.add(Or([v == w for w in s['safe']]))
-				ms.add(Or([v == w for w in s['safe']]))
+				ms.add(Or([v == w for w in s['safe']]), log_str="Grid added")
 		return None
 
 
@@ -402,7 +406,7 @@ class List(Command):
 			And([((v == cnst_ctor(s)(row[1][s['label']])) if s['label'] in row[1] else True)
 			     for s,v in zip(self._spec, self._in_vars)])
 			for row in self._list.iterrows()
-		]))
+		]), log_str="List added")
 
 
 class SafePoint(Solve, Command):
@@ -530,7 +534,7 @@ class Rad(Command):
 
 		for v, s, (c, rng) in zip(self._in_vars, self._spec, self._cmar):
 
-			ms.add(c)
+			ms.add(c, log_str="Restrictions added")
 
 		return None
 
@@ -584,7 +588,7 @@ class Exclude(Command):
 			solver.add(Or([v != w for v,w in zip(self._in_vars, self.args)
 			               if w is not None]))
 			ms.add(Or([v != w for v,w in zip(self._in_vars, self.args)
-			               if w is not None]))
+			               if w is not None]), log_str="Adding exclusion")
 			
 		else:
 			log(1, 'excluding candidate', candidate_idx,
@@ -810,6 +814,10 @@ class Instance:
 
 			
 		ms.add_output_scaler(obj_scaler_mar)
+		if obj_scaler_mar(1.0) != obj_scaler(1.0):
+			print("Not equal {0} != {1}".format(obj_scaler_mar(1.0),obj_scaler(1.0)))
+			#x = input()
+
 
 		return obj_scaler(obj_term)
 
@@ -964,13 +972,13 @@ class Instance:
 			solver.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
 			             for e in excluded[catv]])
 			ms.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
-			             for e in excluded[catv]])						 
+			             for e in excluded[catv]], log_str="Excluding ")						 
 		if catv in excluded_safe:
 			log(1, 'excluding safe', excluded_safe[catv])
 			solver.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
 			             for e in excluded_safe[catv]])
 			ms.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
-			             for e in excluded_safe[catv]])
+			             for e in excluded_safe[catv]], log_str="Excluding safe")
 
 		if extra_eta is not None:
 			extra_eta(in_vars, self.spec, solver)
