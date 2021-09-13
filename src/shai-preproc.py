@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 import pandas as pd
-import sys
+
+import sys, argparse, json
+
+from smlp.util.prog import log, die
 
 prod_cols = {
 	'ICL': {
@@ -162,50 +165,81 @@ def pre_spec2spec(ps):
 spec = dict()
 spec['ADLS_new'] = pre_spec2spec(shai_params(**shai_email_20210802))
 
-#def export_bios_mrc_tx_rx_datasets(data, cols, which, out=sys.stdout):
-#	pass
-
-def log(*args, **kwargs):
-	print(*args, file=sys.stderr, **kwargs)
-
-def die(code, *args, **kwargs):
-	log(*args, **kwargs)
-	sys.exit(code)
-
-def usage(argv):
-	return '\n'.join([
-'usage: %s PRODUCT TYPE CSV [OUT]' % argv[0],
-'',
-'Supported PRODUCT values: %s' % ', '.join(list(prod_cols.keys())),
-	])
-
-def main(argv):
-	if len(argv) < 4 or len(argv) > 5:
-		die(1, usage(argv))
-
-	product = sys.argv[1]
+def export_bios_mrc_tx_rx_datasets(inp, product, ty, out, specfd, log=log):
 	cols = prod_cols.get(product)
+	s = spec.get(product)
+
 	if cols is None:
-		s = spec.get(product)
 		if s is None:
-			die(2, 'error: product "%s" not supported' % product)
+			raise ValueError('product "%s" not supported' % product)
 		cols = {
 			ty: [f['label'] for f in e]
 			for ty,e in s.items()
 		}
 
-	which = sys.argv[2]
-	if which not in cols:
-		die(3, 'error: type "%s" not in supported types: %s' %
-		       (which, list(cols.keys())))
+	if ty not in cols:
+		raise ValueError('type "%s" not in supported types: %s' %
+			(ty, list(cols.keys())))
 
-	log('extracting cols %s' % cols[which])
+	if specfd is not None:
+		if s is None:
+			raise ValueError('.spec generation for product "%s" '
+			                 'not implemented' % product)
+		json.dump(s[ty], specfd)
 
-	data = pd.read_csv(sys.argv[3])
+	log(1, 'extracting cols %s' % cols[ty])
+
+	data = pd.read_csv(inp)
 	data['delta'] = data['Up'] - data['Down']
-	data = data[cols[which]]
-	with open(sys.argv[4], 'w') if len(sys.argv) >= 5 else sys.stdout as f:
-		data.to_csv(f, index=False)
+	data = data[cols[ty]]
+	data.to_csv(out, index=False)
+
+def parse_args(argv):
+	p = argparse.ArgumentParser(prog=argv[0])
+	p.add_argument('product', metavar='PRODUCT', type=str,
+	               help='supported: %s' % ', '.join(
+				set(prod_cols.keys() | spec.keys())))
+	p.add_argument('ty', metavar='TYPE', type=str,
+	               help="one of 'rx', 'tx'")
+	p.add_argument('-i', '--input', type=str, help='path to input CSV')
+	p.add_argument('-o', '--output', type=str, help='path to output CSV')
+	p.add_argument('-s', '--spec', type=str, help='path to output .spec')
+	p.add_argument('-q', '--quiet', default=False, action='store_true',
+	               help='suppress log messages')
+	p.add_argument('-v', '--verbose', default=0, action='count',
+	               help='increase verbosity')
+	args = p.parse_args(argv[1:])
+	return args
+
+def main(argv):
+	args = parse_args(argv)
+	log.verbosity = -1 if args.quiet else args.verbose
+
+	inp = args.input
+	if inp is None or inp == '-':
+		inp = sys.stdin
+
+	out = args.output
+	if out is None or out == '-':
+		out = sys.stdout
+
+	specfd = args.spec
+	if specfd == '-':
+		specfd = sys.stdout
+	elif specfd is not None:
+		try:
+			specfd = open(specfd, 'x')
+		except OSError as e:
+			die(2, 'error opening SPEC: %s' % e)
+
+	try:
+		export_bios_mrc_tx_rx_datasets(inp=inp,
+		                               product=args.product,
+		                               ty=args.ty,
+		                               out=out,
+		                               specfd=specfd)
+	except Exception as e:
+		die(2, 'error: %s' % e)
 
 if __name__ == "__main__":
 	sys.exit(main(sys.argv))
