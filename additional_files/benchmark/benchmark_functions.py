@@ -60,7 +60,31 @@ def rastrigin(x: np.array) -> float:
         ret += t * t - A * np.cos(2 * np.pi * t)
     return ret
 
+'''
+Key characteristics
+* 2 dimensional function used for optimization benchmarking
+* Global minimum at f(1, 3) = 0
+* Common search domain, -10 <= x_i <= 10
+* https://en.wikipedia.org/wiki/Test_functions_for_optimization
+'''
 def booth(x: np.array) -> float:
     assert(len(x) == 2)
     x1 = x[0]
     x2 = x[1]
+    return (x1 + 2 * x2 - 7) * (x1 + 2 * x2 - 7) + (2 * x1 + x2 - 5) * (2 * x1 + x2 - 5)
+
+'''
+Key characteristics
+* n dimensional function used for optimization benchmarking
+* Global minimum at f(1,...,1) = 0
+* Common search domain, -inf <= x_i <= 10
+* https://en.wikipedia.org/wiki/Test_functions_for_optimization
+'''
+def rosenbrock(x: np.array) -> float:
+    n = len(x)
+    ret = x
+    pre_x = x
+    for i in range(len(x)):
+        ret += 100 * (x[i] - pre_x * pre_x) * (x[i] - pre_x * pre_x) + (1 - x[i]) * (1 - x[i])
+        pre_x = x[i]
+    return ret
