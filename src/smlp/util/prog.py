@@ -1,5 +1,5 @@
 
-import sys
+import sys, functools
 
 def log(lvl, *args, **kwargs):
 	if lvl <= log.verbosity:
@@ -7,8 +7,11 @@ def log(lvl, *args, **kwargs):
 
 log.verbosity = 0
 
+def _verbosified(f, n, lvl, *args, **kwargs):
+	return f(lvl-n, *args, **kwargs)
+
 def verbosify(f, n=1):
-	return lambda lvl, *args, **kwargs: f(lvl-n, *args, **kwargs)
+	return functools.partial(_verbosified, f, n)
 
 def die(code, *args, **kwargs):
 	log(0, *args, **kwargs)
