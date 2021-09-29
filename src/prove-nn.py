@@ -1022,6 +1022,14 @@ class Instance:
 
 
 	def csv_spec_rows(self, path):
+		def cex_cb(mk_rad, y, had_cex):
+#			had_cex[0] = True # just to indicate we've been called
+#			excl = mk_rad(in_vars)
+#			if excl._radius is not None:
+#				self.record_excl_region(excl._radius, y)
+#			return excl(solver, candidate_idx)
+			pass
+
 		with open(path, 'r') as f:
 			r = csv.reader(f)
 			header = { l: i for i,l in enumerate(next(r)) }
@@ -1029,7 +1037,8 @@ class Instance:
 			       for i,s in enumerate(self.spec)]
 			for row in r:
 				log(1, 'grid point', { v: c(row[j]) for v,c,j in seq })
-				yield { v: c(row[j]) for v,c,j in seq }
+				yield MockModel({ v: c(row[j]) for v,c,j in seq }), cex_cb
+
 		log(1, 'grid exhausted')
 
 
