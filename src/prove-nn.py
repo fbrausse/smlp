@@ -560,7 +560,9 @@ class Instance:
 						       for r in self.gen['response']
 						       for v in ('min','max')]))
 				def ex_data_counter_example(asgn, threshold):
-					n_fail, n_ok = cd.check([v.as_long() for v in asgn], # TODO: Fraction support
+					n_fail, n_ok = cd.check([v.as_long() if s['range'] == 'int' else v.as_fraction()
+					                         for s,v in zip([s for s in self.spec
+					                                         if s['type'] != 'categorical'], asgn)],
 					                        threshold)
 					log(2,'data in ball: %d fail, %d ok' % (n_fail, n_ok))
 					y = None # TODO: counter-example value
