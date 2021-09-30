@@ -19,3 +19,5 @@ def verbosify(f, n=1):
 def die(code, *args, **kwargs):
 	log(0, *args, **kwargs)
 	sys.exit(code)
+
+__all__ = [s.__name__ for s in (log, verbosify, die)]
