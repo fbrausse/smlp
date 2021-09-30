@@ -21,6 +21,7 @@ from decimal import Decimal
 import itertools, json
 
 from common import *
+from smlp.util import die
 from checkdata import CD
 from solvepar import SOLVERS, run_solvers
 
@@ -1122,6 +1123,80 @@ def excluded_by_trace(inst, trace_path, trace_exclude_safe):
 	return excluded
 
 
+def init_bounds(spec, model_gen, data_bounds_json_path=None, bounds_factor=None,
+                T_resp_bounds_csv_path=None):
+	# init 'bounds' for any feature: determines search space
+	#   a) from grid in spec,
+	#   b) from args.data_bounds (optional file via "-B")
+	#   c) optionally grown by a user-specified factor,
+	# 'data_bounds' for input features from args.data_bounds: used for scaling
+	#   NN's inputs to training data range,
+	# 'resp_bounds' for response/output features contained in
+	#   model_gen['response'] from args.data_bounds: used for scaling NN's
+	#   outputs to training data range, and
+	# 'T_resp_bounds' to either 'resp_bounds' or from file ("-r"): gives the
+	#   scale the thresholds T and ST are interpreted in
+	bounds = {
+		s['label']: { 'min': min(s['safe']), 'max': max(s['safe']) } if 'safe' in s else {}
+		for s in spec #if s['type'] != 'input' # if s['type'] == 'knob'
+	}
+	resp_bounds = None
+	if data_bounds_json_path is not None:
+		with open(data_bounds_json_path, 'r') as f:
+			data_bounds = json.load(f, parse_float=Fraction)
+		for k,b in data_bounds.items():
+			if k in bounds:
+				if 'min' in b:
+					bounds[k]['min'] = (min(bounds[k]['min'], b['min'])
+					                    if 'min' in bounds[k]
+					                    else b['min'])
+				if 'max' in b:
+					bounds[k]['max'] = (max(bounds[k]['max'], b['max'])
+					                    if 'max' in bounds[k]
+					                    else b['max'])
+			if k in model_gen['response']:
+				if resp_bounds is None:
+					resp_bounds = {}
+				resp_bounds[k] = { m: v for m,v in b.items() if m in ('min','max') }
+	if bounds_factor is not None:
+		for s in spec:
+			if s['label'] in bounds:
+				b = bounds[s['label']]
+				if 'min' in b:
+					b['min'] -= b['min'] * bounds_factor
+				if 'max' in b:
+					b['max'] += b['max'] * bounds_factor
+	if model_gen['pp']['features'] == 'min-max':
+		if data_bounds_json_path is None:
+			die(1, 'error: NN expects normalized inputs, require bounds via param "-B"')
+		for s in spec:
+			if s['type'] == 'input':
+				continue
+			try:
+				b = bounds[s['label']]
+			except KeyError:
+				die(1, "error: no bounds provided for variable '%s'" % s['label'])
+			try:
+				b['min'], b['max'] = b['min'], b['max']
+			except KeyError:
+				die(1, "error: bounds for variable '%s' do not include both, "
+				       "'min' and 'max'" % s['label'])
+
+	# NN model produces output normed with resp_bounds
+	# T_resp_bounds relate to the thresholds T and ST
+	if T_resp_bounds_csv_path is None:
+		T_resp_bounds = resp_bounds
+	else:
+		T_resp_bounds = pd.read_csv(T_resp_bounds_csv_path, index_col=0)
+		if all(T_resp_bounds[f][m] == resp_bounds[f][m]
+			   for f in model_gen['response']
+			   for m in ('min','max')):
+			log(1, 'T_resp_bounds = resp_bounds')
+			T_resp_bounds = resp_bounds
+
+	return bounds, data_bounds, resp_bounds, T_resp_bounds
+
+
 def main(argv):
 	args = parse_args(argv)
 	global log
@@ -1142,69 +1217,86 @@ def main(argv):
 	with open(args.model_gen, 'r') as f:
 		model_gen = json.load(f)
 
-	bounds = {
-		s['label']: { 'min': min(s['safe']), 'max': max(s['safe']) } if 'safe' in s else {}
-		for s in spec #if s['type'] != 'input' # if s['type'] == 'knob'
-	}
-	resp_bounds = None
-	if args.data_bounds is not None:
-		with open(args.data_bounds, 'r') as f:
-			data_bounds = json.load(f, parse_float=Fraction)
-		for k,b in data_bounds.items():
-			if k in bounds:
-				if 'min' in b:
-					bounds[k]['min'] = (min(bounds[k]['min'], b['min'])
-					                    if 'min' in bounds[k]
-					                    else b['min'])
-				if 'max' in b:
-					bounds[k]['max'] = (max(bounds[k]['max'], b['max'])
-					                    if 'max' in bounds[k]
-					                    else b['max'])
-			if k in model_gen['response']:
-				if resp_bounds is None:
-					resp_bounds = {}
-				resp_bounds[k] = { m: v for m,v in b.items() if m in ('min','max') }
-	if args.bounds is not None:
-		for s in spec:
-			if s['label'] in bounds:
-				b = bounds[s['label']]
-				if 'min' in b:
-					b['min'] -= b['min'] * args.bounds
-				if 'max' in b:
-					b['max'] += b['max'] * args.bounds
-	if model_gen['pp']['features'] == 'min-max':
-		if args.data_bounds is None:
-			print('error: NN expects normalized inputs, require bounds via param "-B"',
-				  file=sys.stderr)
-			return 1
-		for s in spec:
-			if s['type'] == 'input':
-				continue
-			try:
-				b = bounds[s['label']]
-			except KeyError:
-				print("error: no bounds provided for variable '%s'" % s['label'],
-				      file=sys.stderr)
-				return 1
-			try:
-				b['min'], b['max'] = b['min'], b['max']
-			except KeyError:
-				print(("error: bounds for variable '%s' do not include both, "+
-				       "'min' and 'max'") % s['label'],
-				      file=sys.stderr)
-				return 1
 
-	# NN model produces output normed with resp_bounds
-	# T_resp_bounds relate to the thresholds T and ST
-	if args.response_bounds is None:
-		T_resp_bounds = resp_bounds
-	else:
-		T_resp_bounds = pd.read_csv(args.response_bounds, index_col=0)
-		if all(T_resp_bounds[f][m] == resp_bounds[f][m]
-			   for f in model_gen['response']
-			   for m in ('min','max')):
-			log(1, 'T_resp_bounds = resp_bounds')
-			T_resp_bounds = resp_bounds
+	# init 'bounds' for any feature: determines search space
+	#   a) from grid in spec,
+	#   b) from args.data_bounds (optional file via "-B")
+	#   c) optionally grown by a user-specified factor,
+	# 'data_bounds' for input features from args.data_bounds: used for scaling
+	#   NN's inputs to training data range,
+	# 'resp_bounds' for response/output features contained in
+	#   model_gen['response'] from args.data_bounds: used for scaling NN's
+	#   outputs to training data range, and
+	# 'T_resp_bounds' to either 'resp_bounds' or from file ("-r"): gives the
+	#   scale the thresholds T and ST are interpreted in
+	bounds, data_bounds, resp_bounds, T_resp_bounds = init_bounds(spec, model_gen,
+	                                                              args.data_bounds,
+	                                                              args.bounds,
+	                                                              args.resp_bounds)
+
+#	bounds = {
+#		s['label']: { 'min': min(s['safe']), 'max': max(s['safe']) } if 'safe' in s else {}
+#		for s in spec #if s['type'] != 'input' # if s['type'] == 'knob'
+#	}
+#	resp_bounds = None
+#	if args.data_bounds is not None:
+#		with open(args.data_bounds, 'r') as f:
+#			data_bounds = json.load(f, parse_float=Fraction)
+#		for k,b in data_bounds.items():
+#			if k in bounds:
+#				if 'min' in b:
+#					bounds[k]['min'] = (min(bounds[k]['min'], b['min'])
+#					                    if 'min' in bounds[k]
+#					                    else b['min'])
+#				if 'max' in b:
+#					bounds[k]['max'] = (max(bounds[k]['max'], b['max'])
+#					                    if 'max' in bounds[k]
+#					                    else b['max'])
+#			if k in model_gen['response']:
+#				if resp_bounds is None:
+#					resp_bounds = {}
+#				resp_bounds[k] = { m: v for m,v in b.items() if m in ('min','max') }
+#	if args.bounds is not None:
+#		for s in spec:
+#			if s['label'] in bounds:
+#				b = bounds[s['label']]
+#				if 'min' in b:
+#					b['min'] -= b['min'] * args.bounds
+#				if 'max' in b:
+#					b['max'] += b['max'] * args.bounds
+#	if model_gen['pp']['features'] == 'min-max':
+#		if args.data_bounds is None:
+#			print('error: NN expects normalized inputs, require bounds via param "-B"',
+#				  file=sys.stderr)
+#			return 1
+#		for s in spec:
+#			if s['type'] == 'input':
+#				continue
+#			try:
+#				b = bounds[s['label']]
+#			except KeyError:
+#				print("error: no bounds provided for variable '%s'" % s['label'],
+#				      file=sys.stderr)
+#				return 1
+#			try:
+#				b['min'], b['max'] = b['min'], b['max']
+#			except KeyError:
+#				print(("error: bounds for variable '%s' do not include both, "+
+#				       "'min' and 'max'") % s['label'],
+#				      file=sys.stderr)
+#				return 1
+#
+#	# NN model produces output normed with resp_bounds
+#	# T_resp_bounds relate to the thresholds T and ST
+#	if args.response_bounds is None:
+#		T_resp_bounds = resp_bounds
+#	else:
+#		T_resp_bounds = pd.read_csv(args.response_bounds, index_col=0)
+#		if all(T_resp_bounds[f][m] == resp_bounds[f][m]
+#			   for f in model_gen['response']
+#			   for m in ('min','max')):
+#			log(1, 'T_resp_bounds = resp_bounds')
+#			T_resp_bounds = resp_bounds
 	log(1, 'bounds:', bounds)
 	log(1, 'data_bounds:', data_bounds)
 	log(1, 'resp_bounds:', resp_bounds)
