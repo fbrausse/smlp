@@ -906,7 +906,7 @@ class Instance:
 					self.record_excl_region(excl._radius, y)
 				return excl(solver, candidate_idx)
 
-			yield i_star, cex_cb
+			yield i_star, cex_cb, y
 			Exclude(self.spec, in_vars, i_star)(solver, candidate_idx)
 
 			if 0 in had_cex:
@@ -980,7 +980,7 @@ class Instance:
 			exs.append(self.exists(catv, excluded, excluded_safe, center_threshold, output, None,
 			                       extra_eta = lambda v, s, S: List(v, s, pd.read_csv(partial_grid_path))(S)))
 
-		for i_star, cex_cb in itertools.chain(*exs):
+		for i_star, cex_cb, y in itertools.chain(*exs):
 			def handle_safe(is_safe, cex_model, y):
 				if not is_safe and delta is not None:
 					cex_cb(lambda in_vars:
@@ -997,7 +997,7 @@ class Instance:
 				log(1, 'Found config', str(i_star).replace('\n', ''),
 					   'first UNSAFE for threshold idx', th, '=', threshold[th])
 				assert th > 0
-				yield i_star, threshold[th-1]
+				yield i_star, threshold[th-1], y
 			else:
 				# TODO: disable "data" is_safe() check for those from csv_spec_rows?
 				is_safe = timed(lambda: handle_safe(*self.is_safe(catv, i_star, threshold,
@@ -1006,7 +1006,7 @@ class Instance:
 				if is_safe:
 					log(1, 'Found SAFE config for th=%s:' % threshold,
 					       str(i_star).replace('\n', ''))
-					yield i_star, threshold
+					yield i_star, threshold, y
 				else:
 					log(1, 'config', str(i_star).replace('\n', ''), 'is not safe')
 
@@ -1038,7 +1038,7 @@ class Instance:
 			       for i,s in enumerate(self.spec)]
 			for row in r:
 				log(1, 'grid point', { v: c(row[j]) for v,c,j in seq })
-				yield MockModel({ v: c(row[j]) for v,c,j in seq }), cex_cb
+				yield MockModel({ v: c(row[j]) for v,c,j in seq }), cex_cb, None
 
 		log(1, 'grid exhausted')
 
@@ -1332,9 +1332,9 @@ def main(argv):
 			w = csv.writer(f, dialect='unix', quoting=csv.QUOTE_MINIMAL)
 			if not ex:
 				if isinstance(args.threshold, list):
-					w.writerow([s['label'] for s in spec] + ['thresh'])
+					w.writerow([s['label'] for s in spec] + ['center_obj','thresh'])
 				else:
-					w.writerow([s['label'] for s in spec])
+					w.writerow([s['label'] for s in spec] + ['center_obj'])
 
 
 			for catv in itertools.product(*[spec[i]['range'] for i in inst.cati]):
@@ -1353,15 +1353,15 @@ def main(argv):
 					#assert res is not None
 					if res is None:
 						continue
-					for i_star, th in res:
+					for i_star, th, y in res:
 						def enc(n):
 							return (n.as_string()
 							        if n.is_real() and not n.is_int_value()
 							        else str(n.as_long()))
 						if isinstance(args.threshold, list):
-							w.writerow([enc(i_star[v]) for v in inst.in_vars()] + [th])
+							w.writerow([enc(i_star[v]) for v in inst.in_vars()] + [enc(y),th])
 						else:
-							w.writerow([enc(i_star[v]) for v in inst.in_vars()])
+							w.writerow([enc(i_star[v]) for v in inst.in_vars()] + [enc(y)])
 						safe_n[catv] += 1
 						if safe_n[catv] >= args.n:
 							break
