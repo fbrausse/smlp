@@ -1316,7 +1316,7 @@ def main(argv):
 		for s in pd.read_csv(args.safe).iterrows():
 			c = tuple(np2py(s[1][i]) for i in inst.cati)
 			excluded_safe.setdefault(c, [])
-			excluded_safe[c].append([np2py(w) for w in s[1].values])
+			excluded_safe[c].append([np2py(w, lenient=True) for w in s[1].values])
 			safe_n.setdefault(c, 0)
 			safe_n[c] += 1
 			del c

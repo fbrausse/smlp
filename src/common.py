@@ -53,8 +53,12 @@ NP2PY = {
 	np.float64: float,
 }
 
-def np2py(o):
-	return NP2PY[type(o)](o)
+def np2py(o, lenient=False):
+	if lenient:
+		ty = NP2PY.get(type(o), type(o))
+	else:
+		ty = NP2PY[type(o)]
+	return ty(o)
 
 class np_JSONEncoder(json.JSONEncoder):
     def default(self, o):
