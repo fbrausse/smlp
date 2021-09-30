@@ -178,3 +178,7 @@ def response_scaler(gen, b):
 
 def response_scalers(gen, bnds):
 	return [response_scaler(gen, bnds[r]) for r in gen['response']]
+
+
+class SolverTimeoutError(Exception):
+	pass
