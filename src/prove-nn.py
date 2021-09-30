@@ -1232,7 +1232,7 @@ def main(argv):
 	bounds, data_bounds, resp_bounds, T_resp_bounds = init_bounds(spec, model_gen,
 	                                                              args.data_bounds,
 	                                                              args.bounds,
-	                                                              args.resp_bounds)
+	                                                              args.response_bounds)
 
 #	bounds = {
 #		s['label']: { 'min': min(s['safe']), 'max': max(s['safe']) } if 'safe' in s else {}
