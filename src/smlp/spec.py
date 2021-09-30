@@ -1,6 +1,6 @@
 
 from enum import Enum, unique
-from typing import NamedTuple, Sequence
+from typing import NamedTuple, Sequence, List
 
 @unique
 class Interp(Enum):
@@ -18,7 +18,7 @@ class FeatureNT(NamedTuple):
 	type  : Interp
 	range : Type
 
-class BaseSpec(list[FeatureNT]):
+class BaseSpec(List[FeatureNT]):
 	def __init__(self, fs : Sequence[FeatureNT], file_path = None):
 		super().__init__(fs)
 		self.file_path = file_path
