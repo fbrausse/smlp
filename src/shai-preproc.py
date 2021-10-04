@@ -194,6 +194,10 @@ def export_bios_mrc_tx_rx_datasets(inp, product, ty, out, specfd, log=log):
 			                 'not implemented' % product)
 		json.dump(s[ty], specfd, indent=4)
 
+	if inp is None:
+		assert out is None
+		return
+
 	log(1, 'extracting cols %s' % cols[ty])
 
 	data = pd.read_csv(inp)
@@ -210,6 +214,8 @@ def parse_args(argv):
 	               help="one of 'rx', 'tx'")
 	p.add_argument('-i', '--input', type=str, help='path to input CSV')
 	p.add_argument('-o', '--output', type=str, help='path to output CSV')
+	p.add_argument('-n', '--no-csv', default=False, action='store_true',
+	               help='only output SPEC, do not process CSV')
 	p.add_argument('-s', '--spec', type=str, help='path to output .spec')
 	p.add_argument('-q', '--quiet', default=False, action='store_true',
 	               help='suppress log messages')
@@ -222,13 +228,16 @@ def main(argv):
 	args = parse_args(argv)
 	log.verbosity = -1 if args.quiet else args.verbose
 
-	inp = args.input
-	if inp is None or inp == '-':
-		inp = sys.stdin
+	if args.no_csv:
+		inp, out = None, None
+	else:
+		inp = args.input
+		if inp is None or inp == '-':
+			inp = sys.stdin
 
-	out = args.output
-	if out is None or out == '-':
-		out = sys.stdout
+		out = args.output
+		if out is None or out == '-':
+			out = sys.stdout
 
 	specfd = args.spec
 	if specfd == '-':
