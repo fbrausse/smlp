@@ -58,8 +58,16 @@ def shai_params(**params):
 			'type': 'knob',
 			'safe': l[:-1],
 			'default': l[-1],
-			'range': 'float',
 		}
+	def ranges(k):
+		if k.startswith('TXEQ_COEFF'):
+			return { 'range': 'int', 'rad-abs': 1 }
+		else:
+			return { 'range': 'float', 'rad-rel': 0.1 }
+	def shai_interp(k, v):
+		assert type(v) is list
+		k = key_rename.get(k, k)
+		return (k, dict(concat(shai_interp_list(v).items(), ranges(k).items())))
 	#
 	tys = ('rx', 'tx')
 	key_rename = {
@@ -67,11 +75,11 @@ def shai_params(**params):
 		'SOC_RON': 'CPU_RON',
 	}
 	def_pre_spec = {
-		'Timing': { 'type': 'knob', 'range': 'int' },
+		'Timing': { 'type': 'knob', 'range': 'int', 'rad-abs': 0 },
 		'Area'  : { 'type': 'response', 'range': 'float' },
-		'MC'    : { 'type': 'categorical', 'range': [0,1] },
-		'RANK'  : { 'type': 'categorical', 'range': [0,1] },
-		'Byte'  : { 'type': 'categorical', 'range': list(range(4)) },
+		'MC'    : { 'type': 'categorical', 'range': list(range(2)), 'rad-abs': 0 },
+		'RANK'  : { 'type': 'categorical', 'range': list(range(2)), 'rad-abs': 0 },
+		'Byte'  : { 'type': 'categorical', 'range': list(range(4)), 'rad-abs': 0 },
 	}
 	def_resp = {
 		'delta' : { 'type': 'response', 'range': 'float' },
@@ -93,8 +101,7 @@ def shai_params(**params):
 	# finally concatenate with the defaults
 	pre_spec = {
 		ty: dict(concat(def_pre_spec.items(),
-		                *[[(key_rename.get(k, k),
-		                    shai_interp_list(v))
+		                *[[shai_interp(k, v)
 		                   for k,v in params[p].items()]
 		                  for p in spar],
 		                def_resp.items()))
