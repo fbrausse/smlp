@@ -192,7 +192,7 @@ def export_bios_mrc_tx_rx_datasets(inp, product, ty, out, specfd, log=log):
 		if s is None:
 			raise ValueError('.spec generation for product "%s" '
 			                 'not implemented' % product)
-		json.dump(s[ty], specfd)
+		json.dump(s[ty], specfd, indent=4)
 
 	log(1, 'extracting cols %s' % cols[ty])
 
