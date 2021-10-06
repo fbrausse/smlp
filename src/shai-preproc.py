@@ -172,7 +172,7 @@ def pre_spec2spec(ps):
 spec = dict()
 spec['ADLS_new'] = pre_spec2spec(shai_params(**shai_email_20210802))
 
-def export_bios_mrc_tx_rx_datasets(inp, product, ty, out, specfd, log=log):
+def bios_mrc_tx_rx_dataset_meta(product, ty):
 	cols = prod_cols.get(product)
 	s = spec.get(product)
 
@@ -188,22 +188,13 @@ def export_bios_mrc_tx_rx_datasets(inp, product, ty, out, specfd, log=log):
 		raise ValueError('type "%s" not in supported types: %s' %
 			(ty, list(cols.keys())))
 
-	if specfd is not None:
-		if s is None:
-			raise ValueError('.spec generation for product "%s" '
-			                 'not implemented' % product)
-		json.dump(s[ty], specfd, indent=4)
+	return cols[ty], s[ty] if s is not None else None
 
-	if inp is None:
-		assert out is None
-		return
 
-	log(1, 'extracting cols %s' % cols[ty])
+__all__ = [s.__name__ for s in (bios_mrc_tx_rx_dataset_meta,spec,)]
 
-	data = pd.read_csv(inp)
-	data['delta'] = data['Up'] - data['Down']
-	data = data[cols[ty]]
-	data.to_csv(out, index=False)
+
+
 
 def parse_args(argv):
 	p = argparse.ArgumentParser(prog=argv[0])
@@ -248,14 +239,26 @@ def main(argv):
 		except OSError as e:
 			die(2, 'error opening SPEC: %s' % e)
 
-	try:
-		export_bios_mrc_tx_rx_datasets(inp=inp,
-		                               product=args.product,
-		                               ty=args.ty,
-		                               out=out,
-		                               specfd=specfd)
-	except Exception as e:
-		die(2, 'error: %s' % e)
+	cols, s = bios_mrc_tx_rx_dataset_meta(args.product, args.ty)
+
+	if specfd is not None:
+		if s is None:
+			raise ValueError('.spec generation for product "%s" '
+			                 'not implemented' % args.product)
+		json.dump(s, specfd, indent=4)
+
+	if inp is None:
+		return None
+
+	log(1, 'extracting cols %s' % cols)
+
+	data = pd.read_csv(inp)
+	data['delta'] = data['Up'] - data['Down']
+	data = data[cols]
+	data.to_csv(out, index=False)
 
 if __name__ == "__main__":
-	sys.exit(main(sys.argv))
+	try:
+		sys.exit(main(sys.argv))
+	except Exception as e:
+		die(2, 'error: %s' % e)
