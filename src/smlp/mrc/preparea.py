@@ -100,10 +100,10 @@ shai_data_desc = DataDesc('Timing', 'delta', {'Area'})
 def trad_from_data_desc(desc : DataDesc, trad_col='trad', obj_col='area'):
 	return TradDataDesc(desc.timing_col, trad_col, obj_col, desc.other_output_cols)
 
-def prep_area(inp, is_rx : bool, out, log=const(None), max_workers=None,
+def prep_area(data, is_rx : bool, log=const(None), max_workers=None,
               mp_context=None, desc : DataDesc = shai_data_desc,
               trad_col='trad', obj_col='area',
-              time_window_radii=[100 + i for i in [-30,-20,-10,0,10,20,30]]
+              time_window_radii=[(100 + i)/2 for i in [-30,-20,-10,0,10,20,30]]
              ) -> TradDataDesc:
 
 	#if is_rx: # rx
