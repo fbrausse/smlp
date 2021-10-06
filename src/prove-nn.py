@@ -1323,8 +1323,6 @@ def main(argv):
 	log(1, 'excluded safe', excluded_safe)
 
 
-
-
 	safe_path = os.devnull if args.safe is None else args.safe
 	ex = os.path.exists(safe_path)
 	try:
