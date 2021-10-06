@@ -148,9 +148,6 @@ def prep_area(data, is_rx : bool, log=const(None), max_workers=None,
 	#	v = g.sort_values(by=['Timing'], ascending=True)
 	#	return pd.DataFrame().append([ff(v, rad) for rad in time_window_radii])
 
-	data = pd.read_csv(inp)
-	data = data.drop_duplicates()
-
 	timing_col = desc.timing_col
 	delta_col = desc.delta_col
 	outputs = desc.output_cols
@@ -171,15 +168,20 @@ def prep_area(data, is_rx : bool, log=const(None), max_workers=None,
 	tform = Tform(is_rx, timing_col=timing_col, delta_col=delta_col,
 	              trad_col=trad_col, obj_col=obj_col)
 
-	with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as ex:
-		wrhdr = True
-		fut2res = [ex.submit(tform.tform, kv, time_window_radii, log=log) for kv in grid]
-		for fut in as_completed(fut2res):
-			fut.result().to_csv(out, index=False, header=wrhdr)
-			wrhdr = False
+	if max_workers == 1:
+		for kv in grid:
+			yield tform.tform(kv, time_window_radii, log=log)
+	else:
+		with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as ex:
+			#wrhdr = True
+			fut2res = [ex.submit(tform.tform, kv, time_window_radii, log=log) for kv in grid]
+			for fut in as_completed(fut2res):
+				yield fut.result()
+				#fut.result().to_csv(out, index=False, header=wrhdr)
+				#wrhdr = False
 	# pd.concat([tform(kv) for kv in grid]).write_csv(sys.stdout, index=False)
 
-	return trad_from_data_desc(desc, trad_col, obj_col)
+	# return trad_from_data_desc(desc, trad_col, obj_col)
 
 if __name__ == '__main__':
 	import sys
@@ -193,5 +195,8 @@ if __name__ == '__main__':
 	except:
 		die(1, 'usage: %s {rx|tx} [N_PROC] < DATA.csv > ADJB.csv' % a[0])
 
-	prep_area(sys.stdin, is_rx, sys.stdout, log=verbosify(log),
-	          max_workers=max_workers)
+	wrhdr = True
+	for df in prep_area(pd.read_csv(sys.stdin).drop_duplicates(), is_rx,
+	                    log=verbosify(log), max_workers=max_workers):
+		df.to_csv(sys.stdout, index=False, header=wrhdr)
+		wrhdr = False
