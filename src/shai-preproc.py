@@ -172,6 +172,9 @@ def pre_spec2spec(ps):
 spec = dict()
 spec['ADLS_new'] = pre_spec2spec(shai_params(**shai_email_20210802))
 
+joint = dict()
+joint['ADLS_new'] = [('DDR5_RTT_PARK_RX','DDR5_RTT_PARK_TX')]
+
 def bios_mrc_tx_rx_dataset_meta(product, ty):
 	cols = prod_cols.get(product)
 	s = spec.get(product)

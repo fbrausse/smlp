@@ -52,7 +52,7 @@ class Tform:
 		return max(x) - min(x) + 1
 
 	def ff(self, v, time_window_rad):
-		w = pd.DataFrame(columns=[self.trad_col,self.obj_col], index=v.index)
+		w = pd.DataFrame(columns=[self.trad_col,self.obj_col], index=v.index, dtype=float)
 		for i in range(len(v)):
 			r = v.iloc[i]
 			tw = v[abs(v[self.timing_col] - r[self.timing_col]) <= time_window_rad]
@@ -72,11 +72,34 @@ class DataDesc(NamedTuple):
 	timing_col : str
 	delta_col : str
 
+	byte_col : str
+	channel_col : str
+	rank_col : str
+
 	other_output_cols : Set[str]
 
 	@property
 	def output_cols(self) -> Set[str]:
 		return {self.delta_col, *self.other_output_cols}
+
+	def drop(self, feat):
+		def f(kv):
+			k,v = kv
+			if k == 'other_output_cols':
+				return {c for c in v if c != feat}
+			else:
+				return v if v != feat else None
+		return DataDesc._make(map(f, zip(self._fields, self)))
+
+	def relabel(self, old, new):
+		def f(kv):
+			k,v = kv
+			if k == 'other_output_cols':
+				return {c if c != old else new for c in v}
+			else:
+				return v if v != old else new
+		return DataDesc._make(map(f, zip(self._fields, self)))
+
 
 def data_desc_from_spec(timing_col, delta_col, spec : list):
 	assert all(c in (s['label'] for s in spec)
@@ -89,22 +112,29 @@ class TradDataDesc(NamedTuple):
 	timing_col : str
 	trad_col : str
 	obj_col : str
+
+	byte_col : str
+	channel_col : str
+	rank_col : str
+
 	other_output_cols : Set[str]
 
 	@property
 	def output_cols(self) -> Set[str]:
 		return {self.obj_col, *self.other_output_cols}
 
-shai_data_desc = DataDesc('Timing', 'delta', {'Area'})
+shai_data_desc = DataDesc('Timing', 'delta', 'Byte', 'MC', 'RANK', {'Area'})
 
 def trad_from_data_desc(desc : DataDesc, trad_col='trad', obj_col='area'):
-	return TradDataDesc(desc.timing_col, trad_col, obj_col, desc.other_output_cols)
+	return TradDataDesc(desc.timing_col, trad_col, obj_col,
+	                    desc.byte_col, desc_channel_col, desc.rank_col,
+	                    {desc.delta_col, *desc.other_output_cols})
 
 def prep_area(data, is_rx : bool, log=const(None), max_workers=None,
               mp_context=None, desc : DataDesc = shai_data_desc,
               trad_col='trad', obj_col='area',
               time_window_radii=[(100 + i)/2 for i in [-30,-20,-10,0,10,20,30]]
-             ) -> TradDataDesc:
+             ):
 
 	#if is_rx: # rx
 	#	delta_a, time_a = rx_delta_a, rx_time_a
