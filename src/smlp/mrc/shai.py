@@ -358,7 +358,8 @@ def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
 	              #         ),
 	              preparea.v2(ds.data, preparea.DEF_TIME_WINDOW_RADII,
 	                          ds.desc, eye_w = eye_w_col, eye_h = eye_h_col,
-	                          max_workers=max_workers)
+	                          max_workers=max_workers
+	                         ),
 	              ds.desc)
 
 	ds.drop(ds.desc.delta_col)
