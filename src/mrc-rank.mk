@@ -5,7 +5,7 @@
 # See the LICENSE file for terms of distribution.
 
 CHS   = ch0 ch1
-BYTES = $(foreach c,$(CHS),$(addprefix $(c)/byte/,0 1 2 3 4 5 6 7))
+BYTES = $(foreach c,$(CHS),$(addprefix $(c)/byte/,0 1 2 3))
 
 .PHONY: all train search collect
 
