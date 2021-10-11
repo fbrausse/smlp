@@ -95,7 +95,7 @@ run_stage_prepare() {
 			ln -rs "${bin}"/mrc-ch.mk "${c}"/Makefile && files+=( "${c}"/Makefile ) &&
 			cp "${c}/byte/0/data.spec" "${c}/byte" && files+=( "${c}/byte/data.spec" ) ||
 			return $?
-			for b in "${c}"/byte/{0..7}; do
+			for b in "${c}"/byte/*/; do
 				rm "${b}/data.spec" &&
 				ln -rs "${c}/byte/data.spec" "${b}" ||
 				return $?
