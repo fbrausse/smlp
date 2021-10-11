@@ -1,4 +1,6 @@
 
+from typing import NamedTuple, Set
+
 prod_cols = {
 	'ICL': {
 		'rx': ["Timing","Area","CH","RANK","Byte","LP4_DIMM_RON","CPU_ODT_UP","LP4_SOC_ODT","ICOMP","CTLE_C","CTLE_R","delta"],
@@ -187,5 +189,49 @@ def bios_mrc_tx_rx_dataset_meta(product, ty):
 	return cols[ty], s[ty] if s is not None else None
 
 
-__all__ = [s.__name__ for s in (bios_mrc_tx_rx_dataset_meta,)
-          ] + ['prod_cols','spec','joint']
+class DataDesc(NamedTuple):
+	timing_col : str
+	delta_col : str
+
+	byte_col : str
+	channel_col : str
+	rank_col : str
+
+	other_output_cols : Set[str]
+
+	@property
+	def output_cols(self) -> Set[str]:
+		return {self.delta_col, *self.other_output_cols}
+
+	def drop(self, feat):
+		def f(kv):
+			k,v = kv
+			if k == 'other_output_cols':
+				return {c for c in v if c != feat}
+			else:
+				return v if v != feat else None
+		return DataDesc._make(map(f, zip(self._fields, self)))
+
+	def relabel(self, old, new):
+		def f(kv):
+			k,v = kv
+			if k == 'other_output_cols':
+				return {c if c != old else new for c in v}
+			else:
+				return v if v != old else new
+		return DataDesc._make(map(f, zip(self._fields, self)))
+
+"""
+def data_desc_from_spec(timing_col, delta_col, spec : list):
+	assert all(c in (s['label'] for s in spec)
+	           for c in (timing_col, delta_col))
+	return DataDesc(timing_col, delta_col,
+	                {s['label'] for s in spec
+	                 if s['type'] == 'response' and s['label'] != delta_col})
+"""
+
+shai_data_desc = DataDesc('Timing', 'delta', 'Byte', 'MC', 'RANK', {'Area'})
+
+__all__ = [s.__name__ for s in (bios_mrc_tx_rx_dataset_meta,DataDesc
+                               )
+          ] + ['prod_cols','spec','joint','shai_data_desc']

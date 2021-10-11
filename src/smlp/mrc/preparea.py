@@ -4,9 +4,10 @@ import pandas as pd
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from typing import NamedTuple, Set
+# from typing import NamedTuple, Set
 
-from smlp.util import const
+from ..util import const
+from .defs  import DataDesc, shai_data_desc
 
 def f_weigh(x, sigma, x0):
 	return 1/(1+np.exp(-2*sigma*(x-x0)))
@@ -67,47 +68,7 @@ class Tform:
 		v = g.sort_values(by=[self.timing_col], ascending=True)
 		return pd.DataFrame().append([self.ff(v, rad) for rad in time_window_radii])
 
-
-class DataDesc(NamedTuple):
-	timing_col : str
-	delta_col : str
-
-	byte_col : str
-	channel_col : str
-	rank_col : str
-
-	other_output_cols : Set[str]
-
-	@property
-	def output_cols(self) -> Set[str]:
-		return {self.delta_col, *self.other_output_cols}
-
-	def drop(self, feat):
-		def f(kv):
-			k,v = kv
-			if k == 'other_output_cols':
-				return {c for c in v if c != feat}
-			else:
-				return v if v != feat else None
-		return DataDesc._make(map(f, zip(self._fields, self)))
-
-	def relabel(self, old, new):
-		def f(kv):
-			k,v = kv
-			if k == 'other_output_cols':
-				return {c if c != old else new for c in v}
-			else:
-				return v if v != old else new
-		return DataDesc._make(map(f, zip(self._fields, self)))
-
-
-def data_desc_from_spec(timing_col, delta_col, spec : list):
-	assert all(c in (s['label'] for s in spec)
-	           for c in (timing_col, delta_col))
-	return DataDesc(timing_col, delta_col,
-	                {s['label'] for s in spec
-	                 if s['type'] == 'response' and s['label'] != delta_col})
-
+"""
 class TradDataDesc(NamedTuple):
 	timing_col : str
 	trad_col : str
@@ -123,12 +84,11 @@ class TradDataDesc(NamedTuple):
 	def output_cols(self) -> Set[str]:
 		return {self.obj_col, *self.other_output_cols}
 
-shai_data_desc = DataDesc('Timing', 'delta', 'Byte', 'MC', 'RANK', {'Area'})
-
 def trad_from_data_desc(desc : DataDesc, trad_col='trad', obj_col='area'):
 	return TradDataDesc(desc.timing_col, trad_col, obj_col,
 	                    desc.byte_col, desc_channel_col, desc.rank_col,
 	                    {desc.delta_col, *desc.other_output_cols})
+"""
 
 def prep_area(data, is_rx : bool, log=const(None), max_workers=None,
               mp_context=None, desc : DataDesc = shai_data_desc,

@@ -1,27 +1,14 @@
 
-import pandas as pd
+from ..util import const, log, die
+from .defs  import shai_data_desc
 
 from fractions import Fraction, Decimal
 from typing    import Union, List, Tuple, NamedTuple
-from smlp.util import const, log, die
 from copy      import copy, deepcopy
 
-def load_spec(path : str, floats=Decimal):
-	import json
-	with open(path) as f:
-		spec = json.load(f, parse_float=floats)
-	assert type(spec) is list
-	for i,s in enumerate(spec):
-		assert 'label' in s and type(s['label']) is str, (
-			"'label' missing or of wrong type in item %d" % i)
-		assert 'type' in s and s['type'] in ('knob', 'input', 'response', 'categorical'), (
-			"'type' missing or has wrong value in item %d labelled '%s'" % (i, s['label']))
-		assert 'range' in s and (
-			(type(s['range']) is list) if s['type'] == 'categorical'
-			else (s['range'] in ('int','float'))), (
-			"'range' missing or has wrong value in item %d labelled '%s'" % (i, s['label']))
-	return spec
+import json
 
+import pandas as pd
 
 class Dimension:
 	spec_entry : dict
@@ -81,11 +68,21 @@ class Dimension:
 		assert a == b, "'safe' not compatible: %s != %s" % (a, b)
 
 
+class JSON_DecimalEncoder(json.JSONEncoder):
+	def encode(self, o):
+		if isinstance(o, Decimal):
+			return str(o)
+		else:
+			return super().encode(o)
+
+
 class Speced:
 	def __init__(self, data : pd.DataFrame):
 		assert type(data) is pd.DataFrame
 		for c in data.columns:
-			assert type(c) is Dimension, "column %s of wrong type: %s != Dimension" % (c, type(c))
+			assert type(c) is Dimension, (
+				"column '%s' of wrong type: %s != Dimension"
+				% (c, type(c)))
 		self._data = data
 
 	@property
@@ -132,6 +129,41 @@ class Speced:
 		return Speced(self.data[[c for c in self.data
 		                           if c not in self.response_features]])
 
+	def store(self, data_out, spec_out, *, openmode='x', json_enc_cls=JSON_DecimalEncoder):
+		if isinstance(spec_out, str):
+			with open(spec_out, openmode) as f:
+				return to_csv(data_out, f, openmode=openmode,
+				              json_enc_cls=json_enc_cls)
+
+		import json
+		try:
+			# spec is more important, try to store it first
+			json.dump(self.spec, spec_out, indent=4, cls=json_enc_cls)
+		finally:
+			self.data.to_csv(data_out, index=False, mode=openmode)
+
+def _explode_cat(sp, col):
+	b = sp.data[col]
+	assert b.dtype.is_dtype('category')
+	for c in b.dtype.categories:
+		dsc = sp.fix(col, c)
+		for r in dsc.response_features:
+			dsc = dsc.relabel(r.label, '%s_%s' % (r.label, c))
+		yield dsc
+
+def explode_cat(sp, col):
+	gen = _explode_cat(sp, col)
+	c = next(gen)
+	try:
+		while True:
+			dsc = next(gen)
+			# TODO: merge c.desc and dsc.desc somehow?
+			c = Speced(pd.merge(c.data, dsc.data, how='outer'))
+	except StopIteration:
+		pass
+	return c
+
+
 class ShaiData(Speced):
 
 	def __init__(self, data, desc : NamedTuple):
@@ -166,12 +198,30 @@ class ShaiData(Speced):
 		return ShaiData(super().relabel(old, new).data,
 		                self.desc.relabel(old, new))
 
+
+def load_spec(path : str, floats=Decimal):
+	import json
+	with open(path) as f:
+		spec = json.load(f, parse_float=floats)
+	assert type(spec) is list
+	for i,s in enumerate(spec):
+		assert 'label' in s and type(s['label']) is str, (
+			"'label' missing or of wrong type in item %d" % i)
+		assert 'type' in s and s['type'] in ('knob', 'input', 'response', 'categorical'), (
+			"'type' missing or has wrong value in item %d labelled '%s'" % (i, s['label']))
+		assert 'range' in s and (
+			(type(s['range']) is list) if s['type'] == 'categorical'
+			else (s['range'] in ('int','float'))), (
+			"'range' missing or has wrong value in item %d labelled '%s'" % (i, s['label']))
+	return spec
+
+
 def speced(data : Union[pd.DataFrame, str], spec : Union[list, str],
            cls : type = Speced):
-	if type(data) is str:
+	if isinstance(data, str):
 		data = pd.read_csv(data)
 
-	if type(spec) is str:
+	if isinstance(spec, str):
 		spec = load_spec(spec)
 
 	assert len([c for c in data]) == len(spec)
@@ -188,10 +238,6 @@ def speced(data : Union[pd.DataFrame, str], spec : Union[list, str],
 
 	return cls(pd.DataFrame({ Dimension(s): interp(data[c], s)
 	                          for c,s in zip(data, spec) }))
-
-
-def prepare(rx : Speced, tx : Speced, joint : List[Tuple[str,str]]):
-	pass
 
 
 def lookup_joint(rx, tx, joint):
@@ -235,43 +281,76 @@ def init_joint(rx_data, rx_spec, tx_data, tx_spec,
 rx, tx, joint = shai.init_joint('rx-pp.csv','rx-pp.spec','tx-pp.csv','tx-pp.spec',
                                 [('DDR5_RTT_PARK_RX','DDR5_RTT_PARK_TX')
                                 ,('MC','MC'),('RANK','RANK'),('Byte','Byte')
-                                ],True)
+                                ],True,
+                                cls=lambda df: shai.ShaiData(df, preparea.shai_data_desc))
 """
 
 trad_col = Dimension({'label': 'trad', 'type': 'knob', 'range': 'float', 'rad-abs': 0})
 obj_col = Dimension({'label': 'area', 'type': 'response'})
 
-def _preparea(ds, is_rx, log, max_workers):
-	from smlp.mrc import preparea
-	from smlp.util import verbosify
+#def _preparea(ds, is_rx, log, max_workers):
+#	from smlp.mrc import preparea
+#	from smlp.util import verbosify
+#
+#	for r in ds.desc.other_output_cols:
+#		ds = ds.drop(r)
+#
+#	b = ds.data[ds.desc.byte_col]
+#	assert b.dtype.is_dtype('category')
+#	for c in b.dtype.categories:
+#		dsc = ds.fix(ds.desc.byte_col, c)
+#		dsc = ShaiData(pd.concat(preparea.prep_area(dsc.data, is_rx, log, max_workers,
+#		                                            trad_col=trad_col, obj_col=obj_col,
+#		                                            desc = dsc.desc)
+#		                        ), dsc.desc)
+#		#dsc = dsc.drop(desc.delta_col)
+#		for r in dsc.response_features:
+#			dsc = dsc.relabel(r.label, '%s_%s' % (r.label, c))
+#		yield dsc
+#
+#def preparea(ds, is_rx, log, max_workers):
+#	gen = _preparea(ds, is_rx, log, max_workers)
+#	c = next(gen)
+#	try:
+#		while True:
+#			dsc = next(gen)
+#			# TODO: merge c.desc and dsc.desc somehow?
+#			c = Speced(pd.merge(c.data, dsc.data, how='outer'))
+#	except StopIteration:
+#		pass
+#	return c
 
+# requires access to desc.rank_col, desc.channel_col, desc.byte_col,
+#                    desc.timing_col, desc.delta_col, desc.other_output_cols
+def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
+	"""
+		Transforms the annotated MRC instance `ds` (either RX or TX)
+		into a `Speced` instance with additional features 'trad' and
+		'area' by fixing RANK=0, MC=0 and dropping irrelevant outputs
+		like 'Area'.
+	"""
+
+	from smlp.mrc import preparea
+
+	# fix 'RANK'=0, 'MC'=0
+	ds = ds.fix(ds.desc.rank_col, 0).fix(ds.desc.channel_col, 0)
+
+	# drop 'Area'
 	for r in ds.desc.other_output_cols:
 		ds = ds.drop(r)
 
-	b = ds.data[ds.desc.byte_col]
-	assert b.dtype.is_dtype('category')
-	for c in b.dtype.categories:
-		dsc = ds.fix(ds.desc.byte_col, c)
-		dsc = ShaiData(pd.concat(preparea.prep_area(dsc.data, is_rx, log, max_workers,
-		                                            trad_col=trad_col, obj_col=obj_col,
-		                                            desc = dsc.desc)
-		                        ), dsc.desc)
-		#dsc = dsc.drop(desc.delta_col)
-		for r in dsc.response_features:
-			dsc = dsc.relabel(r.label, '%s_%s' % (r.label, c))
-		yield dsc
+	# compute non-linear 'area' for default set of 'trad'
+	ds = ShaiData(pd.concat(preparea.prep_area(ds.data, is_rx, log,
+	                                           max_workers,
+	                                           trad_col = trad_col,
+	                                           obj_col = obj_col,
+	                                           desc = ds.desc)
+	                       ), ds.desc)
 
-def preparea(ds, is_rx, log, max_workers):
-	gen = _preparea(ds, is_rx, log, max_workers)
-	c = next(gen)
-	try:
-		while True:
-			dsc = next(gen)
-			# TODO: merge c.desc and dsc.desc somehow?
-			c = Speced(pd.merge(c.data, dsc.data, how='outer'))
-	except StopIteration:
-		pass
-	return c
+	# transform 'delta' and 'area' every value i of 'Byte'
+	# into 'delta_i' and 'area_i' to get rid of 'Byte'
+	return explode_cat(ds, ds.desc.byte_col)
+
 
 
 def parse_args(argv):
@@ -293,6 +372,8 @@ def parse_args(argv):
 	               '[default: #cpus]')
 	p.add_argument('-q', '--quiet', default=False, action='store_true',
 	               help='suppress log messages')
+	p.add_argument('-o', '--outdir', metavar='DIR', type=str, help=
+	               'path to (non-existent) working directory to prepare')
 	p.add_argument('-v', '--verbose', default=0, action='count',
 	               help='increase verbosity')
 	args = p.parse_args(argv[1:])
@@ -314,30 +395,31 @@ def parse_args(argv):
 	return args
 
 
-def main(argv):
-	args = parse_args(argv)
+if __name__ == '__main__':
+	import sys, os, json
+	args = parse_args(sys.argv)
+	log.verbosity = args.verbose
 
 	rx, tx, joint = init_joint(args.rx_data, args.rx_spec,
 	                           args.tx_data, args.tx_spec,
-	                           args.joint, force=args.force, log=log)
+	                           args.joint, force=args.force, log=log,
+	                           cls=lambda df: ShaiData(df, shai_data_desc))
 
-	rx = rx.fix('RANK', 0).fix('MC', 0)
-	#rx.drop('Area')
-	tx = tx.fix('RANK', 0).fix('MC', 0)
-	#tx.drop('Area')
+	rx = prepare(rx, True, log, args.max_workers)
+	tx = prepare(tx, False, log, args.max_workers)
 
-	from smlp.util import verbosify
-
-	rxpp = preparea(rx.data, True, verbosify(log),
-	                max_workers=args.max_workers,
-	                trad_col=trad_col, obj_col=obj_col)
-	txpp = preparea(tx.data, False, verbosify(log),
-	                max_workers=args.max_workers,
-	                trad_col=trad_col, obj_col=obj_col)
-
-	return rx, tx, joint, rxpp, txpp
-
-
-if __name__ == '__main__':
-	import sys
-	main(sys.argv)
+	if args.outdir is not None:
+		if os.path.exists(args.outdir):
+			assert os.path.isdir(args.outdir), (
+				"error: output DIR path '%s' exists and "
+				"is not a directory" % args.outdir)
+			assert len(os.listdir(args.outdir)) == 0, (
+				"error: output DIR '%s' exists and is not empty"
+				% args.outdir)
+		os.mkdir(args.outdir)
+		with open(os.path.join(args.outdir, 'joint'), 'x') as f:
+			json.dump(joint, f, indent=4)
+		rx.store(os.path.join(args.outdir, 'rx.csv'),
+		         os.path.join(args.outdir, 'rx.spec'))
+		tx.store(os.path.join(args.outdir, 'tx.csv'),
+		         os.path.join(args.outdir, 'tx.spec'))
