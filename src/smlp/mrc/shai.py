@@ -1,6 +1,9 @@
 
 from ..util import const, log, die
+from ..train import nn_main
 from .defs  import shai_data_desc
+
+from common import DataFileInstance
 
 from fractions import Fraction, Decimal
 from typing    import Union, List, Tuple, NamedTuple
@@ -117,6 +120,10 @@ class Speced:
 		return Speced(self.data.rename(columns={old: c}))
 
 	@property
+	def input_features(self) -> List[Dimension]:
+		return [c for c in self.data if c not in self.response_features]
+
+	@property
 	def response_features(self) -> List[Dimension]:
 		return [c for c in self.data if c.type == 'response']
 
@@ -126,8 +133,7 @@ class Speced:
 
 	@property
 	def independent(self):
-		return Speced(self.data[[c for c in self.data
-		                           if c not in self.response_features]])
+		return Speced(self.data[self.input_features])
 
 	def store(self, data_out, spec_out, *, openmode='x', json_enc_cls=JSON_DecimalEncoder):
 		if isinstance(spec_out, str):
@@ -285,8 +291,12 @@ rx, tx, joint = shai.init_joint('rx-pp.csv','rx-pp.spec','tx-pp.csv','tx-pp.spec
                                 cls=lambda df: shai.ShaiData(df, preparea.shai_data_desc))
 """
 
-trad_col = Dimension({'label': 'trad', 'type': 'knob', 'range': 'float', 'rad-abs': 0})
-obj_col = Dimension({'label': 'area', 'type': 'response'})
+eye_w_col = Dimension({'label': 'eye_w', 'type': 'response'})
+eye_h_col = Dimension({'label': 'eye_h', 'type': 'response'})
+
+#trad_col = Dimension({'label': 'trad', 'type': 'knob', 'range': 'float', 'rad-abs': 0})
+#obj_col = Dimension({'label': 'area', 'type': 'response'})
+
 
 #def _preparea(ds, is_rx, log, max_workers):
 #	from smlp.mrc import preparea
@@ -340,17 +350,26 @@ def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
 		ds = ds.drop(r)
 
 	# compute non-linear 'area' for default set of 'trad'
-	ds = ShaiData(pd.concat(preparea.prep_area(ds.data, is_rx, log,
-	                                           max_workers,
-	                                           trad_col = trad_col,
-	                                           obj_col = obj_col,
-	                                           desc = ds.desc)
-	                       ), ds.desc)
+	ds = ShaiData(#pd.concat(preparea.prep_area(ds.data, is_rx, log,
+	              #                             max_workers,
+	              #                             trad_col = trad_col,
+	              #                             obj_col = obj_col,
+	              #                             desc = ds.desc)
+	              #         ),
+	              preparea.v2(ds.data, preparea.DEF_TIME_WINDOW_RADII,
+	                          ds.desc, eye_w = eye_w_col, eye_h = eye_h_col,
+	                          max_workers=max_workers)
+	              ds.desc)
+
+	ds.drop(ds.desc.delta_col)
+
+	from pprint import pprint
+	import sys
+	pprint(ds.columns, stream=sys.stderr)
 
 	# transform 'delta' and 'area' every value i of 'Byte'
 	# into 'delta_i' and 'area_i' to get rid of 'Byte'
 	return explode_cat(ds, ds.desc.byte_col)
-
 
 
 def parse_args(argv):
@@ -419,7 +438,18 @@ if __name__ == '__main__':
 		os.mkdir(args.outdir)
 		with open(os.path.join(args.outdir, 'joint'), 'x') as f:
 			json.dump(joint, f, indent=4)
-		rx.store(os.path.join(args.outdir, 'rx.csv'),
-		         os.path.join(args.outdir, 'rx.spec'))
-		tx.store(os.path.join(args.outdir, 'tx.csv'),
-		         os.path.join(args.outdir, 'tx.spec'))
+
+		model={}
+
+		for sp, name in [(rx, 'rx'), (tx, 'tx')]:
+			wd_prefix = os.path.join(args.outdir, name)
+			inst = DataFileInstance(wd_prefix)
+
+			# store the data
+			sp.store(inst.data_fname, wd_prefix + '.spec')
+
+			# train NN
+			model[name] = nn_main(inst, sp.response_features,
+			                      sp.input_features, data=sp,
+			                      layers_spec='2,1', seed=1234,
+			                      epochs=30, batch_size=32)

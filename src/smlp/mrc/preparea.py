@@ -2,12 +2,62 @@
 
 import pandas as pd
 import numpy as np
+
 from concurrent.futures import ProcessPoolExecutor, as_completed
+import functools
 
 # from typing import NamedTuple, Set
 
 from ..util import const
 from .defs  import DataDesc, shai_data_desc
+
+
+def _v2(v, rad, timing_col='Timing', delta_col='delta',
+        eye_width_col='eye_width', eye_height_col='eye_height'):
+	#v.sort_values(by=[timing_col], ascending=True, inplace=True)
+	w = pd.DataFrame(index=v.index, columns=[eye_width_col,eye_height_col],
+	                 copy=True)
+	w[eye_width_col] = rad*2 # overwritten below, just to init the right dtype
+	w[eye_height_col] = 0.0  # overwritten below, just to init the right dtype
+	vt = v[timing_col]
+	for idx, t0 in vt.items():
+		x = vt - t0
+		vy = v[(-rad <= x) & (x < rad)]
+		assert len(vy) > 0
+		z = vy[timing_col]
+		w.at[idx, eye_width_col] = z.max() - z.min() + 1
+		w.at[idx, eye_height_col] = min(vy[delta_col])
+	return pd.concat([v, w], axis=1)
+
+def v2_gen(data, radii, desc, eye_w='eye_width', eye_h='eye_height',
+           max_workers=None, mp_context=None):
+	gcols = [c for c in data if c not in (desc.timing_col, *desc.output_cols)]
+	grid = data.groupby(gcols)
+	fn = functools.partial(_v2, timing_col=desc.timing_col,
+	                            delta_col=desc.delta_col,
+	                            eye_width_col=eye_w,
+	                            eye_height_col=eye_h)
+	if max_workers is None:
+		for _, v in grid:
+			for rad in radii:
+				yield fn(v, rad)
+	else:
+		with ProcessPoolExecutor(max_workers=max_workers,
+		                         mp_context=mp_context) as ex:
+			#wrhdr = True
+			for fut in as_completed([ex.submit(fn, v, rad)
+			                         for _,v in grid
+			                         for rad in radii]):
+				yield fut.result()
+
+def v2(data, radii, desc, eye_w='eye_width', eye_h='eye_height',
+       max_workers=None, mp_context=None):
+	return pd.concat(v2_gen(data, radii, desc, eye_w, eye_h,
+	                        max_workers=max_workers, mp_context=mp_context),
+	                 ignore_index=True).drop_duplicates()
+
+
+
 
 def f_weigh(x, sigma, x0):
 	return 1/(1+np.exp(-2*sigma*(x-x0)))
@@ -62,11 +112,15 @@ class Tform:
 		w[v.columns] = v
 		return w
 
-	def tform(self, kv, time_window_radii, log):
+	def _tform(self, kv, time_window_radii, log):
 		g = kv[1]
 		log(1, 'tform %s' % (kv[0],))
 		v = g.sort_values(by=[self.timing_col], ascending=True)
-		return pd.DataFrame().append([self.ff(v, rad) for rad in time_window_radii])
+		for rad in time_window_radii:
+			yield self.ff(v, rad)
+
+	def tform(self, kv, time_window_radii, log):
+		return pd.DataFrame().append(list(self._tform(kv, time_window_radii, log)))
 
 """
 class TradDataDesc(NamedTuple):
@@ -90,10 +144,12 @@ def trad_from_data_desc(desc : DataDesc, trad_col='trad', obj_col='area'):
 	                    {desc.delta_col, *desc.other_output_cols})
 """
 
+DEF_TIME_WINDOW_RADII = [(100 + i)/2 for i in [-30,-20,-10,0,10,20,30]]
+
 def prep_area(data, is_rx : bool, log=const(None), max_workers=None,
               mp_context=None, desc : DataDesc = shai_data_desc,
               trad_col='trad', obj_col='area',
-              time_window_radii=[(100 + i)/2 for i in [-30,-20,-10,0,10,20,30]]
+              time_window_radii=DEF_TIME_WINDOW_RADII
              ):
 
 	#if is_rx: # rx
@@ -160,7 +216,8 @@ def prep_area(data, is_rx : bool, log=const(None), max_workers=None,
 
 	if max_workers == 1:
 		for kv in grid:
-			yield tform.tform(kv, time_window_radii, log=log)
+			for res in tform._tform(kv, time_window_radii, log=log):
+				yield res
 	else:
 		with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as ex:
 			#wrhdr = True
