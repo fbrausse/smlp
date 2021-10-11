@@ -366,7 +366,7 @@ def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
 
 	from pprint import pprint
 	import sys
-	pprint(ds.columns, stream=sys.stderr)
+	pprint(ds.data.columns, stream=sys.stderr)
 
 	# transform 'delta' and 'area' every value i of 'Byte'
 	# into 'delta_i' and 'area_i' to get rid of 'Byte'
