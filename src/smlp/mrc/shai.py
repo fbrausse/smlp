@@ -332,7 +332,7 @@ obj_col = Dimension({'label': 'area', 'type': 'response'})
 
 # requires access to desc.rank_col, desc.channel_col, desc.byte_col,
 #                    desc.timing_col, desc.delta_col, desc.other_output_cols
-def prepare(ds : ShaiData, v2 : bool, is_rx : bool, log, max_workers : int) -> Speced:
+def prepare(ds : ShaiData, v2 : bool, is_rx : bool, log, max_workers : int, debug=False) -> Speced:
 	"""
 		Transforms the annotated MRC instance `ds` (either RX or TX)
 		into a `Speced` instance with additional features 'trad' and
@@ -370,6 +370,11 @@ def prepare(ds : ShaiData, v2 : bool, is_rx : bool, log, max_workers : int) -> S
 	import sys
 	pprint([c.label for c in ds.data.columns], stream=sys.stderr)
 
+	if debug:
+		ds.store('/localdisk/fbrausse/shai-prepare.csv',
+		         '/localdisk/fbrausse/shai-prepare.spec',
+		         openmode='w')
+
 	# transform 'delta' and 'area' every value i of 'Byte'
 	# into 'delta_i' and 'area_i' to get rid of 'Byte'
 	return explode_cat(ds, ds.desc.byte_col) if v2 else ds
@@ -389,6 +394,8 @@ def parse_args(argv):
 	               "'%s'"
 	               % (eye_w_col.label, eye_h_col.label,
 	                  obj_col.label, trad_col.label))
+	p.add_argument('-d', '--debug', default=False, action='store_true', help=
+	               'debug mode, for development')
 	p.add_argument('-j', '--joint', type=str, default='', help=''
 	               'comma-separated list of the form '
 	               'RXCOL1=TXCOL1[,RXCOL2=TXCOL2[,...]] '
@@ -435,8 +442,8 @@ if __name__ == '__main__':
 
 	v2 = getattr(args, '2')
 
-	rx = prepare(rx, v2, True, log, args.max_workers)
-	tx = prepare(tx, v2, False, log, args.max_workers)
+	rx = prepare(rx, v2, True, log, args.max_workers, args.debug)
+	tx = prepare(tx, v2, False, log, args.max_workers, args.debug)
 
 	if args.outdir is not None:
 		if os.path.exists(args.outdir):
