@@ -362,11 +362,11 @@ def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
 	                         ),
 	              ds.desc)
 
-	ds.drop(ds.desc.delta_col)
+	ds = ds.drop(ds.desc.delta_col)
 
 	from pprint import pprint
 	import sys
-	pprint(ds.data.columns, stream=sys.stderr)
+	pprint([c.label for c in ds.data.columns], stream=sys.stderr)
 
 	# transform 'delta' and 'area' every value i of 'Byte'
 	# into 'delta_i' and 'area_i' to get rid of 'Byte'
