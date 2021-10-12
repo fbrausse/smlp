@@ -1,6 +1,6 @@
 
 from ..util import const, log, die
-from ..train import nn_main
+#from ..train import nn_main
 from .defs  import shai_data_desc
 
 from common import DataFileInstance
@@ -294,8 +294,8 @@ rx, tx, joint = shai.init_joint('rx-pp.csv','rx-pp.spec','tx-pp.csv','tx-pp.spec
 eye_w_col = Dimension({'label': 'eye_w', 'type': 'response'})
 eye_h_col = Dimension({'label': 'eye_h', 'type': 'response'})
 
-#trad_col = Dimension({'label': 'trad', 'type': 'knob', 'range': 'float', 'rad-abs': 0})
-#obj_col = Dimension({'label': 'area', 'type': 'response'})
+trad_col = Dimension({'label': 'trad', 'type': 'knob', 'range': 'float', 'rad-abs': 0})
+obj_col = Dimension({'label': 'area', 'type': 'response'})
 
 
 #def _preparea(ds, is_rx, log, max_workers):
@@ -332,7 +332,7 @@ eye_h_col = Dimension({'label': 'eye_h', 'type': 'response'})
 
 # requires access to desc.rank_col, desc.channel_col, desc.byte_col,
 #                    desc.timing_col, desc.delta_col, desc.other_output_cols
-def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
+def prepare(ds : ShaiData, v2 : bool, is_rx : bool, log, max_workers : int) -> Speced:
 	"""
 		Transforms the annotated MRC instance `ds` (either RX or TX)
 		into a `Speced` instance with additional features 'trad' and
@@ -350,19 +350,21 @@ def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
 		ds = ds.drop(r)
 
 	# compute non-linear 'area' for default set of 'trad'
-	ds = ShaiData(#pd.concat(preparea.prep_area(ds.data, is_rx, log,
-	              #                             max_workers,
-	              #                             trad_col = trad_col,
-	              #                             obj_col = obj_col,
-	              #                             desc = ds.desc)
-	              #         ),
-	              preparea.v2(ds.data, preparea.DEF_TIME_WINDOW_RADII,
+	ds = ShaiData(preparea.v2(ds.data, preparea.DEF_TIME_WINDOW_RADII,
 	                          ds.desc, eye_w = eye_w_col, eye_h = eye_h_col,
 	                          max_workers=max_workers
-	                         ),
+	                         )
+	              if v2 else
+	              pd.concat(preparea.prep_area(ds.data, is_rx, log,
+	                                           max_workers,
+	                                           trad_col = trad_col,
+	                                           obj_col = obj_col,
+	                                           desc = ds.desc)
+	                       ),
 	              ds.desc)
 
-	ds = ds.drop(ds.desc.delta_col)
+	if v2:
+		ds = ds.drop(ds.desc.delta_col)
 
 	from pprint import pprint
 	import sys
@@ -370,7 +372,7 @@ def prepare(ds : ShaiData, is_rx : bool, log, max_workers : int) -> Speced:
 
 	# transform 'delta' and 'area' every value i of 'Byte'
 	# into 'delta_i' and 'area_i' to get rid of 'Byte'
-	return explode_cat(ds, ds.desc.byte_col)
+	return explode_cat(ds, ds.desc.byte_col) if v2 else ds
 
 
 def parse_args(argv):
@@ -381,6 +383,12 @@ def parse_args(argv):
 	p.add_argument('rx_spec', type=str, help='path to RX-PP.spec')
 	p.add_argument('tx_data', type=str, help='path to TX-PP.csv')
 	p.add_argument('tx_spec', type=str, help='path to TX-PP.spec')
+	p.add_argument('-2', default=False, action='store_true', help=
+	               "pre-compute columns '%s' and '%s' from datasets instead "
+	               "of the non-linearly combined objective '%s' depending on "
+	               "'%s'"
+	               % (eye_w_col.label, eye_h_col.label,
+	                  obj_col.label, trad_col.label))
 	p.add_argument('-j', '--joint', type=str, default='', help=''
 	               'comma-separated list of the form '
 	               'RXCOL1=TXCOL1[,RXCOL2=TXCOL2[,...]] '
@@ -425,8 +433,10 @@ if __name__ == '__main__':
 	                           args.joint, force=args.force, log=log,
 	                           cls=lambda df: ShaiData(df, shai_data_desc))
 
-	rx = prepare(rx, True, log, args.max_workers)
-	tx = prepare(tx, False, log, args.max_workers)
+	v2 = getattr(args, '2')
+
+	rx = prepare(rx, v2, True, log, args.max_workers)
+	tx = prepare(tx, v2, False, log, args.max_workers)
 
 	if args.outdir is not None:
 		if os.path.exists(args.outdir):
@@ -449,8 +459,8 @@ if __name__ == '__main__':
 			# store the data
 			sp.store(inst.data_fname, wd_prefix + '.spec')
 
-			# train NN
-			model[name] = nn_main(inst, sp.response_features,
-			                      sp.input_features, data=sp,
-			                      layers_spec='2,1', seed=1234,
-			                      epochs=30, batch_size=32)
+			## train NN
+			#model[name] = nn_main(inst, sp.response_features,
+			#                      sp.input_features, data=sp,
+			#                      layers_spec='2,1', seed=1234,
+			#                      epochs=30, batch_size=32)
