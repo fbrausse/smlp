@@ -279,6 +279,7 @@ def init_joint(rx_data, rx_spec, tx_data, tx_spec,
 			if force:
 				log(0, 'warning: joint %s=%s: %s' % (r, t, e))
 			else:
+				log(0, 'error: joint %s=%s: %s. Pass option "-f" to discard this error as a warning.' % (r,t,e))
 				raise
 
 	return rx, tx, joint
