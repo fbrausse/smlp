@@ -1,7 +1,31 @@
 
+# About this document
+
+This document contains a quickstart guide on the steps necessary to solve
+Shai's MRC problem instances.
+
+As such, commands will be written like so:
+```
+$ whoami
+```
+or
+```
+(venv) $ whoami
+```
+The text up to and including the first `$` is not part of the command and only
+given as a hopefully helpful context in what environment commands are run.
+In particular, the block
+```
+(venv) $ $SMLP/repo/smlp-mrc.sh
+```
+describes the command `$SMLP/repo/smlp-mrc.sh`, where `$SMLP/repo` is the path
+to the SMLP directory.
+
+
 # SMLP details and usage
 
-Prepare the shell:
+Prepare the shell (this document assumes `bash` but does not use any features
+not existant in other commonly used shells):
 ```
 $ bash
 $ export SMLP=/nfs/iil/proj/dt/eva/smlp
@@ -12,6 +36,7 @@ $ source $SMLP/root/venv/bin/activate
 This sets the `SMLP` envvar to SMLP's root path and loads the venv.
 `$SMLP/repo` contains the distributed SMLP code and
 `$SMLP/root/venv` contains the Python virtualenv preset to CPython-3.7.
+See `$SMLP/root/README` for details on its setup.
 
 
 ## Shai
