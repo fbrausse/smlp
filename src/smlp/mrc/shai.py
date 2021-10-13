@@ -441,7 +441,9 @@ if __name__ == '__main__':
 
 	v2 = getattr(args, '2')
 
+	log(1, 'preparing RX...')
 	rx = prepare(rx, v2, True, log, args.max_workers, args.debug)
+	log(1, 'preparing TX...')
 	tx = prepare(tx, v2, False, log, args.max_workers, args.debug)
 
 	if args.outdir is not None:
@@ -452,6 +454,7 @@ if __name__ == '__main__':
 			assert len(os.listdir(args.outdir)) == 0, (
 				"error: output DIR '%s' exists and is not empty"
 				% args.outdir)
+		log(1, 'writing output to directory %s' % args.outdir)
 		os.mkdir(args.outdir)
 		with open(os.path.join(args.outdir, 'joint'), 'x') as f:
 			json.dump(joint, f, indent=4)
