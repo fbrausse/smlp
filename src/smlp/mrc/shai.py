@@ -70,14 +70,15 @@ class Dimension:
 		a, b = getattr(self, 'safe', None), getattr(other, 'safe', None)
 		assert a == b, "'safe' not compatible: %s != %s" % (a, b)
 
-
+# can't encode Decimals w/o reimplementing the encoder due to its ridiculously
+# bad interface calling float.__repr__ (hardcoded in CPython) directly even on
+# subclasses of float
 class JSON_DecimalEncoder(json.JSONEncoder):
-	def encode(self, o):
+	def default(self, o):
 		if isinstance(o, Decimal):
-			return str(o)
+			return float(o)
 		else:
-			return super().encode(o)
-
+			return super().default(o)
 
 class Speced:
 	def __init__(self, data : pd.DataFrame):
@@ -138,8 +139,8 @@ class Speced:
 	def store(self, data_out, spec_out, *, openmode='x', json_enc_cls=JSON_DecimalEncoder):
 		if isinstance(spec_out, str):
 			with open(spec_out, openmode) as f:
-				return to_csv(data_out, f, openmode=openmode,
-				              json_enc_cls=json_enc_cls)
+				return self.store(data_out, f, openmode=openmode,
+				                  json_enc_cls=json_enc_cls)
 
 		import json
 		try:
@@ -344,7 +345,7 @@ def prepare(ds : ShaiData, v2 : bool, is_rx : bool, log, max_workers : int, debu
 	from smlp.mrc import preparea
 
 	# fix 'RANK'=0, 'MC'=0
-	ds = ds.fix(ds.desc.rank_col, 0).fix(ds.desc.channel_col, 0)
+	ds = ds.fix(ds.desc.rank_col, 0) #.fix(ds.desc.channel_col, 0)
 
 	# drop 'Area'
 	for r in ds.desc.other_output_cols:
@@ -371,14 +372,11 @@ def prepare(ds : ShaiData, v2 : bool, is_rx : bool, log, max_workers : int, debu
 	import sys
 	pprint([c.label for c in ds.data.columns], stream=sys.stderr)
 
-	if debug:
-		ds.store('/localdisk/fbrausse/shai-prepare.csv',
-		         '/localdisk/fbrausse/shai-prepare.spec',
-		         openmode='w')
+	return ds
 
 	# transform 'delta' and 'area' every value i of 'Byte'
 	# into 'delta_i' and 'area_i' to get rid of 'Byte'
-	return explode_cat(ds, ds.desc.byte_col) if v2 else ds
+	#return explode_cat(ds, ds.desc.byte_col) if v2 else ds
 
 
 def parse_args(argv):
