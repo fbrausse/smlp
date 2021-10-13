@@ -165,3 +165,13 @@ and `$WD/tx/rank0/shared1.csv` for TX.
 Again, for all supported options (like `-r` used in the above commands to denote
 the response feature to optimize, see also preprocessing step 1), run
 `smlp-mrc.sh -h`.
+
+## Parallelization
+
+The `smlp-mrc.sh` script allows for parallelization on the machine it is
+executed on by passing the `-j N` option where `N` is the number of cores to
+use. It achieves this by running instances of `MC` and `Byte` combinations in
+parallel, via `gmake`.
+
+The new version of `SMLP` (under development, at the time of this writing) will
+allow for parallelization in a trusted network without relying on `gmake`.
