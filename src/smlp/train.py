@@ -11,6 +11,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from sklearn.metrics import mean_squared_error, r2_score
 
+from pandas import read_csv, DataFrame
+
 from common import *
 from math import ceil
 import json
