@@ -457,7 +457,7 @@ if __name__ == '__main__':
 		log(1, 'writing output to directory %s' % args.outdir)
 		os.mkdir(args.outdir)
 		with open(os.path.join(args.outdir, 'joint'), 'x') as f:
-			json.dump(joint, f, indent=4)
+			json.dump([[a.label,b.label] for a,b in joint], f, indent=4)
 
 		model={}
 
