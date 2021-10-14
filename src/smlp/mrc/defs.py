@@ -158,6 +158,8 @@ shai_email_20210802 = dict(
 	}
 )
 
+# TODO: Shai said "CPU_RON = DDR5_RON_UP  --> same" on 2021-10-14
+
 def pre_spec2spec(ps):
 	return {
 		ty: [{'label': k, **v} for k,v in entries.items()]
