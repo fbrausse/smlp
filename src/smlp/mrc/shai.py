@@ -345,7 +345,7 @@ def prepare(ds : ShaiData, v2 : bool, is_rx : bool, log, max_workers : int, debu
 	from smlp.mrc import preparea
 
 	# fix 'RANK'=0, 'MC'=0
-	ds = ds.fix(ds.desc.rank_col, 0) #.fix(ds.desc.channel_col, 0)
+	#ds = ds.fix(ds.desc.rank_col, 0) #.fix(ds.desc.channel_col, 0)
 
 	# drop 'Area'
 	for r in ds.desc.other_output_cols:
