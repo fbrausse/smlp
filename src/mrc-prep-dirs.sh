@@ -6,7 +6,7 @@
 # See the LICENSE file for terms of distribution.
 
 set -e
-#set -x
+set -x
 
 bin=$(realpath "`dirname "$0"`")
 export PATH="${bin}:${PATH}"
