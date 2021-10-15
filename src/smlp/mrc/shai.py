@@ -429,17 +429,29 @@ def parse_args(argv):
 	return args
 
 
+def _assert_outdir_valid(path):
+	if os.path.exists(path):
+		assert os.path.isdir(path), (
+			"error: output DIR path '%s' exists and "
+			"is not a directory" % path)
+		assert len(os.listdir(path)) == 0, (
+			"error: output DIR '%s' exists and is not empty"
+			% path)
+
 if __name__ == '__main__':
 	import sys, os, json
 	args = parse_args(sys.argv)
 	log.verbosity = args.verbose
 
+	v2 = getattr(args, '2')
+	if args.outdir is not None:
+		# check before doing expensive operations for quick feedback
+		_assert_outdir_valid(args.outdir)
+
 	rx, tx, joint = init_joint(args.rx_data, args.rx_spec,
 	                           args.tx_data, args.tx_spec,
 	                           args.joint, force=args.force, log=log,
 	                           cls=lambda df: ShaiData(df, shai_data_desc))
-
-	v2 = getattr(args, '2')
 
 	log(1, 'preparing RX...')
 	rx = prepare(rx, v2, True, log, args.max_workers, args.debug)
@@ -447,15 +459,13 @@ if __name__ == '__main__':
 	tx = prepare(tx, v2, False, log, args.max_workers, args.debug)
 
 	if args.outdir is not None:
-		if os.path.exists(args.outdir):
-			assert os.path.isdir(args.outdir), (
-				"error: output DIR path '%s' exists and "
-				"is not a directory" % args.outdir)
-			assert len(os.listdir(args.outdir)) == 0, (
-				"error: output DIR '%s' exists and is not empty"
-				% args.outdir)
+		# we already checked earlier, but file systems are not static
+		_assert_outdir_valid(args.outdir)
 		log(1, 'writing output to directory %s' % args.outdir)
-		os.mkdir(args.outdir)
+		try:
+			os.mkdir(args.outdir)
+		except FileExistsError:
+			pass
 		with open(os.path.join(args.outdir, 'joint'), 'x') as f:
 			json.dump([[a.label,b.label] for a,b in joint], f, indent=4)
 
