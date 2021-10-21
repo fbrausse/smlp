@@ -27,6 +27,13 @@ extern "C" {
 # define smlp_unreachable()	assert(0 && "unreachable")
 #endif
 
+#ifdef __GNUC__
+# define SMLP_FN_ATTR_PRINTF(fmtpos, argspos) \
+	__attribute__((format(printf,fmtpos,argspos)))
+#else
+# define SMLP_FN_ATTR_PRINTF(fmtpos, argspos)
+#endif
+
 struct kjson {
 	struct kjson_value top;
 	char *src;

@@ -44,14 +44,17 @@ Options [defaults]:\n\
 	exit(0);
 }
 
+SMLP_FN_ATTR_PRINTF(2,3)
 static bool log(int lvl, const char *fmt, ...)
 {
 	if (lvl >= verbosity)
 		return false;
-	va_list ap;
-	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
-	va_end(ap);
+	if (fmt) {
+		va_list ap;
+		va_start(ap, fmt);
+		vfprintf(stderr, fmt, ap);
+		va_end(ap);
+	}
 	return true;
 }
 
@@ -63,66 +66,64 @@ static bool log(int lvl, const char *fmt, ...)
 		t = (tw.tv_sec - tv.tv_sec) + (tw.tv_usec - tv.tv_usec) * 1e-6;\
 	} while (0)
 
-struct shai {
+struct shai : smlp::speced_csv {
 
-	smlp::speced_csv       sp;
-	const size_t           timing_idx, delta_idx;
+	size_t                 timing_idx, delta_idx;
 	std::vector<size_t>    nondup, by_cols;
 	std::vector<size_t *>  groups;
 
 	virtual ~shai() = default;
 
-	shai(FILE *csv_in, const char *spec_path,
+	shai(smlp::speced_csv &&speced,
 	     const char *timing_lbl,
 	     const char *delta_lbl)
-	: sp(csv_in, smlp::spec(spec_path))
-	, timing_idx(sp.column_idx(timing_lbl))
-	, delta_idx(sp.column_idx(delta_lbl))
+	: speced_csv(move(speced))
 	{
-		double t;
+		if (ssize_t area_idx = column_idx("Area"); area_idx != -1) {
+			log(1, "dropping 'Area' column\n");
+			drop_column(area_idx);
+		}
 
-		TIMED(t, sp.unique_rows(std::back_inserter(nondup)); );
-		log(1, "de-dup: %g sec -> %zux%zu\n", t, sp.width(), size(nondup));
-
-		if (ssize_t area_idx = sp.column_idx("Area"); area_idx != -1)
-			sp.drop_column(area_idx);
-
+		timing_idx = column_idx(timing_lbl);
 		if (timing_idx == (size_t)-1)
 			throw std::runtime_error("Timing column '" +
 			                         std::string(timing_lbl) +
 			                         "' not in CSV");
-		if (sp.get_spec(timing_idx).dtype != SMLP_DTY_INT)
+		if (spec(timing_idx).dtype != SMLP_DTY_INT)
 			throw std::runtime_error("Timing column '" +
 			                         std::string(timing_lbl) +
 			                         "' has type '" +
-			                         smlp::to_str(sp.get_spec(timing_idx).dtype) +
+			                         smlp::to_str(spec(timing_idx).dtype) +
 			                         "' != " + smlp::to_str(SMLP_DTY_INT));
 
+		delta_idx = column_idx(delta_lbl);
 		if (delta_idx == (size_t)-1)
 			throw std::runtime_error("delta column '" +
 			                         std::string(timing_lbl) +
 			                         "' not in CSV");
-		if (sp.get_spec(delta_idx).dtype != SMLP_DTY_DBL)
+		if (spec(delta_idx).dtype != SMLP_DTY_DBL)
 			throw std::runtime_error("delta column '" +
 			                         std::string(delta_lbl) +
 			                         "' has type '" +
-			                         smlp::to_str(sp.get_spec(delta_idx).dtype) +
+			                         smlp::to_str(spec(delta_idx).dtype) +
 			                         "' != " + smlp::to_str(SMLP_DTY_DBL));
 
+		double t;
+		TIMED(t, unique_rows(std::back_inserter(nondup)); );
+		log(1, "de-dup: %g sec -> %zux%zu\n", t, width(), nondup.size());
+
 		log(1, "group by:");
-		for (size_t i=0; i<sp.width(); i++)
+		for (size_t i=0; i<width(); i++)
 			if (i != timing_idx &&
-			    sp.get_spec(i).purpose == SMLP_PUR_CONFIG) {
-				log(1, " %s", sp.get_spec(i).label);
+			    spec(i).purpose == SMLP_PUR_CONFIG) {
+				log(1, " %s", spec(i).label);
 				by_cols.push_back(i);
 			}
 		log(1, "\n");
 
-		// size_t eye_n = size(time_window_radii);
-
 		TIMED(t,
-			sp.group_by(by_cols, [&](auto &rows, auto &rows_end)
-			                     {
+			group_by(by_cols, [&](auto &rows, auto &rows_end)
+			                  {
 				std::sort(rows, rows_end,
 				          [&](size_t a, size_t b)
 				          { return timing(a) < timing(b); });
@@ -130,42 +131,46 @@ struct shai {
 				if (log(2, "group %zu of size %5zu:",
 				        groups.size(), rows_end - rows)) {
 					for (size_t j : by_cols) {
-						auto v = sp.get(rows[0], j);
-						if (sp.get_spec(j).dtype == SMLP_DTY_DBL)
+						auto v = get(rows[0], j);
+						if (spec(j).dtype == SMLP_DTY_DBL)
 							log(2, " %g", v.d);
 						else
 							log(2, " %jd",
-							    sp.get_spec(j).dtype == SMLP_DTY_CAT
+							    spec(j).dtype == SMLP_DTY_CAT
 							    ? v.c : v.i);
 					}
 					log(2, "\n");
 				}
 
 				groups.push_back(&*rows);
-			                     }, nondup);
+			                  }, nondup);
 		);
 		groups.push_back(nondup.data() + nondup.size());
-		log(1, "grouping into %zu groups: %g sec\n", size(groups)-1, t);
+		log(1, "grouping into %zu groups: %g sec\n", groups.size()-1, t);
 	}
 
-	auto timing(size_t i) const { return sp.get(i, timing_idx).i; }
-	auto delta (size_t i) const { return sp.get(i,  delta_idx).d; }
+	auto timing(size_t i) const { return get(i, timing_idx).i; }
+	auto delta (size_t i) const { return get(i,  delta_idx).d; }
 
 	void prepare(intmax_t rad)
 	{
-		for (size_t i=0; i+1<size(groups); i++) {
+		double t;
+		TIMED(t,
+		for (size_t i=0; i+1<groups.size(); i++) {
 			size_t *rows = groups[i];
 			size_t rows_n = groups[i+1] - rows;
 			for (size_t j=0; j<rows_n; j++)
 				_prepare(rad, rows, j, rows_n);
 		}
+		);
+		log(2, "rad %jd prepare took %g sec\n", rad, t);
 	}
 
-	virtual void objective(intmax_t trad, const size_t *rows, size_t j,
+	virtual void objective(intmax_t trad, size_t row,
 	                       intmax_t width, double min_delta) = 0;
 
 private:
-	void _prepare(intmax_t rad, const size_t *rows, size_t j, size_t n)
+	void _prepare(intmax_t trad, const size_t *rows, size_t j, size_t n)
 	{
 		using std::min;
 
@@ -173,20 +178,20 @@ private:
 		double min_delta = delta(rows[j]);
 		ssize_t beg, end;
 		for (beg=j;; beg--)
-			if (beg >= 0 && -rad <= timing(rows[beg]) - t0)
+			if (beg >= 0 && -trad <= timing(rows[beg]) - t0)
 				min_delta = min(min_delta, delta(rows[beg]));
 			else {
 				beg++;
 				break;
 			}
 		for (end=j;; end++)
-			if ((size_t)end < n && timing(rows[end]) - t0 < rad)
+			if ((size_t)end < n && timing(rows[end]) - t0 < trad)
 				min_delta = min(min_delta, delta(rows[end]));
 			else {
 				end--;
 				break;
 			}
-		objective(rad, rows, j,
+		objective(trad, rows[j],
 		          timing(rows[end]) - timing(rows[beg]) + 1, min_delta);
 	}
 };
@@ -220,13 +225,13 @@ struct shai_v1 : shai {
 	const size_t trad_idx, area_idx;
 	const bool is_rx;
 
-	shai_v1(FILE *csv_in, const char *spec_path,
+	shai_v1(speced_csv &&speced,
 	        const char *timing_lbl,
 	        const char *delta_lbl,
 	        bool is_rx)
-	: shai(csv_in, spec_path, timing_lbl, delta_lbl)
-	, trad_idx(sp.add_column(TRAD))
-	, area_idx(sp.add_column(AREA))
+	: shai(move(speced), timing_lbl, delta_lbl)
+	, trad_idx(add_column(TRAD))
+	, area_idx(add_column(AREA))
 	, is_rx(is_rx)
 	{}
 
@@ -245,14 +250,14 @@ struct shai_v1 : shai {
 		return 1.0 / (1 + exp(-2 * sigma * (x - x0)));
 	}
 
-	void objective(intmax_t trad, const size_t *rows, size_t j,
+	void objective(intmax_t trad, const size_t row,
 	               intmax_t width, double min_delta) override
 	{
 		auto [delta_a,time_a] = params();
 		double fd = weigh(min_delta, 100, 0.02 / delta_a);
 		double ft = weigh(width    , 100, 0.02 / time_a);
-		sp.set(rows[j], trad_idx, { .i = trad });
-		sp.set(rows[j], area_idx, { .d = fd * ft });
+		set(row, trad_idx, { .i = trad });
+		set(row, area_idx, { .d = fd * ft });
 	}
 };
 
@@ -260,76 +265,194 @@ struct shai_v2 : shai {
 
 	const size_t trad_idx, eye_w_idx, eye_h_idx;
 
-	shai_v2(FILE *csv_in, const char *spec_path,
+	shai_v2(speced_csv &&speced,
 	        const char *timing_lbl,
 	        const char *delta_lbl)
-	: shai(csv_in, spec_path, timing_lbl, delta_lbl)
-	, trad_idx(sp.add_column(TRAD))
-	, eye_w_idx(sp.add_column(EYE_W))
-	, eye_h_idx(sp.add_column(EYE_H))
+	: shai(move(speced), timing_lbl, delta_lbl)
+	, trad_idx(add_column(TRAD))
+	, eye_w_idx(add_column(EYE_W))
+	, eye_h_idx(add_column(EYE_H))
 	{}
 
 	using shai::prepare;
 
-	void objective(intmax_t trad, const size_t *rows, size_t j,
+	void objective(intmax_t trad, const size_t row,
 	               intmax_t width, double min_delta
 	              ) override
 	{
-		sp.set(rows[j], trad_idx , { .i = trad });
-		sp.set(rows[j], eye_w_idx, { .i = width });
-		sp.set(rows[j], eye_h_idx, { .d = min_delta });
+		set(row, trad_idx , { .i = trad });
+		set(row, eye_w_idx, { .i = width });
+		set(row, eye_h_idx, { .d = min_delta });
 	}
 };
 
-static void run(shai &&s, const char *spec_out_path, const char *csv_out_path)
+namespace {
+template <typename... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template <typename... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+}
+
+extern "C" {
+
+#ifdef SMLP_PY
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#define PY_ARRAY_UNIQUE_SYMBOL smlp_ARRAY_API
+# include <numpy/arrayobject.h>
+static struct init_numpy {
+	init_numpy() {
+		/* we don't want Python to steal our signal handlers... */
+		Py_InitializeEx(0);
+
+		/* ... and neither numpy; see, e.g.,
+		 * <https://github.com/numpy/numpy/issues/7545> for
+		 * what it uses signal handlers ... pointless */
+		PyOS_sighandler_t sighandler = PyOS_getsig(SIGINT);
+		/* wrap numpy's init call into a function, because for some
+		 * reason it is a macro expanding to 'return' stuff,
+		 * very useful for us. There is also _import_array(), but it's
+		 * not documented and thus not stable. */
+		[]() -> void * { import_array(); return NULL; }();
+		PyOS_setsig(SIGINT,sighandler);
+	}
+} init_np;
+#else
+typedef struct PyObject PyObject;
+#endif
+
+struct smlp_mrc_shai {
+	shai *shai;
+	char *error;
+	PyObject **np_cols;
+	PyObject *np_idcs;
+};
+
+#define SMLP_MRC_SHAI_PREP_NO_PY	(1 << 0)
+
+struct smlp_mrc_shai_params {
+	const char *csv_in_path;
+	const char *spec_in_path;
+	const char *spec_out_path;
+	const char *timing_lbl;
+	const char *delta_lbl;
+	const char *v1;
+};
+
+int smlp_mrc_shai_prep_init(struct smlp_mrc_shai *sh,
+                            const struct smlp_mrc_shai_params *par,
+                            unsigned flags)
 {
-	if (spec_out_path) {
-		FILE *f = fopen(spec_out_path, "w");
-		if (!f)
-			DIE(1,"%s: %s\n",spec_out_path,strerror(errno));
-		smlp_spec_write(&s.sp.get_spec(), f);
-		fclose(f);
+	if (!par->spec_in_path)
+		DIE(1,"error: IN.spec not set, use option '-s'\n");
+
+	if (par->v1 && strcmp(par->v1, "rx") && strcmp(par->v1, "tx"))
+		DIE(1,"error: parameter '%s' to '-1' is neither 'rx' nor 'tx'\n",par->v1);
+
+	FILE *csv_in = par->csv_in_path ? fopen(par->csv_in_path, "r") : stdin;
+	if (!csv_in)
+		DIE(1,"%s: %s\n",par->csv_in_path,strerror(errno));
+
+	try {
+		smlp::speced_csv sp(csv_in, smlp::specification(par->spec_in_path));
+
+		if (log(1,nullptr)) {
+			for (size_t i=0; i<sp.width(); i++) {
+				const auto &[a,e] = sp.col(i);
+				log(1, "  %16s: %u byte(s) %s ~ %.1f MiB\n",
+				    e.label, 1 << a.log_bytes, smlp::to_str(a.dty),
+				    (sp.height() << a.log_bytes) / 1024.0 / 1024.0);
+			}
+		}
+
+		if (par->v1)
+			sh->shai = new shai_v1(move(sp), par->timing_lbl,
+			                       par->delta_lbl,
+			                       !strcmp(par->v1, "rx"));
+		else
+			sh->shai = new shai_v2(move(sp), par->timing_lbl,
+			                       par->delta_lbl);
+
+		if (par->spec_out_path) {
+			FILE *f = fopen(par->spec_out_path, "w");
+			if (!f)
+				DIE(1,"%s: %s\n",par->spec_out_path,strerror(errno));
+			smlp_spec_write(&sh->shai->spec(), f);
+			fclose(f);
+		}
+
+	} catch (const std::runtime_error &ex) {
+		DIE(1,"error: %s\n", ex.what());
 	}
 
-	FILE *out = csv_out_path ? fopen(csv_out_path, "w") : stdout;
-	if (!out)
-		DIE(1,"%s: %s\n",csv_out_path,strerror(errno));
+	sh->np_cols = NULL;
+	sh->np_idcs = NULL;
 
-	s.sp.write_csv_header(out);
-	for (auto diam : { 70, 80, 90, 100, 110, 120, 130 }) {
-		s.prepare(diam / 2);
-		for (size_t i : s.nondup)
-			s.sp.write_csv_row(out, i);
+	if (~flags & SMLP_MRC_SHAI_PREP_NO_PY) {
+#ifdef SMLP_PY
+		sh->np_cols = (PyObject **)malloc(sizeof(*sh->np_cols) * sh->shai->width());
+		npy_intp dim = sh->shai->height();
+		for (size_t j=0; j<sh->shai->width(); j++)
+			sh->np_cols[j] = PyArray_SimpleNewFromData(1, &dim,
+				smlp::with(sh->shai->column(j), overloaded {
+					[](int8_t  *){ return NPY_INT8; },
+					[](int16_t *){ return NPY_INT16; },
+					[](int32_t *){ return NPY_INT32; },
+					[](int64_t *){ return NPY_INT64; },
+					[](float   *){ return NPY_FLOAT32; },
+					[](double  *){ return NPY_FLOAT64; },
+				}), sh->shai->column(j).v);
+		dim = sh->shai->nondup.size();
+		static_assert(std::is_same_v<size_t,uint64_t>);
+		sh->np_idcs = PyArray_SimpleNewFromData(1, &dim, NPY_UINT64,
+		                                        sh->shai->nondup.data());
+#endif
 	}
-	fclose(out);
+
+	return 0;
+}
+
+void smlp_mrc_shai_prep_fini(struct smlp_mrc_shai *sh)
+{
+	delete sh->shai;
+
+	free(sh->np_cols);
+}
+
+void smlp_mrc_shai_prep_rad(struct smlp_mrc_shai *sh, int trad)
+{
+	sh->shai->prepare(trad);
+}
+
 }
 
 int main(int argc, char **argv)
 {
-	const char *csv_in_path = NULL, *csv_out_path = NULL;
-	const char *spec_in_path = NULL, *spec_out_path = NULL;
-	const char *timing_lbl = DEFAULT_TIMING;
-	const char *delta_lbl  = DEFAULT_DELTA;
+	smlp_mrc_shai_params par = {
+		.csv_in_path = NULL,
+		.spec_in_path = NULL,
+		.spec_out_path = NULL,
+		.timing_lbl = DEFAULT_TIMING,
+		.delta_lbl = DEFAULT_DELTA,
+		.v1 = NULL,
+	};
+	const char *csv_out_path = NULL;
 	bool use_jobserver = false;
 	bool quiet = false;
 	int jobs = 0;
-	const char *v1 = nullptr;
 
 	progname = basename(argv[0]);
 
 	for (int opt; (opt = getopt(argc, argv, ":1:D:hi:j:mo:qs:t:T:v")) != -1;)
 		switch (opt) {
-		case '1': v1 = optarg; break;
-		case 'D': delta_lbl = optarg; break;
+		case '1': par.v1 = optarg; break;
+		case 'D': par.delta_lbl = optarg; break;
 		case 'h': usage();
-		case 'i': csv_in_path = optarg; break;
+		case 'i': par.csv_in_path = optarg; break;
 		case 'j': jobs = atoi(optarg); break;
 		case 'm': use_jobserver = true; break;
 		case 'o': csv_out_path = optarg; break;
 		case 'q': quiet = true; break;
-		case 's': spec_in_path = optarg; break;
-		case 't': spec_out_path = optarg; break;
-		case 'T': timing_lbl = optarg; break;
+		case 's': par.spec_in_path = optarg; break;
+		case 't': par.spec_out_path = optarg; break;
+		case 'T': par.timing_lbl = optarg; break;
 		case 'v': verbosity++; break;
 		case ':': DIE(1,"error: option '-%c' requires a parameter",optopt);
 		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
@@ -345,28 +468,26 @@ int main(int argc, char **argv)
 		DIE(1,"\n");
 	}
 
-	if (!spec_in_path)
-		DIE(1,"error: SPEC.in not set, use option '-s'\n");
+	smlp_mrc_shai sh;
+	int r = smlp_mrc_shai_prep_init(&sh, &par, 0*SMLP_MRC_SHAI_PREP_NO_PY);
+	if (r < 0)
+		DIE(-r,"error: %s\n", strerror(-r));
+	if (r > 0)
+		DIE(r,"error: %s\n", sh.error);
 
-	if (v1 && strcmp(v1, "rx") && strcmp(v1, "tx"))
-		DIE(1,"error: parameter '%s' to '-1' is neither 'rx' nor 'tx'\n",v1);
+	FILE *out = csv_out_path ? fopen(csv_out_path, "w") : stdout;
+	if (!out)
+		DIE(1,"%s: %s\n",csv_out_path,strerror(errno));
 
-	FILE *csv_in = csv_in_path ? fopen(csv_in_path, "r") : stdin;
-	if (!csv_in)
-		DIE(1,"%s: %s\n",csv_in_path,strerror(errno));
-
-	try {
-		run(v1 ? static_cast<shai &&>(shai_v1(csv_in, spec_in_path,
-		                                      timing_lbl, delta_lbl,
-		                                      !strcmp(v1, "rx")))
-		       : static_cast<shai &&>(shai_v2(csv_in, spec_in_path,
-		                                      timing_lbl, delta_lbl)),
-		    spec_out_path, csv_out_path);
-	} catch (const std::runtime_error &ex) {
-		DIE(1,"error: %s\n", ex.what());
+	sh.shai->write_csv_header(out);
+	for (auto diam : { 70, 80, 90, 100, 110, 120, 130 }) {
+		smlp_mrc_shai_prep_rad(&sh, diam / 2);
+		for (size_t i : sh.shai->nondup)
+			sh.shai->write_csv_row(out, i);
 	}
+	fclose(out);
 
-	// TODO? use numpy's PyArray_SimpleNewFromData() to wrap each sp.cols[*]
+	smlp_mrc_shai_prep_fini(&sh);
 
 	return 0;
 }

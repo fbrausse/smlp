@@ -215,35 +215,35 @@ speced_group_by(const struct smlp_speced_csv *sp,
 	return idcs;
 }
 
-struct spec : ::smlp_spec, detail::C_vec<::smlp_spec_entry, spec> {
+struct specification : ::smlp_spec, detail::C_vec<::smlp_spec_entry, specification> {
 
-	spec()
+	specification()
 	: ::smlp_spec SMLP_SPEC_INIT
 	, C_vec {}
 	{}
 
-	explicit spec(const kjson_value *v)
-	: spec()
+	explicit specification(const kjson_value *v)
+	: specification()
 	{
 		bool r = smlp_spec_init(this, v);
 		if (!r)
 			throw std::runtime_error("JSON object not in .spec format");
 	}
 
-	explicit spec(const char *path)
-	: spec()
+	explicit specification(const char *path)
+	: specification()
 	{
 		bool r = smlp_spec_init_path(this, path);
 		if (!r)
 			throw std::runtime_error(std::string(path) + " not in .spec format");
 	}
 
-	~spec()
+	~specification()
 	{
 		smlp_spec_fini(this);
 	}
 
-	spec(spec &&o)
+	specification(specification &&o)
 	: ::smlp_spec(o)
 	, C_vec {}
 	{
@@ -252,9 +252,9 @@ struct spec : ::smlp_spec, detail::C_vec<::smlp_spec_entry, spec> {
 		o._delayed_cap = 0;
 	}
 
-	spec(const spec &) = delete;
+	specification(const specification &) = delete;
 
-	friend void swap(spec &a, spec &b)
+	friend void swap(specification &a, specification &b)
 	{
 		using std::swap;
 		swap(a._data(), b._data());
@@ -262,14 +262,14 @@ struct spec : ::smlp_spec, detail::C_vec<::smlp_spec_entry, spec> {
 		swap(a._cap() , b._cap());
 	}
 
-	spec & operator=(spec o)
+	specification & operator=(specification o)
 	{
 		swap(*this, o);
 		return *this;
 	}
 
 private:
-	friend class C_vec<::smlp_spec_entry, spec>;
+	friend class C_vec<::smlp_spec_entry, specification>;
 
 	      ::smlp_spec_entry *      & _data()       { return ::smlp_spec::cols; }
 	const ::smlp_spec_entry *const & _data() const { return ::smlp_spec::cols; }
@@ -354,7 +354,7 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 	, C_vec {}
 	{}
 
-	explicit speced_csv(FILE *f, spec &&spec)
+	explicit speced_csv(FILE *f, specification &&spec)
 	: speced_csv {}
 	{
 		int r = smlp_speced_init_csv(this, f, &spec);
@@ -425,12 +425,12 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 		return r;
 	}
 
-	smlp_value get(size_t i, size_t j) const
+	::smlp_value get(size_t i, size_t j) const
 	{
 		return smlp_speced_get(this, i, j);
 	}
 
-	void set(size_t i, size_t j, smlp_value v)
+	void set(size_t i, size_t j, ::smlp_value v) const
 	{
 		smlp_speced_set(this, i, j, v);
 	}
@@ -440,16 +440,27 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 
 	size_t height_capacity() const { return ::smlp_speced_csv::sz; }
 
-	const spec & get_spec() const { return _spec; }
-	const ::smlp_spec_entry & get_spec(size_t j) const { return _spec[j]; }
+	void reserve_rows(size_t n)
+	{
+		smlp_speced_ensure_size(this, width(), n);
+	}
+
+	void resize_rows(size_t n)
+	{
+		reserve_rows(n);
+		::smlp_speced_csv::h = n;
+	}
+
+	const specification & spec() const { return _spec; }
+	const ::smlp_spec_entry & spec(size_t j) const { return _spec[j]; }
 
 	const C_vec<::smlp_array, speced_csv> & columns() const { return *this; }
 
-	const ::smlp_array & column(size_t i) const { return columns()[i]; }
+	const ::smlp_array & column(size_t j) const { return columns()[j]; }
 
 	std::pair<const ::smlp_array &,const ::smlp_spec_entry &> col(size_t j) const
 	{
-		return { column(j), get_spec(j) };
+		return { column(j), spec(j) };
 	}
 
 	ssize_t column_idx(std::string_view label) const
@@ -479,7 +490,7 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 	}
 
 	template <typename BackInsertIterator, typename Idcs>
-	void unique_col_values(size_t j, BackInsertIterator &&out, Idcs &idcs)
+	void unique_col_values(size_t j, BackInsertIterator &&out, Idcs &idcs) const
 	{
 		group_by(std::array { j },
 		         [&](auto &rows, auto &rend)
@@ -494,18 +505,18 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 		                  detail::range(width()));
 	}
 
-	void write_csv_header(FILE *out)
+	void write_csv_header(FILE *out) const
 	{
 		smlp_speced_write_csv_header(this, &_spec, out);
 	}
 
-	void write_csv_row(FILE *out, size_t row)
+	void write_csv_row(FILE *out, size_t row) const
 	{
 		smlp_speced_write_csv_row(this, &_spec, row, out);
 	}
 
 private:
-	spec _spec;
+	specification _spec;
 
 	friend class C_vec<::smlp_array, speced_csv>;
 
@@ -542,7 +553,7 @@ struct speced_concat_rows {
 		}
 		return sp(-1).get(0, j);
 	}
-	auto   col(size_t j) const { return sp(0).col(j); }
+	// auto   col(size_t j) const { return sp(0).col(j); }
 	size_t width  () const { return sp(0).width(); }
 	size_t height () const
 	{
@@ -572,7 +583,7 @@ struct speced_select_rows {
 	Idcs idcs;
 
 	auto   get(size_t i, size_t j) const { return base.get(idcs[i], j); }
-	auto   col(size_t j) const { return base.col(j); }
+	// auto   col(size_t j) const { return base.col(j); }
 	size_t width  () const { return base.width(); }
 	size_t height () const { using std::size; return size(idcs); }
 };

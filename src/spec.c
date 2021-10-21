@@ -25,16 +25,9 @@
 # define MAX(a,b)	((a) > (b) ? (a) : (b))
 #endif
 
-#ifdef __GNUC__
-# define FN_ATTR_PRINTF(fmtpos, argspos) \
-	__attribute__((format(printf,fmtpos,argspos)))
-#else
-# define FN_ATTR_PRINTF(fmtpos, argspos)
-#endif
-
 #define ARRAY_SIZE(...)	(sizeof(__VA_ARGS__)/sizeof(*(__VA_ARGS__)))
 
-FN_ATTR_PRINTF(1,2)
+SMLP_FN_ATTR_PRINTF(1,2)
 static void log_error(const char *fmt, ...)
 {
 	va_list ap;

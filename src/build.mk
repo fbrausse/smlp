@@ -1,4 +1,12 @@
 
+PYTHON ?= $(shell command -v python3)
+PYTHON_VERSION_MAJOR_MINOR := $(wordlist 2,3,$(subst ., ,$(shell $(PYTHON) --version)))
+PYTHON_VERSION_MAJOR := $(word 1,$(PYTHON_VERSION_MAJOR_MINOR))
+PYTHON_VERSION_MINOR := $(word 2,$(PYTHON_VERSION_MAJOR_MINOR))
+NUMPY_INCLUDE_PATH := $(shell $(PYTHON) -c 'import numpy; print(numpy.get_include())')
+
+$(info numpy include path: $(NUMPY_INCLUDE_PATH))
+
 BINS += \
 	check-data-cmd \
 	shai-prep \
@@ -37,6 +45,11 @@ shai-prep-dep-dlibs = \
 shai-prep-ldlibs = \
 	-lspec \
 	-lcheck-data \
+	$(call pkg-libs,python-$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)-embed) \
+
+ifneq ($(NUMPY_INCLUDE_PATH),)
+$(call objs,shai-prep): override CPPFLAGS += -I$(NUMPY_INCLUDE_PATH) -DSMLP_PY $(call pkg-cflags,python-$(PYTHON_VERSION_MAJOR).$(PYTHON_VERSION_MINOR)-embed)
+endif
 
 spec-srcs := \
 	$(dir)/spec.c \
