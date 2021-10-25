@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>	/* signbit */
 
 #include <vector>
 #include <algorithm>	/* sort */
@@ -109,6 +110,7 @@ template <typename T> view(T *, size_t) -> view<T>;
 
 template <typename T, typename Base> struct C_vec {
 
+	C_vec() = default;
 	C_vec(const C_vec &) = delete;
 
 	C_vec & operator=(const C_vec &) = delete;
@@ -158,6 +160,48 @@ template <typename T, typename Base> struct C_vec {
 };
 }
 
+template <typename Fn>
+static inline auto with(const ::smlp_array &a, Fn &&fn)
+{
+	switch (a.log_bytes << 2 | a.dty) {
+	case 0 << 2 | SMLP_DTY_CAT: return fn(a.i8);
+	case 0 << 2 | SMLP_DTY_INT: return fn(a.i8);
+
+	case 1 << 2 | SMLP_DTY_CAT: return fn(a.i16);
+	case 1 << 2 | SMLP_DTY_INT: return fn(a.i16);
+
+	case 2 << 2 | SMLP_DTY_CAT: return fn(a.i32);
+	case 2 << 2 | SMLP_DTY_INT: return fn(a.i32);
+	case 2 << 2 | SMLP_DTY_DBL: return fn(a.f32);
+
+	case 3 << 2 | SMLP_DTY_CAT: return fn(a.i64);
+	case 3 << 2 | SMLP_DTY_INT: return fn(a.i64);
+	case 3 << 2 | SMLP_DTY_DBL: return fn(a.f64);
+	}
+	smlp_unreachable();
+}
+
+template <typename T> static inline int sgn(const T &x)
+{
+	return x < 0 ? -1 : x > 0 ? +1 : 0;
+}
+
+template <> inline int sgn(const int8_t &x) { return x; }
+template <> inline int sgn(const int16_t &x) { return x; }
+template <> inline int sgn(const int32_t &x) { return x; }
+template <> inline int sgn(const float &x) { return std::signbit(x); }
+template <> inline int sgn(const double &x) { return std::signbit(x); }
+
+template <typename T> static inline int cmp(const T &a, const T &b)
+{
+	return a < b ? -1 : a > b ? +1 : 0;
+}
+
+template <> inline int cmp(const int8_t &a, const int8_t &b) { return sgn(a-b); }
+template <> inline int cmp(const int16_t &a, const int16_t &b) { return sgn(a-b); }
+template <> inline int cmp(const int32_t &a, const int32_t &b) { return sgn(a-b); }
+template <> inline int cmp(const int64_t &a, const int64_t &b) { return sgn(a-b); }
+
 template <typename Cols, typename Fn, typename Idcs>
 static inline void
 speced_group_by(const struct smlp_speced_csv *sp,
@@ -169,10 +213,8 @@ speced_group_by(const struct smlp_speced_csv *sp,
 
 	auto group_cmp = [&](const size_t &a, const size_t &b){
 		for (size_t j : by_cols) {
-			int c = smlp_value_cmp(smlp_speced_get(sp, a, j),
-			                       smlp_speced_get(sp, b, j),
-			                       spec->cols[j].dtype);
-			if (c)
+			if (int c = with(sp->cols[j],
+			                 [&](auto p){ return cmp(p[a], p[b]); }))
 				return c;
 		}
 		return 0;
@@ -225,17 +267,18 @@ struct specification : ::smlp_spec, detail::C_vec<::smlp_spec_entry, specificati
 	explicit specification(const kjson_value *v)
 	: specification()
 	{
-		bool r = smlp_spec_init(this, v);
-		if (!r)
-			throw std::runtime_error("JSON object not in .spec format");
+		char *error = NULL;
+		if (int r = smlp_spec_init(this, v, &error))
+			throw std::runtime_error(r < 0 ? strerror(-r) : error);
 	}
 
 	explicit specification(const char *path)
 	: specification()
 	{
-		bool r = smlp_spec_init_path(this, path);
-		if (!r)
-			throw std::runtime_error(std::string(path) + " not in .spec format");
+		char *error = NULL;
+		if (int r = smlp_spec_init_path(this, path, &error))
+			throw std::runtime_error(std::string(path) + ": " +
+			                         (r < 0 ? strerror(-r) : error));
 	}
 
 	~specification()
@@ -269,7 +312,7 @@ struct specification : ::smlp_spec, detail::C_vec<::smlp_spec_entry, specificati
 	}
 
 private:
-	friend class C_vec<::smlp_spec_entry, specification>;
+	friend struct C_vec<::smlp_spec_entry, specification>;
 
 	      ::smlp_spec_entry *      & _data()       { return ::smlp_spec::cols; }
 	const ::smlp_spec_entry *const & _data() const { return ::smlp_spec::cols; }
@@ -326,27 +369,6 @@ struct array : ::smlp_array {
 	smlp_value get(size_t i) const { return smlp_array_get(this, i); }
 };
 
-template <typename Fn>
-static inline auto with(const ::smlp_array &a, Fn &&fn)
-{
-	switch (a.log_bytes << 2 | a.dty) {
-	case 0 << 2 | SMLP_DTY_CAT: return fn(a.i8);
-	case 0 << 2 | SMLP_DTY_INT: return fn(a.i8);
-
-	case 1 << 2 | SMLP_DTY_CAT: return fn(a.i16);
-	case 1 << 2 | SMLP_DTY_INT: return fn(a.i16);
-
-	case 2 << 2 | SMLP_DTY_CAT: return fn(a.i32);
-	case 2 << 2 | SMLP_DTY_INT: return fn(a.i32);
-	case 2 << 2 | SMLP_DTY_DBL: return fn(a.f32);
-
-	case 3 << 2 | SMLP_DTY_CAT: return fn(a.i64);
-	case 3 << 2 | SMLP_DTY_INT: return fn(a.i64);
-	case 3 << 2 | SMLP_DTY_DBL: return fn(a.f64);
-	}
-	smlp_unreachable();
-}
-
 struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, speced_csv> {
 
 	speced_csv()
@@ -357,8 +379,7 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 	explicit speced_csv(FILE *f, specification &&spec)
 	: speced_csv {}
 	{
-		int r = smlp_speced_init_csv(this, f, &spec);
-		if (r)
+		if (int r = smlp_speced_init_csv(this, f, &spec))
 			throw std::runtime_error("invalid spec'ed CSV");
 		this->_spec = move(spec);
 	}
@@ -465,9 +486,9 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 
 	ssize_t column_idx(std::string_view label) const
 	{
-		for (size_t i=0; i<width(); i++)
-			if (_spec[i].label == label)
-				return i;
+		for (size_t j=0; j<width(); j++)
+			if (_spec[j].label == label)
+				return j;
 		return -1;
 	}
 
@@ -518,7 +539,7 @@ struct speced_csv : ::smlp_speced_csv, private detail::C_vec<::smlp_array, spece
 private:
 	specification _spec;
 
-	friend class C_vec<::smlp_array, speced_csv>;
+	friend struct C_vec<::smlp_array, speced_csv>;
 
 	      ::smlp_array *      & _data()       { return ::smlp_speced_csv::cols; }
 	const ::smlp_array *const & _data() const { return ::smlp_speced_csv::cols; }

@@ -1,48 +1,17 @@
 
-#define _POSIX_C_SOURCE 200809L
-
 #include <cstring>
 #include <cstdlib>
 #include <cinttypes>	/* strtoimax */
 #include <cstdarg>
-#include <unistd.h>	/* getopt */
-#include <libgen.h>	/* basename */
 #include <cmath>	/* exp */
 
 #include <sys/time.h>
 
 #include <smlp/spec.hh>
 
+extern "C" int verbosity = 1;
+
 using std::vector, std::move;
-
-#define DIE(code, ...) do { fprintf(stderr,__VA_ARGS__); exit(code); } while (0)
-#define DEFAULT_TIMING	"Timing"
-#define DEFAULT_DELTA	"delta"
-
-static int verbosity = 1;
-static const char *progname;
-
-static void usage(void)
-{
-	printf("\
-usage: %s [-OPTS] -s IN.spec\n\
-\n\
-Options [defaults]:\n\
-  -1 {rx|tx}   prepare single-objective version for RX or TX [multi-objective]\n\
-  -D DELTA     name of the 'delta' feature in IN.csv [" DEFAULT_DELTA "]\n\
-  -h           display this help message\n\
-  -i IN.csv    read dataset from IN.csv [stdin]\n\
-  -j N         use N parallel threads to process the dataset [none]\n\
-  -m           enable compatibility to gmake's jobserver for parallelism [false]\n\
-  -o OUT.csv   write processed dataset to OUT.csv [stdout]\n\
-  -q           quiet mode, suppress all non-error outputs [false]\n\
-  -s IN.spec   read .spec from IN.spec\n\
-  -t OUT.spec  write processed .spec to OUT.spec\n\
-  -T TIMING    name of the 'time' feature in IN.csv [" DEFAULT_TIMING "]\n\
-  -v           increase verbosity [1]\n\
-", progname);
-	exit(0);
-}
 
 SMLP_FN_ATTR_PRINTF(2,3)
 static bool log(int lvl, const char *fmt, ...)
@@ -68,15 +37,19 @@ static bool log(int lvl, const char *fmt, ...)
 
 struct shai : smlp::speced_csv {
 
-	size_t                 timing_idx, delta_idx;
-	std::vector<size_t>    nondup, by_cols;
-	std::vector<size_t *>  groups;
+	size_t            timing_idx, delta_idx;
+	vector<size_t>    index, by_cols;
+	vector<size_t *>  groups;
 
 	virtual ~shai() = default;
 
+	auto timing(size_t i) const { return get(i, timing_idx).i; }
+	auto delta (size_t i) const { return get(i,  delta_idx).d; }
+
 	shai(smlp::speced_csv &&speced,
 	     const char *timing_lbl,
-	     const char *delta_lbl)
+	     const char *delta_lbl,
+	     bool dedup = true)
 	: speced_csv(move(speced))
 	{
 		if (ssize_t area_idx = column_idx("Area"); area_idx != -1) {
@@ -109,8 +82,11 @@ struct shai : smlp::speced_csv {
 			                         "' != " + smlp::to_str(SMLP_DTY_DBL));
 
 		double t;
-		TIMED(t, unique_rows(std::back_inserter(nondup)); );
-		log(1, "de-dup: %g sec -> %zux%zu\n", t, width(), nondup.size());
+		if (dedup) {
+			TIMED(t, unique_rows(std::back_inserter(index)); );
+			log(1, "de-dup: %g sec -> %zux%zu\n", t, width(), index.size());
+		} else
+			index = smlp::indices(height());
 
 		log(1, "group by:");
 		for (size_t i=0; i<width(); i++)
@@ -126,7 +102,7 @@ struct shai : smlp::speced_csv {
 			                  {
 				std::sort(rows, rows_end,
 				          [&](size_t a, size_t b)
-				          { return timing(a) < timing(b); });
+				          { return this->timing(a) < this->timing(b); });
 
 				if (log(2, "group %zu of size %5zu:",
 				        groups.size(), rows_end - rows)) {
@@ -143,14 +119,11 @@ struct shai : smlp::speced_csv {
 				}
 
 				groups.push_back(&*rows);
-			                  }, nondup);
+			                  }, index);
 		);
-		groups.push_back(nondup.data() + nondup.size());
+		groups.push_back(index.data() + index.size());
 		log(1, "grouping into %zu groups: %g sec\n", groups.size()-1, t);
 	}
-
-	auto timing(size_t i) const { return get(i, timing_idx).i; }
-	auto delta (size_t i) const { return get(i,  delta_idx).d; }
 
 	void prepare(intmax_t rad)
 	{
@@ -196,31 +169,47 @@ private:
 	}
 };
 
-static const ::smlp_spec_entry
-	TRAD = {
+static ::smlp_spec_entry trad_entry()
+{
+	return {
 		.dtype   = SMLP_DTY_INT,
 		.purpose = SMLP_PUR_CONFIG,
 		.radius_type = SMLP_RAD_0,
 		.label   = strdup("trad"),
 	//	.safe    = { time_window_radii.data(), eye_n },
-	},
-	AREA = {
+	};
+}
+
+static ::smlp_spec_entry area_entry()
+{
+	return {
 		.dtype   = SMLP_DTY_DBL,
 		.purpose = SMLP_PUR_RESPONSE,
 		.label   = strdup("area"),
-	},
-	EYE_W = {
+	};
+}
+
+static ::smlp_spec_entry eye_w_entry()
+{
+	return {
 		.dtype   = SMLP_DTY_INT,
 		.purpose = SMLP_PUR_RESPONSE,
 		.label   = strdup("eye_w"),
-	},
-	EYE_H = {
+	};
+}
+
+static ::smlp_spec_entry eye_h_entry()
+{
+	return {
 		.dtype   = SMLP_DTY_DBL,
 		.purpose = SMLP_PUR_RESPONSE,
 		.label   = strdup("eye_h"),
 	};
+}
 
 struct shai_v1 : shai {
+
+	static constexpr const size_t ADDED_COLS = 2;
 
 	const size_t trad_idx, area_idx;
 	const bool is_rx;
@@ -230,8 +219,8 @@ struct shai_v1 : shai {
 	        const char *delta_lbl,
 	        bool is_rx)
 	: shai(move(speced), timing_lbl, delta_lbl)
-	, trad_idx(add_column(TRAD))
-	, area_idx(add_column(AREA))
+	, trad_idx(add_column(trad_entry()))
+	, area_idx(add_column(area_entry()))
 	, is_rx(is_rx)
 	{}
 
@@ -263,15 +252,17 @@ struct shai_v1 : shai {
 
 struct shai_v2 : shai {
 
+	static constexpr const size_t ADDED_COLS = 3;
+
 	const size_t trad_idx, eye_w_idx, eye_h_idx;
 
 	shai_v2(speced_csv &&speced,
 	        const char *timing_lbl,
 	        const char *delta_lbl)
 	: shai(move(speced), timing_lbl, delta_lbl)
-	, trad_idx(add_column(TRAD))
-	, eye_w_idx(add_column(EYE_W))
-	, eye_h_idx(add_column(EYE_H))
+	, trad_idx(add_column(trad_entry()))
+	, eye_w_idx(add_column(eye_w_entry()))
+	, eye_h_idx(add_column(eye_h_entry()))
 	{}
 
 	using shai::prepare;
@@ -294,13 +285,15 @@ template <typename... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 extern "C" {
 
 #ifdef SMLP_PY
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-#define PY_ARRAY_UNIQUE_SYMBOL smlp_ARRAY_API
+# define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+# define PY_ARRAY_UNIQUE_SYMBOL smlp_ARRAY_API
 # include <numpy/arrayobject.h>
 static struct init_numpy {
 	init_numpy() {
+#if 0
 		/* we don't want Python to steal our signal handlers... */
 		Py_InitializeEx(0);
+#endif
 
 		/* ... and neither numpy; see, e.g.,
 		 * <https://github.com/numpy/numpy/issues/7545> for
@@ -323,6 +316,9 @@ struct smlp_mrc_shai {
 	char *error;
 	PyObject **np_cols;
 	PyObject *np_idcs;
+	size_t width;
+	size_t const_width;
+	const ::smlp_spec *spec;
 };
 
 #define SMLP_MRC_SHAI_PREP_NO_PY	(1 << 0)
@@ -336,73 +332,94 @@ struct smlp_mrc_shai_params {
 	const char *v1;
 };
 
+#define FAIL(code,...) do {                                                    \
+		return asprintf(&sh->error, __VA_ARGS__) == -1                 \
+		       ? errno ? -errno : -ENOMEM : code;                      \
+	} while (0)
+
 int smlp_mrc_shai_prep_init(struct smlp_mrc_shai *sh,
                             const struct smlp_mrc_shai_params *par,
                             unsigned flags)
 {
 	if (!par->spec_in_path)
-		DIE(1,"error: IN.spec not set, use option '-s'\n");
+		FAIL(1,"IN.spec not set, use option '-s'");
 
 	if (par->v1 && strcmp(par->v1, "rx") && strcmp(par->v1, "tx"))
-		DIE(1,"error: parameter '%s' to '-1' is neither 'rx' nor 'tx'\n",par->v1);
+		FAIL(1,"parameter '%s' to '-1' is neither 'rx' nor 'tx'",par->v1);
 
 	FILE *csv_in = par->csv_in_path ? fopen(par->csv_in_path, "r") : stdin;
 	if (!csv_in)
-		DIE(1,"%s: %s\n",par->csv_in_path,strerror(errno));
+		FAIL(1,"%s: %s",par->csv_in_path,strerror(errno));
 
 	try {
 		smlp::speced_csv sp(csv_in, smlp::specification(par->spec_in_path));
 
-		if (log(1,nullptr)) {
+		if (log(1,nullptr))
 			for (size_t i=0; i<sp.width(); i++) {
 				const auto &[a,e] = sp.col(i);
 				log(1, "  %16s: %u byte(s) %s ~ %.1f MiB\n",
 				    e.label, 1 << a.log_bytes, smlp::to_str(a.dty),
 				    (sp.height() << a.log_bytes) / 1024.0 / 1024.0);
 			}
-		}
 
-		if (par->v1)
+		if (par->v1) {
 			sh->shai = new shai_v1(move(sp), par->timing_lbl,
 			                       par->delta_lbl,
 			                       !strcmp(par->v1, "rx"));
-		else
+			sh->const_width = sh->shai->width() - shai_v1::ADDED_COLS;
+		} else {
 			sh->shai = new shai_v2(move(sp), par->timing_lbl,
 			                       par->delta_lbl);
-
-		if (par->spec_out_path) {
-			FILE *f = fopen(par->spec_out_path, "w");
-			if (!f)
-				DIE(1,"%s: %s\n",par->spec_out_path,strerror(errno));
-			smlp_spec_write(&sh->shai->spec(), f);
-			fclose(f);
+			sh->const_width = sh->shai->width() - shai_v2::ADDED_COLS;
 		}
 
 	} catch (const std::runtime_error &ex) {
-		DIE(1,"error: %s\n", ex.what());
+		FAIL(1,"%s", ex.what());
+	}
+
+	if (par->spec_out_path) {
+		FILE *f = fopen(par->spec_out_path, "w");
+		if (!f)
+			FAIL(1,"%s: %s",par->spec_out_path,strerror(errno));
+		smlp_spec_write(&sh->shai->spec(), f);
+		fclose(f);
 	}
 
 	sh->np_cols = NULL;
 	sh->np_idcs = NULL;
+	sh->width = sh->shai->width();
+	sh->error = NULL;
+	sh->spec = &sh->shai->spec();
 
 	if (~flags & SMLP_MRC_SHAI_PREP_NO_PY) {
 #ifdef SMLP_PY
+		// Py_BEGIN_ALLOW_THREADS
+		PyGILState_STATE gstate = PyGILState_Ensure();
+
 		sh->np_cols = (PyObject **)malloc(sizeof(*sh->np_cols) * sh->shai->width());
 		npy_intp dim = sh->shai->height();
-		for (size_t j=0; j<sh->shai->width(); j++)
-			sh->np_cols[j] = PyArray_SimpleNewFromData(1, &dim,
-				smlp::with(sh->shai->column(j), overloaded {
-					[](int8_t  *){ return NPY_INT8; },
-					[](int16_t *){ return NPY_INT16; },
-					[](int32_t *){ return NPY_INT32; },
-					[](int64_t *){ return NPY_INT64; },
-					[](float   *){ return NPY_FLOAT32; },
-					[](double  *){ return NPY_FLOAT64; },
-				}), sh->shai->column(j).v);
-		dim = sh->shai->nondup.size();
+		for (size_t j=0; j<sh->shai->width(); j++) {
+			int ty = smlp::with(sh->shai->column(j), overloaded {
+				[](int8_t  *){ return NPY_INT8; },
+				[](int16_t *){ return NPY_INT16; },
+				[](int32_t *){ return NPY_INT32; },
+				[](int64_t *){ return NPY_INT64; },
+				[](float   *){ return NPY_FLOAT32; },
+				[](double  *){ return NPY_FLOAT64; },
+			});
+			sh->np_cols[j] = PyArray_SimpleNewFromData(1, &dim, ty,
+				sh->shai->column(j).v);
+		}
+		dim = sh->shai->index.size();
 		static_assert(std::is_same_v<size_t,uint64_t>);
 		sh->np_idcs = PyArray_SimpleNewFromData(1, &dim, NPY_UINT64,
-		                                        sh->shai->nondup.data());
+		                                        sh->shai->index.data());
+		fprintf(stderr, "init idcs refcnt: %zd\n", Py_REFCNT(sh->np_idcs));
+
+		PyGILState_Release(gstate);
+		// Py_END_ALLOW_THREADS
+#else
+		FAIL(1,"smlp was compiled without python support");
 #endif
 	}
 
@@ -411,9 +428,29 @@ int smlp_mrc_shai_prep_init(struct smlp_mrc_shai *sh,
 
 void smlp_mrc_shai_prep_fini(struct smlp_mrc_shai *sh)
 {
-	delete sh->shai;
+	free(sh->error);
 
+#ifdef SMLP_PY
+	// Py_BEGIN_ALLOW_THREADS
+	PyGILState_STATE gstate = PyGILState_Ensure();
+
+	if (sh->np_cols)
+		for (size_t i=0; i<sh->shai->width(); i++) {
+			// PyObject_Del(sh->np_cols[i]);
+			Py_DECREF(sh->np_cols[i]);
+		}
+	if (sh->np_idcs) {
+		fprintf(stderr, "fini idcs refcnt: %zd\n", Py_REFCNT(sh->np_idcs));
+		//PyObject_Del(sh->np_idcs);
+		Py_DECREF(sh->np_idcs);
+	}
+
+	PyGILState_Release(gstate);
+	// Py_END_ALLOW_THREADS
 	free(sh->np_cols);
+#endif
+
+	delete sh->shai;
 }
 
 void smlp_mrc_shai_prep_rad(struct smlp_mrc_shai *sh, int trad)
@@ -421,73 +458,4 @@ void smlp_mrc_shai_prep_rad(struct smlp_mrc_shai *sh, int trad)
 	sh->shai->prepare(trad);
 }
 
-}
-
-int main(int argc, char **argv)
-{
-	smlp_mrc_shai_params par = {
-		.csv_in_path = NULL,
-		.spec_in_path = NULL,
-		.spec_out_path = NULL,
-		.timing_lbl = DEFAULT_TIMING,
-		.delta_lbl = DEFAULT_DELTA,
-		.v1 = NULL,
-	};
-	const char *csv_out_path = NULL;
-	bool use_jobserver = false;
-	bool quiet = false;
-	int jobs = 0;
-
-	progname = basename(argv[0]);
-
-	for (int opt; (opt = getopt(argc, argv, ":1:D:hi:j:mo:qs:t:T:v")) != -1;)
-		switch (opt) {
-		case '1': par.v1 = optarg; break;
-		case 'D': par.delta_lbl = optarg; break;
-		case 'h': usage();
-		case 'i': par.csv_in_path = optarg; break;
-		case 'j': jobs = atoi(optarg); break;
-		case 'm': use_jobserver = true; break;
-		case 'o': csv_out_path = optarg; break;
-		case 'q': quiet = true; break;
-		case 's': par.spec_in_path = optarg; break;
-		case 't': par.spec_out_path = optarg; break;
-		case 'T': par.timing_lbl = optarg; break;
-		case 'v': verbosity++; break;
-		case ':': DIE(1,"error: option '-%c' requires a parameter",optopt);
-		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
-		}
-
-	if (quiet)
-		verbosity = 0;
-
-	if (optind < argc) {
-		fprintf(stderr, "error: unknown trailing options:");
-		for (; optind < argc; optind++)
-			fprintf(stderr, " %s", argv[optind]);
-		DIE(1,"\n");
-	}
-
-	smlp_mrc_shai sh;
-	int r = smlp_mrc_shai_prep_init(&sh, &par, 0*SMLP_MRC_SHAI_PREP_NO_PY);
-	if (r < 0)
-		DIE(-r,"error: %s\n", strerror(-r));
-	if (r > 0)
-		DIE(r,"error: %s\n", sh.error);
-
-	FILE *out = csv_out_path ? fopen(csv_out_path, "w") : stdout;
-	if (!out)
-		DIE(1,"%s: %s\n",csv_out_path,strerror(errno));
-
-	sh.shai->write_csv_header(out);
-	for (auto diam : { 70, 80, 90, 100, 110, 120, 130 }) {
-		smlp_mrc_shai_prep_rad(&sh, diam / 2);
-		for (size_t i : sh.shai->nondup)
-			sh.shai->write_csv_row(out, i);
-	}
-	fclose(out);
-
-	smlp_mrc_shai_prep_fini(&sh);
-
-	return 0;
 }

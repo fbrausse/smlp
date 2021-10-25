@@ -4,8 +4,9 @@ from typing import NamedTuple, Sequence, List
 
 @unique
 class Interp(Enum):
-	Config = 'knob'
-	Input  = 'input'
+	Config   = 'knob'
+	Input    = 'input'
+	Response = 'response'
 
 @unique
 class Type(Enum):

@@ -39,7 +39,7 @@ struct kjson {
 	char *src;
 };
 
-bool kjson_init_path(struct kjson *sp, const char *path);
+int  kjson_init_path(struct kjson *sp, const char *path, char **error);
 void kjson_fini(struct kjson *sp);
 
 
@@ -119,11 +119,19 @@ struct smlp_spec {
 
 #define SMLP_SPEC_INIT	{ NULL, 0 }
 
-bool smlp_spec_init_path(struct smlp_spec *spec, const char *path);
-bool smlp_spec_init(struct smlp_spec *spec, const struct kjson_value *v);
+int  smlp_spec_init_path(struct smlp_spec *spec, const char *path,
+                         char **error);
+int  smlp_spec_init(struct smlp_spec *spec, const struct kjson_value *v,
+                    char **error);
 void smlp_spec_write(const struct smlp_spec *spec, FILE *f);
 void smlp_spec_fini(struct smlp_spec *spec);
 
+/* when modifying this structure, also update:
+ * - smlp_array_get()
+ * - smlp_array_set_internal()
+ * - smlp_speced_set(),
+ * - smlp::with()
+ */
 struct smlp_array {
 	union {
 		struct {
@@ -148,7 +156,8 @@ struct smlp_array {
 	};
 };
 
-static_assert(sizeof(intmax_t) == sizeof(int64_t));
+static_assert(sizeof(intmax_t) == sizeof(int64_t),
+              "require intmax_t to be the same size as int64_t");
 
 void smlp_array_init(struct smlp_array *a, enum smlp_dtype dty);
 

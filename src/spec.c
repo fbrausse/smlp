@@ -46,10 +46,30 @@ static int buf_ensure_sz(void **buf, size_t *sz, const size_t *valid, size_t n)
 		*sz = nsz;
 		*buf = r;
 	}
-	return r ? -errno : 0;
+	return r ? 0 : -errno;
 }
 
-static void * fread_mem(FILE *f, size_t *_sz, size_t *_valid)
+SMLP_FN_ATTR_PRINTF(2,3)
+static int bsprintf(char **strp, const char *fmt, ...)
+{
+	va_list ap, ap2;
+	va_start(ap,fmt);
+	va_copy(ap2, ap);
+	int n = snprintf(NULL, 0, fmt, ap);
+	va_end(ap);
+	if (n == -1) {
+		va_end(ap2);
+		return -1;
+	}
+	*strp = malloc(n+1);
+	if (!*strp) {
+		va_end(ap2);
+		return -1;
+	}
+	return sprintf(*strp, fmt, ap2);
+}
+
+static void * fread_mem(FILE *f, size_t *_sz, size_t *_valid, char **error)
 {
 	void *content = NULL;
 	size_t sz = 0, valid = 0;
@@ -58,7 +78,7 @@ static void * fread_mem(FILE *f, size_t *_sz, size_t *_valid)
 		int r = buf_ensure_sz(&content, &sz, &valid, rd);
 		if (r) {
 			free(content);
-			log_error("error allocating buffer: %s\n", strerror(-r));
+			bsprintf(error, strerror(-r));
 			return NULL;
 		}
 		memcpy((char *)content + valid, buf, rd);
@@ -66,7 +86,7 @@ static void * fread_mem(FILE *f, size_t *_sz, size_t *_valid)
 	}
 	if (ferror(f)) {
 		free(content);
-		log_error("error reading file\n");
+		bsprintf(error, "error reading file\n");
 		return NULL;
 	}
 	if (_sz)
@@ -79,47 +99,36 @@ static void * fread_mem(FILE *f, size_t *_sz, size_t *_valid)
 #define log_error_and(finally, ...) \
 	do { log_error(__VA_ARGS__); finally; } while (0)
 
-/*
-static void * memdup(const void *src, size_t n)
-{
-	void *tgt = malloc(n);
-	if (!tgt)
-		return NULL;
-	return memcpy(tgt, src, n);
-}
-*/
-
-bool kjson_init_path(struct kjson *sp, const char *path)
+int kjson_init_path(struct kjson *sp, const char *path, char **error)
 {
 	FILE *specf = fopen(path, "r");
-	if (!specf) {
-		int r = -errno;
-		log_error("error opening JSON '%s': %s\n", path, strerror(-r));
-		return false;
-	}
+	if (!specf)
+		return -errno;
 	size_t sz, valid;
-	char *spec = fread_mem(specf, &sz, &valid);
+	char *err = NULL;
+	char *spec = fread_mem(specf, &sz, &valid, &err);
 	fclose(specf);
 	if (!spec) {
-		log_error("error reading JSON '%s'\n", path);
-		return false;
+		bsprintf(error, "error reading JSON '%s': %s\n", path, err);
+		free(err);
+		return 1;
 	}
 	int r = buf_ensure_sz((void *)&spec, &sz, &valid, 1);
 	if (r) {
-		log_error("error allocating buffer: %s\n", strerror(-r));
-		return false;
+		bsprintf(error, "error allocating buffer: %s\n", strerror(-r));
+		return 2;
 	}
 	spec[valid] = '\0';
 
 	sp->top.type = KJSON_VALUE_NULL;
 	sp->src = spec;
 	if (kjson_parse(&(struct kjson_parser){ sp->src }, &sp->top))
-		return true;
+		return 0;
 
-	log_error("error: '%s' does not contain a valid JSON document\n", path);
+	bsprintf(error, "error: '%s' does not contain a valid JSON document\n", path);
 	free(spec);
 	kjson_value_fini(&sp->top);
-	return false;
+	return 3;
 }
 
 void kjson_fini(struct kjson *sp)
@@ -182,27 +191,30 @@ static bool smlp_value_from_json(union smlp_value *r,
 	}
 }
 
-bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
+#define FAIL(code, ...) do { \
+		smlp_spec_fini(table); \
+		return error && bsprintf(error, __VA_ARGS__) == -1 \
+		     ? -errno : code; \
+	} while (0)
+
+int smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec,
+                   char **error)
 {
 	memset(table, 0, sizeof(*table));
 
 	if (spec->type != KJSON_VALUE_ARRAY)
-		log_error_and(goto json_error,
-		              "spec format error: top-level is not an array\n");
+		FAIL(1, "spec format error: top-level is not an array\n");
 
 	table->cols = calloc(spec->a.n, sizeof(*table->cols));
 	if (!table->cols)
-		log_error_and(goto json_error,
-		              "error allocating table columns: %s",
-		              strerror(errno));
+		FAIL(2, "error allocating table columns: %s", strerror(errno));
 
 	struct smlp_spec_entry *c = table->cols;
 	for (size_t i=0; i<spec->a.n; i++, c++) {
 		struct kjson_value *e = &spec->a.data[i];
 		if (e->type != KJSON_VALUE_OBJECT)
-			log_error_and(goto json_error,
-			              "error: element #%" FMT_SZ "u of array is not a "
-			              "JSON object\n", i);
+			FAIL(3, "error: element #%" FMT_SZ "u of array is not a "
+			        "JSON object\n", i);
 
 		enum smlp_dtype type = -1;
 		enum smlp_purpose purp = -1;
@@ -213,19 +225,17 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 			struct kjson_object_entry *v = &e->o.data[j];
 			if (!strcmp(v->key.begin, "label")) {
 				if (v->value.type != KJSON_VALUE_STRING)
-					log_error_and(goto json_error,
-					              "error: 'label' value of "
-					              "object #%" FMT_SZ "u in array is "
-					              "not a JSON string\n", i);
+					FAIL(4, "error: 'label' value of "
+					        "object #%" FMT_SZ "u in array is "
+					        "not a JSON string\n", i);
 
 				label = &v->value.s;
 			} else if (!strcmp(v->key.begin, "type")) {
 				if (v->value.type != KJSON_VALUE_STRING)
-					log_error_and(goto json_error,
-					              "error: 'type' value of "
-					              "object in element #%" FMT_SZ "u "
-					              "of .spec array is not a JSON "
-					              "string\n", i);
+					FAIL(5, "error: 'type' value of "
+					        "object in element #%" FMT_SZ "u "
+					        "of .spec array is not a JSON "
+					        "string\n", i);
 				if (!strcmp(v->value.s.begin, "knob"))
 					purp = SMLP_PUR_CONFIG;
 				else if (!strcmp(v->value.s.begin, "input"))
@@ -235,11 +245,10 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 				else if (!strcmp(v->value.s.begin, "categorical"))
 					purp = SMLP_PUR_CONFIG;
 				else
-					log_error_and(goto json_error,
-					              "error: 'type' value '%s' "
-					              "of object #%" FMT_SZ "u in .spec array "
-					              "is unknown\n",
-					              v->value.s.begin, i);
+					FAIL(6, "error: 'type' value '%s' "
+					        "of object #%" FMT_SZ "u in .spec array "
+					        "is unknown\n",
+					        v->value.s.begin, i);
 			} else if (!strcmp(v->key.begin, "range")) {
 				switch (v->value.type) {
 				case KJSON_VALUE_STRING:
@@ -248,24 +257,22 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 					else if (!strcmp(v->value.s.begin, "float"))
 						type = SMLP_DTY_DBL;
 					else
-						log_error_and(goto json_error,
-						              "error: 'range' "
-						              "value '%s' of "
-						              "object #%" FMT_SZ "u in "
-						              ".spec array is unknown\n",
-						              v->value.s.begin, i);
+						FAIL(7, "error: 'range' "
+						        "value '%s' of "
+						        "object #%" FMT_SZ "u in "
+						        ".spec array is unknown\n",
+						        v->value.s.begin, i);
 					break;
 				case KJSON_VALUE_ARRAY:
 					type = SMLP_DTY_CAT;
 					cats = &v->value.a;
 					break;
 				default:
-					log_error_and(goto json_error,
-					              "error: 'range' value of "
-					              "object in element #%" FMT_SZ "u "
-					              "of array is neither a "
-					              "JSON string nor an .spec array\n",
-					              i);
+					FAIL(8, "error: 'range' value of "
+					        "object in element #%" FMT_SZ "u "
+					        "of array is neither a "
+					        "JSON string nor an .spec array\n",
+					        i);
 				}
 			} else if (!strcmp(v->key.begin, "rad-rel")) {
 				rad_rel = &v->value;
@@ -279,10 +286,9 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 		}
 
 		if ((int)type == -1 || (int)purp == -1 || !label)
-			log_error_and(goto json_error,
-			              "error: object #%" FMT_SZ "u in array does not "
-			              "specify all of 'label', 'type' and "
-			              "'range'\n", i);
+			FAIL(9, "error: object #%" FMT_SZ "u in array does not "
+			        "specify all of 'label', 'type' and "
+			        "'range'\n", i);
 
 		char *concat = NULL;
 		const char **cats_data = NULL;
@@ -291,9 +297,8 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 			struct kjson_value *v = cats->data;
 			size_t *cats_offsets = calloc(cats->n, sizeof(*cats_offsets));
 			if (!cats_offsets)
-				log_error_and(goto json_error,
-				              "error allocating memory: %s\n",
-				              strerror(errno));
+				FAIL(10, "error allocating memory: %s\n",
+				         strerror(errno));
 			for (size_t j=0; j<cats->n; j++, v++) {
 				int n;
 				switch (v->type) {
@@ -309,19 +314,17 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 				default:
 					free(concat);
 					free(cats_offsets);
-					log_error_and(goto json_error,
-					              "error: invalid entry type "
-					              "for item #%" FMT_SZ "u in "
-					              "'range' for object #%" FMT_SZ "u "
-					              "in array\n", j, i);
+					FAIL(11, "error: invalid entry type "
+					         "for item #%" FMT_SZ "u in "
+					         "'range' for object #%" FMT_SZ "u "
+					         "in array\n", j, i);
 				}
 				int r = buf_ensure_sz((void *)&concat, &sz, &valid, n+1);
 				if (r) {
 					free(concat);
 					free(cats_offsets);
-					log_error_and(goto json_error,
-					              "error allocating memory: %s\n",
-					              strerror(-r));
+					FAIL(12, "error allocating memory: %s\n",
+					         strerror(-r));
 				}
 				cats_offsets[j] = valid;
 				switch (v->type) {
@@ -345,9 +348,8 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 
 			cats_data = calloc(cats->n, sizeof(*cats_data));
 			if (!cats_data)
-				log_error_and(goto json_error,
-				              "error allocating memory: %s\n",
-				              strerror(errno));
+				FAIL(13, "error allocating memory: %s\n",
+				         strerror(errno));
 			for (size_t j=0; j<cats->n; j++)
 				cats_data[j] = concat + cats_offsets[j];
 			free(cats_offsets);
@@ -362,27 +364,27 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 		table->n++;
 
 		if (rad_rel && rad_abs) {
-			log_error_and(goto json_error, "error: 'rad-rel' and "
-			              "'rad-abs' specifications in object "
-			              "#%" FMT_SZ "u in .spec array\n", i);
+			FAIL(14, "error: 'rad-rel' and "
+			         "'rad-abs' specifications in object "
+			         "#%" FMT_SZ "u in .spec array\n", i);
 		} else if (rad_abs && rad_abs->type == KJSON_VALUE_NUMBER_INTEGER && rad_abs->i == 0) {
 			c->radius_type = SMLP_RAD_0;
 		} else if (rad_abs) {
 			if (c->dtype == SMLP_DTY_CAT)
-				log_error_and(goto json_error, "error: 'rad-abs' != 0 "
-				              "in object #%" FMT_SZ "u in .spec "
-				              "array of categorical type\n", i);
+				FAIL(15, "error: 'rad-abs' != 0 "
+				         "in object #%" FMT_SZ "u in .spec "
+				         "array of categorical type\n", i);
 			if (!smlp_value_from_json(&c->rad.abs, c, rad_abs, false))
-				log_error_and(goto json_error, "error: 'rad-abs' "
-				              "value type %d does not match 'range' "
-				              "%d in object #%" FMT_SZ "u in .spec "
-				              "array\n", rad_abs->type, c->dtype, i);
+				FAIL(16, "error: 'rad-abs' "
+				         "value type %d does not match 'range' "
+				         "%d in object #%" FMT_SZ "u in .spec "
+				         "array\n", rad_abs->type, c->dtype, i);
 			c->radius_type = SMLP_RAD_ABS;
 		} else if (rad_rel) {
 			if (c->dtype == SMLP_DTY_CAT)
-				log_error_and(goto json_error, "error: 'rad-rel' "
-				              "in object #%" FMT_SZ "u in .spec "
-				              "array of categorical type\n", i);
+				FAIL(17, "error: 'rad-rel' "
+				         "in object #%" FMT_SZ "u in .spec "
+				         "array of categorical type\n", i);
 			switch (rad_rel->type) {
 			case KJSON_VALUE_NUMBER_INTEGER:
 				c->rad.rel = rad_rel->i;
@@ -391,51 +393,48 @@ bool smlp_spec_init(struct smlp_spec *table, const struct kjson_value *spec)
 				c->rad.rel = rad_rel->d;
 				break;
 			default:
-				log_error_and(goto json_error, "error: 'rad-rel' "
-				              "value of object #%" FMT_SZ "u in "
-				              ".spec array is not supported\n", i);
+				FAIL(18, "error: 'rad-rel' "
+				         "value of object #%" FMT_SZ "u in "
+				         ".spec array is not supported\n", i);
 			}
 			c->radius_type = SMLP_RAD_REL;
 		} else
 			c->radius_type = SMLP_RAD_NONE;
 
 		if (safe && safe->type != KJSON_VALUE_ARRAY)
-			log_error_and(goto json_error, "error: 'safe' value in "
-			              "object #%" FMT_SZ "u in .spec array is "
-			              "not an array itself\n", i);
+			FAIL(19, "error: 'safe' value in "
+			         "object #%" FMT_SZ "u in .spec array is "
+			         "not an array itself\n", i);
 		if (safe) {
 			c->safe.data = calloc(safe->a.n, sizeof(*c->safe.data));
 			c->safe.n = safe->a.n;
 			for (size_t j=0; j<safe->a.n; j++) {
 				struct kjson_value *v = &safe->a.data[j];
 				if (!smlp_value_from_json(c->safe.data + j, c, v, true))
-					log_error_and(goto json_error, "error: "
-					              "cannot interpret value #%"
-					              FMT_SZ "u in 'safe' array "
-					              "of object #%" FMT_SZ "u "
-					              "in its type.\n", j, i);
+					FAIL(20, "error: "
+					         "cannot interpret value #%"
+					         FMT_SZ "u in 'safe' array "
+					         "of object #%" FMT_SZ "u "
+					         "in its type.\n", j, i);
 			}
 		}
 
 		if (def_val && !smlp_value_from_json(&c->default_value, c, def_val, true))
-			log_error_and(goto json_error, "error: cannot interpret "
-			              "'default' value of object #%" FMT_SZ "u "
-			              "in .spec array in its type.\n", i);
+			FAIL(21, "error: cannot interpret "
+			         "'default' value of object #%" FMT_SZ "u "
+			         "in .spec array in its type.\n", i);
 	}
 
-	return true;
-
-json_error:
-	smlp_spec_fini(table);
-	return false;
+	return 0;
 }
 
-bool smlp_spec_init_path(struct smlp_spec *spec, const char *path)
+int smlp_spec_init_path(struct smlp_spec *spec, const char *path, char **error)
 {
 	struct kjson json;
-	if (!kjson_init_path(&json, path))
-		return false;
-	bool r = smlp_spec_init(spec, &json.top);
+	int r = kjson_init_path(&json, path, error);
+	if (r)
+		return r;
+	r = smlp_spec_init(spec, &json.top, error);
 	kjson_fini(&json);
 	return r;
 }
@@ -678,12 +677,6 @@ int smlp_speced_init_csv(struct smlp_speced_csv *sp, FILE *csv,
 	size_t sz = 0;
 	ssize_t rd;
 	for (size_t no=2; (rd = getline(&line, &sz, csv)) > 0; no++, sp->h++) {
-		/*
-		if (sp->h+1 > sp->sz) {
-			sp->sz = MAX(sp->h+1, 2*sp->sz);
-			for (size_t i=0; i<spec->n; i++)
-				smlp_array_resize(&sp->cols[i], sp->sz);
-		}*/
 		smlp_speced_ensure_size(sp, spec->n, sp->h+1);
 
 		if (line[rd-1] == '\n')
