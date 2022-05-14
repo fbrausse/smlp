@@ -75,6 +75,14 @@ Two main scripts are provided:
 - src/prove_nn.py: takes a specification and a neural network as above and
   optimizes safe and stable regions according to the specification.
 
+Crucially, both steps depend on a specification file (abbreviated as .spec)
+throughout SMLP. It is a JSON file containing a list of object values as
+top-level element and it is described in detail in doc/spec.pdf, which can be
+built from the LaTeX sources by running
+
+  $ gmake -C doc
+
+
 Training Details
 ~~~~~~~~~~~~~~~~
 
