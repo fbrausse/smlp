@@ -63,6 +63,7 @@ Known to work:
 * seaborn-0.9.x, -0.10.x,
 * h5py-2.10.0
 * gcc-4.7.4, -5.4, -9.3, -10.1
+* skopt-0.8.1
 
 * GNU make-4.1, -4.2, make-4.3
 * bash-5.0_p17
