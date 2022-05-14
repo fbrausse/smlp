@@ -169,13 +169,15 @@ generates the following files:
 - PATH/model_gen_PREFIX_12.json
   stores values of the essential parameters [-OPTS] passed to the training
   script in JSON format, such as
-  - which variables are considered response features
-  - what objective feature has been set in the training script (if any) and
-    its bounds as derived from evaluating it on the points in data set
-  - the training-related parameters such as activation function, random seed,
-    etc.
-  - the kind of preprocessing/normalization that has been performed before
-    training the neural network
+  - "resp": list of variables considered response features
+  - "obj": what objective feature has been set in the training script (if any)
+  - "obj-bounds": bounds on the value of the objective (if any) as derived from
+    evaluating the function on the points in data set
+  - "train": the training-related parameters such as activation function,
+    random seed, etc.
+  - "pp": the kind of preprocessing/normalization that has been performed before
+    training the neural network, separately for the input features and the
+    response features
 
 
 
