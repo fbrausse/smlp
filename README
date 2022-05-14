@@ -25,6 +25,13 @@ Then, in the smlprover directory, run
 to build the libcheck-data.so shared library and the documentation.
 SMLP is now prepared to run.
 
+In case the source repository has been obtained through git, it may be required
+to run
+
+	git submodule update --init
+
+once after the cloning in order to obtain the sources for the 'kjson' library.
+
 
 Usage
 ~~~~~
