@@ -25,6 +25,13 @@ Then, in the smlprover directory, run
 to build the libcheck-data.so shared library and the documentation.
 SMLP is now prepared to run.
 
+In case the source repository has been obtained through git, it may be required
+to run
+
+	git submodule update --init
+
+once after the cloning in order to obtain the sources for the 'kjson' library.
+
 
 Usage
 ~~~~~
@@ -56,6 +63,7 @@ Known to work:
 * seaborn-0.9.x, -0.10.x,
 * h5py-2.10.0
 * gcc-4.7.4, -5.4, -9.3, -10.1
+* skopt-0.8.1
 
 * GNU make-4.1, -4.2, make-4.3
 * bash-5.0_p17
@@ -65,3 +73,204 @@ Known to work:
 * GNU time-1.7, -1.7.2, -1.9
 
 * kjson-0.1.3 (bundled in release)
+
+
+Running SMLP
+~~~~~~~~~~~~
+Two main scripts are provided:
+- src/train_nn.py: takes a specification and a training data set, optionally
+  performs normalizations and trains a neural network
+- src/prove_nn.py: takes a specification and a neural network as above and
+  optimizes safe and stable regions according to the specification.
+
+Crucially, both steps depend on a specification file (abbreviated as .spec)
+throughout SMLP. It is a JSON file containing a list of object values as
+top-level element and it is described in detail in doc/spec.pdf, which can be
+built from the LaTeX sources by running
+
+  $ gmake -C doc
+
+
+Training Details
+~~~~~~~~~~~~~~~~
+
+The training script offers the following options:
+
+--------------------------------------------------------------------------------
+usage: src/train-nn.py [-h] [-a ACT] [-b BATCH] [-B BOUNDS] [-c [CHKPT]]
+                       [-e EPOCHS] [-f FILTER] [-l LAYERS] [-o OPT]
+                       [-O OBJECTIVE] [-p PP] [-r RESPONSE] [-R SEED] -s SPEC
+                       [-S SPLIT]
+                       DATA
+
+positional arguments:
+  DATA                  Path excluding the .csv suffix to input data file
+                        containing labels
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -a ACT, --nn_activation ACT
+                        activation for NN [default: relu]
+  -b BATCH, --nn_batch_size BATCH
+                        batch_size for NN [default: 200]
+  -B BOUNDS, --bounds BOUNDS
+                        Path to pre-computed bounds.csv
+  -c [CHKPT], --chkpt [CHKPT]
+                        save model checkpoints after each epoch; optionally
+                        use CHKPT as path, can contain named formatting
+                        options "{ID:FMT}" where ID is one of: 'epoch', 'acc',
+                        'loss', 'val_loss'; if these are missing only the best
+                        model will be saved [default: no, otherwise if CHKPT
+                        is missing: model_checkpoint_DATA.h5]
+  -e EPOCHS, --nn_epochs EPOCHS
+                        epochs for NN [default: 2000]
+  -f FILTER, --filter FILTER
+                        filter data set to rows satisfying RESPONSE >=
+                        quantile(FILTER) [default: no]
+  -l LAYERS, --nn_layers LAYERS
+                        specify number and sizes of the hidden layers of the
+                        NN as non-empty colon-separated list of positive
+                        fractions in the number of input features in, e.g.
+                        "1:0.5:0.25" means 3 layers: first of input size,
+                        second of half input size, third of quarter input
+                        size; [default: 1 (one hidden layer of size exactly
+                        #input-features)]
+  -o OPT, --nn_optimizer OPT
+                        optimizer for NN [default: adam]
+  -O OBJECTIVE, --objective OBJECTIVE
+                        Objective function in terms of labelled outputs
+                        [default: RESPONSE if it is a single variable]
+  -p PP, --preprocess PP
+                        preprocess data using "std, "min-max", "max-abs" or
+                        "none" scalers. PP can optionally contain a prefix
+                        "F=" where F denotes a feature of the input data by
+                        column index (0-based) or by column header. If the
+                        prefix is absent, the selected scaler will be applied
+                        to all features. This parameter can be given multiple
+                        times. [default: min-max]
+  -r RESPONSE, --response RESPONSE
+                        comma-separated names of the response variables
+                        [default: taken from SPEC, where "type" is "response"]
+  -R SEED, --seed SEED  Initial random seed
+  -s SPEC, --spec SPEC  .spec file
+  -S SPLIT, --split-test SPLIT
+                        Fraction in (0,1) of data samples to split from
+                        training data for testing [default: 0.2]
+--------------------------------------------------------------------------------
+
+When run as
+
+  $ src/train_nn.py [-OPTS] PATH/PREFIX
+
+it assumes existence of the training dataset in the file path/prefix.csv and
+generates the following files:
+
+- PATH/PREFIX_12_eval-{Test,Train}-*.png:
+  one plot for each objective showing the quality of predicted vs. true values
+  for the training and the test part of the data set
+- PATH/PREFIX_12_resp-distr.png:
+  distribution of the response values
+- PATH/PREFIX_12_train-reg.png:
+  graph of the accuracy obtained during the process of training the neural
+  network
+- PATH/data_bounds_PREFIX_12.json:
+  file containing the min/max bounds obtained from the data set
+- PATH/model_complete_PREFIX_12.h5
+  dump of the weights, biases and training configuration parameters for the
+  neural network in HDF-5 format suitable for Tensorflow's
+    tf.keras.model.load_model()
+- PATH/model_config_PREFIX_12.json
+  essential training parameters of the neural network in JSON format
+  (identical information is also contained in the HDF-5 file above)
+- PATH/model_gen_PREFIX_12.json
+  stores values of the essential parameters [-OPTS] passed to the training
+  script in JSON format, such as
+  - "resp": list of variables considered response features
+  - "obj": what objective feature has been set in the training script (if any)
+  - "obj-bounds": bounds on the value of the objective (if any) as derived from
+    evaluating the function on the points in data set
+  - "train": the training-related parameters such as activation function,
+    random seed, etc.
+  - "pp": the kind of preprocessing/normalization that has been performed before
+    training the neural network, separately for the input features and the
+    response features
+
+
+
+Prover Details
+~~~~~~~~~~~~~~
+
+The prover script provides the following options:
+--------------------------------------------------------------------------------
+usage: src/prove-nn.py [-h] [-b [BOUNDS]] [-B DBOUNDS] [-C CHECK_SAFE]
+                       [-d DATA] [-D DELTA] -g MODEL_GEN [-G GRID] [-n N] [-N]
+                       [-o OUTPUT] [-O OBJECTIVE] [-P PARTIAL_GRID]
+                       [-r RESPONSE_BOUNDS] -s SPEC [-S SAFE] [-t THRESHOLD]
+                       [-T SAFE_THRESHOLD] [-U CENTER_OFFSET] [-v] [-x TRACE]
+                       [-X] [-z BO_CEX] [-Z BO_CAD]
+                       NN_MODEL
+
+positional arguments:
+  NN_MODEL              Path to NN model in .h5 format
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -b [BOUNDS], --bounds [BOUNDS]
+                        bound variables [default: none; otherwise, if BOUNDS
+                        is missing, 0]
+  -B DBOUNDS, --data-bounds DBOUNDS
+                        path to data_bounds file to amend the bounds
+                        determined from SPEC
+  -C CHECK_SAFE, --check-safe CHECK_SAFE
+                        Number of random samples to check for each SAFE config
+                        found [default: 1000]
+  -d DATA, --data DATA  path to DATA.csv; check DATA for counter-examples to
+                        found regions
+  -D DELTA, --delta DELTA
+                        exclude (1+DELTA)*radius region for non-grid
+                        components
+  -g MODEL_GEN, --model-gen MODEL_GEN
+                        the model_gen*.json file containing the training /
+                        preprocessing parameters
+  -G GRID, --grid GRID  Path to grid.istar file
+  -n N                  number of safe regions to generate in total (that is,
+                        including those already in SAFE) [default: 1]
+  -N, --no-exists       only check GRID, no solving of existential part
+  -o OUTPUT, --output OUTPUT
+                        Path to output .smt2 instance [default: none]
+  -O OBJECTIVE, --objective OBJECTIVE
+                        Objective function in terms of labelled outputs
+                        [default: "delta"]
+  -P PARTIAL_GRID, --partial-grid PARTIAL_GRID
+                        Path to partial grid CSV
+  -r RESPONSE_BOUNDS, --response-bounds RESPONSE_BOUNDS
+                        Path to bounds.csv for response bounds to interpret T
+                        and ST in [default: use DATA_BOUNDS]
+  -s SPEC, --spec SPEC  Path to JSON spec of input features
+  -S SAFE, --safe SAFE  Path to output found safe configurations to as CSV
+  -t THRESHOLD, --threshold THRESHOLD
+                        Threshold to restrict output feature to be larger-
+                        equal than [default: search in 0.05 grid between 0 and
+                        0.95]
+  -T SAFE_THRESHOLD, --safe_threshold SAFE_THRESHOLD
+                        Center threshold [default: THRESHOLD+SAFE_OFFSET].
+                        Overrides any SAFE_OFFSET.
+  -U CENTER_OFFSET, --center_offset CENTER_OFFSET
+                        Center threshold offset of threshold [default: 0]
+  -v, --verbose         Increase verbosity
+  -x TRACE, --trace-exclude TRACE
+                        exclude all unsafe i* from trace file
+  -X, --trace-exclude-safe
+                        exclude also found safe i* from the trace file
+  -z BO_CEX, --bo-cex BO_CEX
+                        use BO_CEX >= 10 iterations of BO to find counter-
+                        examples [default: no]
+  -Z BO_CAD, --bo-cad BO_CAD
+                        use BO_CAD iterations of BO to find a candidate prior
+                        to falling back to Z3 [default: no]
+--------------------------------------------------------------------------------
+
+By default it does not create any files, however these options enable creating
+the corresponding files: -S, -x, -o
+
+Mandatory arguments are: -s and the path the HDF-5 file storing the NN
