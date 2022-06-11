@@ -536,7 +536,8 @@ class Instance:
 
 		assert(type(self.spec) == list)
 
-		assert max(len(w) for w in model.layers[0].get_weights()[0].transpose()) == len(self.spec)
+		assert(max(len(w) for w in model.layers[0].get_weights()[0].transpose()) ==
+		       len(self.spec))
 
 		self.model = model
 		self.gen = gen
