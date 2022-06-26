@@ -33,6 +33,10 @@ def parse_args(argv):
 	p = argparse.ArgumentParser(prog=argv[0])
 	p.add_argument('nn_model', metavar='NN_MODEL', type=str,
 	               help='Path to NN model in .h5 format')
+	p.add_argument('-a', '--more-constraints', type=str, default=None,
+	               metavar='CONSTRAINTS',
+	               help='additional constraints; Python term containing features '+
+	                    'or numeric constants; incompatible with BO and -d')
 	p.add_argument('-b', '--bounds', type=float, nargs='?', const=0.0,
 	               help='bound variables; optional parameter is a factor to '+
 	                    'increase the range (max-min) by '+
@@ -449,17 +453,21 @@ class Rad(Command):
 
 class CounterExample(Solve, Command):
 	LABEL = 'b'
-	def __init__(self, obj_term, threshold, output, in_vars):
+	def __init__(self, obj_term, threshold, output, in_vars, guard):
 		Command.__init__(self, CounterExample.LABEL, threshold)
 		Solve.__init__(self,
 		               None if output is None else output + '-' + CounterExample.LABEL,
 		               obj_term, in_vars)
 		self._obj_term = obj_term
+		self._guard = guard
 
 	def run(self, solver):
 		threshold = self.args[0]
 		log(1, 'solving safe <', threshold, 'with eps ...')
-		solver.add(self._obj_term < threshold)
+		assertion = self._obj_term < threshold
+		if self._guard is not None:
+			assertion = z3.Implies(self._guard, assertion)
+		solver.add(assertion)
 		out = self.solve(solver)
 		log(1, '->', out[0], 'in', self.t, 'sec')
 		return out
@@ -528,7 +536,7 @@ class MockModel(dict):
 class Instance:
 	def __init__(self, spec_path, model, gen, data_bounds, use_input_bounds,
 	             input_bounds, resp_bounds, T_resp_bounds, data_path=None,
-	             bo_cex = None):
+	             bo_cex = None, more_constraints : str = None):
 
 		with open(spec_path, 'r') as f:
 			all_spec = json.load(f, parse_float=Fraction)
@@ -547,6 +555,7 @@ class Instance:
 		self.input_bounds = input_bounds
 		self.T_resp_bounds = T_resp_bounds
 		self.resp_bounds = resp_bounds
+		self.more_constraints = more_constraints
 
 		self.counter_ex_finders = []
 		if data_path is not None:
@@ -571,7 +580,7 @@ class Instance:
 					y = None # TODO: counter-example value
 					return sat if n_fail > 0 else unsat, None, y
 				self.counter_ex_finders.append(('data',
-					lambda solver, i_star, obj_term, in_vars, threshold, output=None:
+					lambda solver, i_star, obj_term, in_vars, threshold, output=None, constraints=None: # constraints get ignored
 						ex_data_counter_example([
 							i_star[v] for s,v in zip(self.spec, in_vars) if s['type'] != 'categorical'
 						], threshold)))
@@ -580,7 +589,7 @@ class Instance:
 
 		self.excl_regions = []
 
-		def skopt_counter_example(solver, i_star, obj_term, in_vars, threshold, output = None):
+		def skopt_counter_example(solver, i_star, obj_term, in_vars, threshold, output = None, constraints = None): # constraints get ignored
 			r = Rad(in_vars, self.spec, i_star)
 			try:
 				opt = self._init_skopt(r.bnds)
@@ -622,9 +631,9 @@ class Instance:
 			return eps_res, eps_model, y
 
 		self.counter_ex_finders.append(('NN',
-			lambda solver, i_star, obj_term, in_vars, threshold, output=None:
+			lambda solver, i_star, obj_term, in_vars, threshold, output=None, constraints=None:
 				ex_model_counter_example(solver, i_star, obj_term, in_vars,
-				                         threshold, output)))
+				                         threshold, output, constraints)))
 
 
 	def record_excl_region(self, r : Rad, y):
@@ -725,11 +734,19 @@ class Instance:
 			           self.input_bounds if self.use_input_bounds else {},
 			           which)(solver)
 
-		unnorm_resp = {r: s.denorm(t) for r, t, s in
-		               zip(self.gen['response'], nn_terms,
-		                   response_scalers(self.gen, self.data_bounds))}
+		constraints = None
+		if self.more_constaints is not None:
+			unnorm_resp = {r: s.denorm(t) for r, t, s in
+			               zip(self.gen['response'], nn_terms,
+			                   response_scalers(self.gen, self.data_bounds))}
+			print('unnorm_resp:', unnorm_resp)
+			constraints = eval(compile(self.more_constraints, '<string>', 'eval'),
+				{}, # globals
+				unnorm_resp | {e['label']: v for e,v in zip(self.spec, in_vars)} # locals
+			)
+		print('constraints:', constraints)
 
-		return solver, obj_term, in_vars
+		return solver, obj_term, in_vars, constraints
 
 	def _intersect(self, a, b):
 		if a is None:
@@ -834,9 +851,10 @@ class Instance:
 	# yields a sequence of candidate solutions i_star
 	def exists(self, catv, excluded, excluded_safe, center_threshold,
 	           output=None, bo_cad = None, ctx=None, extra_eta=None):
-		solver, obj_term, in_vars = timed(lambda: self._init_solver(ctx=ctx),
-		                                  'a init_solver()',
-		                                  lambda *args: log(2, *args))
+		solver, obj_term, in_vars, constrains = timed(
+			lambda: self._init_solver(ctx=ctx),
+			'a init_solver()',
+			lambda *args: log(2, *args))
 		#for catv in itertools.product(*[spec[i]['range'] for i in cati]):
 		Cat(in_vars, self.cati, catv)(solver)
 
@@ -861,6 +879,9 @@ class Instance:
 
 		if extra_eta is not None:
 			extra_eta(in_vars, self.spec, solver)
+
+		if constraints is not None:
+			solver.add(constraints)
 
 		for candidate_idx in itertools.count(): # infinite loop
 			safe_res = None
@@ -933,15 +954,17 @@ class Instance:
 
 
 	def is_safe(self, catv, i_star, threshold, output=None, check_safe=0, ctx=None):
-		solver, obj_term, in_vars = timed(lambda: self._init_solver(ctx=ctx),
-		                                  'b init_solver()',
-		                                  lambda *args: log(2, *args))
+		solver, obj_term, in_vars, constraints = timed(
+			lambda: self._init_solver(ctx=ctx),
+			'b init_solver()',
+			lambda *args: log(2, *args))
 		Cat(in_vars, self.cati, catv)(solver)
 		eps_res = unknown
 		for k,f in self.counter_ex_finders:
 			log(1, "'%s' searching CEX < %s" % (k,threshold))
 			(eps_res, eps_model, y), t = timed(lambda: f(solver, i_star, obj_term,
-			                                             in_vars, threshold, output))
+			                                             in_vars, threshold, output,
+			                                             constraints))
 			log(2,"'%s' counter-example returned" % k, eps_res, 'in', t, 'seconds')
 			if eps_res == unknown:
 				log(1, "'%s' returned unknown, reason:" % k, eps_model)
@@ -1310,7 +1333,7 @@ def main(argv):
 
 	inst = Instance(args.spec, load_model(args.nn_model), model_gen, data_bounds,
 	                args.bounds is not None, bounds, resp_bounds, T_resp_bounds,
-	                args.data, args.bo_cex)
+	                args.data, args.bo_cex, args.more_constraints)
 
 	excluded = {} # dict from catv -> [[x1,x2,...,xn], ...]
 	if args.trace_exclude is not None and os.path.exists(args.trace_exclude):
