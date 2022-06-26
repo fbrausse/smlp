@@ -228,7 +228,7 @@ def evaluate_nn(model, history, epochs, X_train, X_test, y_train, y_test,
 
 # runs Keras NN algorithm, outputs lots of stats, saves model to disk
 # epochs and batch_size are arguments of NN algorithm from keras library
-def nn_main(inst, resp_names, input_names, split_test=DEF_SPLIT_TEST, chkpt_pattern=None,
+def nn_main(inst, resp_names : list, input_names, split_test=DEF_SPLIT_TEST, chkpt_pattern=None,
             layers_spec='2,1', #pp=[DEF_SCALER],
             seed=None, filter : float=0.0, objective : str=None, bnds=None,
             # keras NN arguments:

@@ -725,6 +725,10 @@ class Instance:
 			           self.input_bounds if self.use_input_bounds else {},
 			           which)(solver)
 
+		unnorm_resp = {r: s.denorm(t) for r, t, s in
+		               zip(self.gen['response'], nn_terms,
+		                   response_scalers(self.gen, self.data_bounds))}
+
 		return solver, obj_term, in_vars
 
 	def _intersect(self, a, b):
