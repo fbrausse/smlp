@@ -419,8 +419,9 @@ class Rad(Command):
 						t, e = 'abs', s['rad-abs']
 					except KeyError:
 						t, e = 'rel', s['rad-rel']
-					e = e * (1+delta)
-					c, rng = (abs_err(v, i_star[v], e, s), '%g' % e)
+					ef = e * (1+delta)
+					e = e * (1+to_real(cnst_ctor(s)(delta)))
+					c, rng = (abs_err(v, i_star[v], e, s), '%g' % ef)
 					self.bnds[s['label']] = {
 						'min': i_star.eval((-e) + to_real(i_star[v])).as_fraction(),
 						'max': i_star.eval((+e) + to_real(i_star[v])).as_fraction(),
