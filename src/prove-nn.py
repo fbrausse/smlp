@@ -34,8 +34,9 @@ def parse_args(argv):
 	p.add_argument('nn_model', metavar='NN_MODEL', type=str,
 	               help='Path to NN model in .h5 format')
 	p.add_argument('-b', '--bounds', type=float, nargs='?', const=0.0,
-	               help='bound variables  [default: none; otherwise, if BOUNDS '+
-	                    'is missing, 0]')
+	               help='bound variables; optional parameter is a factor to '+
+	                    'increase the range (max-min) by '+
+	                    '[default: none; otherwise, if BOUNDS is missing, 0]')
 	p.add_argument('-B', '--data-bounds', default=None, type=str, metavar='DBOUNDS',
 	               help='path to data_bounds file to amend the bounds determined from SPEC')
 	p.add_argument('-C', '--check-safe', type=int, default=0,
@@ -1163,10 +1164,10 @@ def init_bounds(spec, model_gen, data_bounds_json_path=None, bounds_factor=None,
 		for s in spec:
 			if s['label'] in bounds:
 				b = bounds[s['label']]
-				if 'min' in b:
-					b['min'] -= b['min'] * bounds_factor
-				if 'max' in b:
-					b['max'] += b['max'] * bounds_factor
+				if 'min' in b and 'max' in b:
+					d = b['max'] - b['min']
+					b['min'] -= d * bounds_factor / 2
+					b['max'] += d * bounds_factor / 2;
 	if model_gen['pp']['features'] == 'min-max':
 		if data_bounds_json_path is None:
 			die(1, 'error: NN expects normalized inputs, require bounds via param "-B"')
