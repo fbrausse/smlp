@@ -615,11 +615,11 @@ class Instance:
 			self.counter_ex_finders.append(('BO', skopt_counter_example))
 
 
-		def ex_model_counter_example(solver, i_star, obj_term, in_vars, threshold, output):
+		def ex_model_counter_example(solver, i_star, obj_term, in_vars, threshold, output, constraints):
 			#Simple('push')(solver)
 			r = Rad(in_vars, self.spec, i_star)
 			r(solver)
-			eps_res, eps_model = CounterExample(obj_term, threshold, output, in_vars)(solver)
+			eps_res, eps_model = CounterExample(obj_term, threshold, output, in_vars, constraints)(solver)
 			y = None
 			#Simple('pop')(solver)
 			if eps_res == sat:
@@ -735,7 +735,7 @@ class Instance:
 			           which)(solver)
 
 		constraints = None
-		if self.more_constaints is not None:
+		if self.more_constraints is not None:
 			unnorm_resp = {r: s.denorm(t) for r, t, s in
 			               zip(self.gen['response'], nn_terms,
 			                   response_scalers(self.gen, self.data_bounds))}
@@ -851,7 +851,7 @@ class Instance:
 	# yields a sequence of candidate solutions i_star
 	def exists(self, catv, excluded, excluded_safe, center_threshold,
 	           output=None, bo_cad = None, ctx=None, extra_eta=None):
-		solver, obj_term, in_vars, constrains = timed(
+		solver, obj_term, in_vars, constraints = timed(
 			lambda: self._init_solver(ctx=ctx),
 			'a init_solver()',
 			lambda *args: log(2, *args))
