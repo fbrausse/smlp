@@ -741,11 +741,13 @@ class Instance:
 			               zip(self.gen['response'], nn_terms,
 			                   response_scalers(self.gen, self.data_bounds))}
 			print('unnorm_resp:', unnorm_resp)
+			namespace = unnorm_resp | {e['label']: v for e,v in zip(self.spec, in_vars)}
+			namespace['And'] = z3.And
 			constraints = eval(compile(self.more_constraints, '<string>', 'eval'),
 				{}, # globals
-				unnorm_resp | {e['label']: v for e,v in zip(self.spec, in_vars)} # locals
+				namespace # locals
 			)
-		print('constraints:', constraints)
+		print('constraints:', constraints.sexpr())
 
 		return solver, obj_term, in_vars, constraints
 
