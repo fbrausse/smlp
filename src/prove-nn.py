@@ -743,7 +743,8 @@ class Instance:
 			if log(2, 'unnorm_resp:'):
 				for k,v in unnorm_resp.items():
 					log(2, '  %s =' % k, v.sexpr())
-			namespace = unnorm_resp | {e['label']: v for e,v in zip(self.spec, in_vars)}
+			namespace = unnorm_resp
+			namespace.update({e['label']: v for e,v in zip(self.spec, in_vars)})
 			namespace['And'] = z3.And
 			namespace['Or'] = z3.Or
 			constraints = eval(compile(self.more_constraints, '<string>', 'eval'),
