@@ -740,14 +740,17 @@ class Instance:
 			unnorm_resp = {r: s.denorm(t) for r, t, s in
 			               zip(self.gen['response'], nn_terms,
 			                   response_scalers(self.gen, self.data_bounds))}
-			print('unnorm_resp:', unnorm_resp)
+			if log(2, 'unnorm_resp:'):
+				for k,v in unnorm_resp.items():
+					log(2, '  %s =' % k, v.sexpr())
 			namespace = unnorm_resp | {e['label']: v for e,v in zip(self.spec, in_vars)}
 			namespace['And'] = z3.And
+			namespace['Or'] = z3.Or
 			constraints = eval(compile(self.more_constraints, '<string>', 'eval'),
 				{}, # globals
 				namespace # locals
 			)
-		print('constraints:', constraints.sexpr())
+		log(2, 'constraints:', constraints.sexpr())
 
 		return solver, obj_term, in_vars, constraints
 
@@ -1111,6 +1114,7 @@ def bisect_left(a, pred, lo=0, hi=None):
 		hi = len(a)
 	while lo < hi:
 		m = (lo+hi) // 2
+		log(1, 'bisect_left[%s ; %s) m = %s, TH[m] = %s' % (lo,hi,m,a[m]))
 		if pred(a[m]):
 			lo = m+1
 		else:
