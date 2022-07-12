@@ -751,7 +751,7 @@ class Instance:
 				{}, # globals
 				namespace # locals
 			)
-		log(2, 'constraints:', constraints.sexpr())
+			log(2, 'constraints:', constraints.sexpr())
 
 		return solver, obj_term, in_vars, constraints
 
