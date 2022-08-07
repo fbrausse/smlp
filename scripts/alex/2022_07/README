@@ -1,0 +1,27 @@
+1. Export all 4 different sheets in `via_results.xlsx` to CSV; combine the CSVs
+   into a single file if multiple have been created.
+   Combination is by concetanation; also drop the first column and rename
+   features to form valid Python identifiers:
+
+	$ ./alex.py
+
+   This also writes a .spec file for SMLP containing the description of all
+   features, their ranges, types, etc.  The .spec is a JSON array and stored in
+   `via_results.spec`.
+
+2. Edit the .spec to match the semantics you want to assign to features, here:
+
+3. Run the training process:
+
+	$ mkdir a b c d e
+	$ ln -rs via_results.csv a/data.csv
+	$ env -u DISPLAY ../../../smlp/src/train-nn.py -s via_results.spec \
+	  a/data -O 'RL__8e_09Hz' -e 500 |& tee a/train.log
+
+4. Run the solver:
+
+	$ /usr/bin/time stdbuf -oL ../../../smlp/src/prove-nn.py -b \
+	  -d via_results.csv -D 0.05 -g a/model_gen_data_12.json -n 10 \
+	  -s via_results.spec -S a/search.safe.csv -B a/data_bounds_data_12.json \
+	  -t "[`LC_ALL=C seq 0.00 0.05 0.95 | tr '\n' ,`1]" \
+	  a/model_complete_data_12.h5 2>&1 >a/search.trace | tee a/search.log
