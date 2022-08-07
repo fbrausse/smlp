@@ -132,10 +132,10 @@ def io_scalers(spec, gen, bnds):
 
 def obj_range(gen, bnds):
 	r = gen['response']
-	for i,resp in enumerate(r):
+	for resp in r:
 		if gen['objective'] == resp:
 			so = scaler_from_bounds([{'label': resp}], bnds)
-			return so.data_min_[i], so.data_max_[i]
+			return so.data_min_[0], so.data_max_[0]
 	assert len(r) == 2
 	sOu = None
 	sOl = None
