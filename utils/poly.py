@@ -1,12 +1,30 @@
 #!/usr/bin/env python3
 
-import sys, copy, z3
-
 Z3 = True
+
+import sys
+from copy import copy
+from enum import Enum
+
+if Z3:
+	import z3
+
+class Result(Enum):
+	SAT = 'sat'
+	UNSAT = 'unsat'
+	UNKNOWN = 'unknown'
+
+	def __str__(self):
+		return self.value
+
+SAT = Result.SAT
+UNSAT = Result.UNSAT
+UNKNOWN = Result.UNKNOWN
 
 # non-empty closed intervals
 class Interval:
 	def __init__(self, lo, up):
+		assert lo.__class__ is up.__class__
 		assert lo <= up
 		self.lo = lo
 		self.up = up
@@ -57,15 +75,85 @@ class Interval:
 	def __rmul__(self, other):
 		return self.__mul__(other)
 
+	def __lt__(self, other):
+		a = self
+		b = other
+		lo = False
+		up = True
+		if isinstance(b, Interval):
+			if a.up < b.lo:
+				lo = True
+			elif a.lo > b.up:
+				up = False
+		else:
+			if a.up < b:
+				lo = True
+			elif a.lo > b:
+				up = False
+		return Interval(lo, up)
+
+	def __gt__(self, other):
+		return ~(self <= other)
+
+	def __le__(self, other):
+		a = self
+		b = other
+		lo = False
+		up = True
+		if isinstance(b, Interval):
+			if a.up <= b.lo:
+				lo = True
+			elif a.lo > b.up:
+				up = False
+		else:
+			if a.up <= b:
+				lo = True
+			elif a.lo > b:
+				up = False
+		return Interval(lo, up)
+
+	def __ge__(self, other):
+		return ~(self < other)
+
+	def __eq__(self, other):
+		raise NotImplementedError
+
+	def __ne__(self, other):
+		raise NotImplementedError
+
+	def __invert__(self): # unary operator ~
+		if isinstance(self.lo, bool):
+			return Interval(not self.up, not self.lo)
+		raise NotImplementedError
+
+	def __bool__(self):
+		if isinstance(self.lo, bool) and self.lo is self.up:
+			return self.lo
+		raise NotImplementedError
+
+	def __len__(self):
+		return self.up - self.lo
+
 	def __str__(self):
 		return str([self.lo, self.up])
 
 	def __repr__(self):
 		return 'Interval(%s, %s)' % (self.lo, self.up)
 
+def as_result(r):
+	if Z3 and isinstance(r, z3.CheckSatResult):
+		return Result(str(r))
+	if isinstance(r, Interval) and r.lo.__class__ is bool:
+		if r.lo is True:
+			return SAT
+		if r.up is False:
+			return UNSAT
+		return UNKNOWN
+	raise NotImplementedError
+
 def union(*ivals):
 	assert len(ivals) > 0 # Interval is non-empty
-	a = copy.copy(ivals[0])
+	a = copy(ivals[0])
 	for b in ivals[1:]:
 		if a.lo > b.lo:
 			a.lo = b.lo
@@ -101,8 +189,8 @@ def prep(contents):
 def parse_dom(line):
 	toks = line.split(maxsplit=2)
 	assert len(toks) == 3, (toks, line)
-	ival = toks[2]
-	return (prep(toks[0]), Interval(*eval(compile(ival, '<string>', 'eval'), {}, {})))
+	bnds = eval(compile(toks[2], '<string>', 'eval'), {}, {})
+	return (prep(toks[0]), Interval(*bnds))
 
 if __name__ == '__main__':
 	domain = {}
@@ -137,17 +225,15 @@ if __name__ == '__main__':
 		res = solver.check()
 	else:
 		v = domain             # variables (local)
-		print('vars:', str(v))
+		print('vars:', str(v), file=sys.stderr)
 		values = []
 		for post in [5,8]:
 			y = eval(c, f, v | { '_post': post })
 			values.append(y)
-			print('post=%s:' % post, y)
+			print('post=%s:' % post, y, file=sys.stderr)
 
 		Y = union(*values)
-		print('union:', Y)
-		res = ('sat' if Y.lo >= T else
-		       'unsat' if Y.up < T else
-		       'unknown')
+		print('Y:', Y, file=sys.stderr)
+		res = Y >= T
 
-	print('Y >= %s:' % T, res, file=sys.stderr)
+	print('Y >= %s:' % T, as_result(res), file=sys.stderr)
