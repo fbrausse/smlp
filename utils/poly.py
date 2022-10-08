@@ -21,6 +21,15 @@ SAT = Result.SAT
 UNSAT = Result.UNSAT
 UNKNOWN = Result.UNKNOWN
 
+def exit_code(result):
+	if result == SAT:
+		return 10
+	if result == UNSAT:
+		return 20
+	if result == UNKNOWN:
+		return 0
+	raise NotImplementedError
+
 # non-empty closed intervals
 class Interval:
 	def __init__(self, lo, up):
@@ -140,17 +149,6 @@ class Interval:
 	def __repr__(self):
 		return 'Interval(%s, %s)' % (self.lo, self.up)
 
-def as_result(r):
-	if Z3 and isinstance(r, z3.CheckSatResult):
-		return Result(str(r))
-	if isinstance(r, Interval) and r.lo.__class__ is bool:
-		if r.lo is True:
-			return SAT
-		if r.up is False:
-			return UNSAT
-		return UNKNOWN
-	raise NotImplementedError
-
 def union(*ivals):
 	assert len(ivals) > 0 # Interval is non-empty
 	a = copy(ivals[0])
@@ -161,12 +159,26 @@ def union(*ivals):
 			a.up = b.up
 	return a
 
+def as_result(r):
+	if Z3 and isinstance(r, z3.CheckSatResult):
+		return Result(str(r))
+	if isinstance(r, Interval) and isinstance(r.lo, bool):
+		if r.lo is True:
+			return SAT
+		if r.up is False:
+			return UNSAT
+		return UNKNOWN
+	raise NotImplementedError
+
+def _log(*args):
+	print(*args, file=sys.stderr)
+
 if Z3:
 	def build_match(var, otherwise, args):
 		if len(args) == 0:
 			return 0 if otherwise is None else otherwise
 		o = build_match(var, otherwise, args[2:])
-		#print(type(var), type(args[0]), type(o))
+		#_log(type(var), type(args[0]), type(o))
 		return z3.If(var == args[0], args[1], o)
 else:
 	def build_match(var, otherwise, args):
@@ -180,32 +192,38 @@ def Match(var, *args):
 	assert args[-1] is None
 	return build_match(var, args[-1], args[:-1])
 
-def prep(contents):
+def _prep(contents):
 	return (contents.replace(' ', '')
 	                .replace('\n', '')
 	                .replace(':', '_')
 	                .replace(',.)', ',None)'))
 
-def parse_dom(line):
-	toks = line.split(maxsplit=2)
-	assert len(toks) == 3, (toks, line)
-	bnds = eval(compile(toks[2], '<string>', 'eval'), {}, {})
-	return (prep(toks[0]), Interval(*bnds))
+def parse_dom_file(f):
+	domain = {}
+	for line in f:
+		line = line.strip()
+		if not len(line):
+			continue
+		toks = line.split(maxsplit=2)
+		assert len(toks) == 3, (toks, line)
+		bnds = eval(compile(toks[2], '<string>', 'eval'), {}, {})
+		var = _prep(toks[0])
+		rng = Interval(*bnds)
+		domain[var] = rng
+	return domain
+
+def parse_expr_file(f):
+	s = _prep(f.read())
+	#_log(s)
+	return compile(s, '<string>', 'eval')
 
 if __name__ == '__main__':
-	domain = {}
 	with open(sys.argv[1]) as f:
-		for line in f:
-			line = line.strip()
-			if len(line):
-				var, rng = parse_dom(line)
-				domain[var] = rng
+		domain = parse_dom_file(f)
 
 	with open(sys.argv[2]) as f:
-		s = prep(f.read())
-		#print(s)
+		c = parse_expr_file(f)
 
-	c = compile(s, '<string>', 'eval')
 	f = { 'Match': Match } # functions (global)
 	T = 0.95
 
@@ -225,15 +243,17 @@ if __name__ == '__main__':
 		res = solver.check()
 	else:
 		v = domain             # variables (local)
-		print('vars:', str(v), file=sys.stderr)
+		_log('vars:', str(v))
 		values = []
 		for post in [5,8]:
 			y = eval(c, f, v | { '_post': post })
 			values.append(y)
-			print('post=%s:' % post, y, file=sys.stderr)
+			_log('post=%s:' % post, y)
 
 		Y = union(*values)
-		print('Y:', Y, file=sys.stderr)
+		_log('Y:', Y)
 		res = Y >= T
 
-	print('Y >= %s:' % T, as_result(res), file=sys.stderr)
+	res = as_result(res)
+	_log('Y >= %s:' % T, res)
+	sys.exit(exit_code(res))
