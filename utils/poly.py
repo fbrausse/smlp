@@ -40,7 +40,7 @@ class Interval:
 		a = self
 		b = other
 		if b is a and a.contains(0):
-			return Interval(0, a.up * a.up)
+			return Interval(0, max(a.lo * a.lo, a.up * a.up))
 		elif isinstance(b, Interval):
 			ll = a.lo * b.lo
 			lu = a.lo * b.up
