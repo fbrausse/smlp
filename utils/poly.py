@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
-Z3 = True
+Z3 = False # True: solve with Z3; False: evaluate using interval arithmetic
 
 import sys
 from copy import copy
 from enum import Enum
+from itertools import product
 
 if Z3:
 	import z3
@@ -174,6 +175,7 @@ def _log(*args):
 	print(*args, file=sys.stderr)
 
 if Z3:
+	# build_match(var, else, case1, expr1, case2, expr2, ...)
 	def build_match(var, otherwise, args):
 		if len(args) == 0:
 			return 0 if otherwise is None else otherwise
@@ -181,12 +183,14 @@ if Z3:
 		#_log(type(var), type(args[0]), type(o))
 		return z3.If(var == args[0], args[1], o)
 else:
+	# build_match(var, else, case1, expr1, case2, expr2, ...)
 	def build_match(var, otherwise, args):
 		for i in range(0, len(args) // 2):
 			if var == args[2*i]:
 				return args[2*i+1]
 		return otherwise
 
+# Match(var, case1, expr1, case2, expr2, ..., else)
 def Match(var, *args):
 	assert len(args) % 2 == 1
 	assert args[-1] is None
@@ -208,7 +212,12 @@ def parse_dom_file(f):
 		assert len(toks) == 3, (toks, line)
 		bnds = eval(compile(toks[2], '<string>', 'eval'), {}, {})
 		var = _prep(toks[0])
-		rng = Interval(*bnds)
+		if isinstance(bnds, list):
+			rng = Interval(*bnds)
+		elif isinstance(bnds, set):
+			rng = bnds
+		else:
+			assert False, "range '%s' of '%s' is neither a list nor a set" % (rng, var)
 		domain[var] = rng
 	return domain
 
@@ -234,21 +243,26 @@ if __name__ == '__main__':
 		for k,rng in domain.items():
 			var = z3.Real(k)
 			v[k] = var
-			solver.add(z3.And(rng.lo <= var, var <= rng.up))
-		v['_post'] = z3.Real('_post')
-		solver.add(z3.Or(v['_post'] == 5, v['_post'] == 8))
+			if isinstance(rng, Interval):
+				solver.add(z3.And(rng.lo <= var, var <= rng.up))
+			elif isinstance(rng, set):
+				solver.add(z3.Or([var == v for v in rng]))
+			else:
+				assert False, type(rng)
 		Y = eval(c, f, v)
 		solver.add(Y >= T)
 		print(solver.to_smt2())
-		res = solver.check()
+		res = solver.check()   # exists X, Y >= T
 	else:
-		v = domain             # variables (local)
-		_log('vars:', str(v))
+		_log('dom:', str(domain))
+		v = {k:w for k,w in domain.items() if isinstance(w, Interval)} # variables (local)
 		values = []
-		for post in [5,8]:
-			y = eval(c, f, v | { '_post': post })
+		sets = {k: w for k,w in domain.items() if not isinstance(w, Interval)}
+		assert all(isinstance(w, set) for w in sets.values())
+		for vals in product(*sets.values()):
+			y = eval(c, f, v | dict(zip(sets.keys(), vals)))
 			values.append(y)
-			_log('post=%s:' % post, y)
+			_log('%s=%s:' % (sets.keys(), vals), y)
 
 		Y = union(*values)
 		_log('Y:', Y)
