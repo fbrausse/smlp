@@ -115,7 +115,7 @@ struct component : sumtype<ival,list> {
 		for (const kay::Q &q : c.get<list>()->values)
 			if (q.get_den() != 1)
 				return true;
-		return 1 || false;
+		return 1 || false; /* always real: Z3 falls back to a slow method otherwise */
 	}
 };
 
@@ -700,7 +700,7 @@ struct infix_parser {
 	{
 		// fprintf(stderr, "mul: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
 		expr r = low();
-		while (t == SPECIAL && (tok == "*")) {
+		if (t == SPECIAL && (tok == "*")) {
 			next();
 			r = bop {
 				bop::MUL,
@@ -716,13 +716,13 @@ struct infix_parser {
 		// fprintf(stderr, "add: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
 		expr r = mul();
 		// fprintf(stderr, "add2: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
-		while (t == SPECIAL && (tok == "+" || tok == "-")) {
+		if (t == SPECIAL && (tok == "+" || tok == "-")) {
 			decltype(bop::op) op = tok == "+" ? bop::ADD : bop::SUB;
 			next();
 			r = bop {
 				op,
 				std::make_unique<expr>(move(r)),
-				std::make_unique<expr>(mul())
+				std::make_unique<expr>(add())
 			};
 		}
 		return r;
@@ -807,8 +807,8 @@ int main(int argc, char **argv)
 		},
 	};
 
-	dump_smt2(stdout, "QF_NIRA", p);
-	return 0;
+	// dump_smt2(stdout, "QF_NIRA", p);
+	// return 0;
 
 	z3_solver s(p.dom);
 	s.add(p.p);
