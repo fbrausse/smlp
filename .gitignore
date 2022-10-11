@@ -4,3 +4,4 @@
 /lib/pkgconfig/kjson.pc
 /lib/libkjson.a
 /lib/libkjson.so
+*.d

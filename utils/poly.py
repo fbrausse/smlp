@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 Z3 = False # True: solve with Z3; False: evaluate using interval arithmetic
+DUMP_AST = True
 
 import sys
 from copy import copy
@@ -175,7 +176,7 @@ def _log(*args):
 	print(*args, file=sys.stderr)
 
 if Z3:
-	# build_match(var, else, case1, expr1, case2, expr2, ...)
+	# build_match(var, else, [case1, expr1, case2, expr2, ...])
 	def build_match(var, otherwise, args):
 		if len(args) == 0:
 			return 0 if otherwise is None else otherwise
@@ -183,7 +184,7 @@ if Z3:
 		#_log(type(var), type(args[0]), type(o))
 		return z3.If(var == args[0], args[1], o)
 else:
-	# build_match(var, else, case1, expr1, case2, expr2, ...)
+	# build_match(var, else, [case1, expr1, case2, expr2, ...])
 	def build_match(var, otherwise, args):
 		for i in range(0, len(args) // 2):
 			if var == args[2*i]:
@@ -222,19 +223,53 @@ def parse_dom_file(f):
 	return domain
 
 def parse_expr_file(f):
-	s = _prep(f.read())
-	#_log(s)
-	return compile(s, '<string>', 'eval')
+	return _prep(f.read())
+
+# Dumps the given AST in Polish notation, one node per line. These node types
+# are supported:
+# +,-,*: binary arith ops
+# x,y  : unary add,neg
+# C n  : function call followed by the name and n arguments
+# N id : name (identifier)
+# V c  : constant c
+def dump_ast(a, f):
+	print(type(a), a, file=sys.stderr)
+	rec = lambda a: dump_ast(a, f)
+	binops = {
+		ast.Add: '+',
+		ast.Sub: '-',
+		ast.Mult: '*',
+	}
+	unops = {
+		ast.UAdd: 'x',
+		ast.USub: 'y',
+	}
+	{ ast.BinOp: lambda a: (f(binops[type(a.op)]), rec(a.left), rec(a.right)),
+	  ast.UnaryOp: lambda a: (f(unops[type(a.op)]), rec(a.operand)),
+	  ast.Call: lambda b: (f('C', str(len(b.args))),
+	                       rec(b.func),
+	                       *(rec(p) for p in b.args)),
+	  ast.Name: lambda c: (f('N', c.id),),
+	  ast.Constant: lambda c: f('V', str(c.value)),
+	}[type(a)](a)
 
 if __name__ == '__main__':
 	with open(sys.argv[1]) as f:
 		domain = parse_dom_file(f)
 
 	with open(sys.argv[2]) as f:
-		c = parse_expr_file(f)
+		s = parse_expr_file(f)
+		#_log(s)
+		c = compile(s, '<string>', 'eval')
 
 	f = { 'Match': Match } # functions (global)
 	T = 0.95
+
+	if DUMP_AST:
+		import ast
+		with open('ast', 'w') as file:
+			dump_ast(ast.parse(s, '<string>', 'eval').body,
+			         lambda *s: print(*s, file=file))
 
 	if Z3:
 		solver = z3.Solver()
