@@ -1,0 +1,18 @@
+# poly
+
+poly is a program to solve polynomial inequalities over the reals.
+
+## Build instructions
+
+To build the program, run
+
+	$ make
+
+A compiler supporting C++20 is required as well as:
+
+- the kay library <https://github.com/fbrausse/kay>
+- GMP <https://gmplib.org> and either
+  - its C++ bindings, or
+  - Flint <http://flintlib.org> (to use Flint, change `-DKAY_USE_GMPXX` to
+    `-DKAY_USE_FLINT` in the Makefile)
+- Z3 and its C++ bindings <https://github.com/Z3Prover/z3>

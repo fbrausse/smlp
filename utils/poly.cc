@@ -22,7 +22,8 @@ struct cnst { str value; };
 static const char *bop_s[] = { "+", "-", "*" };
 static const char *uop_s[] = { "+", "-" };
 
-struct expr : sumtype<name,call,bop,uop,cnst>, std::enable_shared_from_this<expr> {
+struct expr : sumtype<name,call,bop,uop,cnst>
+            , std::enable_shared_from_this<expr> {
 
 	using sumtype<name,call,bop,uop,cnst>::sumtype;
 
@@ -173,7 +174,8 @@ struct lneg2 { sptr<form2> arg; };
 
 static const char *lbop_s[] = { "and", "or" };
 
-struct form2 : sumtype<prop2,lbop2,lneg2>, std::enable_shared_from_this<form2> {
+struct form2 : sumtype<prop2,lbop2,lneg2>
+             , std::enable_shared_from_this<form2> {
 
 	using sumtype<prop2,lbop2,lneg2>::sumtype;
 };
@@ -183,7 +185,8 @@ struct bop2 { decltype(bop::op) op; sptr<expr2> left, right; };
 struct uop2 { decltype(uop::op) op; sptr<expr2> operand; };
 struct cnst2 { sumtype<kay::Z,kay::Q,str> value; };
 
-struct expr2 : sumtype<name,bop2,uop2,cnst2,ite2>, std::enable_shared_from_this<expr2> {
+struct expr2 : sumtype<name,bop2,uop2,cnst2,ite2>
+             , std::enable_shared_from_this<expr2> {
 
 	using sumtype<name,bop2,uop2,cnst2,ite2>::sumtype;
 };
@@ -754,15 +757,53 @@ static domain parse_domain_file(const char *path)
 	return domain_parser(f).get();
 }
 
-static expr parse_expression_file(const char *path, bool org)
+static expr parse_expression_file(const char *path, bool infix)
 {
 	file f(path, "r");
 	if (!f)
 		DIE(1,"error opening expression file path: %s: %s\n",
 		    path,strerror(errno));
-	if (!org)
+	if (!infix)
 		return pe_parser(f).get();
 	return infix_parser(read_all(f)).get();
+}
+
+[[noreturn]]
+static void usage(const char *program_name, int exit_code)
+{
+	FILE *f = exit_code ? stderr : stdout;
+	fprintf(f, "usage: %s [-OPTS] [--] DOMAIN-FILE EXPR-FILE OP CNST\n",
+	        program_name);
+	if (!exit_code)
+		fprintf(f,"\
+\n\
+Options [defaults]:\n\
+  -F IFORMAT  determines the format of the EXPR-FILE; can be one of: 'infix',\n\
+              'prefix' [infix]\n\
+  -h          displays this help message\n\
+  -n          dry run, do not solve the problem [no]\n\
+  -p          dump the expression in Polish notation to stdout [no]\n\
+  -s          dump the problem in SMT-LIB2 format to stdout [no]\n\
+\n\
+The DOMAIN-FILE is a text file containing the bounds for all variables in the\n\
+form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either\n\
+an interval of the form '[a,b]' or a list of specific values '{a,b,c,d,...}'.\n\
+Empty lines are skipped.\n\
+\n\
+The EXPR-FILE contains a polynomial expression in the variables specified by the\n\
+DOMAIN-FILE. The format is either an infix notation or the prefix notation also\n\
+known as Polish notation. The expected format can be specified through the -F\n\
+switch.\n\
+\n\
+The problem to be solved is specified by the two parameters OP CNST where OP is\n\
+one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell\n\
+to avoid unwanted redirections. CNST is a rational constant in the same format\n\
+as those in the EXPR-FILE (if any).\n\
+\n\
+Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
+License: Apache 2.0; part of SMLP.\n\
+");
+	exit(exit_code);
 }
 
 int main(int argc, char **argv)
@@ -770,9 +811,20 @@ int main(int argc, char **argv)
 	bool solve = true;
 	bool dump_pe = false;
 	bool dump_smt2 = false;
+	bool infix = true;
 
-	for (int opt; (opt = getopt(argc, argv, ":nps")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":F:hnps")) != -1;)
 		switch (opt) {
+		case 'F':
+			if (!strcmp(optarg, "infix"))
+				infix = true;
+			else if (!strcmp(optarg, "prefix"))
+				infix = false;
+			else
+				DIE(1,"\
+error: option '-F' only supports 'infix' and 'prefix'\n");
+			break;
+		case 'h': usage(argv[0], 0);
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
 		case 's': dump_smt2 = true; break;
@@ -781,10 +833,10 @@ int main(int argc, char **argv)
 		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
 		}
 	if (argc - optind != 4)
-		DIE(1,"usage: %s [-nps] DOMAIN-FILE EXPR-FILE OP CNST\n",argv[0]);
+		usage(argv[0], 1);
 
 	domain d = parse_domain_file(argv[optind]);
-	expr e = parse_expression_file(argv[optind+1], true);
+	expr e = parse_expression_file(argv[optind+1], infix);
 
 	hmap<str,fun<expr2(vec<expr2>)>> funs;
 	funs["Match"] = [](vec<expr2> args) {
@@ -830,11 +882,17 @@ int main(int argc, char **argv)
 		},
 	};
 
+	const char *logic = "QF_NRA";
+	for (const auto &[_,rng] : p.dom)
+		if (!is_real(rng))
+			logic = "QF_NIRA";
+
 	if (dump_smt2)
-		::dump_smt2(stdout, "QF_NRA", p);
+		::dump_smt2(stdout, logic, p);
 
 	if (solve) {
 		z3_solver s(p.dom);
+		s.slv.set("logic", logic);
 		s.add(p.p);
 		z3::check_result r = s.slv.check();
 		switch (r) {
