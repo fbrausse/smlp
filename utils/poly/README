@@ -4,9 +4,14 @@ poly is a program to solve polynomial inequalities over the reals.
 
 ## Build instructions
 
-To build the program, run
+To build the program, meson <https://mesonbuild.com> is required.
+Run:
 
-	$ make
+	$ mkdir build
+	$ meson setup build
+	$ meson compile -C build
+
+The resulting binary will be located in build/src/poly.
 
 A compiler supporting C++20 is required as well as:
 
