@@ -2,6 +2,7 @@
 CXXSTD = -std=c++20
 WARNS  = -Wall -Wextra
 OPT    = -O0 -g
+#OPT    = -O
 
 poly: poly.o
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ $(LDLIBS)

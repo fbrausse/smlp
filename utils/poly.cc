@@ -14,15 +14,15 @@ namespace {
 struct expr;
 
 struct name { str id; };
-struct call { uptr<expr> func; vec<expr> args; };
-struct bop { enum { ADD, SUB, MUL, } op; uptr<expr> left, right; };
-struct uop { enum { UADD, USUB, } op; uptr<expr> operand; };
+struct call { sptr<expr> func; vec<expr> args; };
+struct bop { enum { ADD, SUB, MUL, } op; sptr<expr> left, right; };
+struct uop { enum { UADD, USUB, } op; sptr<expr> operand; };
 struct cnst { str value; };
 
 static const char *bop_s[] = { "+", "-", "*" };
 static const char *uop_s[] = { "+", "-" };
 
-struct expr : sumtype<name,call,bop,uop,cnst> {
+struct expr : sumtype<name,call,bop,uop,cnst>, std::enable_shared_from_this<expr> {
 
 	using sumtype<name,call,bop,uop,cnst>::sumtype;
 
@@ -52,6 +52,12 @@ struct expr : sumtype<name,call,bop,uop,cnst> {
 	}
 };
 
+template <typename... Ts>
+static inline sptr<expr> make1e(Ts &&... ts)
+{
+	return std::make_shared<expr>(std::forward<Ts>(ts)...);
+}
+
 struct pe_parser {
 
 	FILE *f;
@@ -72,6 +78,7 @@ struct pe_parser {
 	}
 
 	uptr<expr> getu() { return std::make_unique<expr>(get()); }
+	sptr<expr> gets() { return std::make_shared<expr>(get()); }
 
 	expr get()
 	{
@@ -79,16 +86,16 @@ struct pe_parser {
 		// fprintf(stderr, "debug: next tok: '%s'\n", tok.c_str());
 		assert(tok.size() == 1);
 		switch (tok[0]) {
-		case '+': return bop { bop::ADD, getu(), getu() };
-		case '-': return bop { bop::SUB, getu(), getu() };
-		case '*': return bop { bop::MUL, getu(), getu() };
-		case 'x': return uop { uop::UADD, getu() };
-		case 'y': return uop { uop::USUB, getu() };
+		case '+': return bop { bop::ADD, gets(), gets() };
+		case '-': return bop { bop::SUB, gets(), gets() };
+		case '*': return bop { bop::MUL, gets(), gets() };
+		case 'x': return uop { uop::UADD, gets() };
+		case 'y': return uop { uop::USUB, gets() };
 		case 'C': {
 			size_t n = strtol(next().c_str(), NULL, 0);
 			vec<expr> args;
 			args.reserve(n);
-			uptr<expr> func = getu();
+			sptr<expr> func = gets();
 			assert(func->get<name>());
 			while (n--)
 				args.push_back(get());
@@ -160,31 +167,37 @@ static inline cmp_t operator~(cmp_t c)
 struct expr2;
 struct form2;
 
-struct prop2 { cmp_t cmp; uptr<expr2> left, right; };
+struct prop2 { cmp_t cmp; sptr<expr2> left, right; };
 struct lbop2 { enum { AND, OR } op; vec<form2> args; };
-struct lneg2 { uptr<form2> arg; };
+struct lneg2 { sptr<form2> arg; };
 
 static const char *lbop_s[] = { "and", "or" };
 
-struct form2 : sumtype<prop2,lbop2,lneg2> {
+struct form2 : sumtype<prop2,lbop2,lneg2>, std::enable_shared_from_this<form2> {
 
 	using sumtype<prop2,lbop2,lneg2>::sumtype;
 };
 
-struct ite2 { form2 cond; uptr<expr2> yes, no; };
-struct bop2 { decltype(bop::op) op; uptr<expr2> left, right; };
-struct uop2 { decltype(uop::op) op; uptr<expr2> operand; };
+struct ite2 { form2 cond; sptr<expr2> yes, no; };
+struct bop2 { decltype(bop::op) op; sptr<expr2> left, right; };
+struct uop2 { decltype(uop::op) op; sptr<expr2> operand; };
 struct cnst2 { sumtype<kay::Z,kay::Q,str> value; };
 
-struct expr2 : sumtype<name,bop2,uop2,cnst2,ite2> {
+struct expr2 : sumtype<name,bop2,uop2,cnst2,ite2>, std::enable_shared_from_this<expr2> {
 
 	using sumtype<name,bop2,uop2,cnst2,ite2>::sumtype;
 };
 
 template <typename... Ts>
-static inline uptr<expr2> make2e(Ts &&... ts)
+static inline sptr<expr2> make2e(Ts &&... ts)
 {
-	return std::make_unique<expr2>(std::forward<Ts>(ts)...);
+	return std::make_shared<expr2>(std::forward<Ts>(ts)...);
+}
+
+template <typename... Ts>
+static inline sptr<form2> make2f(Ts &&... ts)
+{
+	return std::make_shared<form2>(std::forward<Ts>(ts)...);
 }
 
 static expr2 unroll(const expr &e, const hmap<str,fun<expr2(vec<expr2>)>> &funs)
@@ -199,7 +212,6 @@ static expr2 unroll(const expr &e, const hmap<str,fun<expr2(vec<expr2>)>> &funs)
 		    c.value.find('E') == str::npos)
 			return cnst2 { kay::Z(c.value) };
 		return cnst2 { kay::Q_from_str(str(c.value).data()) };
-		// return cnst2 { c.value };
 	},
 	[&](const bop &b) {
 		return bop2 {
@@ -292,11 +304,7 @@ static void dump_smt2(FILE *f, const form2 &e)
 	e.match(
 	[&](const prop2 &p) { dump_smt2(f, p); },
 	[&](const lbop2 &b) { dump_smt2_n(f, lbop_s[b.op], b.args); },
-	[&](const lneg2 &n) {
-		fprintf(f, "(not ");
-		dump_smt2(f, *n.arg);
-		fprintf(f, ")");
-	}
+	[&](const lneg2 &n) { dump_smt2_un(f, "not", *n.arg); }
 	);
 }
 
@@ -477,8 +485,9 @@ struct z3_solver {
 	: slv(ctx)
 	{
 		for (const auto &[var,rng] : d) {
-			symbols.emplace(var, is_real(rng) ? ctx.real_const(var.c_str())
-			                                  : ctx.int_const(var.c_str()));
+			const char *s = var.c_str();
+			symbols.emplace(var, is_real(rng) ? ctx.real_const(s)
+			                                  : ctx.int_const(s));
 			add(domain_constraint(var, rng));
 		}
 	}
@@ -656,7 +665,7 @@ struct infix_parser {
 			if (tok == "+" || tok == "-") {
 				decltype(uop::op) op = tok == "+" ? uop::UADD : uop::USUB;
 				next();
-				return uop { op, std::make_unique<expr>(low()) };
+				return uop { op, make1e(low()) };
 			}
 			if (tok == "(") {
 				next();
@@ -672,7 +681,7 @@ struct infix_parser {
 			if (t == SPECIAL && tok == "(") {
 				next();
 				return call {
-					std::make_unique<expr>(name { move(id) }),
+					make1e(name { move(id) }),
 					tuple()
 				};
 			}
@@ -704,8 +713,8 @@ struct infix_parser {
 			next();
 			r = bop {
 				bop::MUL,
-				std::make_unique<expr>(move(r)),
-				std::make_unique<expr>(mul()),
+				make1e(move(r)),
+				make1e(mul()),
 			};
 		}
 		return r;
@@ -721,8 +730,8 @@ struct infix_parser {
 			next();
 			r = bop {
 				op,
-				std::make_unique<expr>(move(r)),
-				std::make_unique<expr>(add())
+				make1e(move(r)),
+				make1e(add())
 			};
 		}
 		return r;
@@ -758,11 +767,24 @@ static expr parse_expression_file(const char *path, bool org)
 
 int main(int argc, char **argv)
 {
-	if (argc != 5)
-		DIE(1,"usage: %s DOMAIN-FILE EXPR-FILE OP CNST\n",argv[0]);
+	bool solve = true;
+	bool dump_pe = false;
+	bool dump_smt2 = false;
 
-	domain d = parse_domain_file(argv[1]);
-	expr e = parse_expression_file(argv[2], false);
+	for (int opt; (opt = getopt(argc, argv, ":nps")) != -1;)
+		switch (opt) {
+		case 'n': solve = false; break;
+		case 'p': dump_pe = true; break;
+		case 's': dump_smt2 = true; break;
+		case ':': DIE(1,"error: option '-%c' requires an argument\n",
+		              optopt);
+		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
+		}
+	if (argc - optind != 4)
+		DIE(1,"usage: %s [-nps] DOMAIN-FILE EXPR-FILE OP CNST\n",argv[0]);
+
+	domain d = parse_domain_file(argv[optind]);
+	expr e = parse_expression_file(argv[optind+1], true);
 
 	hmap<str,fun<expr2(vec<expr2>)>> funs;
 	funs["Match"] = [](vec<expr2> args) {
@@ -785,14 +807,15 @@ int main(int argc, char **argv)
 
 	size_t c;
 	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
-		if (std::string_view(cmp_s[c]) == argv[3])
+		if (std::string_view(cmp_s[c]) == argv[optind+2])
 			break;
 	if (c == ARRAY_SIZE(cmp_s))
-		DIE(1,"OP '%s' unknown\n",argv[3]);
+		DIE(1,"OP '%s' unknown\n",argv[optind+2]);
 
-	expr2 rhs = unroll(cnst { argv[4] }, funs);
+	expr2 rhs = unroll(cnst { argv[optind+3] }, funs);
 
-	// e.dump_pe(stdout);
+	if (dump_pe)
+		e.dump_pe(stdout);
 	assert(d.size() == 10);
 	/*
 	list *l = d["_post"].get<list>();
@@ -807,15 +830,17 @@ int main(int argc, char **argv)
 		},
 	};
 
-	// dump_smt2(stdout, "QF_NIRA", p);
-	// return 0;
+	if (dump_smt2)
+		::dump_smt2(stdout, "QF_NRA", p);
 
-	z3_solver s(p.dom);
-	s.add(p.p);
-	z3::check_result r = s.slv.check();
-	switch (r) {
-	case z3::sat: fprintf(stderr, "sat\n"); break;
-	case z3::unsat: fprintf(stderr, "unsat\n"); break;
-	case z3::unknown: fprintf(stderr, "unknown\n"); break;
+	if (solve) {
+		z3_solver s(p.dom);
+		s.add(p.p);
+		z3::check_result r = s.slv.check();
+		switch (r) {
+		case z3::sat: fprintf(stderr, "sat\n"); break;
+		case z3::unsat: fprintf(stderr, "unsat\n"); break;
+		case z3::unknown: fprintf(stderr, "unknown\n"); break;
+		}
 	}
 }
