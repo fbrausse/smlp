@@ -13,6 +13,5 @@ A compiler supporting C++20 is required as well as:
 - the kay library <https://github.com/fbrausse/kay>
 - GMP <https://gmplib.org> and either
   - its C++ bindings, or
-  - Flint <http://flintlib.org> (to use Flint, change `-DKAY_USE_GMPXX` to
-    `-DKAY_USE_FLINT` in the Makefile)
+  - Flint <http://flintlib.org>
 - Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
