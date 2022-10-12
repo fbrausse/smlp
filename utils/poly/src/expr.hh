@@ -5,6 +5,14 @@
 
 namespace smlp {
 
+/* Definition of 'expr' as either
+ * - name: named constant
+ * - call: function call
+ * - bop : binary (arithmetic) operation
+ * - uop : unary (arithmetic) operation
+ * - cnst: literal value
+ */
+
 struct expr;
 
 struct name { str id; };

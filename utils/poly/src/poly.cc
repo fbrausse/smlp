@@ -62,6 +62,24 @@ static expr parse_expression_file(const char *path, bool infix, bool python_comp
 	DIE(1,"error opening expression file path: %s: %s\n",path,strerror(errno));
 }
 
+static expr2 Match(vec<expr2> args)
+{
+	assert(args.size() >= 2);
+	const name *var = args.front().get<name>();
+	expr2 r = move(args.back());
+	for (int i=args.size()-3; i >= 1; i-=2)
+		r = ite2 {
+			prop2 {
+				EQ,
+				make2e(*var),
+				make2e(move(args[i]))
+			},
+			make2e(move(args[i+1])),
+			make2e(move(r)),
+		};
+	return r;
+}
+
 [[noreturn]]
 static void usage(const char *program_name, int exit_code)
 {
@@ -106,12 +124,14 @@ License: Apache 2.0; part of SMLP.\n\
 
 int main(int argc, char **argv)
 {
-	bool solve = true;
-	bool dump_pe = false;
-	bool dump_smt2 = false;
-	bool infix = true;
+	/* these determine the mode of operation of this program */
+	bool solve         = true;
+	bool dump_pe       = false;
+	bool dump_smt2     = false;
+	bool infix         = true;
 	bool python_compat = false;
 
+	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv, ":C:F:hnps")) != -1;)
 		switch (opt) {
 		case 'C':
@@ -141,28 +161,20 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	if (argc - optind != 4)
 		usage(argv[0], 1);
 
+	/* parse the input */
 	domain d = parse_domain_file(argv[optind]);
 	expr e = parse_expression_file(argv[optind+1], infix, python_compat);
 
+	/* optionally dump the prefix notation of the expression */
+	if (dump_pe)
+		::dump_pe(stdout, e);
+
+	/* interpret known non-recursive function symbols */
 	hmap<str,fun<expr2(vec<expr2>)>> funs;
-	funs["Match"] = [](vec<expr2> args) {
-		assert(args.size() >= 2);
-		const name *var = args.front().get<name>();
-		expr2 r = move(args.back());
-		for (int i=args.size()-3; i >= 1; i-=2)
-			r = ite2 {
-				prop2 {
-					EQ,
-					make2e(*var),
-					make2e(move(args[i]))
-				},
-				make2e(move(args[i+1])),
-				make2e(move(r)),
-			};
-		return r;
-	};
+	funs["Match"] = Match;
 	expr2 e2 = unroll(e, funs);
 
+	/* find out about the OP comparison operation */
 	size_t c;
 	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
 		if (std::string_view(cmp_s[c]) == argv[optind+2])
@@ -170,15 +182,10 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	if (c == ARRAY_SIZE(cmp_s))
 		DIE(1,"OP '%s' unknown\n",argv[optind+2]);
 
+	/* interpret the CNST on the right hand side */
 	expr2 rhs = unroll(cnst { argv[optind+3] }, funs);
 
-	if (dump_pe)
-		::dump_pe(stdout, e);
-	assert(d.size() == 10);
-	/*
-	list *l = d["_post"].get<list>();
-	assert(l);*/
-
+	/* the problem consists of domain and the (EXPR OP CNST) constraint */
 	problem p = {
 		move(d),
 		prop2 {
@@ -188,14 +195,19 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 		},
 	};
 
+	/* hint for the solver later: non-linear real arithmetic, potentially
+	 * also with integers */
 	const char *logic = "QF_NRA";
 	for (const auto &[_,rng] : p.dom)
 		if (!is_real(rng))
 			logic = "QF_NIRA";
 
+	/* optionally dump the smt2 representation of the (unrolled) expression
+	 */
 	if (dump_smt2)
 		::dump_smt2(stdout, logic, p);
 
+	/* optionally solve the problem */
 	if (solve) {
 		z3_solver s(p.dom);
 		s.slv.set("logic", logic);

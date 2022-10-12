@@ -5,9 +5,14 @@
 
 namespace smlp {
 
+/* Closed interval with rational endpoints */
 struct ival { kay::Q lo, hi; };
+
+/* Explicit list of rational values */
 struct list { vec<kay::Q> values; };
 
+/* A component (of the domain) is either an interval or a list of rational
+ * values */
 struct component : sumtype<ival,list> {
 
 	using sumtype<ival,list>::sumtype;
@@ -23,11 +28,15 @@ struct component : sumtype<ival,list> {
 	}
 };
 
+/* Translates a component 'rng' and the appropriate variable name 'var' into a
+ * constraint in form of a 'form2' formula. */
 form2 domain_constraint(const str &var, const component &rng);
 
+/* The domain is an (ordered) list of pairs (name, component) */
 struct domain : vec<pair<str,component>> {
 };
 
+/* Parses the DOMAIN-FILE, see poly.cc for details. */
 domain parse_domain(FILE *f);
 
 }

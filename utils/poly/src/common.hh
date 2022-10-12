@@ -25,6 +25,22 @@
 
 namespace smlp {
 
+/* Common definitions to allow for a more concise language than that of the C++
+ * std library:
+ *
+ * - hmap<K,V>   : hash-map (std::unordered_map)
+ * - str         : std::string
+ * - vec         : std::vector
+ * - uptr<T>     : std::unique_ptr
+ * - sptr<T>     : std::shared_ptr
+ * - fun         : std::function
+ * - opt         : std::optional
+ * - pair        : std::pair
+ * - move        : std::move
+ * - sumtype<...>: std::variant with a more intuitive name and '.match()' member
+ *                 function to access its contents
+ */
+
 using namespace std::literals::string_view_literals;
 
 template <typename K, typename V,
