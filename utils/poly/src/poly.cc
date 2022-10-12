@@ -174,7 +174,8 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	if (dump_pe)
 		::dump_pe(stdout, e);
 
-	/* interpret known non-recursive function symbols */
+	/* interpret symbols of known non-recursive functions and numeric
+	 * constants */
 	hmap<str,fun<expr2(vec<expr2>)>> funs;
 	funs["Match"] = Match;
 	expr2 e2 = unroll(e, funs);
