@@ -1,14 +1,23 @@
 
 z3_dep = dependency('z3')
 gmp_dep = dependency('gmp')
-flint_dep = dependency('flint', required: false)
-#kay_dep = dependency('kay')
-# get_option('kay-dir')
-#kay_dep = declare_dependency('
+
+cxx = meson.get_compiler('cpp')
 
 poly_deps = [z3_dep, gmp_dep]
 
-cxx = meson.get_compiler('cpp')
+flint_dirs = []
+flint_hdrs = []
+if get_option('flint-prefix') != ''
+  flint_dirs += get_option('flint-prefix') / 'lib'
+  flint_hdrs += get_option('flint-prefix') / 'include'
+endif
+flint_dep = cxx.find_library('flint',
+  dirs: flint_dirs,
+  has_headers: ['flint/fmpz.h', 'flint/fmpq.h'],
+  header_include_directories: flint_hdrs,
+  required: get_option('flint'))
+
 if flint_dep.found()
   extra_defs = ['-DKAY_USE_FLINT']
   poly_deps += flint_dep
@@ -19,12 +28,14 @@ else
 endif
 
 add_project_arguments(extra_defs, language: 'cpp')
-#add_project_arguments(['-O'], language: 'cpp')
 
-kay_inc = include_directories(get_option('kay-dir'))
+kay_inc = []
+if get_option('kay-prefix') != ''
+  kay_inc += get_option('kay-prefix') / 'include'
+endif
+kay_inc = include_directories(kay_inc)
 if cxx.check_header('kay/numbers.hh', include_directories: kay_inc, required: true)
-  kay_dep = declare_dependency(
-	include_directories: kay_inc)
+  kay_dep = declare_dependency(include_directories: kay_inc)
 endif
 
 poly_deps += kay_dep
@@ -49,6 +60,12 @@ srcs = [
 	'z3-solver.cc',
 ]
 
+# not yet: need a library first
+# install_headers(hdrs, subdir: 'smlp' / 'poly')
+
 executable('poly', srcs,
            dependencies: poly_deps,
-           override_options: 'cpp_std=c++20')
+           override_options: 'cpp_std=c++20',
+           include_directories: flint_hdrs,
+           install: true
+          )

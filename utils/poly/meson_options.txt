@@ -1,1 +1,7 @@
-option('kay-dir', type: 'string', description: 'include path containing the kay library')
+option('kay-prefix', type: 'string', description:
+	'prefix of the include path containing the kay library')
+
+option('flint', type: 'feature', description:
+	'use the flint library for Z and Q')
+option('flint-prefix', type: 'string', description:
+	'prefix of the install path containing the flint library')
