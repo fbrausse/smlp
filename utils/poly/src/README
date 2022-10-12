@@ -1,0 +1,16 @@
+
+The following functionality, usually split into a .hh API and a .cc
+implementation file is here:
+
+- expr: symbolic expressions suitable to store polynomials exported from the
+        JMP software
+- expr2: a variation on expr that replaces function calls with ite-s and is more
+         suitable for symbolic solving + logical formulas
+- infix, prefix: parsers for text files containing a string representation of
+                 polynomials
+- domain: a representation of commonly used domains of the variables
+- dump-smt2: methods to export expr2, formulas and domain constraints to
+             SMT-LIB2
+- z3-solver: an abstraction of the Z3 API, allowing to put formulas, expr2 and
+             domain constraints into the Z3 solver
+- poly.cc: the main program
