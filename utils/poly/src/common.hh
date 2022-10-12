@@ -21,6 +21,7 @@
 #endif
 
 #define ARRAY_SIZE(...)	(sizeof(__VA_ARGS__)/sizeof(*(__VA_ARGS__)))
+#define DIE(code,...) do { fprintf(stderr, __VA_ARGS__); exit(code); } while (0)
 
 namespace smlp {
 

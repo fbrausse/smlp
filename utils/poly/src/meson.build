@@ -19,7 +19,7 @@ else
 endif
 
 add_project_arguments(extra_defs, language: 'cpp')
-#add_project_arguments(['-Wextra'], language: 'cpp')
+#add_project_arguments(['-O'], language: 'cpp')
 
 kay_inc = include_directories(get_option('kay-dir'))
 if cxx.check_header('kay/numbers.hh', include_directories: kay_inc, required: true)
@@ -29,8 +29,25 @@ endif
 
 poly_deps += kay_dep
 
-hdrs = ['common.hh']
-srcs = ['poly.cc']
+hdrs = [
+	'common.hh',
+	'expr.hh',
+	'prefix.hh',
+	'infix.hh',
+	'expr2.hh',
+	'domain.hh',
+	'dump-smt2.hh',
+	'z3-solver.hh',
+]
+srcs = [
+	'poly.cc',
+	'prefix.cc',
+	'infix.cc',
+	'expr2.cc',
+	'domain.cc',
+	'dump-smt2.cc',
+	'z3-solver.cc',
+]
 
 executable('poly', srcs,
            dependencies: poly_deps,
