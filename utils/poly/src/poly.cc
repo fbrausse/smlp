@@ -55,10 +55,10 @@ static domain parse_domain_file(const char *path)
 	DIE(1,"error opening domain file path: %s: %s\n",path,strerror(errno));
 }
 
-static expr parse_expression_file(const char *path, bool infix)
+static expr parse_expression_file(const char *path, bool infix, bool python_compat)
 {
 	if (file f { path, "r" })
-		return infix ? parse_infix(f) : parse_pe(f);
+		return infix ? parse_infix(f, python_compat) : parse_pe(f);
 	DIE(1,"error opening expression file path: %s: %s\n",path,strerror(errno));
 }
 
@@ -72,6 +72,10 @@ static void usage(const char *program_name, int exit_code)
 		fprintf(f,"\
 \n\
 Options [defaults]:\n\
+  -C COMPAT   use a compatibility layer, can be given multiple times; supported\n\
+              values for COMPAT:\n\
+              - python: reinterpret floating point constants as python would\n\
+                        print them\n\
   -F IFORMAT  determines the format of the EXPR-FILE; can be one of: 'infix',\n\
               'prefix' [infix]\n\
   -h          displays this help message\n\
@@ -106,9 +110,17 @@ int main(int argc, char **argv)
 	bool dump_pe = false;
 	bool dump_smt2 = false;
 	bool infix = true;
+	bool python_compat = false;
 
-	for (int opt; (opt = getopt(argc, argv, ":F:hnps")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":C:F:hnps")) != -1;)
 		switch (opt) {
+		case 'C':
+			if (optarg == "python"sv)
+				python_compat = true;
+			else
+				DIE(1,"\
+error: option '-C' only supports 'python'\n");
+			break;
 		case 'F':
 			if (!strcmp(optarg, "infix"))
 				infix = true;
@@ -130,7 +142,7 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 		usage(argv[0], 1);
 
 	domain d = parse_domain_file(argv[optind]);
-	expr e = parse_expression_file(argv[optind+1], infix);
+	expr e = parse_expression_file(argv[optind+1], infix, python_compat);
 
 	hmap<str,fun<expr2(vec<expr2>)>> funs;
 	funs["Match"] = [](vec<expr2> args) {

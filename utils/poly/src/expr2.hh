@@ -12,8 +12,8 @@ enum cmp_t { LE, LT, GE, GT, EQ, NE, };
 inline const char *cmp_s[] = { "<=", "<", ">=", ">", "==", "!=" };
 inline const char *cmp_smt2[] = { "<=", "<", ">=", ">", "=", "distinct" };
 
-static inline bool is_strict(cmp_t c) { return (int)c & 0x1; }
-static inline bool is_order(cmp_t c) { return !((int)c & 0x4); }
+static inline bool is_strict(cmp_t c) { return (unsigned)c & 0x1; }
+static inline bool is_order(cmp_t c) { return !((unsigned)c >> 2); }
 static inline cmp_t operator-(cmp_t c)
 {
 	switch (c) {

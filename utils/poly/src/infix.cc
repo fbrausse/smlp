@@ -12,11 +12,16 @@ struct infix_parser {
 	};
 
 	str the_str;
+	bool python_compat;
 	char *s;
 	type t;
 	str tok;
 
-	infix_parser(str s) : the_str(s), s(the_str.data()) { next(); }
+	infix_parser(str s, bool python_compat)
+	: the_str(move(s))
+	, python_compat(python_compat)
+	, s(the_str.data())
+	{ next(); }
 
 	void set(type t, str tok)
 	{
@@ -120,11 +125,17 @@ struct infix_parser {
 			return name { move(id) };
 		}
 		case FLOAT: {
-			double d = atof(tok.c_str());
-			next();
-			char buf[64];
-			sprintf(buf, "%.15g", d);
-			return cnst { buf };
+			if (python_compat) {
+				double d = atof(tok.c_str());
+				next();
+				char buf[64];
+				sprintf(buf, "%.15g", d);
+				return cnst { buf };
+			} else {
+				str s = move(tok);
+				next();
+				return cnst { move(s) };
+			}
 		}
 		case INT: {
 			str s = move(tok);
@@ -185,7 +196,7 @@ static str read_all(FILE *f)
 	return r;
 }
 
-expr smlp::parse_infix(FILE *f)
+expr smlp::parse_infix(FILE *f, bool python_compat)
 {
-	return infix_parser(read_all(f)).get();
+	return infix_parser(read_all(f), python_compat).get();
 }

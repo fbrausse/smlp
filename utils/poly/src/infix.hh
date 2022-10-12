@@ -5,6 +5,6 @@
 
 namespace smlp {
 
-expr parse_infix(FILE *f);
+expr parse_infix(FILE *f, bool python_compat);
 
 }

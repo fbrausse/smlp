@@ -25,6 +25,8 @@
 
 namespace smlp {
 
+using namespace std::literals::string_view_literals;
+
 template <typename K, typename V,
           typename Hash = std::hash<K>,
           typename Eq = std::equal_to<K>>
@@ -54,7 +56,7 @@ using std::pair;
 // helper type for the visitor #4
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 // explicit deduction guide (not needed as of C++20)
-template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+// template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
 template <typename... Ts>
 struct sumtype : std::variant<Ts...> {
