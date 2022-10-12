@@ -79,7 +79,7 @@ struct pe_parser {
 	}
 
 	uptr<expr> getu() { return std::make_unique<expr>(get()); }
-	sptr<expr> gets() { return std::make_shared<expr>(get()); }
+	sptr<expr> gets() { return make1e(get()); }
 
 	expr get()
 	{

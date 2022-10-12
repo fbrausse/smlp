@@ -13,6 +13,6 @@ poly.o: override CXXFLAGS += $(CXXSTD) $(WARNS) $(OPT) -MMD
 poly.o: override CPPFLAGS += -I ~/stovokor/kay/include -DKAY_USE_GMPXX
 
 clean:
-	$(RM) poly poly.o
+	$(RM) poly poly.o poly.d
 
 -include $(wildcard *.d)
