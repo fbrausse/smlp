@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2022 Franz Brausse <franz.brausse@manchester.ac.uk>
+ * Copyright 2022 The University of Manchester
+ */
 
 #include "prefix.hh"
 
