@@ -56,7 +56,7 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 static domain parse_domain_file(const char *path)
 {
 	if (file f { path, "r" })
-		return parse_domain(f);
+		return parse_simple_domain(f);
 	DIE(1,"error opening domain file path: %s: %s\n",path,strerror(errno));
 }
 
@@ -79,6 +79,44 @@ static sptr<expr2> Match(vec<sptr<expr2>> args)
 			move(r),
 		});
 	return r;
+}
+
+static problem parse_poly_problem(const char *simple_domain_path,
+                                  const char *poly_expression_path,
+                                  bool python_compat,
+                                  const char *op,
+                                  const char *rhs_cnst,
+                                  bool dump_pe = false,
+                                  bool infix = true)
+{
+	/* parse the input */
+	domain d = parse_domain_file(simple_domain_path);
+	expr e = parse_expression_file(poly_expression_path, infix, python_compat);
+
+	/* optionally dump the prefix notation of the expression */
+	if (dump_pe)
+		::dump_pe(stdout, e);
+
+	/* interpret symbols of known non-recursive functions and numeric
+	 * constants */
+	sptr<expr2> e2 = unroll(e, { {"Match", Match} });
+
+	/* find out about the OP comparison operation */
+	size_t c;
+	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
+		if (std::string_view(cmp_s[c]) == op)
+			break;
+	if (c == ARRAY_SIZE(cmp_s))
+		DIE(1,"OP '%s' unknown\n",op);
+
+	/* interpret the CNST on the right hand side */
+	sptr<expr2> rhs = unroll(cnst { rhs_cnst }, {});
+
+	/* the problem consists of domain and the (EXPR OP CNST) constraint */
+	return problem {
+		move(d),
+		prop2 { (cmp_t)c, move(e2), move(rhs), },
+	};
 }
 
 [[noreturn]]
@@ -162,34 +200,9 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	if (argc - optind != 4)
 		usage(argv[0], 1);
 
-	/* parse the input */
-	domain d = parse_domain_file(argv[optind]);
-	expr e = parse_expression_file(argv[optind+1], infix, python_compat);
-
-	/* optionally dump the prefix notation of the expression */
-	if (dump_pe)
-		::dump_pe(stdout, e);
-
-	/* interpret symbols of known non-recursive functions and numeric
-	 * constants */
-	sptr<expr2> e2 = unroll(e, { {"Match", Match} });
-
-	/* find out about the OP comparison operation */
-	size_t c;
-	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
-		if (std::string_view(cmp_s[c]) == argv[optind+2])
-			break;
-	if (c == ARRAY_SIZE(cmp_s))
-		DIE(1,"OP '%s' unknown\n",argv[optind+2]);
-
-	/* interpret the CNST on the right hand side */
-	sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, {});
-
-	/* the problem consists of domain and the (EXPR OP CNST) constraint */
-	problem p = {
-		move(d),
-		prop2 { (cmp_t)c, e2, rhs, },
-	};
+	problem p = parse_poly_problem(argv[optind], argv[optind+1],
+	                               python_compat, argv[optind+2],
+	                               argv[optind+3], dump_pe, infix);
 
 	/* hint for the solver later: non-linear real arithmetic, potentially
 	 * also with integers */

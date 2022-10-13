@@ -10,15 +10,15 @@ using namespace smlp;
 
 namespace {
 
-struct domain_parser {
+struct simple_domain_parser {
 
 	FILE *f;
 	str line;
 
-	explicit domain_parser(FILE *f) : f(f) {}
+	explicit simple_domain_parser(FILE *f) : f(f) {}
 
-	domain_parser(const domain_parser &) = delete;
-	domain_parser & operator=(const domain_parser &) = delete;
+	simple_domain_parser(const simple_domain_parser &) = delete;
+	simple_domain_parser & operator=(const simple_domain_parser &) = delete;
 
 	str & next()
 	{
@@ -92,9 +92,9 @@ struct domain_parser {
 
 }
 
-domain smlp::parse_domain(FILE *f)
+domain smlp::parse_simple_domain(FILE *f)
 {
-	return domain_parser(f).get();
+	return simple_domain_parser(f).get();
 }
 
 form2 smlp::domain_constraint(const str &var, const component &rng)

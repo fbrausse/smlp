@@ -42,6 +42,6 @@ struct domain : vec<pair<str,component>> {
 };
 
 /* Parses the DOMAIN-FILE, see poly.cc for details. */
-domain parse_domain(FILE *f);
+domain parse_simple_domain(FILE *f);
 
 }
