@@ -52,7 +52,7 @@ static inline cmp_t operator~(cmp_t c)
 	unreachable();
 }
 
-/* Definition of 'expr2' terms and 'form2' formulas. */
+/* Definition of 'expr2' terms and (quantifier-free) 'form2' formulas. */
 
 struct expr2;
 struct form2;

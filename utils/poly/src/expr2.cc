@@ -63,7 +63,9 @@ bool cnst2::operator==(const cnst2 &b) const
 	return value == b.value;
 }
 
-sptr<expr2> smlp::unroll(const expr &e, const hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> &funs)
+sptr<expr2>
+smlp::unroll(const expr &e,
+             const hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> &funs)
 {
 	return e.match<sptr<expr2>>(
 	[&](const name &n) { return make2e(n); },

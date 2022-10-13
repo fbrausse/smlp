@@ -16,7 +16,7 @@ struct z3_solver {
 	z3::solver slv;
 	hmap<str,z3::expr> symbols;
 
-	explicit z3_solver(const domain &d);
+	explicit z3_solver(const domain &d, const char *logic = nullptr);
 
 	void add(const form2 &f)
 	{

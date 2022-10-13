@@ -172,9 +172,7 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 
 	/* interpret symbols of known non-recursive functions and numeric
 	 * constants */
-	hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> funs;
-	funs["Match"] = Match;
-	sptr<expr2> e2 = unroll(e, funs);
+	sptr<expr2> e2 = unroll(e, { {"Match", Match} });
 
 	/* find out about the OP comparison operation */
 	size_t c;
@@ -185,7 +183,7 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 		DIE(1,"OP '%s' unknown\n",argv[optind+2]);
 
 	/* interpret the CNST on the right hand side */
-	sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, funs);
+	sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, {});
 
 	/* the problem consists of domain and the (EXPR OP CNST) constraint */
 	problem p = {
@@ -200,15 +198,13 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 		if (!is_real(rng))
 			logic = "QF_NIRA";
 
-	/* optionally dump the smt2 representation of the (unrolled) expression
-	 */
+	/* optionally dump the smt2 representation of the problem */
 	if (dump_smt2)
 		::dump_smt2(stdout, logic, p);
 
 	/* optionally solve the problem */
 	if (solve) {
-		z3_solver s(p.dom);
-		s.slv.set("logic", logic);
+		z3_solver s(p.dom, logic);
 		s.add(p.p);
 		z3::check_result r = s.slv.check();
 		switch (r) {

@@ -8,9 +8,11 @@
 
 using namespace smlp;
 
-z3_solver::z3_solver(const domain &d)
+z3_solver::z3_solver(const domain &d, const char *logic)
 : slv(ctx)
 {
+	if (logic)
+		slv.set("logic", logic);
 	for (const auto &[var,rng] : d) {
 		const char *s = var.c_str();
 		symbols.emplace(var, is_real(rng) ? ctx.real_const(s)
@@ -58,7 +60,7 @@ z3::expr z3_solver::interp(const expr2 &e)
 	},
 	[&](const cnst2 &c){
 		return c.value.match(
-		[&](const str &s) -> z3::expr { abort(); },
+		[&](const str &) -> z3::expr { abort(); },
 		[&](const kay::Z &v){ return ctx.int_val(v.get_str().c_str()); },
 		[&](const kay::Q &v){ return ctx.real_val(v.get_str().c_str()); }
 		);
