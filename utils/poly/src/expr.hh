@@ -20,7 +20,10 @@ namespace smlp {
 
 struct expr;
 
-struct name { str id; };
+struct name {
+	str id;
+	bool operator==(const name &b) const;
+};
 struct call { sptr<expr> func; vec<expr> args; };
 struct bop { enum { ADD, SUB, MUL, } op; sptr<expr> left, right; };
 struct uop { enum { UADD, USUB, } op; sptr<expr> operand; };

@@ -63,9 +63,18 @@ struct form2;
  * - lneg2: logical negation of a form2
  */
 
-struct prop2 { cmp_t cmp; sptr<expr2> left, right; };
-struct lbop2 { enum { AND, OR } op; vec<sptr<form2>> args; };
-struct lneg2 { sptr<form2> arg; };
+struct prop2 {
+	cmp_t cmp; sptr<expr2> left, right;
+	bool operator==(const prop2 &b) const;
+};
+struct lbop2 {
+	enum { AND, OR } op; vec<sptr<form2>> args;
+	bool operator==(const lbop2 &b) const;
+};
+struct lneg2 {
+	sptr<form2> arg;
+	bool operator==(const lneg2 &b) const;
+};
 
 inline const char *lbop_s[] = { "and", "or" };
 
@@ -87,10 +96,22 @@ struct form2 : sumtype<prop2,lbop2,lneg2>
  * interpreted (and rationals potentially reduced).
  */
 
-struct ite2 { sptr<form2> cond; sptr<expr2> yes, no; };
-struct bop2 { decltype(bop::op) op; sptr<expr2> left, right; };
-struct uop2 { decltype(uop::op) op; sptr<expr2> operand; };
-struct cnst2 { sumtype<kay::Z,kay::Q,str> value; };
+struct ite2 {
+	sptr<form2> cond; sptr<expr2> yes, no;
+	bool operator==(const ite2 &b) const;
+};
+struct bop2 {
+	decltype(bop::op) op; sptr<expr2> left, right;
+	bool operator==(const bop2 &b) const;
+};
+struct uop2 {
+	decltype(uop::op) op; sptr<expr2> operand;
+	bool operator==(const uop2 &b) const;
+};
+struct cnst2 {
+	sumtype<kay::Z,kay::Q,str> value;
+	bool operator==(const cnst2 &b) const;
+};
 
 struct expr2 : sumtype<name,bop2,uop2,cnst2,ite2>
              , std::enable_shared_from_this<expr2> {

@@ -8,6 +8,61 @@
 
 using namespace smlp;
 
+bool prop2::operator==(const prop2 &b) const
+{
+	return cmp == b.cmp &&
+	       (left == b.left || *left == *b.left) &&
+	       (right == b.right || *right == *b.right);
+}
+
+bool lbop2::operator==(const lbop2 &b) const
+{
+	if (op != b.op)
+		return false;
+	if (args == b.args)
+		return true;
+	if (args.size() != b.args.size())
+		return false;
+	for (size_t i=0; i<args.size(); i++)
+		if (*args[i] != *b.args[i])
+			return false;
+	return true;
+}
+
+bool lneg2::operator==(const lneg2 &b) const
+{
+	return arg == b.arg || *arg == *b.arg;
+}
+
+bool name::operator==(const name &b) const
+{
+	return id == b.id;
+}
+
+bool ite2::operator==(const ite2 &b) const
+{
+	return (cond == b.cond || *cond == *b.cond) &&
+	       (yes == b.yes || *yes == *b.yes) &&
+	       (no == b.no || *no == *b.no);
+}
+
+bool bop2::operator==(const bop2 &b) const
+{
+	return op == b.op &&
+	       (left == b.left || *left == *b.left) &&
+	       (right == b.right || *right == *b.right);
+}
+
+bool uop2::operator==(const uop2 &b) const
+{
+	return op == b.op && (operand == b.operand || *operand == *b.operand);
+}
+
+bool cnst2::operator==(const cnst2 &b) const
+{
+	return value == b.value;
+}
+
 sptr<expr2> smlp::unroll(const expr &e, const hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> &funs)
 {
 	return e.match<sptr<expr2>>(
