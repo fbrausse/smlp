@@ -109,7 +109,18 @@ struct uop2 {
 	bool operator==(const uop2 &b) const;
 };
 struct cnst2 {
-	sumtype<kay::Z,kay::Q,str> value;
+	struct : sumtype<kay::Z,kay::Q,str> {
+
+		using sumtype<kay::Z,kay::Q,str>::sumtype;
+
+		friend str to_string(const auto &v)
+		{
+			return v.match(
+			[](const str &s) { return s; },
+			[](const auto &x) { return x.get_str(); }
+			);
+		}
+	} value;
 	bool operator==(const cnst2 &b) const;
 };
 

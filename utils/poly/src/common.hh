@@ -74,6 +74,8 @@ using opt = std::optional<T>;
 
 using std::pair;
 
+using std::to_string;
+
 // helper type for the visitor #4
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 // explicit deduction guide (not needed as of C++20)

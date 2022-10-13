@@ -294,10 +294,7 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 			fprintf(stderr, "sat, model:\n");
 			for (const auto &[n,c] : s.model)
 				fprintf(stderr, "  %s = %s\n", n.c_str(),
-				        c.value.match(
-				        [](const str &s) { return s; },
-				        [](const auto &v) { return v.get_str(); }
-				        ).c_str());
+				        to_string(c.value).c_str());
 		},
 		[](const unsat &) { fprintf(stderr, "unsat\n"); },
 		[](const unknown &u) { fprintf(stderr, "unknown: %s\n", u.reason.c_str()); }
