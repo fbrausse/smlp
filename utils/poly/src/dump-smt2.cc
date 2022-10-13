@@ -9,12 +9,12 @@
 using namespace smlp;
 
 template <typename T>
-static void dump_smt2_n(FILE *f, const char *op, const vec<T> &args)
+static void dump_smt2_n(FILE *f, const char *op, const vec<sptr<T>> &args)
 {
 	fprintf(f, "(%s", op);
-	for (const T &t : args) {
+	for (const sptr<T> &t : args) {
 		fprintf(f, " ");
-		dump_smt2(f, t);
+		dump_smt2(f, *t);
 	}
 	fprintf(f, ")");
 }
@@ -83,7 +83,7 @@ void smlp::dump_smt2(FILE *f, const expr2 &e)
 	},
 	[&](const ite2 &i){
 		fprintf(f, "(ite ");
-		dump_smt2(f, i.cond);
+		dump_smt2(f, *i.cond);
 		fprintf(f, " ");
 		dump_smt2(f, *i.yes);
 		fprintf(f, " ");

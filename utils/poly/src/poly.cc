@@ -74,11 +74,11 @@ static expr2 Match(vec<expr2> args)
 	expr2 r = move(args.back());
 	for (int i=args.size()-3; i >= 1; i-=2)
 		r = ite2 {
-			prop2 {
+			make2f(prop2 {
 				EQ,
 				make2e(*var),
 				make2e(move(args[i]))
-			},
+			}),
 			make2e(move(args[i+1])),
 			make2e(move(r)),
 		};

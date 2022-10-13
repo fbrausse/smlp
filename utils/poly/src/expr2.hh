@@ -64,7 +64,7 @@ struct form2;
  */
 
 struct prop2 { cmp_t cmp; sptr<expr2> left, right; };
-struct lbop2 { enum { AND, OR } op; vec<form2> args; };
+struct lbop2 { enum { AND, OR } op; vec<sptr<form2>> args; };
 struct lneg2 { sptr<form2> arg; };
 
 inline const char *lbop_s[] = { "and", "or" };
@@ -87,7 +87,7 @@ struct form2 : sumtype<prop2,lbop2,lneg2>
  * interpreted (and rationals potentially reduced).
  */
 
-struct ite2 { form2 cond; sptr<expr2> yes, no; };
+struct ite2 { sptr<form2> cond; sptr<expr2> yes, no; };
 struct bop2 { decltype(bop::op) op; sptr<expr2> left, right; };
 struct uop2 { decltype(uop::op) op; sptr<expr2> operand; };
 struct cnst2 { sumtype<kay::Z,kay::Q,str> value; };
@@ -113,5 +113,9 @@ static inline sptr<form2> make2f(Ts &&... ts)
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a expr2 term. */
 expr2 unroll(const expr &e, const hmap<str,fun<expr2(vec<expr2>)>> &funs);
+
+/* Substitute all 'name' expressions with id in 'repl' by another expression. */
+sptr<expr2> subst(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl);
+sptr<form2> subst(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl);
 
 }

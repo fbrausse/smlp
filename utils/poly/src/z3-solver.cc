@@ -36,8 +36,8 @@ z3::expr z3_solver::interp(const form2 &f)
 	},
 	[&](const lbop2 &b) {
 		z3::expr_vector a(ctx);
-		for (const form2 &f : b.args)
-			a.push_back(interp(f));
+		for (const sptr<form2> &f : b.args)
+			a.push_back(interp(*f));
 		switch (b.op) {
 		case lbop2::OR: return z3::mk_or(a);
 		case lbop2::AND: return z3::mk_and(a);
@@ -64,7 +64,7 @@ z3::expr z3_solver::interp(const expr2 &e)
 		);
 	},
 	[&](const ite2 &i){
-		return ite(interp(i.cond), interp(*i.yes), interp(*i.no));
+		return ite(interp(*i.cond), interp(*i.yes), interp(*i.no));
 	},
 	[&](const bop2 &b){
 		z3::expr l = interp(*b.left);
