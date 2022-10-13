@@ -11,7 +11,31 @@
 namespace smlp {
 
 /* Closed interval with rational endpoints */
-struct ival { kay::Q lo, hi; };
+struct ival {
+
+	kay::Q lo, hi;
+
+	ival(kay::Q v = 0)
+	: ival(v, v)
+	{}
+
+	ival(kay::Q lo, kay::Q hi)
+	: lo(move(lo))
+	, hi(move(hi))
+	{
+		assert(this->lo <= this->hi);
+	}
+
+	friend kay::Q length(const ival &i)
+	{
+		return i.hi - i.lo;
+	}
+
+	friend kay::Q mid(const ival &i)
+	{
+		return (i.lo + i.hi) / 2;
+	}
+};
 
 /* Explicit list of rational values */
 struct list { vec<kay::Q> values; };

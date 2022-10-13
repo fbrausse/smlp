@@ -19,6 +19,11 @@ namespace {
 
 // using domain_ref = typename domain::const_iterator;
 
+struct pre_problem {
+	domain dom;
+	sptr<expr2> func;
+};
+
 struct problem {
 
 	domain dom;
@@ -81,13 +86,11 @@ static sptr<expr2> Match(vec<sptr<expr2>> args)
 	return r;
 }
 
-static problem parse_poly_problem(const char *simple_domain_path,
-                                  const char *poly_expression_path,
-                                  bool python_compat,
-                                  const char *op,
-                                  const char *rhs_cnst,
-                                  bool dump_pe = false,
-                                  bool infix = true)
+static pre_problem parse_poly_problem(const char *simple_domain_path,
+                                      const char *poly_expression_path,
+                                      bool python_compat,
+                                      bool dump_pe = false,
+                                      bool infix = true)
 {
 	/* parse the input */
 	domain d = parse_domain_file(simple_domain_path);
@@ -101,30 +104,83 @@ static problem parse_poly_problem(const char *simple_domain_path,
 	 * constants */
 	sptr<expr2> e2 = unroll(e, { {"Match", Match} });
 
-	/* find out about the OP comparison operation */
-	size_t c;
-	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
-		if (std::string_view(cmp_s[c]) == op)
-			break;
-	if (c == ARRAY_SIZE(cmp_s))
-		DIE(1,"OP '%s' unknown\n",op);
+	return pre_problem { move(d), move(e2) };
+}
 
-	/* interpret the CNST on the right hand side */
-	sptr<expr2> rhs = unroll(cnst { rhs_cnst }, {});
+static result solve_exists(const domain &dom,
+                           const form2 &f,
+                           const char *logic = nullptr)
+{
+	z3_solver s(dom, logic);
+	s.add(f);
+	return s.check();
+}
 
-	/* the problem consists of domain and the (EXPR OP CNST) constraint */
-	return problem {
-		move(d),
-		prop2 { (cmp_t)c, move(e2), move(rhs), },
-	};
+/* assumes the relation underlying theta is symmetric! */
+static vec<pair<kay::Q,hmap<str,cnst2>>>
+maximize_EA(const domain &dom,
+            const sptr<expr2> &objective,
+            const sptr<form2> &alpha,
+            const sptr<form2> &beta,
+            ival &obj_range,
+            const kay::Q &max_prec,
+            const fun<sptr<form2>(const hmap<str,cnst2> &)> theta,
+            const char *logic = nullptr)
+{
+	vec<pair<kay::Q,hmap<str,cnst2>>> results;
+
+	while (length(obj_range) > max_prec) {
+		kay::Q T = mid(obj_range);
+		sptr<expr2> threshold = make2e(cnst2 { T });
+
+		z3_solver exists(dom, logic);
+		exists.add(prop2 { GE, objective, threshold });
+		exists.add(*alpha);
+		exists.add(*beta);
+
+		while (true) {
+			result e = exists.check();
+			if (unknown *u = e.get<unknown>())
+				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
+			if (e.get<unsat>()) {
+				obj_range.hi = T;
+				break;
+			}
+			auto &candidate = e.get<sat>()->model;
+
+			z3_solver forall(dom, logic);
+			/* ! ( eta y -> theta x y -> alpha y -> beta y /\ obj y >= T ) =
+			 * ! ( ! eta y \/ ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
+			 * eta y /\ theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
+			forall.add(*theta(candidate));
+			forall.add(*alpha);
+			forall.add(lbop2 { lbop2::OR, {
+				make2f(lneg2 { beta }),
+				make2f(prop2 { LT, objective, threshold })
+			} });
+
+			result a = forall.check();
+			if (unknown *u = a.get<unknown>())
+				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
+			if (a.get<unsat>()) {
+				results.emplace_back(T, candidate);
+				obj_range.lo = T;
+				break;
+			}
+			exists.add(lneg2 { theta(a.get<sat>()->model) });
+		}
+	}
+
+	return results;
 }
 
 [[noreturn]]
 static void usage(const char *program_name, int exit_code)
 {
 	FILE *f = exit_code ? stderr : stdout;
-	fprintf(f, "usage: %s [-OPTS] [--] DOMAIN-FILE EXPR-FILE OP CNST\n",
-	        program_name);
+	fprintf(f, "\
+usage: %s [-OPTS] [--] DOMAIN EXPR OP CNST\n\
+", program_name);
 	if (!exit_code)
 		fprintf(f,"\
 \n\
@@ -140,12 +196,12 @@ Options [defaults]:\n\
   -p          dump the expression in Polish notation to stdout [no]\n\
   -s          dump the problem in SMT-LIB2 format to stdout [no]\n\
 \n\
-The DOMAIN-FILE is a text file containing the bounds for all variables in the\n\
+The DOMAIN is a text file containing the bounds for all variables in the\n\
 form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either\n\
 an interval of the form '[a,b]' or a list of specific values '{a,b,c,d,...}'.\n\
 Empty lines are skipped.\n\
 \n\
-The EXPR-FILE contains a polynomial expression in the variables specified by the\n\
+The EXPR file contains a polynomial expression in the variables specified by the\n\
 DOMAIN-FILE. The format is either an infix notation or the prefix notation also\n\
 known as Polish notation. The expected format can be specified through the -F\n\
 switch.\n\
@@ -200,30 +256,50 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	if (argc - optind != 4)
 		usage(argv[0], 1);
 
-	problem p = parse_poly_problem(argv[optind], argv[optind+1],
-	                               python_compat, argv[optind+2],
-	                               argv[optind+3], dump_pe, infix);
+	auto [dom,lhs] = parse_poly_problem(argv[optind], argv[optind+1],
+	                                    python_compat, dump_pe, infix);
 
 	/* hint for the solver later: non-linear real arithmetic, potentially
 	 * also with integers */
 	const char *logic = "QF_NRA";
-	for (const auto &[_,rng] : p.dom)
+	for (const auto &[_,rng] : dom)
 		if (!is_real(rng))
 			logic = "QF_NIRA";
+
+	/* find out about the OP comparison operation */
+	size_t c;
+	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
+		if (std::string_view(cmp_s[c]) == argv[optind+2])
+			break;
+	if (c == ARRAY_SIZE(cmp_s))
+		DIE(1,"OP '%s' unknown\n",argv[optind+2]);
+
+	/* interpret the CNST on the right hand side */
+	sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, {});
+
+	/* the problem consists of domain and the (EXPR OP CNST) constraint */
+	problem p = {
+		move(dom),
+		prop2 { (cmp_t)c, move(lhs), move(rhs), },
+	};
 
 	/* optionally dump the smt2 representation of the problem */
 	if (dump_smt2)
 		::dump_smt2(stdout, logic, p);
 
 	/* optionally solve the problem */
-	if (solve) {
-		z3_solver s(p.dom, logic);
-		s.add(p.p);
-		z3::check_result r = s.slv.check();
-		switch (r) {
-		case z3::sat: fprintf(stderr, "sat\n"); break;
-		case z3::unsat: fprintf(stderr, "unsat\n"); break;
-		case z3::unknown: fprintf(stderr, "unknown\n"); break;
-		}
-	}
+	if (solve)
+		solve_exists(p.dom, p.p, logic).match(
+		[](const sat &s) {
+			fprintf(stderr, "sat, model:\n");
+			for (const auto &[n,c] : s.model)
+				fprintf(stderr, "  %s = %s\n", n.c_str(),
+				        c.value.match(
+				        [](const str &s) { return s; },
+				        [](const auto &v) { return v.get_str(); }
+				        ).c_str());
+		},
+		[](const unsat &) { fprintf(stderr, "unsat\n"); },
+		[](const unknown &u) { fprintf(stderr, "unknown: %s\n", u.reason.c_str()); }
+		);
 }

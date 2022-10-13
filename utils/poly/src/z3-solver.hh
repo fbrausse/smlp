@@ -10,21 +10,30 @@
 
 namespace smlp {
 
-struct z3_solver {
+struct sat { hmap<str,cnst2> model; };
+struct unsat {};
+struct unknown { str reason; };
+
+typedef sumtype<sat,unsat,unknown> result;
+
+class z3_solver {
 
 	z3::context ctx;
 	z3::solver slv;
 	hmap<str,z3::expr> symbols;
 
+	z3::expr interp(const expr2 &e);
+	z3::expr interp(const form2 &f);
+
+public:
 	explicit z3_solver(const domain &d, const char *logic = nullptr);
+
+	result check();
 
 	void add(const form2 &f)
 	{
 		slv.add(interp(f));
 	}
-
-	z3::expr interp(const expr2 &e);
-	z3::expr interp(const form2 &f);
 };
 
 }

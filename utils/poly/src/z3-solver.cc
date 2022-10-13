@@ -88,3 +88,29 @@ z3::expr z3_solver::interp(const expr2 &e)
 	}
 	);
 }
+
+result z3_solver::check()
+{
+	z3::check_result r = slv.check();
+	switch (r) {
+	case z3::sat: {
+		z3::model m = slv.get_model();
+		assert(m.num_consts() == size(symbols));
+		hmap<str,cnst2> r;
+		for (size_t i=0; i<size(symbols); i++)
+		{
+			z3::func_decl fd = m.get_const_decl(i);
+			z3::expr e = m.get_const_interp(fd);
+			str num;
+			if (!e.is_numeral(num))
+				abort();
+			r[fd.name().str()] =
+				*unroll(cnst { move(num) }, {})->get<cnst2>();
+		}
+		return sat { move(r) };
+	}
+	case z3::unsat: return unsat {};
+	case z3::unknown: return unknown { slv.reason_unknown() };
+	}
+	unreachable();
+}
