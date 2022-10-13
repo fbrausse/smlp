@@ -118,7 +118,8 @@ static result solve_exists(const domain &dom,
 
 /* assumes the relation underlying theta is symmetric! */
 static vec<pair<kay::Q,hmap<str,cnst2>>>
-maximize_EA(const domain &dom,
+optimize_EA(cmp_t direction,
+            const domain &dom,
             const sptr<expr2> &objective,
             const sptr<form2> &alpha,
             const sptr<form2> &beta,
@@ -127,6 +128,7 @@ maximize_EA(const domain &dom,
             const fun<sptr<form2>(const hmap<str,cnst2> &)> theta,
             const char *logic = nullptr)
 {
+	assert(is_order(direction));
 	vec<pair<kay::Q,hmap<str,cnst2>>> results;
 
 	while (length(obj_range) > max_prec) {
@@ -134,7 +136,7 @@ maximize_EA(const domain &dom,
 		sptr<expr2> threshold = make2e(cnst2 { T });
 
 		z3_solver exists(dom, logic);
-		exists.add(prop2 { GE, objective, threshold });
+		exists.add(prop2 { direction, objective, threshold });
 		exists.add(*alpha);
 		exists.add(*beta);
 
@@ -143,7 +145,10 @@ maximize_EA(const domain &dom,
 			if (unknown *u = e.get<unknown>())
 				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
 			if (e.get<unsat>()) {
-				obj_range.hi = T;
+				if (is_less(direction))
+					obj_range.lo = T;
+				else
+					obj_range.hi = T;
 				break;
 			}
 			auto &candidate = e.get<sat>()->model;
@@ -156,7 +161,7 @@ maximize_EA(const domain &dom,
 			forall.add(*alpha);
 			forall.add(lbop2 { lbop2::OR, {
 				make2f(lneg2 { beta }),
-				make2f(prop2 { LT, objective, threshold })
+				make2f(prop2 { ~direction, objective, threshold })
 			} });
 
 			result a = forall.check();
@@ -164,7 +169,10 @@ maximize_EA(const domain &dom,
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
 			if (a.get<unsat>()) {
 				results.emplace_back(T, candidate);
-				obj_range.lo = T;
+				if (is_less(direction))
+					obj_range.hi = T;
+				else
+					obj_range.lo = T;
 				break;
 			}
 			exists.add(lneg2 { theta(a.get<sat>()->model) });

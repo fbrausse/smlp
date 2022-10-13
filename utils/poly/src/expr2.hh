@@ -20,6 +20,7 @@ inline const char *cmp_s[] = { "<=", "<", ">=", ">", "==", "!=" };
 inline const char *cmp_smt2[] = { "<=", "<", ">=", ">", "=", "distinct" };
 
 /* Some properties of cmp_t */
+static inline bool is_less(cmp_t c) { return (unsigned)c <= LT; }
 static inline bool is_strict(cmp_t c) { return (unsigned)c & 0x1; }
 static inline bool is_order(cmp_t c) { return !((unsigned)c >> 2); }
 
