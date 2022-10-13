@@ -67,21 +67,17 @@ static expr parse_expression_file(const char *path, bool infix, bool python_comp
 	DIE(1,"error opening expression file path: %s: %s\n",path,strerror(errno));
 }
 
-static expr2 Match(vec<expr2> args)
+static sptr<expr2> Match(vec<sptr<expr2>> args)
 {
 	assert(args.size() >= 2);
-	const name *var = args.front().get<name>();
-	expr2 r = move(args.back());
+	const sptr<expr2> &var = args.front();
+	sptr<expr2> r = move(args.back());
 	for (int i=args.size()-3; i >= 1; i-=2)
-		r = ite2 {
-			make2f(prop2 {
-				EQ,
-				make2e(*var),
-				make2e(move(args[i]))
-			}),
-			make2e(move(args[i+1])),
-			make2e(move(r)),
-		};
+		r = make2e(ite2 {
+			make2f(prop2 { EQ, var, move(args[i]) }),
+			move(args[i+1]),
+			move(r),
+		});
 	return r;
 }
 
@@ -176,9 +172,9 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 
 	/* interpret symbols of known non-recursive functions and numeric
 	 * constants */
-	hmap<str,fun<expr2(vec<expr2>)>> funs;
+	hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> funs;
 	funs["Match"] = Match;
-	expr2 e2 = unroll(e, funs);
+	sptr<expr2> e2 = unroll(e, funs);
 
 	/* find out about the OP comparison operation */
 	size_t c;
@@ -189,16 +185,12 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 		DIE(1,"OP '%s' unknown\n",argv[optind+2]);
 
 	/* interpret the CNST on the right hand side */
-	expr2 rhs = unroll(cnst { argv[optind+3] }, funs);
+	sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, funs);
 
 	/* the problem consists of domain and the (EXPR OP CNST) constraint */
 	problem p = {
 		move(d),
-		prop2 {
-			(cmp_t)c,
-			make2e(move(e2)),
-			make2e(move(rhs)),
-		},
+		prop2 { (cmp_t)c, e2, rhs, },
 	};
 
 	/* hint for the solver later: non-linear real arithmetic, potentially

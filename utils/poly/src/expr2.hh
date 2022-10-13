@@ -112,7 +112,8 @@ static inline sptr<form2> make2f(Ts &&... ts)
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a expr2 term. */
-expr2 unroll(const expr &e, const hmap<str,fun<expr2(vec<expr2>)>> &funs);
+sptr<expr2> unroll(const expr &e,
+                   const hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> &funs);
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */
 sptr<expr2> subst(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl);

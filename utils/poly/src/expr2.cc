@@ -8,34 +8,34 @@
 
 using namespace smlp;
 
-expr2 smlp::unroll(const expr &e, const hmap<str,fun<expr2(vec<expr2>)>> &funs)
+sptr<expr2> smlp::unroll(const expr &e, const hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> &funs)
 {
-	return e.match<expr2>(
-	[&](const name &n) { return n; },
+	return e.match<sptr<expr2>>(
+	[&](const name &n) { return make2e(n); },
 	[&](const cnst &c) {
 		if (c.value == "None")
-			return cnst2 { kay::Z(0) };
+			return make2e(cnst2 { kay::Z(0) });
 		if (c.value.find('.') == str::npos &&
 		    c.value.find('e') == str::npos &&
 		    c.value.find('E') == str::npos)
-			return cnst2 { kay::Z(c.value) };
-		return cnst2 { kay::Q_from_str(str(c.value).data()) };
+			return make2e(cnst2 { kay::Z(c.value) });
+		return make2e(cnst2 { kay::Q_from_str(str(c.value).data()) });
 	},
 	[&](const bop &b) {
-		return bop2 {
+		return make2e(bop2 {
 			b.op,
-			make2e(unroll(*b.left, funs)),
-			make2e(unroll(*b.right, funs)),
-		};
+			unroll(*b.left, funs),
+			unroll(*b.right, funs),
+		});
 	},
 	[&](const uop &u) {
-		return uop2 {
+		return make2e(uop2 {
 			u.op,
-			make2e(unroll(*u.operand, funs)),
-		};
+			unroll(*u.operand, funs),
+		});
 	},
 	[&](const call &c) {
-		vec<expr2> args;
+		vec<sptr<expr2>> args;
 		args.reserve(c.args.size());
 		for (const expr &e : c.args)
 			args.push_back(unroll(e, funs));
