@@ -110,6 +110,10 @@ static inline sptr<form2> make2f(Ts &&... ts)
 	return std::make_shared<form2>(std::forward<Ts>(ts)...);
 }
 
+/* Constants for true and false */
+inline const sptr<form2> true2  = make2f(lbop2 { lbop2::AND, {} });
+inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
+
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a expr2 term. */
 sptr<expr2> unroll(const expr &e,
