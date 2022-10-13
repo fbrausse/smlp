@@ -156,3 +156,30 @@ sptr<expr2> smlp::subst(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl)
 	}
 	);
 }
+
+bool smlp::is_ground(const sptr<form2> &f)
+{
+	return f->match(
+	[](const prop2 &p) { return is_ground(p.left) && is_ground(p.right); },
+	[](const lbop2 &b) {
+		for (const auto &o : b.args)
+			if (!is_ground(o))
+				return false;
+		return true;
+	},
+	[](const lneg2 &n) { return is_ground(n.arg); }
+	);
+}
+
+bool smlp::is_ground(const sptr<expr2> &e)
+{
+	return e->match(
+	[](const name &) { return false; },
+	[](const bop2 &b) { return is_ground(b.left) && is_ground(b.right); },
+	[](const uop2 &a) { return is_ground(a.operand); },
+	[](const cnst2 &) { return true; },
+	[](const ite2 &i) {
+		return is_ground(i.cond) && is_ground(i.yes) && is_ground(i.no);
+	}
+	);
+}

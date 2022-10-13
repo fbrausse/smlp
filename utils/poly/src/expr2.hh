@@ -144,4 +144,8 @@ sptr<expr2> unroll(const expr &e,
 sptr<expr2> subst(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl);
 sptr<form2> subst(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl);
 
+/* Ground terms and ground formulas contain no variables (i.e., 'name') */
+bool is_ground(const sptr<expr2> &e);
+bool is_ground(const sptr<form2> &f);
+
 }
