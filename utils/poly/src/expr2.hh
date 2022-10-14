@@ -121,6 +121,14 @@ struct cnst2 {
 			[](const auto &x) { return x.get_str(); }
 			);
 		}
+
+		friend kay::Q to_Q(const auto &v)
+		{
+			return v.template match(
+			[](const str &x) { return kay::Q_from_str(str(x).data()); },
+			[](const auto &x) { return kay::Q(x); }
+			);
+		}
 	} value;
 	bool operator==(const cnst2 &b) const;
 };
@@ -159,5 +167,8 @@ sptr<form2> subst(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl);
 /* Ground terms and ground formulas contain no variables (i.e., 'name') */
 bool is_ground(const sptr<expr2> &e);
 bool is_ground(const sptr<form2> &f);
+
+sptr<expr2> cnst_fold(const sptr<expr2> &e);
+sptr<form2> cnst_fold(const sptr<form2> &f);
 
 }

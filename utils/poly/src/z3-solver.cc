@@ -96,7 +96,7 @@ result z3_solver::check()
 	case z3::sat: {
 		z3::model m = slv.get_model();
 		assert(m.num_consts() == size(symbols));
-		hmap<str,cnst2> r;
+		hmap<str,sptr<expr2>> r;
 		for (size_t i=0; i<size(symbols); i++)
 		{
 			z3::func_decl fd = m.get_const_decl(i);
@@ -104,9 +104,17 @@ result z3_solver::check()
 			str num;
 			if (!e.is_numeral(num))
 				abort();
-			r[fd.name().str()] =
-				*unroll(cnst { move(num) }, {})->get<cnst2>();
+			//std::cerr << "z3: parsing cnst " << num << " -> ";
+			cnst2 c;
+			if (strchr(num.c_str(), '/'))
+				c.value = kay::Q(num.c_str());
+			else
+				c.value = kay::Z(num.c_str());
+			r[fd.name().str()] = make2e(move(c));
+			//std::cerr << to_string(r[fd.name().str()]->get<cnst2>()->value) << "\n";
 		}
+		//fprintf(stderr, "z3 model:\n");
+		//std::cerr << m << "\n";
 		return sat { move(r) };
 	}
 	case z3::unsat: return unsat {};

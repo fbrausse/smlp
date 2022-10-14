@@ -126,3 +126,11 @@ form2 smlp::domain_constraint(const str &var, const component &rng)
 		return lbop2 { lbop2::AND, move(args) };
 	});
 }
+
+form2 smlp::domain_constraints(const domain &d)
+{
+	lbop2 conj = { lbop2::AND, {} };
+	for (const auto &[var,rng] : d)
+		conj.args.emplace_back(make2f(domain_constraint(var, rng)));
+	return conj;
+}

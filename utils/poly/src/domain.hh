@@ -35,6 +35,16 @@ struct ival {
 	{
 		return (i.lo + i.hi) / 2;
 	}
+
+	bool contains(const kay::Z &v) const
+	{
+		return lo <= v && v <= hi;
+	}
+
+	bool contains(const kay::Q &v) const
+	{
+		return lo <= v && v <= hi;
+	}
 };
 
 /* Explicit list of rational values */
@@ -55,6 +65,16 @@ struct component : sumtype<ival,list> {
 				return true;
 		return 1 || false; /* always real: Z3 falls back to a slow method otherwise */
 	}
+
+	bool contains(const kay::Q &v) const
+	{
+		if (const ival *i = get<ival>())
+			return i->contains(v);
+		for (const kay::Q &q : get<list>()->values)
+			if (q == v)
+				return true;
+		return false;
+	}
 };
 
 /* Translates a component 'rng' and the appropriate variable name 'var' into a
@@ -63,7 +83,17 @@ form2 domain_constraint(const str &var, const component &rng);
 
 /* The domain is an (ordered) list of pairs (name, component) */
 struct domain : vec<pair<str,component>> {
+
+	const component * operator[](const std::string_view &s) const
+	{
+		for (const auto &[n,c] : *this)
+			if (n == s)
+				return &c;
+		return nullptr;
+	}
 };
+
+form2 domain_constraints(const domain &d);
 
 /* Parses the DOMAIN-FILE, see poly.cc for details. */
 domain parse_simple_domain(FILE *f);

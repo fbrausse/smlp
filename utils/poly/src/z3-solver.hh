@@ -10,7 +10,7 @@
 
 namespace smlp {
 
-struct sat { hmap<str,cnst2> model; };
+struct sat { hmap<str,sptr<expr2>> model; };
 struct unsat {};
 struct unknown { str reason; };
 

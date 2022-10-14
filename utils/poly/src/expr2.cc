@@ -183,3 +183,101 @@ bool smlp::is_ground(const sptr<expr2> &e)
 	}
 	);
 }
+
+sptr<form2> smlp::cnst_fold(const sptr<form2> &f)
+{
+	return f->match(
+	[&](const prop2 &p) {
+		sptr<expr2> l = cnst_fold(p.left);
+		sptr<expr2> r = cnst_fold(p.right);
+		const cnst2 *lc = l->get<cnst2>();
+		const cnst2 *rc = r->get<cnst2>();
+		if (!lc || !rc)
+			return l == p.left && r == p.right ? f
+			     : make2f(prop2 { p.cmp, move(l), move(r) });
+		kay::Q lq = to_Q(lc->value);
+		kay::Q rq = to_Q(rc->value);
+		bool v;
+		switch (p.cmp) {
+		case LT: v = lq <  rq; break;
+		case LE: v = lq <= rq; break;
+		case GT: v = lq >  rq; break;
+		case GE: v = lq >= rq; break;
+		case EQ: v = lq == rq; break;
+		case NE: v = lq != rq; break;
+		default: unreachable();
+		}
+		return v ? true2 : false2;
+	},
+	[&](const lbop2 &b) {
+		vec<sptr<form2>> args;
+		for (const sptr<form2> &a : b.args) {
+			sptr<form2> f = cnst_fold(a);
+			if (*f == *true2 && b.op == lbop2::OR)
+				return true2;
+			if (*f == *false2 && b.op == lbop2::AND)
+				return false2;
+			args.emplace_back(move(f));
+		}
+		return args == b.args ? f : make2f(lbop2 { b.op, move(args) });
+	},
+	[&](const lneg2 &n) {
+		sptr<form2> o = cnst_fold(n.arg);
+		if (*o == *true2)
+			return false2;
+		if (*o == *false2)
+			return true2;
+		return o == n.arg ? f : make2f(lneg2 { move(o) });
+	}
+	);
+}
+
+sptr<expr2> smlp::cnst_fold(const sptr<expr2> &e)
+{
+	return e->match(
+	[&](const name &) { return e; },
+	[&](const cnst2 &) { return e; },
+	[&](const bop2 &b) {
+		sptr<expr2> l = cnst_fold(b.left);
+		sptr<expr2> r = cnst_fold(b.right);
+		const cnst2 *lc = l->get<cnst2>();
+		const cnst2 *rc = r->get<cnst2>();
+		if (!lc || !rc) {
+			if (l == b.left && r == b.right)
+				return e;
+			return make2e(bop2 { b.op, move(l), move(r) });
+		}
+		kay::Q q;
+		switch (b.op) {
+		case bop::ADD: q = to_Q(lc->value) + to_Q(rc->value); break;
+		case bop::SUB: q = to_Q(lc->value) - to_Q(rc->value); break;
+		case bop::MUL: q = to_Q(lc->value) * to_Q(rc->value); break;
+		}
+		return make2e(cnst2 { move(q) });
+	},
+	[&](const uop2 &u) {
+		sptr<expr2> o = cnst_fold(u.operand);
+		const cnst2 *c = o->get<cnst2>();
+		if (!c)
+			return o == u.operand ? e : make2e(uop2 { u.op, move(o) });
+		kay::Q q;
+		switch (u.op) {
+		case uop::UADD: q = +to_Q(c->value); break;
+		case uop::USUB: q = -to_Q(c->value); break;
+		}
+		return make2e(cnst2 { move(q) });
+	},
+	[&](const ite2 &i) {
+		sptr<form2> c = cnst_fold(i.cond);
+		sptr<expr2> y = cnst_fold(i.yes);
+		sptr<expr2> n = cnst_fold(i.no);
+		if (*c == *true2)
+			return y;
+		if (*c == *false2)
+			return n;
+		if (c == i.cond && y == i.yes && n == i.no)
+			return e;
+		return make2e(ite2 { move(c), move(y), move(n) });
+	}
+	);
+}

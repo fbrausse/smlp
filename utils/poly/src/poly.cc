@@ -116,8 +116,18 @@ static result solve_exists(const domain &dom,
 	return s.check();
 }
 
+struct smlp_result {
+	kay::Q threshold;
+	hmap<str,sptr<expr2>> point;
+
+	kay::Q center_value(const sptr<expr2> &obj) const
+	{
+		return to_Q(cnst_fold(subst(obj, point))->get<cnst2>()->value);
+	}
+};
+
 /* assumes the relation underlying theta is symmetric! */
-static vec<pair<kay::Q,hmap<str,cnst2>>>
+static vec<smlp_result>
 optimize_EA(cmp_t direction,
             const domain &dom,
             const sptr<expr2> &objective,
@@ -125,11 +135,11 @@ optimize_EA(cmp_t direction,
             const sptr<form2> &beta,
             ival &obj_range,
             const kay::Q &max_prec,
-            const fun<sptr<form2>(const hmap<str,cnst2> &)> theta,
+            const fun<sptr<form2>(const hmap<str,sptr<expr2>> &)> theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
-	vec<pair<kay::Q,hmap<str,cnst2>>> results;
+	vec<smlp_result> results, counter_examples;
 
 	while (length(obj_range) > max_prec) {
 		kay::Q T = mid(obj_range);
@@ -288,7 +298,7 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	/* the problem consists of domain and the (EXPR OP CNST) constraint */
 	problem p = {
 		move(dom),
-		prop2 { (cmp_t)c, move(lhs), move(rhs), },
+		prop2 { (cmp_t)c, lhs, rhs, },
 	};
 
 	/* optionally dump the smt2 representation of the problem */
@@ -298,11 +308,15 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	/* optionally solve the problem */
 	if (solve)
 		solve_exists(p.dom, p.p, logic).match(
-		[](const sat &s) {
-			fprintf(stderr, "sat, model:\n");
-			for (const auto &[n,c] : s.model)
+		[&](const sat &s) {
+			kay::Q q = to_Q(cnst_fold(subst(lhs, s.model))->get<cnst2>()->value);
+			fprintf(stderr, "sat, value: %s ~ %g, model:\n", q.get_str().c_str(), q.get_d());
+			for (const auto &[n,c] : s.model) {
+				kay::Q q = to_Q(c->get<cnst2>()->value);
 				fprintf(stderr, "  %s = %s\n", n.c_str(),
-				        to_string(c.value).c_str());
+				        q.get_str().c_str());
+				assert(p.dom[n]->contains(q));
+			}
 		},
 		[](const unsat &) { fprintf(stderr, "unsat\n"); },
 		[](const unknown &u) { fprintf(stderr, "unknown: %s\n", u.reason.c_str()); }
