@@ -126,7 +126,6 @@ struct smlp_result {
 	}
 };
 
-/* assumes the relation underlying theta is symmetric! */
 static vec<smlp_result>
 optimize_EA(cmp_t direction,
             const domain &dom,
@@ -135,7 +134,7 @@ optimize_EA(cmp_t direction,
             const sptr<form2> &beta,
             ival &obj_range,
             const kay::Q &max_prec,
-            const fun<sptr<form2>(const hmap<str,sptr<expr2>> &)> theta,
+            const fun<sptr<form2>(bool left, const hmap<str,sptr<expr2>> &)> theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
@@ -173,7 +172,7 @@ optimize_EA(cmp_t direction,
 			/* ! ( eta y -> theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! eta y \/ ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
 			 * eta y /\ theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
-			forall.add(*theta(candidate));
+			forall.add(*theta(true, candidate));
 			forall.add(*alpha);
 			forall.add(lbop2 { lbop2::OR, {
 				make2f(lneg2 { beta }),
@@ -191,7 +190,7 @@ optimize_EA(cmp_t direction,
 					obj_range.lo = T;
 				break;
 			}
-			exists.add(lneg2 { theta(a.get<sat>()->model) });
+			exists.add(lneg2 { theta(false, a.get<sat>()->model) });
 		}
 	}
 
