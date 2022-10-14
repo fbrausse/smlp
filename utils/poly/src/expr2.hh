@@ -110,22 +110,20 @@ struct uop2 {
 	bool operator==(const uop2 &b) const;
 };
 struct cnst2 {
-	struct : sumtype<kay::Z,kay::Q,str> {
+	struct : sumtype<kay::Z,kay::Q> {
 
-		using sumtype<kay::Z,kay::Q,str>::sumtype;
+		using sumtype<kay::Z,kay::Q>::sumtype;
 
 		friend str to_string(const auto &v)
 		{
 			return v.match(
-			[](const str &s) { return s; },
 			[](const auto &x) { return x.get_str(); }
 			);
 		}
 
 		friend kay::Q to_Q(const auto &v)
 		{
-			return v.template match(
-			[](const str &x) { return kay::Q_from_str(str(x).data()); },
+			return v.match(
 			[](const auto &x) { return kay::Q(x); }
 			);
 		}
