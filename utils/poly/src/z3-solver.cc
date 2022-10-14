@@ -82,9 +82,13 @@ z3::expr z3_solver::interp(const expr2 &e)
 	);
 }
 
+z3::context *z3_solver::is_checking;
+
 result z3_solver::check()
 {
+	is_checking = &ctx;
 	z3::check_result r = slv.check();
+	is_checking = nullptr;
 	switch (r) {
 	case z3::sat: {
 		z3::model m = slv.get_model();

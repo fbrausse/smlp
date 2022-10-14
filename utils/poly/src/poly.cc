@@ -218,6 +218,7 @@ Options [defaults]:\n\
   -n          dry run, do not solve the problem [no]\n\
   -p          dump the expression in Polish notation to stdout [no]\n\
   -s          dump the problem in SMT-LIB2 format to stdout [no]\n\
+  -t TIMEOUT  set the solver timeout in seconds, 0 to disable [0]\n\
 \n\
 The DOMAIN is a text file containing the bounds for all variables in the\n\
 form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either\n\
@@ -240,6 +241,13 @@ License: Apache 2.0; part of SMLP.\n\
 	exit(exit_code);
 }
 
+static void alarm_handler(int sig)
+{
+	if (z3::context *p = z3_solver::is_checking)
+		p->interrupt();
+	signal(sig, alarm_handler);
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
@@ -248,9 +256,10 @@ int main(int argc, char **argv)
 	bool dump_smt2     = false;
 	bool infix         = true;
 	bool python_compat = false;
+	int  timeout       = 0;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":C:F:hnps")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":C:F:hnpst:")) != -1;)
 		switch (opt) {
 		case 'C':
 			if (optarg == "python"sv)
@@ -272,6 +281,7 @@ int main(int argc, char **argv)
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
 		case 's': dump_smt2 = true; break;
+		case 't': timeout = atoi(optarg); break;
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
 		              optopt);
 		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
@@ -309,6 +319,11 @@ int main(int argc, char **argv)
 	/* optionally dump the smt2 representation of the problem */
 	if (dump_smt2)
 		::dump_smt2(stdout, logic, p);
+
+	if (timeout > 0) {
+		signal(SIGALRM, alarm_handler);
+		alarm(timeout);
+	}
 
 	/* optionally solve the problem */
 	if (solve)
