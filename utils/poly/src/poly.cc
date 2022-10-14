@@ -141,10 +141,16 @@ optimize_EA(cmp_t direction,
 	assert(is_order(direction));
 	vec<smlp_result> results, counter_examples;
 
+	/* optimize T in obj_range such that (assuming direction is >=):
+	 * E x . eta x /\
+	 * A y . eta y -> theta x y -> alpha y -> (beta y /\ obj y >= T)
+	 */
+
 	while (length(obj_range) > max_prec) {
 		kay::Q T = mid(obj_range);
 		sptr<expr2> threshold = make2e(cnst2 { T });
 
+		/* eta x /\ alpha x /\ beta x */
 		z3_solver exists(dom, logic);
 		exists.add(prop2 { direction, objective, threshold });
 		exists.add(*alpha);
@@ -310,7 +316,8 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 		solve_exists(p.dom, p.p, logic).match(
 		[&](const sat &s) {
 			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
-			fprintf(stderr, "sat, value: %s ~ %g, model:\n", q.get_str().c_str(), q.get_d());
+			fprintf(stderr, "sat, value: %s ~ %g, model:\n",
+			        q.get_str().c_str(), q.get_d());
 			for (const auto &[n,c] : s.model) {
 				kay::Q q = to_Q(c->get<cnst2>()->value);
 				fprintf(stderr, "  %s = %s\n", n.c_str(),

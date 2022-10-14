@@ -6,6 +6,8 @@
 
 #include "z3-solver.hh"
 
+#include <sstream>
+
 using namespace smlp;
 
 z3_solver::z3_solver(const domain &d, const char *logic)
@@ -101,17 +103,23 @@ result z3_solver::check()
 		{
 			z3::func_decl fd = m.get_const_decl(i);
 			z3::expr e = m.get_const_interp(fd);
+			str id = fd.name().str();
 			str num;
-			if (!e.is_numeral(num))
-				abort();
+			if (!e.is_numeral(num)) {
+				std::stringstream ss;
+				ss << e;
+				DIE(3,"error: expected numeral assignment "
+				      "for %s, got %s\n",
+				    id.c_str(), ss.str().c_str());
+			}
 			//std::cerr << "z3: parsing cnst " << num << " -> ";
 			cnst2 c;
 			if (strchr(num.c_str(), '/'))
 				c.value = kay::Q(num.c_str());
 			else
 				c.value = kay::Z(num.c_str());
-			r[fd.name().str()] = make2e(move(c));
-			//std::cerr << to_string(r[fd.name().str()]->get<cnst2>()->value) << "\n";
+			r[id] = make2e(move(c));
+			//std::cerr << to_string(r[id]->get<cnst2>()->value) << "\n";
 		}
 		//fprintf(stderr, "z3 model:\n");
 		//std::cerr << m << "\n";
