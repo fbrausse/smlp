@@ -166,6 +166,10 @@ sptr<form2> subst(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl);
 bool is_ground(const sptr<expr2> &e);
 bool is_ground(const sptr<form2> &f);
 
+/* Constant folding, under the (potentially empty) assignment 'repl'.
+ * Arithmetic (bop2, uop2, prop2) terms are only evaluated when all parameters
+ * are constants. Logical connectives (lbop2) are evaluated in a short-circuit
+ * fashion from beginning to end. */
 sptr<expr2> cnst_fold(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl);
 sptr<form2> cnst_fold(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl);
 

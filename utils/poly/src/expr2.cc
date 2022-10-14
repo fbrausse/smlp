@@ -213,10 +213,16 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<expr2>> &r
 		vec<sptr<form2>> args;
 		for (const sptr<form2> &a : b.args) {
 			sptr<form2> f = cnst_fold(a, repl);
-			if (*f == *true2 && b.op == lbop2::OR)
-				return true2;
-			if (*f == *false2 && b.op == lbop2::AND)
-				return false2;
+			if (*f == *true2) {
+				if (b.op == lbop2::OR)
+					return true2;
+				continue;
+			}
+			if (*f == *false2) {
+				if (b.op == lbop2::AND)
+					return false2;
+				continue;
+			}
 			args.emplace_back(move(f));
 		}
 		return args == b.args ? f : make2f(lbop2 { b.op, move(args) });
