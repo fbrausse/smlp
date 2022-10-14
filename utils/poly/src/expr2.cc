@@ -195,18 +195,7 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<expr2>> &r
 		if (!lc || !rc)
 			return l == p.left && r == p.right ? f
 			     : make2f(prop2 { p.cmp, move(l), move(r) });
-		kay::Q lq = to_Q(lc->value);
-		kay::Q rq = to_Q(rc->value);
-		bool v;
-		switch (p.cmp) {
-		case LT: v = lq <  rq; break;
-		case LE: v = lq <= rq; break;
-		case GT: v = lq >  rq; break;
-		case GE: v = lq >= rq; break;
-		case EQ: v = lq == rq; break;
-		case NE: v = lq != rq; break;
-		default: unreachable();
-		}
+		bool v = do_cmp(to_Q(lc->value), p.cmp, to_Q(rc->value));
 		return v ? true2 : false2;
 	},
 	[&](const lbop2 &b) {

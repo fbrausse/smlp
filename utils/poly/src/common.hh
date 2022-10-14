@@ -36,14 +36,18 @@ namespace smlp {
  * - hmap<K,V>   : hash-map (std::unordered_map)
  * - str         : std::string
  * - vec         : std::vector
- * - uptr<T>     : std::unique_ptr
- * - sptr<T>     : std::shared_ptr
+ * - uptr<T>     : std::unique_ptr, non-copyable heap-allocated T
+ * - sptr<T>     : std::shared_ptr, reference-counted heap-allocated T
  * - fun         : std::function
  * - opt         : std::optional
- * - pair        : std::pair
- * - move        : std::move
  * - sumtype<...>: std::variant with a more intuitive name and '.match()' member
  *                 function to access its contents
+ *
+ * Imports with the same name as in std:
+ * - pair
+ * - move
+ * - to_string
+ * - min, max
  */
 
 using namespace std::literals::string_view_literals;
@@ -75,6 +79,9 @@ using opt = std::optional<T>;
 using std::pair;
 
 using std::to_string;
+
+using std::max;
+using std::min;
 
 // helper type for the visitor #4
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };

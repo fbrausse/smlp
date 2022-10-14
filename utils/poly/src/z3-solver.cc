@@ -27,16 +27,7 @@ z3::expr z3_solver::interp(const form2 &f)
 {
 	return f.match(
 	[&](const prop2 &p) {
-		z3::expr l = interp(*p.left), r = interp(*p.right);
-		switch (p.cmp) {
-		case LE: return l <= r;
-		case LT: return l <  r;
-		case GE: return l >= r;
-		case GT: return l >  r;
-		case EQ: return l == r;
-		case NE: return l != r;
-		}
-		unreachable();
+		return do_cmp(interp(*p.left), p.cmp, interp(*p.right));
 	},
 	[&](const lbop2 &b) {
 		z3::expr_vector a(ctx);

@@ -257,8 +257,8 @@ int main(int argc, char **argv)
 			if (optarg == "python"sv)
 				python_compat = true;
 			else
-				DIE(1,"\
-error: option '-C' only supports 'python'\n");
+				DIE(1,"error: option '-C' only supports "
+				      "'python'\n");
 			break;
 		case 'F':
 			if (!strcmp(optarg, "infix"))
@@ -266,8 +266,8 @@ error: option '-C' only supports 'python'\n");
 			else if (!strcmp(optarg, "prefix"))
 				infix = false;
 			else
-				DIE(1,"\
-error: option '-F' only supports 'infix' and 'prefix'\n");
+				DIE(1,"error: option '-F' only supports "
+				      "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
 		case 'n': solve = false; break;
@@ -316,11 +316,15 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 		solve_exists(p.dom, p.p, logic).match(
 		[&](const sat &s) {
 			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
-			fprintf(stderr, "sat, value: %s ~ %g, model:\n",
+			fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
 			        q.get_str().c_str(), q.get_d());
+			size_t k = 0;
+			for (const auto &[n,_] : s.model)
+				k = max(k, n.length());
 			for (const auto &[n,c] : s.model) {
 				kay::Q q = to_Q(c->get<cnst2>()->value);
-				fprintf(stderr, "  %s = %s\n", n.c_str(),
+				fprintf(stderr, "  %*s = %s\n",
+				        -(int)k, n.c_str(),
 				        q.get_str().c_str());
 				assert(p.dom[n]->contains(q));
 			}

@@ -43,9 +43,7 @@ License: Apache 2.0; part of SMLP.
 To build the program, meson <https://mesonbuild.com> is required.
 Run:
 
-	$ mkdir build
-	$ meson setup build
-	$ meson compile -C build
+	$ mkdir build && meson setup build && meson compile -C build
 
 The resulting binary will be located in build/src/poly.
 
