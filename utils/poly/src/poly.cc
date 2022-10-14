@@ -56,6 +56,7 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	dump_smt2(f, p.p);
 	fprintf(f, ")\n");
 	fprintf(f, "(check-sat)\n");
+	fprintf(f, "(get-model)\n");
 }
 
 static domain parse_domain_file(const char *path)
@@ -138,22 +139,27 @@ optimize_EA(cmp_t direction,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
-	vec<smlp_result> results, counter_examples;
 
 	/* optimize T in obj_range such that (assuming direction is >=):
+	 *
 	 * E x . eta x /\
 	 * A y . eta y -> theta x y -> alpha y -> (beta y /\ obj y >= T)
+	 *
+	 * In this implementation, eta is represented as the domain constraints
+	 * from 'dom'.
 	 */
+
+	vec<smlp_result> results, counter_examples;
 
 	while (length(obj_range) > max_prec) {
 		kay::Q T = mid(obj_range);
 		sptr<expr2> threshold = make2e(cnst2 { T });
 
-		/* eta x /\ alpha x /\ beta x */
+		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
 		z3_solver exists(dom, logic);
-		exists.add(prop2 { direction, objective, threshold });
 		exists.add(*alpha);
 		exists.add(*beta);
+		exists.add(prop2 { direction, objective, threshold });
 
 		while (true) {
 			result e = exists.check();
@@ -190,7 +196,9 @@ optimize_EA(cmp_t direction,
 					obj_range.lo = T;
 				break;
 			}
-			exists.add(lneg2 { theta(false, a.get<sat>()->model) });
+			auto &counter_example = a.get<sat>()->model;
+			counter_examples.emplace_back(T, counter_example);
+			exists.add(lneg2 { theta(false, counter_example) });
 		}
 	}
 
@@ -269,9 +277,9 @@ int main(int argc, char **argv)
 				      "'python'\n");
 			break;
 		case 'F':
-			if (!strcmp(optarg, "infix"))
+			if (optarg == "infix"sv)
 				infix = true;
-			else if (!strcmp(optarg, "prefix"))
+			else if (optarg == "prefix"sv)
 				infix = false;
 			else
 				DIE(1,"error: option '-F' only supports "
@@ -344,6 +352,8 @@ int main(int argc, char **argv)
 			}
 		},
 		[](const unsat &) { fprintf(stderr, "unsat\n"); },
-		[](const unknown &u) { fprintf(stderr, "unknown: %s\n", u.reason.c_str()); }
+		[](const unknown &u) {
+			fprintf(stderr, "unknown: %s\n", u.reason.c_str());
+		}
 		);
 }
