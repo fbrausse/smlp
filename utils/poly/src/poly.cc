@@ -22,6 +22,7 @@ namespace {
 struct pre_problem {
 	domain dom;
 	sptr<expr2> func;
+	sptr<form2> partial_domain = true2;
 };
 
 struct problem {
@@ -73,19 +74,39 @@ static expr parse_expression_file(const char *path, bool infix, bool python_comp
 	DIE(1,"error opening expression file path: %s: %s\n",path,strerror(errno));
 }
 
-static sptr<expr2> Match(vec<sptr<expr2>> args)
-{
-	assert(args.size() >= 2);
-	const sptr<expr2> &var = args.front();
-	sptr<expr2> r = move(args.back());
-	for (int i=args.size()-3; i >= 1; i-=2)
-		r = make2e(ite2 {
-			make2f(prop2 { EQ, var, move(args[i]) }),
-			move(args[i+1]),
-			move(r),
-		});
-	return r;
-}
+struct Match {
+
+	/* Match could be a partial function (if None was on of the arguments).
+	 * This (conjunction) of constraints are required to be satisfied in
+	 * order for Match() to produce a value. */
+	vec<sptr<form2>> constraints;
+
+	sptr<expr2> operator()(vec<sptr<expr2>> args)
+	{
+		assert(args.size() >= 2);
+		const sptr<expr2> &var = args.front();
+		sptr<expr2> r = move(args.back());
+		int k = args.size()-3;
+		if (!r) {
+			vec<sptr<form2>> disj;
+			for (int i=k; i >= 1; i-=2)
+				disj.emplace_back(make2f(prop2 { EQ, var, args[i] }));
+			constraints.emplace_back(make2f(lbop2 { lbop2::OR, move(disj) }));
+			r = move(args[k+1]);
+			k -= 2;
+		}
+		for (int i=k; i >= 1; i-=2) {
+			assert(args[i]);
+			assert(args[i+1]);
+			r = make2e(ite2 {
+				make2f(prop2 { EQ, var, move(args[i]) }),
+				move(args[i+1]),
+				move(r),
+			});
+		}
+		return r;
+	}
+};
 
 static pre_problem parse_poly_problem(const char *simple_domain_path,
                                       const char *poly_expression_path,
@@ -103,9 +124,14 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 
 	/* interpret symbols of known non-recursive functions and numeric
 	 * constants */
-	sptr<expr2> e2 = unroll(e, { {"Match", Match} });
+	Match match;
+	sptr<expr2> e2 = unroll(e, { {"Match", std::ref(match)} });
 
-	return pre_problem { move(d), move(e2) };
+	return pre_problem {
+		move(d),
+		move(e2),
+		make2f(lbop2 { lbop2::AND, move(match.constraints) })
+	};
 }
 
 static result solve_exists(const domain &dom,
@@ -256,6 +282,18 @@ static void alarm_handler(int sig)
 	signal(sig, alarm_handler);
 }
 
+static void print_model(FILE *f, const hmap<str,sptr<expr2>> &model, int indent)
+{
+	size_t k = 0;
+	for (const auto &[n,_] : model)
+		k = max(k, n.length());
+	for (const auto &[n,c] : model) {
+		kay::Q q = to_Q(c->get<cnst2>()->value);
+		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, n.c_str(),
+		        q.get_str().c_str());
+	}
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
@@ -297,8 +335,8 @@ int main(int argc, char **argv)
 	if (argc - optind != 4)
 		usage(argv[0], 1);
 
-	auto [dom,lhs] = parse_poly_problem(argv[optind], argv[optind+1],
-	                                    python_compat, dump_pe, infix);
+	auto [dom,lhs,pc] = parse_poly_problem(argv[optind], argv[optind+1],
+	                                       python_compat, dump_pe, infix);
 
 	/* hint for the solver later: non-linear real arithmetic, potentially
 	 * also with integers */
@@ -306,6 +344,21 @@ int main(int argc, char **argv)
 	for (const auto &[_,rng] : dom)
 		if (!is_real(rng))
 			logic = "QF_NIRA";
+
+	/* Check that the constraints from partial function evaluation are met
+	 * on the domain. */
+	z3_solver ood(dom, logic);
+	ood.add(lneg2 { pc });
+	ood.check().match(
+	[](const sat &s) {
+		fprintf(stderr, "error: DOMAIN constraints do not imply that "
+		                "all function parameters are inside the "
+		                "respective function's domain, e.g.:\n");
+		print_model(stderr, s.model, 2);
+		exit(4);
+	},
+	[](const auto &) {}
+	);
 
 	/* find out about the OP comparison operation */
 	size_t c;
@@ -340,14 +393,9 @@ int main(int argc, char **argv)
 			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 			fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
 			        q.get_str().c_str(), q.get_d());
-			size_t k = 0;
-			for (const auto &[n,_] : s.model)
-				k = max(k, n.length());
+			print_model(stderr, s.model, 2);
 			for (const auto &[n,c] : s.model) {
 				kay::Q q = to_Q(c->get<cnst2>()->value);
-				fprintf(stderr, "  %*s = %s\n",
-				        -(int)k, n.c_str(),
-				        q.get_str().c_str());
 				assert(p.dom[n]->contains(q));
 			}
 		},

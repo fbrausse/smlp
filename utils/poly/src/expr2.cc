@@ -69,9 +69,9 @@ smlp::unroll(const expr &e,
 {
 	return e.match<sptr<expr2>>(
 	[&](const name &n) { return make2e(n); },
-	[&](const cnst &c) {
+	[&](const cnst &c) -> sptr<expr2> {
 		if (c.value == "None")
-			return make2e(cnst2 { kay::Z(0) });
+			return nullptr;
 		if (c.value.find('.') == str::npos &&
 		    c.value.find('e') == str::npos &&
 		    c.value.find('E') == str::npos)
