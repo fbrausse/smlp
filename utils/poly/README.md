@@ -51,9 +51,15 @@ The resulting binary will be located in build/src/poly.
 A compiler supporting C++20 is required as well as:
 
 - the kay library <https://github.com/fbrausse/kay>
+
+  Use the parameter `-Dkay-prefix=PATH` for the `meson setup` command to
+  specify the location of the kay library.
 - GMP <https://gmplib.org> and either
   - its C++ bindings, or
   - Flint <http://flintlib.org>
+
+    Use `-Dflint-prefix=PATH` for the `meson setup` command to specify a
+    non-standard location of the flint library.
 - Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
 
 ## Legal info
