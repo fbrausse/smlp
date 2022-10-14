@@ -279,3 +279,43 @@ sptr<expr2> smlp::cnst_fold(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &r
 	}
 	);
 }
+
+static bool is_nonlinear(const sptr<form2> &f)
+{
+	return f->match(
+	[](const prop2 &p) { return is_nonlinear(p.left) || is_nonlinear(p.right); },
+	[](const lbop2 &b) {
+		for (const sptr<form2> &f : b.args)
+			if (is_nonlinear(f))
+				return true;
+		return false;
+	},
+	[](const lneg2 &n) { return is_nonlinear(n.arg); }
+	);
+}
+
+bool smlp::is_nonlinear(const sptr<expr2> &e)
+{
+	return e->match(
+	[](const name &) { return false; },
+	[](const cnst2 &) { return false; },
+	[](const bop2 &b) {
+		switch (b.op) {
+		case bop::ADD:
+		case bop::SUB:
+			return is_nonlinear(b.left) || is_nonlinear(b.right);
+		case bop::MUL:
+			if (is_nonlinear(b.left) || is_nonlinear(b.right))
+				return true;
+			return !(is_ground(b.left) || is_ground(b.right));
+		}
+		unreachable();
+	},
+	[](const uop2 &u) { return is_nonlinear(u.operand); },
+	[](const ite2 &i) {
+		return ::is_nonlinear(i.cond) ||
+		       is_nonlinear(i.yes) ||
+		       is_nonlinear(i.no);
+	}
+	);
+}

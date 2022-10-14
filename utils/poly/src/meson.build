@@ -28,6 +28,7 @@ else
 endif
 
 add_project_arguments(extra_defs, language: 'cpp')
+add_project_arguments('-Wno-format-zero-length', language: 'cpp')
 
 kay_inc = []
 if get_option('kay-prefix') != ''

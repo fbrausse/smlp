@@ -147,6 +147,11 @@ struct smlp_result {
 	kay::Q threshold;
 	hmap<str,sptr<expr2>> point;
 
+	smlp_result(kay::Q threshold, hmap<str,sptr<expr2>> point)
+	: threshold(move(threshold))
+	, point(move(point))
+	{}
+
 	kay::Q center_value(const sptr<expr2> &obj) const
 	{
 		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
@@ -282,16 +287,39 @@ static void alarm_handler(int sig)
 	signal(sig, alarm_handler);
 }
 
+static void sigint_handler(int sig)
+{
+	signal(sig, sigint_handler);
+	raise(sig);
+}
+
 static void print_model(FILE *f, const hmap<str,sptr<expr2>> &model, int indent)
 {
 	size_t k = 0;
 	for (const auto &[n,_] : model)
 		k = max(k, n.length());
-	for (const auto &[n,c] : model) {
-		kay::Q q = to_Q(c->get<cnst2>()->value);
+	for (const auto &[n,c] : model)
 		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, n.c_str(),
-		        q.get_str().c_str());
-	}
+		        to_string(c->get<cnst2>()->value).c_str());
+}
+
+static str logic_of(const domain &dom, const sptr<expr2> &e)
+{
+	bool reals = false;
+	bool ints = false;
+	for (const auto &[_,rng] : dom)
+		if (is_real(rng))
+			reals = true;
+		else
+			ints = true;
+	str logic = "QF_";
+	logic += is_nonlinear(e) ? 'N' : 'L';
+	if (ints)
+		logic += 'I';
+	if (reals)
+		logic += 'R';
+	logic += 'A';
+	return logic;
 }
 
 int main(int argc, char **argv)
@@ -338,16 +366,13 @@ int main(int argc, char **argv)
 	auto [dom,lhs,pc] = parse_poly_problem(argv[optind], argv[optind+1],
 	                                       python_compat, dump_pe, infix);
 
-	/* hint for the solver later: non-linear real arithmetic, potentially
-	 * also with integers */
-	const char *logic = "QF_NRA";
-	for (const auto &[_,rng] : dom)
-		if (!is_real(rng))
-			logic = "QF_NIRA";
+	/* hint for the solver: non-linear real arithmetic, potentially also
+	 * with integers */
+	str logic = logic_of(dom, lhs);
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	z3_solver ood(dom, logic);
+	z3_solver ood(dom, logic.c_str());
 	ood.add(lneg2 { pc });
 	ood.check().match(
 	[](const sat &s) {
@@ -355,7 +380,7 @@ int main(int argc, char **argv)
 		                "all function parameters are inside the "
 		                "respective function's domain, e.g.:\n");
 		print_model(stderr, s.model, 2);
-		exit(4);
+		DIE(4, "");
 	},
 	[](const auto &) {}
 	);
@@ -379,17 +404,19 @@ int main(int argc, char **argv)
 
 	/* optionally dump the smt2 representation of the problem */
 	if (dump_smt2)
-		::dump_smt2(stdout, logic, p);
+		::dump_smt2(stdout, logic.c_str(), p);
 
 	if (timeout > 0) {
 		signal(SIGALRM, alarm_handler);
 		alarm(timeout);
 	}
 
+	signal(SIGINT, sigint_handler);
+
 	/* optionally solve the problem */
 	if (solve)
-		solve_exists(p.dom, p.p, logic).match(
-		[&](const sat &s) {
+		solve_exists(p.dom, p.p, logic.c_str()).match(
+		[&,lhs=lhs](const sat &s) {
 			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 			fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
 			        q.get_str().c_str(), q.get_d());
