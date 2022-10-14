@@ -168,7 +168,7 @@ sptr<form2> subst(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl);
 bool is_ground(const sptr<expr2> &e);
 bool is_ground(const sptr<form2> &f);
 
-sptr<expr2> cnst_fold(const sptr<expr2> &e);
-sptr<form2> cnst_fold(const sptr<form2> &f);
+sptr<expr2> cnst_fold(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl);
+sptr<form2> cnst_fold(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl);
 
 }

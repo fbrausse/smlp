@@ -184,12 +184,12 @@ bool smlp::is_ground(const sptr<expr2> &e)
 	);
 }
 
-sptr<form2> smlp::cnst_fold(const sptr<form2> &f)
+sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl)
 {
 	return f->match(
 	[&](const prop2 &p) {
-		sptr<expr2> l = cnst_fold(p.left);
-		sptr<expr2> r = cnst_fold(p.right);
+		sptr<expr2> l = cnst_fold(p.left, repl);
+		sptr<expr2> r = cnst_fold(p.right, repl);
 		const cnst2 *lc = l->get<cnst2>();
 		const cnst2 *rc = r->get<cnst2>();
 		if (!lc || !rc)
@@ -212,7 +212,7 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f)
 	[&](const lbop2 &b) {
 		vec<sptr<form2>> args;
 		for (const sptr<form2> &a : b.args) {
-			sptr<form2> f = cnst_fold(a);
+			sptr<form2> f = cnst_fold(a, repl);
 			if (*f == *true2 && b.op == lbop2::OR)
 				return true2;
 			if (*f == *false2 && b.op == lbop2::AND)
@@ -222,7 +222,7 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f)
 		return args == b.args ? f : make2f(lbop2 { b.op, move(args) });
 	},
 	[&](const lneg2 &n) {
-		sptr<form2> o = cnst_fold(n.arg);
+		sptr<form2> o = cnst_fold(n.arg, repl);
 		if (*o == *true2)
 			return false2;
 		if (*o == *false2)
@@ -232,14 +232,17 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f)
 	);
 }
 
-sptr<expr2> smlp::cnst_fold(const sptr<expr2> &e)
+sptr<expr2> smlp::cnst_fold(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl)
 {
 	return e->match(
-	[&](const name &) { return e; },
+	[&](const name &n) {
+		auto it = repl.find(n.id);
+		return it == repl.end() ? e : cnst_fold(it->second, repl);
+	},
 	[&](const cnst2 &) { return e; },
 	[&](const bop2 &b) {
-		sptr<expr2> l = cnst_fold(b.left);
-		sptr<expr2> r = cnst_fold(b.right);
+		sptr<expr2> l = cnst_fold(b.left, repl);
+		sptr<expr2> r = cnst_fold(b.right, repl);
 		const cnst2 *lc = l->get<cnst2>();
 		const cnst2 *rc = r->get<cnst2>();
 		if (!lc || !rc) {
@@ -256,7 +259,7 @@ sptr<expr2> smlp::cnst_fold(const sptr<expr2> &e)
 		return make2e(cnst2 { move(q) });
 	},
 	[&](const uop2 &u) {
-		sptr<expr2> o = cnst_fold(u.operand);
+		sptr<expr2> o = cnst_fold(u.operand, repl);
 		const cnst2 *c = o->get<cnst2>();
 		if (!c)
 			return o == u.operand ? e : make2e(uop2 { u.op, move(o) });
@@ -268,9 +271,9 @@ sptr<expr2> smlp::cnst_fold(const sptr<expr2> &e)
 		return make2e(cnst2 { move(q) });
 	},
 	[&](const ite2 &i) {
-		sptr<form2> c = cnst_fold(i.cond);
-		sptr<expr2> y = cnst_fold(i.yes);
-		sptr<expr2> n = cnst_fold(i.no);
+		sptr<form2> c = cnst_fold(i.cond, repl);
+		sptr<expr2> y = cnst_fold(i.yes, repl);
+		sptr<expr2> n = cnst_fold(i.no, repl);
 		if (*c == *true2)
 			return y;
 		if (*c == *false2)

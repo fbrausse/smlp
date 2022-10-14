@@ -122,7 +122,7 @@ struct smlp_result {
 
 	kay::Q center_value(const sptr<expr2> &obj) const
 	{
-		return to_Q(cnst_fold(subst(obj, point))->get<cnst2>()->value);
+		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
 	}
 };
 
@@ -309,7 +309,7 @@ error: option '-F' only supports 'infix' and 'prefix'\n");
 	if (solve)
 		solve_exists(p.dom, p.p, logic).match(
 		[&](const sat &s) {
-			kay::Q q = to_Q(cnst_fold(subst(lhs, s.model))->get<cnst2>()->value);
+			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 			fprintf(stderr, "sat, value: %s ~ %g, model:\n", q.get_str().c_str(), q.get_d());
 			for (const auto &[n,c] : s.model) {
 				kay::Q q = to_Q(c->get<cnst2>()->value);
