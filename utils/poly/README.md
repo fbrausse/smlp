@@ -39,6 +39,11 @@ Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.
 License: Apache 2.0; part of SMLP.
 ```
 
+Assuming files `domain` and `expression` are in the current directory, this would
+be a sample to execute poly:
+
+	$ build/src/poly domain expression '>=' 0.42
+
 ## Build instructions
 
 To build the program, meson <https://mesonbuild.com> is required.
