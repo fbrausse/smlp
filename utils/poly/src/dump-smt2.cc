@@ -64,7 +64,15 @@ void smlp::dump_smt2(FILE *f, const form2 &e)
 {
 	e.match(
 	[&](const prop2 &p) { dump_smt2(f, p); },
-	[&](const lbop2 &b) { dump_smt2_n(f, lbop_s[b.op], b.args); },
+	[&](const lbop2 &b) {
+		if (size(b.args) > 0)
+			return dump_smt2_n(f, lbop_s[b.op], b.args);
+		switch (b.op) {
+		case lbop2::AND: fprintf(f, "true"); return;
+		case lbop2::OR: fprintf(f, "false"); return;
+		}
+		unreachable();
+	},
 	[&](const lneg2 &n) { dump_smt2_un(f, "not", *n.arg); }
 	);
 }
@@ -96,8 +104,13 @@ void smlp::dump_smt2(FILE *f, const expr2 &e)
 void smlp::dump_smt2(FILE *f, const domain &d)
 {
 	for (const auto &[var,rng] : d) {
-		fprintf(f, "(declare-const %s %s)\n", var.c_str(),
-		        is_real(rng) ? "Real" : "Int");
+		const char *t = nullptr;
+		switch (rng.type) {
+		case component::INT: t = "Int"; break;
+		case component::REAL: t = "Real"; break;
+		}
+		assert(t);
+		fprintf(f, "(declare-const %s %s)\n", var.c_str(), t);
 		dump_smt2_un(f, "assert", domain_constraint(var, rng));
 		fprintf(f, "\n");
 	}

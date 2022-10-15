@@ -50,36 +50,43 @@ struct ival {
 /* Explicit list of rational values */
 struct list { vec<kay::Q> values; };
 
+struct entire {};
+
 /* A component (of the domain) is either an interval or a list of rational
  * values */
-struct component : sumtype<ival,list> {
+struct component {
 
-	using sumtype<ival,list>::sumtype;
-
-	friend bool is_real(const component &c)
-	{
-		if (c.get<ival>())
-			return true;
-		for (const kay::Q &q : c.get<list>()->values)
-			if (q.get_den() != 1)
-				return true;
-		return 1 || false; /* always real: Z3 falls back to a slow method otherwise */
-	}
+	sumtype<entire,ival,list> range;
+	enum { INT, REAL } type;
 
 	bool contains(const kay::Q &v) const
 	{
-		if (const ival *i = get<ival>())
-			return i->contains(v);
-		for (const kay::Q &q : get<list>()->values)
-			if (q == v)
-				return true;
-		return false;
+		return range.match(
+		[](const entire &) { return true; },
+		[&](const ival &i) { return i.contains(v); },
+		[&](const list &l) {
+			for (const kay::Q &q : l.values)
+				if (q == v)
+					return true;
+			return false;
+		}
+		);
 	}
 };
 
+static inline bool is_real(const sumtype<entire,ival,list> &c)
+{
+	if (c.get<entire>() || c.get<ival>())
+		return true;
+	for (const kay::Q &q : c.get<list>()->values)
+		if (q.get_den() != 1)
+			return true;
+	return 1 || false; /* always real: Z3 falls back to a slow method otherwise */
+}
+
 /* Translates a component 'rng' and the appropriate variable name 'var' into a
  * constraint in form of a 'form2' formula. */
-form2 domain_constraint(const str &var, const component &rng);
+form2 domain_constraint(const str &var, const component &c);
 
 /* The domain is an (ordered) list of pairs (name, component) */
 struct domain : vec<pair<str,component>> {

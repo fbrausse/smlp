@@ -12,21 +12,13 @@
 #include "domain.hh"
 #include "dump-smt2.hh"
 #include "z3-solver.hh"
-
-#define SAFE_UNROLL_MAX 0
-#include <nn-common.hh>
+#include "nn.hh"
 
 using namespace smlp;
 
 namespace {
 
 // using domain_ref = typename domain::const_iterator;
-
-struct pre_problem {
-	domain dom;
-	sptr<expr2> func;
-	sptr<form2> partial_domain = true2;
-};
 
 struct problem {
 
@@ -138,6 +130,14 @@ struct Match {
 	}
 };
 
+static sptr<form2> id_theta(bool /* left */, const hmap<str,sptr<expr2>> &v)
+{
+	vec<sptr<form2>> conj;
+	for (const auto &[n,e] : v)
+		conj.emplace_back(make2f(prop2 { EQ, make2e(name { n }), e }));
+	return make2f(lbop2 { lbop2::AND, move(conj) });
+}
+
 static pre_problem parse_poly_problem(const char *simple_domain_path,
                                       const char *poly_expression_path,
                                       bool python_compat,
@@ -160,7 +160,9 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 	return pre_problem {
 		move(d),
 		move(e2),
-		make2f(lbop2 { lbop2::AND, move(match.constraints) })
+		true2,
+		make2f(lbop2 { lbop2::AND, move(match.constraints) }),
+		id_theta,
 	};
 }
 
@@ -261,50 +263,6 @@ optimize_EA(cmp_t direction,
 	return results;
 }
 
-[[noreturn]]
-static void usage(const char *program_name, int exit_code)
-{
-	FILE *f = exit_code ? stderr : stdout;
-	fprintf(f, "\
-usage: %s [-OPTS] [--] { DOMAIN EXPR OP CNST | H5-NN SPEC GEN IO-BOUNDS OP }\n\
-", program_name);
-	if (!exit_code)
-		fprintf(f,"\
-\n\
-Options [defaults]:\n\
-  -C COMPAT   use a compatibility layer, can be given multiple times; supported\n\
-              values for COMPAT:\n\
-              - python: reinterpret floating point constants as python would\n\
-                        print them\n\
-  -F IFORMAT  determines the format of the EXPR-FILE; can be one of: 'infix',\n\
-              'prefix' [infix]\n\
-  -h          displays this help message\n\
-  -n          dry run, do not solve the problem [no]\n\
-  -p          dump the expression in Polish notation to stdout [no]\n\
-  -s          dump the problem in SMT-LIB2 format to stdout [no]\n\
-  -t TIMEOUT  set the solver timeout in seconds, 0 to disable [0]\n\
-\n\
-The DOMAIN is a text file containing the bounds for all variables in the\n\
-form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either\n\
-an interval of the form '[a,b]' or a list of specific values '{a,b,c,d,...}'.\n\
-Empty lines are skipped.\n\
-\n\
-The EXPR file contains a polynomial expression in the variables specified by the\n\
-DOMAIN-FILE. The format is either an infix notation or the prefix notation also\n\
-known as Polish notation. The expected format can be specified through the -F\n\
-switch.\n\
-\n\
-The problem to be solved is specified by the two parameters OP CNST where OP is\n\
-one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell\n\
-to avoid unwanted redirections. CNST is a rational constant in the same format\n\
-as those in the EXPR-FILE (if any).\n\
-\n\
-Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
-License: Apache 2.0; part of SMLP.\n\
-");
-	exit(exit_code);
-}
-
 static void alarm_handler(int sig)
 {
 	if (z3::context *p = z3_solver::is_checking)
@@ -333,10 +291,10 @@ static str smt2_logic_str(const domain &dom, const sptr<expr2> &e)
 	bool reals = false;
 	bool ints = false;
 	for (const auto &[_,rng] : dom)
-		if (is_real(rng))
-			reals = true;
-		else
-			ints = true;
+		switch (rng.type) {
+		case component::INT: ints = true; break;
+		case component::REAL: reals = true; break;
+		}
 	str logic = "QF_";
 	if (ints || reals) {
 		logic += is_nonlinear(e) ? 'N' : 'L';
@@ -350,62 +308,50 @@ static str smt2_logic_str(const domain &dom, const sptr<expr2> &e)
 	return logic;
 }
 
-static void solve_nn_opt(const char *gen_path, const char *hdf5_path,
-                         const char *spec_path, const char *io_bounds,
-                         const char *out_bounds, bool clamp_inputs)
+[[noreturn]]
+static void usage(const char *program_name, int exit_code)
 {
-	using namespace iv::functions;
-	iv::nn::common::model_fun2 mf2(gen_path, hdf5_path, spec_path, io_bounds);
-
-	kjson::json io_bnds = iv::nn::common::json_parse(io_bounds);
-	vec<sptr<expr2>> in_vars;
-	vec<sptr<form2>> in_bnds;
-
-	domain dom;
-	for (size_t i=0; i<input_dim(mf2.spec); i++) {
-		kjson::json s = mf2.spec.spec[mf2.spec.dom2spec[i]];
-		str id = s["label"].template get<str>();
-
-		kjson::json bnds = io_bnds[id];
-		kay::Q lo = bnds["min"].template get<kay::Q>();
-		kay::Q hi = bnds["max"].template get<kay::Q>();
-		component c;
-		if (s.contains("safe")) {
-			vec<kay::Q> safe;
-			for (const kjson::json &v : s["safe"])
-				safe.emplace_back(v.template get<kay::Q>());
-			c = list { move(safe) };
-		} else if (s["range"] == "int") {
-			
-		} else {
-			assert(s["range"] == "float");
-			c = ival { move(lo), move(hi) };
-		}
-		dom.emplace_back(id, move(c));
-		in_vars.emplace_back(make2e(name { id }));
-		in_bnds.emplace_back(make2f(lbop2 { lbop2::AND, {
-			make2f(prop2 { GE, in_vars.back(), make2e(cnst2 { lo }) }),
-			make2f(prop2 { LE, in_vars.back(), make2e(cnst2 { hi }) }),
-		}}));
-	}
-	dump_smt2(stderr, dom);
-	dump_smt2(stderr, lbop2 { lbop2::AND, in_bnds });
-	size_t n = size(in_vars);
-
-	const opt_fun<pointwise<affine1<double, double>>> &in_scaler_opt = mf2.in_scaler;
-	assert(in_scaler_opt);
-	const pointwise<affine1<double,double>> &in_scaler_pt = *in_scaler_opt;
-
-	assert(n == size(in_scaler_pt.f));
-	vec<sptr<expr2>> in_scaled;
-	for (size_t i=0; i<n; i++) {
-		const affine1<double,double> &comp = in_scaler_pt.f[i];
-		in_scaled.emplace_back(make2e(bop2 { bop::ADD,
-			make2e(bop2 { bop::MUL, make2e(cnst2 { comp.a }), in_vars[i] }),
-			make2e(cnst2 { comp.b })
-		}));
-	}
-
+	FILE *f = exit_code ? stderr : stdout;
+	fprintf(f, "\
+usage: %s [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]\n\
+", program_name);
+	if (!exit_code)
+		fprintf(f,"\
+\n\
+Options [defaults]:\n\
+  -c           clamp inputs (only meaningful for NNs) [no]\n\
+  -C COMPAT    use a compatibility layer, can be given multiple times; supported\n\
+               values for COMPAT:\n\
+               - python: reinterpret floating point constants as python would\n\
+                         print them\n\
+  -F IFORMAT   determines the format of the EXPR-FILE; can be one of: 'infix',\n\
+               'prefix' [infix]\n\
+  -h           displays this help message\n\
+  -n           dry run, do not solve the problem [no]\n\
+  -O OUT-BNDS  scale output according to min-max output bounds (.csv) [none]\n\
+  -p           dump the expression in Polish notation to stdout [no]\n\
+  -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
+  -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
+\n\
+The DOMAIN is a text file containing the bounds for all variables in the\n\
+form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either\n\
+an interval of the form '[a,b]' or a list of specific values '{a,b,c,d,...}'.\n\
+Empty lines are skipped.\n\
+\n\
+The EXPR file contains a polynomial expression in the variables specified by the\n\
+DOMAIN-FILE. The format is either an infix notation or the prefix notation also\n\
+known as Polish notation. The expected format can be specified through the -F\n\
+switch.\n\
+\n\
+The problem to be solved is specified by the two parameters OP CNST where OP is\n\
+one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell\n\
+to avoid unwanted redirections. CNST is a rational constant in the same format\n\
+as those in the EXPR-FILE (if any).\n\
+\n\
+Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
+License: Apache 2.0; part of SMLP.\n\
+");
+	exit(exit_code);
 }
 
 int main(int argc, char **argv)
@@ -417,10 +363,13 @@ int main(int argc, char **argv)
 	bool infix         = true;
 	bool python_compat = false;
 	int  timeout       = 0;
+	bool clamp_inputs  = false;
+	const char *out_bounds = nullptr;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":C:F:hnpst:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":cC:F:hnO:pst:")) != -1;)
 		switch (opt) {
+		case 'c': clamp_inputs = true; break;
 		case 'C':
 			if (optarg == "python"sv)
 				python_compat = true;
@@ -440,51 +389,71 @@ int main(int argc, char **argv)
 		case 'h': usage(argv[0], 0);
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
+		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 't': timeout = atoi(optarg); break;
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
 		              optopt);
 		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
 		}
-	if (argc - optind == 4) {
+
+	pre_problem pp;
+
+	if (argc - optind >= 5) {
+		/* Solve NN problem */
+		const char *hdf5_path = argv[optind];
+		const char *spec_path = argv[optind+1];
+		const char *gen_path = argv[optind+2];
+		const char *io_bounds = argv[optind+3];
+		pp = parse_nn(gen_path, hdf5_path, spec_path, io_bounds,
+		              out_bounds, clamp_inputs);
+		optind += 4;
+	} else if (argc - optind >= 3) {
 		/* Solve polynomial problem */
-		auto [dom,lhs,pc] = parse_poly_problem(argv[optind], argv[optind+1],
-		                                       python_compat, dump_pe, infix);
+		pp = parse_poly_problem(argv[optind], argv[optind+1],
+		                        python_compat, dump_pe, infix);
+		optind += 2;
+	} else
+		usage(argv[0], 1);
 
-		/* hint for the solver: non-linear real arithmetic, potentially also
-		 * with integers */
-		str logic = smt2_logic_str(dom, lhs);
+	auto &[dom,lhs,eeta,pc,theta] = pp;
 
-		/* Check that the constraints from partial function evaluation are met
-		 * on the domain. */
-		z3_solver ood(dom, logic.c_str());
-		ood.add(lneg2 { pc });
-		ood.check().match(
-		[](const sat &s) {
-			fprintf(stderr, "error: DOMAIN constraints do not imply that "
-			                "all function parameters are inside the "
-			                "respective function's domain, e.g.:\n");
-			print_model(stderr, s.model, 2);
-			DIE(4, "");
-		},
-		[](const auto &) {}
-		);
+	/* hint for the solver: non-linear real arithmetic, potentially also
+	 * with integers */
+	str logic = smt2_logic_str(dom, lhs);
 
-		/* find out about the OP comparison operation */
-		size_t c;
-		for (c=0; c<ARRAY_SIZE(cmp_s); c++)
-			if (std::string_view(cmp_s[c]) == argv[optind+2])
-				break;
-		if (c == ARRAY_SIZE(cmp_s))
-			DIE(1,"OP '%s' unknown\n",argv[optind+2]);
+	/* Check that the constraints from partial function evaluation are met
+	 * on the domain. */
+	z3_solver ood(dom, logic.c_str());
+	ood.add(lneg2 { pc });
+	ood.check().match(
+	[](const sat &s) {
+		fprintf(stderr, "error: DOMAIN constraints do not imply that "
+		                "all function parameters are inside the "
+		                "respective function's domain, e.g.:\n");
+		print_model(stderr, s.model, 2);
+		DIE(4, "");
+	},
+	[](const auto &) {}
+	);
 
+	/* find out about the OP comparison operation */
+	size_t c;
+	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
+		if (std::string_view(cmp_s[c]) == argv[optind])
+			break;
+	if (c == ARRAY_SIZE(cmp_s))
+		DIE(1,"OP '%s' unknown\n",argv[optind]);
+	optind++;
+
+	if (argc - optind >= 1) {
 		/* interpret the CNST on the right hand side */
-		sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, {});
+		sptr<expr2> rhs = unroll(cnst { argv[optind] }, {});
 
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {
 			move(dom),
-			prop2 { (cmp_t)c, lhs, rhs, },
+			lbop2 { lbop2::AND, { eeta, make2f(prop2 { (cmp_t)c, lhs, rhs, }) } },
 		};
 
 		/* optionally dump the smt2 representation of the problem */
@@ -516,18 +485,22 @@ int main(int argc, char **argv)
 				fprintf(stderr, "unknown: %s\n", u.reason.c_str());
 			}
 			);
-	} else if (argc - optind == 5) {
-		/* Solve NN optimization problem */
-		const char *hdf5_path = argv[optind];
-		const char *spec_path = argv[optind+1];
-		const char *gen_path = argv[optind+2];
-		const char *io_bounds = argv[optind+3];
-		const char *opstr = argv[optind+4];
-		bool clamp_inputs = true;
-		/* for mf2.objective_scaler(), see also with() in nn-common.hh */
-		const char *out_bounds = nullptr;
-		solve_nn_opt(gen_path, hdf5_path, spec_path, io_bounds,
-		             out_bounds, clamp_inputs);
-	} else
-		usage(argv[0], 1);
+	} else {
+		ival obj_range(0,10);
+		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs, eeta, true2,
+		                                 obj_range, kay::Q(0.05), theta,
+		                                 logic.c_str());
+		fprintf(stderr, "%s of objective in theta in [%s, %s] ~ [%f,%f]\n",
+		        is_less((cmp_t)c) ? "min max" : "max min",
+		        obj_range.lo.get_str().c_str(),
+		        obj_range.hi.get_str().c_str(),
+		        obj_range.lo.get_d(), obj_range.hi.get_d());
+		for (const auto &s : r) {
+			kay::Q c = s.center_value(lhs);
+			fprintf(stderr, "T: %s ~ %f -> center: %s ~ %f\n",
+			        s.threshold.get_str().c_str(),
+			        s.threshold.get_d(),
+			        c.get_str().c_str(), c.get_d());
+		}
+	}
 }

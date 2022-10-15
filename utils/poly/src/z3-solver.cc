@@ -17,8 +17,12 @@ z3_solver::z3_solver(const domain &d, const char *logic)
 		slv.set("logic", logic);
 	for (const auto &[var,rng] : d) {
 		const char *s = var.c_str();
-		symbols.emplace(var, is_real(rng) ? ctx.real_const(s)
-		                                  : ctx.int_const(s));
+		z3::expr e(ctx);
+		switch (rng.type) {
+		case component::INT: e = ctx.int_const(s); break;
+		case component::REAL: e = ctx.real_const(s); break;
+		}
+		symbols.emplace(var, move(e));
 		add(domain_constraint(var, rng));
 	}
 }

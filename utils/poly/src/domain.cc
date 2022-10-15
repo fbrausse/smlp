@@ -77,13 +77,14 @@ struct simple_domain_parser {
 			switch (*delim) {
 			case ']':
 				assert(nums.size() == 2);
-				range = ival { move(nums[0]), move(nums[1]) };
+				range.range = ival { move(nums[0]), move(nums[1]) };
 				break;
 			case '}':
 				assert(!nums.empty());
-				range = list { move(nums) };
+				range.range = list { move(nums) };
 				break;
 			}
+			range.type = is_real(range.range) ? component::REAL : component::INT;
 			d.emplace_back(move(name), move(range));
 		}
 		return d;
@@ -97,9 +98,10 @@ domain smlp::parse_simple_domain(FILE *f)
 	return simple_domain_parser(f).get();
 }
 
-form2 smlp::domain_constraint(const str &var, const component &rng)
+form2 smlp::domain_constraint(const str &var, const component &c)
 {
-	return rng.match<form2>(
+	return c.range.match<form2>(
+	[](const entire &) { return *true2; },
 	[&](const list &lst) {
 		vec<sptr<form2>> args;
 		args.reserve(lst.values.size());
