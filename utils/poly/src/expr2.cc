@@ -283,7 +283,9 @@ sptr<expr2> smlp::cnst_fold(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &r
 static bool is_nonlinear(const sptr<form2> &f)
 {
 	return f->match(
-	[](const prop2 &p) { return is_nonlinear(p.left) || is_nonlinear(p.right); },
+	[](const prop2 &p) {
+		return is_nonlinear(p.left) || is_nonlinear(p.right);
+	},
 	[](const lbop2 &b) {
 		for (const sptr<form2> &f : b.args)
 			if (is_nonlinear(f))

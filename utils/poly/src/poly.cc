@@ -13,6 +13,9 @@
 #include "dump-smt2.hh"
 #include "z3-solver.hh"
 
+#define SAFE_UNROLL_MAX 0
+#include <nn-common.hh>
+
 using namespace smlp;
 
 namespace {
@@ -29,6 +32,33 @@ struct problem {
 
 	domain dom;
 	form2 p;
+};
+
+/* max T, s.t.
+ * E x. eta x /\
+ * A y. eta y -> theta x y -> alpha y -> beta y /\ obj y >= T
+ */
+struct maxprob {
+
+	domain dom;
+	expr2  obj;
+	sptr<form2> theta;
+	sptr<form2> alpha = true2;
+	sptr<form2> beta  = true2;
+};
+
+struct maxprob_solver {
+
+	vec<kay::Q> Ts; /* ordered list of thresholds to test */
+	
+};
+
+struct pareto {
+
+	domain dom;
+	vec<expr2> objs;
+	sptr<form2> alpha = true2;
+	sptr<form2> beta  = true2;
 };
 
 struct file {
@@ -147,11 +177,6 @@ struct smlp_result {
 	kay::Q threshold;
 	hmap<str,sptr<expr2>> point;
 
-	smlp_result(kay::Q threshold, hmap<str,sptr<expr2>> point)
-	: threshold(move(threshold))
-	, point(move(point))
-	{}
-
 	kay::Q center_value(const sptr<expr2> &obj) const
 	{
 		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
@@ -241,7 +266,7 @@ static void usage(const char *program_name, int exit_code)
 {
 	FILE *f = exit_code ? stderr : stdout;
 	fprintf(f, "\
-usage: %s [-OPTS] [--] DOMAIN EXPR OP CNST\n\
+usage: %s [-OPTS] [--] { DOMAIN EXPR OP CNST | H5-NN SPEC GEN IO-BOUNDS OP }\n\
 ", program_name);
 	if (!exit_code)
 		fprintf(f,"\
@@ -303,7 +328,7 @@ static void print_model(FILE *f, const hmap<str,sptr<expr2>> &model, int indent)
 		        to_string(c->get<cnst2>()->value).c_str());
 }
 
-static str logic_of(const domain &dom, const sptr<expr2> &e)
+static str smt2_logic_str(const domain &dom, const sptr<expr2> &e)
 {
 	bool reals = false;
 	bool ints = false;
@@ -313,13 +338,74 @@ static str logic_of(const domain &dom, const sptr<expr2> &e)
 		else
 			ints = true;
 	str logic = "QF_";
-	logic += is_nonlinear(e) ? 'N' : 'L';
-	if (ints)
-		logic += 'I';
-	if (reals)
-		logic += 'R';
-	logic += 'A';
+	if (ints || reals) {
+		logic += is_nonlinear(e) ? 'N' : 'L';
+		if (ints)
+			logic += 'I';
+		if (reals)
+			logic += 'R';
+		logic += 'A';
+	} else
+		logic += "UF";
 	return logic;
+}
+
+static void solve_nn_opt(const char *gen_path, const char *hdf5_path,
+                         const char *spec_path, const char *io_bounds,
+                         const char *out_bounds, bool clamp_inputs)
+{
+	using namespace iv::functions;
+	iv::nn::common::model_fun2 mf2(gen_path, hdf5_path, spec_path, io_bounds);
+
+	kjson::json io_bnds = iv::nn::common::json_parse(io_bounds);
+	vec<sptr<expr2>> in_vars;
+	vec<sptr<form2>> in_bnds;
+
+	domain dom;
+	for (size_t i=0; i<input_dim(mf2.spec); i++) {
+		kjson::json s = mf2.spec.spec[mf2.spec.dom2spec[i]];
+		str id = s["label"].template get<str>();
+
+		kjson::json bnds = io_bnds[id];
+		kay::Q lo = bnds["min"].template get<kay::Q>();
+		kay::Q hi = bnds["max"].template get<kay::Q>();
+		component c;
+		if (s.contains("safe")) {
+			vec<kay::Q> safe;
+			for (const kjson::json &v : s["safe"])
+				safe.emplace_back(v.template get<kay::Q>());
+			c = list { move(safe) };
+		} else if (s["range"] == "int") {
+			
+		} else {
+			assert(s["range"] == "float");
+			c = ival { move(lo), move(hi) };
+		}
+		dom.emplace_back(id, move(c));
+		in_vars.emplace_back(make2e(name { id }));
+		in_bnds.emplace_back(make2f(lbop2 { lbop2::AND, {
+			make2f(prop2 { GE, in_vars.back(), make2e(cnst2 { lo }) }),
+			make2f(prop2 { LE, in_vars.back(), make2e(cnst2 { hi }) }),
+		}}));
+	}
+	dump_smt2(stderr, dom);
+	dump_smt2(stderr, lbop2 { lbop2::AND, in_bnds });
+	size_t n = size(in_vars);
+
+	const opt_fun<pointwise<affine1<double, double>>> &in_scaler_opt = mf2.in_scaler;
+	assert(in_scaler_opt);
+	const pointwise<affine1<double,double>> &in_scaler_pt = *in_scaler_opt;
+
+	assert(n == size(in_scaler_pt.f));
+	vec<sptr<expr2>> in_scaled;
+	for (size_t i=0; i<n; i++) {
+		const affine1<double,double> &comp = in_scaler_pt.f[i];
+		in_scaled.emplace_back(make2e(bop2 { bop::ADD,
+			make2e(bop2 { bop::MUL, make2e(cnst2 { comp.a }), in_vars[i] }),
+			make2e(cnst2 { comp.b })
+		}));
+	}
+
 }
 
 int main(int argc, char **argv)
@@ -360,75 +446,88 @@ int main(int argc, char **argv)
 		              optopt);
 		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
 		}
-	if (argc - optind != 4)
-		usage(argv[0], 1);
+	if (argc - optind == 4) {
+		/* Solve polynomial problem */
+		auto [dom,lhs,pc] = parse_poly_problem(argv[optind], argv[optind+1],
+		                                       python_compat, dump_pe, infix);
 
-	auto [dom,lhs,pc] = parse_poly_problem(argv[optind], argv[optind+1],
-	                                       python_compat, dump_pe, infix);
+		/* hint for the solver: non-linear real arithmetic, potentially also
+		 * with integers */
+		str logic = smt2_logic_str(dom, lhs);
 
-	/* hint for the solver: non-linear real arithmetic, potentially also
-	 * with integers */
-	str logic = logic_of(dom, lhs);
-
-	/* Check that the constraints from partial function evaluation are met
-	 * on the domain. */
-	z3_solver ood(dom, logic.c_str());
-	ood.add(lneg2 { pc });
-	ood.check().match(
-	[](const sat &s) {
-		fprintf(stderr, "error: DOMAIN constraints do not imply that "
-		                "all function parameters are inside the "
-		                "respective function's domain, e.g.:\n");
-		print_model(stderr, s.model, 2);
-		DIE(4, "");
-	},
-	[](const auto &) {}
-	);
-
-	/* find out about the OP comparison operation */
-	size_t c;
-	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
-		if (std::string_view(cmp_s[c]) == argv[optind+2])
-			break;
-	if (c == ARRAY_SIZE(cmp_s))
-		DIE(1,"OP '%s' unknown\n",argv[optind+2]);
-
-	/* interpret the CNST on the right hand side */
-	sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, {});
-
-	/* the problem consists of domain and the (EXPR OP CNST) constraint */
-	problem p = {
-		move(dom),
-		prop2 { (cmp_t)c, lhs, rhs, },
-	};
-
-	/* optionally dump the smt2 representation of the problem */
-	if (dump_smt2)
-		::dump_smt2(stdout, logic.c_str(), p);
-
-	if (timeout > 0) {
-		signal(SIGALRM, alarm_handler);
-		alarm(timeout);
-	}
-
-	signal(SIGINT, sigint_handler);
-
-	/* optionally solve the problem */
-	if (solve)
-		solve_exists(p.dom, p.p, logic.c_str()).match(
-		[&,lhs=lhs](const sat &s) {
-			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
-			fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
-			        q.get_str().c_str(), q.get_d());
+		/* Check that the constraints from partial function evaluation are met
+		 * on the domain. */
+		z3_solver ood(dom, logic.c_str());
+		ood.add(lneg2 { pc });
+		ood.check().match(
+		[](const sat &s) {
+			fprintf(stderr, "error: DOMAIN constraints do not imply that "
+			                "all function parameters are inside the "
+			                "respective function's domain, e.g.:\n");
 			print_model(stderr, s.model, 2);
-			for (const auto &[n,c] : s.model) {
-				kay::Q q = to_Q(c->get<cnst2>()->value);
-				assert(p.dom[n]->contains(q));
-			}
+			DIE(4, "");
 		},
-		[](const unsat &) { fprintf(stderr, "unsat\n"); },
-		[](const unknown &u) {
-			fprintf(stderr, "unknown: %s\n", u.reason.c_str());
-		}
+		[](const auto &) {}
 		);
+
+		/* find out about the OP comparison operation */
+		size_t c;
+		for (c=0; c<ARRAY_SIZE(cmp_s); c++)
+			if (std::string_view(cmp_s[c]) == argv[optind+2])
+				break;
+		if (c == ARRAY_SIZE(cmp_s))
+			DIE(1,"OP '%s' unknown\n",argv[optind+2]);
+
+		/* interpret the CNST on the right hand side */
+		sptr<expr2> rhs = unroll(cnst { argv[optind+3] }, {});
+
+		/* the problem consists of domain and the (EXPR OP CNST) constraint */
+		problem p = {
+			move(dom),
+			prop2 { (cmp_t)c, lhs, rhs, },
+		};
+
+		/* optionally dump the smt2 representation of the problem */
+		if (dump_smt2)
+			::dump_smt2(stdout, logic.c_str(), p);
+
+		if (timeout > 0) {
+			signal(SIGALRM, alarm_handler);
+			alarm(timeout);
+		}
+
+		signal(SIGINT, sigint_handler);
+
+		/* optionally solve the problem */
+		if (solve)
+			solve_exists(p.dom, p.p, logic.c_str()).match(
+			[&,lhs=lhs](const sat &s) {
+				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
+				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
+				        q.get_str().c_str(), q.get_d());
+				print_model(stderr, s.model, 2);
+				for (const auto &[n,c] : s.model) {
+					kay::Q q = to_Q(c->get<cnst2>()->value);
+					assert(p.dom[n]->contains(q));
+				}
+			},
+			[](const unsat &) { fprintf(stderr, "unsat\n"); },
+			[](const unknown &u) {
+				fprintf(stderr, "unknown: %s\n", u.reason.c_str());
+			}
+			);
+	} else if (argc - optind == 5) {
+		/* Solve NN optimization problem */
+		const char *hdf5_path = argv[optind];
+		const char *spec_path = argv[optind+1];
+		const char *gen_path = argv[optind+2];
+		const char *io_bounds = argv[optind+3];
+		const char *opstr = argv[optind+4];
+		bool clamp_inputs = true;
+		/* for mf2.objective_scaler(), see also with() in nn-common.hh */
+		const char *out_bounds = nullptr;
+		solve_nn_opt(gen_path, hdf5_path, spec_path, io_bounds,
+		             out_bounds, clamp_inputs);
+	} else
+		usage(argv[0], 1);
 }

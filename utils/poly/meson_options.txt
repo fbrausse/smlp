@@ -5,3 +5,12 @@ option('flint', type: 'feature', description:
 	'use the flint library for Z and Q')
 option('flint-prefix', type: 'string', description:
 	'prefix of the install path containing the flint library')
+
+option('hdf5-prefix', type: 'string', description:
+	'prefix of the install path containing the hdf5 library and its C++ headers')
+
+option('kjson-prefix', type: 'string', description:
+	'prefix of the install path containing the kjson library')
+
+option('iv-prefix', type: 'string', description:
+	'prefix of the install path containing the iv library')

@@ -1,10 +1,10 @@
 
-z3_dep = dependency('z3')
-gmp_dep = dependency('gmp')
-
 cxx = meson.get_compiler('cpp')
 
-poly_deps = [z3_dep, gmp_dep]
+poly_deps = []
+foreach name : ['z3', 'gmp']
+  poly_deps += dependency(name)
+endforeach
 
 flint_dirs = []
 flint_hdrs = []
@@ -28,18 +28,64 @@ else
 endif
 
 add_project_arguments(extra_defs, language: 'cpp')
-add_project_arguments('-Wno-format-zero-length', language: 'cpp')
+add_project_arguments(['-ffp-contract=off', '-Wno-format-zero-length'], language: 'cpp')
 
-kay_inc = []
-if get_option('kay-prefix') != ''
-  kay_inc += get_option('kay-prefix') / 'include'
-endif
-kay_inc = include_directories(kay_inc)
-if cxx.check_header('kay/numbers.hh', include_directories: kay_inc, required: true)
-  kay_dep = declare_dependency(include_directories: kay_inc)
-endif
+# manually found libraries
+# ------------------------
+foreach name, desc : {
+  'hdf5': {
+    'libs_hdrs': {
+      'hdf5': ['hdf5.h'],
+    # 'hdf5_hl': ['hdf5_hl.h'],
+      'hdf5_cpp': ['H5Cpp.h'],
+    # 'hdf5_hl_cpp' : [],
+    },
+  },
+  'kay': {
+    'libs_hdrs': { '': ['kay' / 'numbers.hh'] },
+    'extra': { 'required': true }
+  },
+  'kjson': {
+    'libs_hdrs': { 'kjson': ['kjson.hh'], },
+  },
+  'iv': {
+    'libs_hdrs': { 'iv': [] },
+  }
+}
+  dirs = []
+  hdrs = []
+  prefix = get_option(name + '-prefix')
+  if prefix != ''
+    dirs += prefix / 'lib'
+    hdrs += prefix / 'include'
+  endif
+  idirs = include_directories(hdrs)
+  foreach lib, hs : desc['libs_hdrs']
+    if lib == ''
+      foreach h : hs
+        cxx.check_header(h,
+          include_directories : idirs,
+          kwargs: desc.get('extra', {}))
+      endforeach
+      poly_deps += declare_dependency(include_directories: idirs)
+    else
+      poly_deps += cxx.find_library(lib,
+        dirs: dirs,
+        has_headers: hs,
+        header_include_directories: idirs,
+        kwargs: desc.get('extra', {}))
+    endif
+  endforeach
+endforeach
 
-poly_deps += kay_dep
+if get_option('iv-prefix') != ''
+  poly_deps += declare_dependency(
+    include_directories: [
+      get_option('iv-prefix') / 'include',
+      get_option('iv-prefix') / 'src',
+    ]
+  )
+endif
 
 hdrs = [
 	'common.hh',
@@ -67,6 +113,5 @@ srcs = [
 executable('poly', srcs,
            dependencies: poly_deps,
            override_options: 'cpp_std=c++20',
-           include_directories: flint_hdrs,
            install: true
           )

@@ -16,6 +16,7 @@
 #include <memory>
 #include <variant>
 #include <functional>
+#include <unordered_set>
 #include <unordered_map>
 #include <optional>
 
