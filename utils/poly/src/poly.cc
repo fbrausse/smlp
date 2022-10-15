@@ -330,6 +330,7 @@ Options [defaults]:\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv) [none]\n\
   -p           dump the expression in Polish notation to stdout [no]\n\
+  -P PREC      maximum precision to obtain the optimization result for [0.05]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
 \n\
@@ -365,9 +366,10 @@ int main(int argc, char **argv)
 	int  timeout       = 0;
 	bool clamp_inputs  = false;
 	const char *out_bounds = nullptr;
+	str max_prec = "0.05";
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":cC:F:hnO:pst:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":cC:F:hnO:pP:st:")) != -1;)
 		switch (opt) {
 		case 'c': clamp_inputs = true; break;
 		case 'C':
@@ -389,6 +391,7 @@ int main(int argc, char **argv)
 		case 'h': usage(argv[0], 0);
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
+		case 'P': max_prec = optarg; break;
 		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 't': timeout = atoi(optarg); break;
@@ -416,7 +419,7 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
-	auto &[dom,lhs,eeta,pc,theta] = pp;
+	const auto &[dom,lhs,eeta,pc,theta] = pp;
 
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
@@ -486,21 +489,35 @@ int main(int argc, char **argv)
 			}
 			);
 	} else {
-		ival obj_range(0,10);
+		ival obj_range(-10,10);
 		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs, eeta, true2,
-		                                 obj_range, kay::Q(0.05), theta,
-		                                 logic.c_str());
-		fprintf(stderr, "%s of objective in theta in [%s, %s] ~ [%f,%f]\n",
-		        is_less((cmp_t)c) ? "min max" : "max min",
-		        obj_range.lo.get_str().c_str(),
-		        obj_range.hi.get_str().c_str(),
-		        obj_range.lo.get_d(), obj_range.hi.get_d());
-		for (const auto &s : r) {
-			kay::Q c = s.center_value(lhs);
-			fprintf(stderr, "T: %s ~ %f -> center: %s ~ %f\n",
-			        s.threshold.get_str().c_str(),
-			        s.threshold.get_d(),
-			        c.get_str().c_str(), c.get_d());
+		                                 obj_range,
+		                                 kay::Q_from_str(max_prec.data()),
+		                                 theta, logic.c_str());
+		if (empty(r)) {
+			fprintf(stderr,
+			        "no solution for objective in theta in "
+			        "[%s, %s] ~ [%f, %f]\n",
+			        obj_range.lo.get_str().c_str(),
+			        obj_range.hi.get_str().c_str(),
+			        obj_range.lo.get_d(), obj_range.hi.get_d());
+		} else {
+			fprintf(stderr,
+			        "%s of objective in theta in "
+			        "[%s, %s] ~ [%f, %f] around:\n",
+			        is_less((cmp_t)c) ? "min max" : "max min",
+			        obj_range.lo.get_str().c_str(),
+			        obj_range.hi.get_str().c_str(),
+			        obj_range.lo.get_d(), obj_range.hi.get_d());
+			print_model(stderr, r.back().point, 2);
+			for (const auto &s : r) {
+				kay::Q c = s.center_value(lhs);
+				fprintf(stderr,
+				        "T: %s ~ %f -> center: %s ~ %f\n",
+				        s.threshold.get_str().c_str(),
+				        s.threshold.get_d(),
+				        c.get_str().c_str(), c.get_d());
+			}
 		}
 	}
 }
