@@ -51,6 +51,11 @@ def parse_args(argv):
 	                    'found regions')
 	p.add_argument('-D', '--delta', type=str,
 	               help='exclude (1+DELTA)*radius region for non-grid components')
+	# E x . eta(x,f(x)) /\ A y . ((alpha(y,f(y)) /\ theta(x,y)) -> (beta(y,f(y)) /\ phi(y,f(y))))
+	p.add_argument('--alpha', type=str,
+	               help='constraints on the region (premise of counter-examples)')
+	p.add_argument('--beta', type=str,
+	               help='constraints on the output (conclusion of counter-examples)')
 	p.add_argument('-g', '--model-gen', type=str, required=True,
 	               help='the model_gen*.json file containing the training / '+
 	                    'preprocessing parameters')
@@ -537,7 +542,8 @@ class MockModel(dict):
 class Instance:
 	def __init__(self, spec_path, model, gen, data_bounds, use_input_bounds,
 	             input_bounds, resp_bounds, T_resp_bounds, data_path=None,
-	             bo_cex = None, more_constraints : str = None):
+	             bo_cex = None, more_constraints : str = None,
+	             alpha : str = None, beta : str = None):
 
 		with open(spec_path, 'r') as f:
 			all_spec = json.load(f, parse_float=Fraction)
@@ -557,6 +563,8 @@ class Instance:
 		self.T_resp_bounds = T_resp_bounds
 		self.resp_bounds = resp_bounds
 		self.more_constraints = more_constraints
+		self.alpha = alpha
+		self.beta = beta
 
 		self.counter_ex_finders = []
 		if data_path is not None:
@@ -735,23 +743,37 @@ class Instance:
 			           self.input_bounds if self.use_input_bounds else {},
 			           which)(solver)
 
+		unnorm_resp = {r: s.denorm(t) for r, t, s in
+		               zip(self.gen['response'], nn_terms,
+		                   response_scalers(self.gen, self.data_bounds))}
+		if log(2, 'unnorm_resp:'):
+			for k,v in unnorm_resp.items():
+				log(2, '  %s =' % k, v.sexpr())
+		namespace = unnorm_resp
+		namespace.update({e['label']: v for e,v in zip(self.spec, in_vars)})
+		namespace['And'] = z3.And
+		namespace['Or'] = z3.Or
+
 		constraints = None
 		if self.more_constraints is not None:
-			unnorm_resp = {r: s.denorm(t) for r, t, s in
-			               zip(self.gen['response'], nn_terms,
-			                   response_scalers(self.gen, self.data_bounds))}
-			if log(2, 'unnorm_resp:'):
-				for k,v in unnorm_resp.items():
-					log(2, '  %s =' % k, v.sexpr())
-			namespace = unnorm_resp
-			namespace.update({e['label']: v for e,v in zip(self.spec, in_vars)})
-			namespace['And'] = z3.And
-			namespace['Or'] = z3.Or
 			constraints = eval(compile(self.more_constraints, '<string>', 'eval'),
 				{}, # globals
 				namespace # locals
 			)
 			log(2, 'constraints:', constraints.sexpr())
+
+		if self.alpha is not None:
+			alpha = eval(compile(self.alpha, '<string>', 'eval'), {}, namespace)
+			log(2, 'alpha:', alpha.sexpr())
+			solver.add(alpha)
+
+		if self.beta is not None:
+			beta = eval(compile(self.beta, '<string>', 'eval'), {}, namespace)
+			log(2, 'beta:', beta.sexpr())
+			if constraints is None:
+				constraints = beta
+			else:
+				constraints = z3.And(constraints, beta)
 
 		return solver, obj_term, in_vars, constraints
 
@@ -1341,7 +1363,8 @@ def main(argv):
 
 	inst = Instance(args.spec, load_model(args.nn_model), model_gen, data_bounds,
 	                args.bounds is not None, bounds, resp_bounds, T_resp_bounds,
-	                args.data, args.bo_cex, args.more_constraints)
+	                args.data, args.bo_cex, args.more_constraints, args.alpha,
+	                args.beta)
 
 	excluded = {} # dict from catv -> [[x1,x2,...,xn], ...]
 	if args.trace_exclude is not None and os.path.exists(args.trace_exclude):

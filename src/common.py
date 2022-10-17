@@ -122,7 +122,7 @@ def scaler_from_bounds(spec, bnds):
 
 def io_scalers(spec, gen, bnds):
 	si = scaler_from_bounds([s for s in spec
-	                         if s['type'] in ('categorical', 'knob')],
+	                         if s['type'] in ('categorical', 'knob', 'input')],
 	                        bnds)
 	so = scaler_from_bounds([s for s in spec
 	                         if s['type'] == 'response'
