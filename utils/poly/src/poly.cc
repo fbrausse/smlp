@@ -161,7 +161,8 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 
 	return pre_problem {
 		move(d),
-		{ pair { "_", move(e2) } },
+		move(e2),
+		{},
 		true2,
 		make2f(lbop2 { lbop2::AND, move(match.constraints) }),
 		id_theta,
@@ -394,6 +395,7 @@ License: Apache 2.0; part of SMLP.\n\
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
+	bool        single_obj    = false;
 	bool        solve         = true;
 	bool        dump_pe       = false;
 	bool        dump_smt2     = false;
@@ -407,8 +409,9 @@ int main(int argc, char **argv)
 	const char *beta_s        = nullptr;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":a:b:cC:F:hnO:pP:st:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:F:hnO:pP:st:")) != -1;)
 		switch (opt) {
+		case '1': single_obj = true; break;
 		case 'a': alpha_s = optarg; break;
 		case 'b': beta_s = optarg; break;
 		case 'c': clamp_inputs = true; break;
@@ -449,7 +452,7 @@ int main(int argc, char **argv)
 		const char *gen_path = argv[optind+2];
 		const char *io_bounds = argv[optind+3];
 		pp = parse_nn(gen_path, hdf5_path, spec_path, io_bounds,
-		              out_bounds, clamp_inputs, true);
+		              out_bounds, clamp_inputs, single_obj);
 		optind += 4;
 	} else if (argc - optind >= 3) {
 		/* Solve polynomial problem */
@@ -459,13 +462,18 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
-	auto &[dom,lhs,alpha,pc,theta] = pp;
+	auto &[dom,lhs,funs,alpha,pc,theta] = pp;
 
-	assert(size(lhs) == 1); /* larger not implement, yet */
+	fprintf(stderr, "defined outputs:");
+	for (const auto &[k,e] : funs) {
+		fprintf(stderr, "- '%s': ", k.c_str());
+		smlp::dump_smt2(stderr, *e);
+		fprintf(stderr, "\n");
+	}
 
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
-	str logic = smt2_logic_str(dom, lhs.begin()->second);
+	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
@@ -502,19 +510,24 @@ int main(int argc, char **argv)
 		fprintf(stderr, "\n");
 		alpha = make2f(lbop2 { lbop2::AND, { alpha, move(*a.get<sptr<form2>>()) } });
 	}
+	alpha = subst(alpha, funs);
+	fprintf(stderr, "alpha: ");
+	smlp::dump_smt2(stderr, *alpha);
+	fprintf(stderr, "\n");
 
 	sptr<form2> beta = true2;
 	if (beta_s) {
 		fprintf(stderr, "---------- extra beta:\n");
-		expr e = parse_infix(alpha_s, false);
+		expr e = parse_infix(beta_s, false);
 		::dump_pe(stderr, e);
 		fprintf(stderr, "---------- extra beta done\n");
 		term2s b = unroll(e, { {"And", And}, {"Or", Or} });
 		fprintf(stderr, "extra beta: ");
 		b.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
 		fprintf(stderr, "\n");
-		beta = make2f(lbop2 { lbop2::AND, { alpha, move(*b.get<sptr<form2>>()) } });
+		beta = make2f(lbop2 { lbop2::AND, { beta, move(*b.get<sptr<form2>>()) } });
 	}
+	beta = subst(beta, funs);
 
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
@@ -528,7 +541,7 @@ int main(int argc, char **argv)
 			move(dom),
 			lbop2 { lbop2::AND, {
 				alpha,
-				make2f(prop2 { (cmp_t)c, lhs.begin()->second, rhs, }) }
+				make2f(prop2 { (cmp_t)c, lhs, rhs, }) }
 			},
 		};
 
@@ -546,7 +559,7 @@ int main(int argc, char **argv)
 		/* optionally solve the problem */
 		if (solve)
 			solve_exists(p.dom, p.p, logic.c_str()).match(
-			[&,lhs=lhs.begin()->second](const sat &s) {
+			[&,lhs=lhs](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
 				        q.get_str().c_str(), q.get_d());
@@ -563,7 +576,7 @@ int main(int argc, char **argv)
 			);
 	} else {
 		ival obj_range(0,30);
-		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs.begin()->second,
+		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs,
 		                         alpha, beta, obj_range,
 		                         kay::Q_from_str(max_prec.data()),
 		                         theta, logic.c_str());
@@ -586,7 +599,7 @@ int main(int argc, char **argv)
 			        obj_range.lo.get_d(), obj_range.hi.get_d());
 			print_model(stderr, r.back().point, 2);
 			for (const auto &s : r) {
-				kay::Q c = s.center_value(lhs.begin()->second);
+				kay::Q c = s.center_value(lhs);
 				fprintf(stderr,
 				        "T: %s ~ %f -> center: %s ~ %f\n",
 				        s.threshold.get_str().c_str(),
@@ -595,7 +608,7 @@ int main(int argc, char **argv)
 				hmap<str,sptr<expr2>> repl = s.point;
 				for (int i=1; i<=4; i++) {
 					repl["stackup"]->get<cnst2>()->value = kay::Z(i);
-					kay::Q v = to_Q(cnst_fold(lhs.begin()->second, repl)->get<cnst2>()->value);
+					kay::Q v = to_Q(cnst_fold(lhs, repl)->get<cnst2>()->value);
 					fprintf(stderr, "  stackup=%d: %s ~ %f\n", i, v.get_str().c_str(), v.get_d());
 				}
 			}

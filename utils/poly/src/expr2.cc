@@ -123,13 +123,9 @@ sptr<form2> smlp::subst(const sptr<form2> &f, const hmap<str,sptr<expr2>> &repl)
 	},
 	[&](const lbop2 &b){
 		vec<sptr<form2>> a = b.args;
-		bool changed = false;
-		for (sptr<form2> &o : a) {
-			sptr<form2> q = subst(o, repl);
-			changed |= o == q;
-			o = move(q);
-		}
-		return !changed ? f : make2f(lbop2 { b.op, move(a) });
+		for (sptr<form2> &o : a)
+			o = subst(o, repl);
+		return a == b.args ? f : make2f(lbop2 { b.op, move(a) });
 	},
 	[&](const lneg2 &n){
 		sptr<form2> m = subst(n.arg, repl);
