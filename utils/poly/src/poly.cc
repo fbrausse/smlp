@@ -159,7 +159,7 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 
 	return pre_problem {
 		move(d),
-		move(e2),
+		{ pair { "_", move(e2) } },
 		true2,
 		make2f(lbop2 { lbop2::AND, move(match.constraints) }),
 		id_theta,
@@ -185,7 +185,7 @@ struct smlp_result {
 	}
 };
 
-static vec<smlp_result>
+static pair<vec<smlp_result>,opt<kay::Q>>
 optimize_EA(cmp_t direction,
             const domain &dom,
             const sptr<expr2> &objective,
@@ -207,7 +207,17 @@ optimize_EA(cmp_t direction,
 	 * from 'dom'.
 	 */
 
+	fprintf(stderr, "dom: ");
+	dump_smt2(stderr, dom);
+	fprintf(stderr, "alpha: ");
+	dump_smt2(stderr, *alpha);
+	fprintf(stderr, "\nbeta: ");
+	dump_smt2(stderr, *beta);
+	fprintf(stderr, "\n");
+
 	vec<smlp_result> results, counter_examples;
+
+	opt<kay::Q> known_safe;
 
 	while (length(obj_range) > max_prec) {
 		kay::Q T = mid(obj_range);
@@ -248,6 +258,7 @@ optimize_EA(cmp_t direction,
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
 			if (a.get<unsat>()) {
 				results.emplace_back(T, candidate);
+				known_safe = T;
 				if (is_less(direction))
 					obj_range.hi = T;
 				else
@@ -260,7 +271,7 @@ optimize_EA(cmp_t direction,
 		}
 	}
 
-	return results;
+	return { move(results), move(known_safe) };
 }
 
 static void alarm_handler(int sig)
@@ -409,7 +420,7 @@ int main(int argc, char **argv)
 		const char *gen_path = argv[optind+2];
 		const char *io_bounds = argv[optind+3];
 		pp = parse_nn(gen_path, hdf5_path, spec_path, io_bounds,
-		              out_bounds, clamp_inputs);
+		              out_bounds, clamp_inputs, true);
 		optind += 4;
 	} else if (argc - optind >= 3) {
 		/* Solve polynomial problem */
@@ -421,9 +432,11 @@ int main(int argc, char **argv)
 
 	const auto &[dom,lhs,eeta,pc,theta] = pp;
 
+	assert(size(lhs) == 1); /* larger not implement, yet */
+
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
-	str logic = smt2_logic_str(dom, lhs);
+	str logic = smt2_logic_str(dom, lhs.begin()->second);
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
@@ -456,7 +469,10 @@ int main(int argc, char **argv)
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {
 			move(dom),
-			lbop2 { lbop2::AND, { eeta, make2f(prop2 { (cmp_t)c, lhs, rhs, }) } },
+			lbop2 { lbop2::AND, {
+				eeta,
+				make2f(prop2 { (cmp_t)c, lhs.begin()->second, rhs, }) }
+			},
 		};
 
 		/* optionally dump the smt2 representation of the problem */
@@ -473,7 +489,7 @@ int main(int argc, char **argv)
 		/* optionally solve the problem */
 		if (solve)
 			solve_exists(p.dom, p.p, logic.c_str()).match(
-			[&,lhs=lhs](const sat &s) {
+			[&,lhs=lhs.begin()->second](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
 				        q.get_str().c_str(), q.get_d());
@@ -489,11 +505,11 @@ int main(int argc, char **argv)
 			}
 			);
 	} else {
-		ival obj_range(-10,10);
-		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs, eeta, true2,
-		                                 obj_range,
-		                                 kay::Q_from_str(max_prec.data()),
-		                                 theta, logic.c_str());
+		ival obj_range(0,30);
+		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs.begin()->second, eeta, true2,
+		                         obj_range,
+		                         kay::Q_from_str(max_prec.data()),
+		                         theta, logic.c_str());
 		if (empty(r)) {
 			fprintf(stderr,
 			        "no solution for objective in theta in "
@@ -503,20 +519,28 @@ int main(int argc, char **argv)
 			        obj_range.lo.get_d(), obj_range.hi.get_d());
 		} else {
 			fprintf(stderr,
-			        "%s of objective in theta in "
+			        "%s of objective in theta known safe threshold %s ~ %f, search range in "
 			        "[%s, %s] ~ [%f, %f] around:\n",
 			        is_less((cmp_t)c) ? "min max" : "max min",
+			        t ? t->get_str().c_str() : "(none)",
+			        t ? t->get_d() : 0.0,
 			        obj_range.lo.get_str().c_str(),
 			        obj_range.hi.get_str().c_str(),
 			        obj_range.lo.get_d(), obj_range.hi.get_d());
 			print_model(stderr, r.back().point, 2);
 			for (const auto &s : r) {
-				kay::Q c = s.center_value(lhs);
+				kay::Q c = s.center_value(lhs.begin()->second);
 				fprintf(stderr,
 				        "T: %s ~ %f -> center: %s ~ %f\n",
 				        s.threshold.get_str().c_str(),
 				        s.threshold.get_d(),
 				        c.get_str().c_str(), c.get_d());
+				hmap<str,sptr<expr2>> repl = s.point;
+				for (int i=1; i<=4; i++) {
+					repl["stackup"]->get<cnst2>()->value = kay::Z(i);
+					kay::Q v = to_Q(cnst_fold(lhs.begin()->second, repl)->get<cnst2>()->value);
+					fprintf(stderr, "  stackup=%d: %s ~ %f\n", i, v.get_str().c_str(), v.get_d());
+				}
 			}
 		}
 	}
