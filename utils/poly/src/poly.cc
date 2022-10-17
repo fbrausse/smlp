@@ -350,6 +350,11 @@ usage: %s [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]\n\
 		fprintf(f,"\
 \n\
 Options [defaults]:\n\
+  -a ALPHA     additional ALPHA constraints restricting candidates *and*\n\
+               counter-examples (only points in regions satsifying ALPHA\n\
+               are considered counter-examples to safety) [true]\n\
+  -b BETA      additional BETA constraints restricting only candidates\n\
+               (all points in safe regions satisfy BETA) [true]\n\
   -c           clamp inputs (only meaningful for NNs) [no]\n\
   -C COMPAT    use a compatibility layer, can be given multiple times; supported\n\
                values for COMPAT:\n\
@@ -498,8 +503,21 @@ int main(int argc, char **argv)
 		alpha = make2f(lbop2 { lbop2::AND, { alpha, move(*a.get<sptr<form2>>()) } });
 	}
 
+	sptr<form2> beta = true2;
+	if (beta_s) {
+		fprintf(stderr, "---------- extra beta:\n");
+		expr e = parse_infix(alpha_s, false);
+		::dump_pe(stderr, e);
+		fprintf(stderr, "---------- extra beta done\n");
+		term2s b = unroll(e, { {"And", And}, {"Or", Or} });
+		fprintf(stderr, "extra beta: ");
+		b.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
+		fprintf(stderr, "\n");
+		beta = make2f(lbop2 { lbop2::AND, { alpha, move(*b.get<sptr<form2>>()) } });
+	}
+
 	if (argc - optind >= 1) {
-		if (beta_s)
+		if (*beta != *true2)
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
@@ -545,8 +563,8 @@ int main(int argc, char **argv)
 			);
 	} else {
 		ival obj_range(0,30);
-		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs.begin()->second, alpha, true2,
-		                         obj_range,
+		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs.begin()->second,
+		                         alpha, beta, obj_range,
 		                         kay::Q_from_str(max_prec.data()),
 		                         theta, logic.c_str());
 		if (empty(r)) {
