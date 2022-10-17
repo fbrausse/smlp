@@ -11,5 +11,6 @@
 namespace smlp {
 
 expr parse_infix(FILE *f, bool python_compat);
+expr parse_infix(str s, bool python_compat);
 
 }

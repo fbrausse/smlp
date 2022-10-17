@@ -12,61 +12,6 @@
 
 namespace smlp {
 
-/* Symbolic representation of a order/equality predicate over ints/reals */
-
-enum cmp_t { LE, LT, GE, GT, EQ, NE, };
-
-inline const char *cmp_s[] = { "<=", "<", ">=", ">", "==", "!=" };
-inline const char *cmp_smt2[] = { "<=", "<", ">=", ">", "=", "distinct" };
-
-/* Some properties of cmp_t */
-static inline bool is_less(cmp_t c) { return (unsigned)c <= LT; }
-static inline bool is_strict(cmp_t c) { return (unsigned)c & 0x1; }
-static inline bool is_order(cmp_t c) { return !((unsigned)c >> 2); }
-
-/* Flip a cmp_t */
-static inline cmp_t operator-(cmp_t c)
-{
-	switch (c) {
-	case LE: return GE;
-	case LT: return GT;
-	case GE: return LE;
-	case GT: return LT;
-	case EQ:
-	case NE:
-		return c;
-	}
-	unreachable();
-}
-
-/* Negate a cmp_t */
-static inline cmp_t operator~(cmp_t c)
-{
-	switch (c) {
-	case LE: return GT;
-	case LT: return GE;
-	case GE: return LT;
-	case GT: return LE;
-	case EQ: return NE;
-	case NE: return EQ;
-	}
-	unreachable();
-}
-
-template <typename T>
-static inline auto do_cmp(const T &l, cmp_t c, const T &r)
-{
-	switch (c) {
-	case LE: return l <  r;
-	case LT: return l <= r;
-	case GE: return l >  r;
-	case GT: return l >= r;
-	case EQ: return l == r;
-	case NE: return l != r;
-	}
-	unreachable();
-}
-
 /* Definition of 'expr2' terms and (quantifier-free) 'form2' formulas. */
 
 struct expr2;
@@ -169,8 +114,9 @@ inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a expr2 term. */
-sptr<expr2> unroll(const expr &e,
-                   const hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> &funs);
+using term2s = sumtype<sptr<expr2>,sptr<form2>>;
+term2s unroll(const expr &e,
+              const hmap<str,fun<term2s(vec<term2s>)>> &funs);
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */
 sptr<expr2> subst(const sptr<expr2> &e, const hmap<str,sptr<expr2>> &repl);

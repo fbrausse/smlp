@@ -45,6 +45,12 @@ struct infix_parser {
 		char *begin = s++;
 		if (strchr("()[]{},", *begin))
 			return set(SPECIAL, str(begin, s));
+		if (strchr("<>!=", *begin) && *s == '=') {
+			s++;
+			return set(SPECIAL, str(begin, s));
+		}
+		if (strchr("<>", *begin))
+			return set(SPECIAL, str(begin, s));
 		if (isdigit(*begin) /*|| (strchr("+-", *begin) && (isdigit(*s) || *s == '.'))*/) {
 			bool dot = false;
 			while (isdigit(*s) || (!dot && *s == '.')) {
@@ -109,7 +115,7 @@ struct infix_parser {
 			}
 			if (tok == "(") {
 				next();
-				expr e = add();
+				expr e = get();
 				assert(t == SPECIAL && tok == ")");
 				next();
 				return e;
@@ -183,10 +189,23 @@ struct infix_parser {
 		return r;
 	}
 
+	expr cmp()
+	{
+		expr r = add();
+		if (t != SPECIAL)
+			return r;
+		cmp_t cmp;
+		auto [rem,ec] = from_chars(tok.data(), tok.data() + tok.length(), cmp);
+		if (rem != tok.data() + tok.length() || ec != std::errc {})
+			return r;
+		next();
+		return cop { cmp, make1e(move(r)), make1e(add()) };
+	}
+
 	expr get()
 	{
 		assert(*this);
-		return add();
+		return cmp();
 	}
 };
 
@@ -203,5 +222,10 @@ static str read_all(FILE *f)
 
 expr smlp::parse_infix(FILE *f, bool python_compat)
 {
-	return infix_parser(read_all(f), python_compat).get();
+	return parse_infix(read_all(f), python_compat);
+}
+
+expr smlp::parse_infix(str s, bool python_compat)
+{
+	return infix_parser(move(s), python_compat).get();
 }

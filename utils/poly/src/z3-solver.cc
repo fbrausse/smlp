@@ -52,7 +52,9 @@ z3::expr z3_solver::interp(const expr2 &e)
 	return e.match(
 	[&](const name &n){
 		auto it = symbols.find(n.id);
-		assert(it != symbols.end());
+		if (it == symbols.end())
+			DIE(1,"error: reference to symbol '%s' not in domain\n",
+			    n.id.c_str());
 		return it->second;
 	},
 	[&](const cnst2 &c){

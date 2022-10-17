@@ -63,11 +63,10 @@ bool cnst2::operator==(const cnst2 &b) const
 	return value == b.value;
 }
 
-sptr<expr2>
-smlp::unroll(const expr &e,
-             const hmap<str,fun<sptr<expr2>(vec<sptr<expr2>>)>> &funs)
+term2s smlp::unroll(const expr &e,
+                    const hmap<str,fun<term2s(vec<term2s>)>> &funs)
 {
-	return e.match<sptr<expr2>>(
+	return e.match<term2s>(
 	[&](const name &n) { return make2e(n); },
 	[&](const cnst &c) -> sptr<expr2> {
 		if (c.value == "None")
@@ -81,23 +80,33 @@ smlp::unroll(const expr &e,
 	[&](const bop &b) {
 		return make2e(bop2 {
 			b.op,
-			unroll(*b.left, funs),
-			unroll(*b.right, funs),
+			*unroll(*b.left, funs).get<sptr<expr2>>(),
+			*unroll(*b.right, funs).get<sptr<expr2>>(),
 		});
 	},
 	[&](const uop &u) {
 		return make2e(uop2 {
 			u.op,
-			unroll(*u.operand, funs),
+			*unroll(*u.operand, funs).get<sptr<expr2>>(),
+		});
+	},
+	[&](const cop &c) -> sptr<form2> {
+		return make2f(prop2 {
+			c.cmp,
+			*unroll(*c.left, funs).get<sptr<expr2>>(),
+			*unroll(*c.right, funs).get<sptr<expr2>>(),
 		});
 	},
 	[&](const call &c) {
-		vec<sptr<expr2>> args;
+		vec<term2s> args;
 		args.reserve(c.args.size());
 		for (const expr &e : c.args)
 			args.push_back(unroll(e, funs));
-		auto f = funs.find(c.func->get<name>()->id);
-		assert(f != funs.end());
+		const str &s = c.func->get<name>()->id;
+		auto f = funs.find(s);
+		if (f == funs.end())
+			DIE(1,"error: function '%s' called but not defined\n",
+			    s.c_str());
 		return f->second(move(args));
 	}
 	);

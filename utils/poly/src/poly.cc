@@ -103,26 +103,28 @@ struct Match {
 	 * order for Match() to produce a value. */
 	vec<sptr<form2>> constraints;
 
-	sptr<expr2> operator()(vec<sptr<expr2>> args)
+	term2s operator()(vec<term2s> args)
 	{
 		assert(args.size() >= 2);
-		const sptr<expr2> &var = args.front();
-		sptr<expr2> r = move(args.back());
+		const sptr<expr2> &var = *args.front().get<sptr<expr2>>();
+		sptr<expr2> r = move(*args.back().get<sptr<expr2>>());
 		int k = args.size()-3;
 		if (!r) {
 			vec<sptr<form2>> disj;
 			for (int i=k; i >= 1; i-=2)
-				disj.emplace_back(make2f(prop2 { EQ, var, args[i] }));
+				disj.emplace_back(make2f(prop2 { EQ, var, *args[i].get<sptr<expr2>>() }));
 			constraints.emplace_back(make2f(lbop2 { lbop2::OR, move(disj) }));
-			r = move(args[k+1]);
+			r = move(*args[k+1].get<sptr<expr2>>());
 			k -= 2;
 		}
 		for (int i=k; i >= 1; i-=2) {
-			assert(args[i]);
-			assert(args[i+1]);
+			sptr<expr2> *rhs = args[i].get<sptr<expr2>>();
+			sptr<expr2> *yes = args[i+1].get<sptr<expr2>>();
+			assert(rhs);
+			assert(yes);
 			r = make2e(ite2 {
-				make2f(prop2 { EQ, var, move(args[i]) }),
-				move(args[i+1]),
+				make2f(prop2 { EQ, var, move(*rhs) }),
+				move(*yes),
 				move(r),
 			});
 		}
@@ -155,7 +157,7 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 	/* interpret symbols of known non-recursive functions and numeric
 	 * constants */
 	Match match;
-	sptr<expr2> e2 = unroll(e, { {"Match", std::ref(match)} });
+	sptr<expr2> e2 = *unroll(e, { {"Match", std::ref(match)} }).get<sptr<expr2>>();
 
 	return pre_problem {
 		move(d),
@@ -319,6 +321,24 @@ static str smt2_logic_str(const domain &dom, const sptr<expr2> &e)
 	return logic;
 }
 
+static term2s And(vec<term2s> args)
+{
+	vec<sptr<form2>> b;
+	b.reserve(args.size());
+	for (term2s &t : args)
+		b.emplace_back(move(*t.get<sptr<form2>>()));
+	return make2f(lbop2 { lbop2::AND, move(b) });
+}
+
+static term2s Or(vec<term2s> args)
+{
+	vec<sptr<form2>> b;
+	b.reserve(args.size());
+	for (term2s &t : args)
+		b.emplace_back(move(*t.get<sptr<form2>>()));
+	return make2f(lbop2 { lbop2::OR, move(b) });
+}
+
 [[noreturn]]
 static void usage(const char *program_name, int exit_code)
 {
@@ -369,19 +389,23 @@ License: Apache 2.0; part of SMLP.\n\
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
-	bool solve         = true;
-	bool dump_pe       = false;
-	bool dump_smt2     = false;
-	bool infix         = true;
-	bool python_compat = false;
-	int  timeout       = 0;
-	bool clamp_inputs  = false;
-	const char *out_bounds = nullptr;
-	str max_prec = "0.05";
+	bool        solve         = true;
+	bool        dump_pe       = false;
+	bool        dump_smt2     = false;
+	bool        infix         = true;
+	bool        python_compat = false;
+	int         timeout       = 0;
+	bool        clamp_inputs  = false;
+	const char *out_bounds    = nullptr;
+	str         max_prec      = "0.05";
+	const char *alpha_s       = nullptr;
+	const char *beta_s        = nullptr;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":cC:F:hnO:pP:st:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":a:b:cC:F:hnO:pP:st:")) != -1;)
 		switch (opt) {
+		case 'a': alpha_s = optarg; break;
+		case 'b': beta_s = optarg; break;
 		case 'c': clamp_inputs = true; break;
 		case 'C':
 			if (optarg == "python"sv)
@@ -430,7 +454,7 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
-	const auto &[dom,lhs,eeta,pc,theta] = pp;
+	auto &[dom,lhs,alpha,pc,theta] = pp;
 
 	assert(size(lhs) == 1); /* larger not implement, yet */
 
@@ -462,15 +486,30 @@ int main(int argc, char **argv)
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
 
+	if (alpha_s) {
+		fprintf(stderr, "---------- extra alpha:\n");
+		expr e = parse_infix(alpha_s, false);
+		::dump_pe(stderr, e);
+		fprintf(stderr, "---------- extra alpha done\n");
+		term2s a = unroll(e, { {"And", And}, {"Or", Or} });
+		fprintf(stderr, "extra alpha: ");
+		a.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
+		fprintf(stderr, "\n");
+		alpha = make2f(lbop2 { lbop2::AND, { alpha, move(*a.get<sptr<form2>>()) } });
+	}
+
 	if (argc - optind >= 1) {
+		if (beta_s)
+			DIE(1,"-b BETA is not supported when CNST is given\n");
+
 		/* interpret the CNST on the right hand side */
-		sptr<expr2> rhs = unroll(cnst { argv[optind] }, {});
+		sptr<expr2> rhs = *unroll(cnst { argv[optind] }, {}).get<sptr<expr2>>();
 
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {
 			move(dom),
 			lbop2 { lbop2::AND, {
-				eeta,
+				alpha,
 				make2f(prop2 { (cmp_t)c, lhs.begin()->second, rhs, }) }
 			},
 		};
@@ -506,7 +545,7 @@ int main(int argc, char **argv)
 			);
 	} else {
 		ival obj_range(0,30);
-		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs.begin()->second, eeta, true2,
+		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs.begin()->second, alpha, true2,
 		                         obj_range,
 		                         kay::Q_from_str(max_prec.data()),
 		                         theta, logic.c_str());
