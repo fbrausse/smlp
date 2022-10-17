@@ -5,27 +5,35 @@ poly is a program to solve polynomial inequalities over the reals.
 ## Usage
 
 ```
-usage: ./poly [-OPTS] [--] DOMAIN-FILE EXPR-FILE OP CNST
+usage: ./poly [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
 
 Options [defaults]:
-  -C COMPAT   use a compatibility layer, can be given multiple times; supported
-              values for COMPAT:
-              - python: reinterpret floating point constants as python would
-                        print them
-  -F IFORMAT  determines the format of the EXPR-FILE; can be one of: 'infix',
-              'prefix' [infix]
-  -h          displays this help message
-  -n          dry run, do not solve the problem [no]
-  -p          dump the expression in Polish notation to stdout [no]
-  -s          dump the problem in SMT-LIB2 format to stdout [no]
-  -t TIMEOUT  set the solver timeout in seconds, 0 to disable [0]
+  -a ALPHA     additional ALPHA constraints restricting candidates *and*
+               counter-examples (only points in regions satsifying ALPHA
+               are considered counter-examples to safety) [true]
+  -b BETA      additional BETA constraints restricting only candidates
+               (all points in safe regions satisfy BETA) [true]
+  -c           clamp inputs (only meaningful for NNs) [no]
+  -C COMPAT    use a compatibility layer, can be given multiple times; supported
+               values for COMPAT:
+               - python: reinterpret floating point constants as python would
+                         print them
+  -F IFORMAT   determines the format of the EXPR-FILE; can be one of: 'infix',
+               'prefix' [infix]
+  -h           displays this help message
+  -n           dry run, do not solve the problem [no]
+  -O OUT-BNDS  scale output according to min-max output bounds (.csv) [none]
+  -p           dump the expression in Polish notation to stdout [no]
+  -P PREC      maximum precision to obtain the optimization result for [0.05]
+  -s           dump the problem in SMT-LIB2 format to stdout [no]
+  -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
 
-The DOMAIN-FILE is a text file containing the bounds for all variables in the
+The DOMAIN is a text file containing the bounds for all variables in the
 form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either
 an interval of the form '[a,b]' or a list of specific values '{a,b,c,d,...}'.
 Empty lines are skipped.
 
-The EXPR-FILE contains a polynomial expression in the variables specified by the
+The EXPR file contains a polynomial expression in the variables specified by the
 DOMAIN-FILE. The format is either an infix notation or the prefix notation also
 known as Polish notation. The expected format can be specified through the -F
 switch.
