@@ -27,11 +27,11 @@ static void dump_smt2(FILE *f, const kay::Q &q)
 	}
 }
 
-static void dump_smt2(FILE *f, const term2 &e, const hset<void *> &m);
-static void dump_smt2(FILE *f, const form2 &e, const hset<void *> &m);
+static void dump_smt2(FILE *f, const term2 &e, const hmap<const void *,size_t> &m);
+static void dump_smt2(FILE *f, const form2 &e, const hmap<const void *,size_t> &m);
 
 template <typename T>
-static void dump_smt2(FILE *f, const sptr<T> &p, const hset<void *> &m)
+static void dump_smt2(FILE *f, const sptr<T> &p, const hmap<const void *,size_t> &m)
 {
 	if (m.contains(p.get()))
 		fprintf(f, "|:%p|", p.get());
@@ -41,7 +41,7 @@ static void dump_smt2(FILE *f, const sptr<T> &p, const hset<void *> &m)
 
 template <typename T>
 static void dump_smt2_n(FILE *f, const char *op, const vec<sptr<T>> &args,
-                        const hset<void *> &m)
+                        const hmap<const void *,size_t> &m)
 {
 	fprintf(f, "(%s", op);
 	for (const sptr<T> &t : args) {
@@ -52,7 +52,7 @@ static void dump_smt2_n(FILE *f, const char *op, const vec<sptr<T>> &args,
 }
 
 static void dump_smt2_bin(FILE *f, const char *op, const sptr<term2> &l,
-                          const sptr<term2> &r, const hset<void *> &m)
+                          const sptr<term2> &r, const hmap<const void *,size_t> &m)
 {
 	fprintf(f, "(%s ", op);
 	dump_smt2(f, l, m);
@@ -63,14 +63,14 @@ static void dump_smt2_bin(FILE *f, const char *op, const sptr<term2> &l,
 
 template <typename T>
 static void dump_smt2_un(FILE *f, const char *op, const sptr<T> &o,
-                         const hset<void *> &m)
+                         const hmap<const void *,size_t> &m)
 {
 	fprintf(f, "(%s ", op);
 	dump_smt2(f, o, m);
 	fprintf(f, ")");
 }
 
-static void dump_smt2(FILE *f, const form2 &e, const hset<void *> &m)
+static void dump_smt2(FILE *f, const form2 &e, const hmap<const void *,size_t> &m)
 {
 	e.match(
 	[&](const prop2 &p) {
@@ -89,7 +89,7 @@ static void dump_smt2(FILE *f, const form2 &e, const hset<void *> &m)
 	);
 }
 
-static void dump_smt2(FILE *f, const term2 &e, const hset<void *> &m)
+static void dump_smt2(FILE *f, const term2 &e, const hmap<const void *,size_t> &m)
 {
 	e.match(
 	[&](const name &n){ fprintf(f, "%s", n.id.c_str()); },
@@ -121,19 +121,21 @@ static bool is_terminal(const T &g)
 }
 
 template <typename T>
-static void refs(const T &g, hset<void *> &m,
+static void refs(const T &g, hmap<const void *,size_t> &m,
                  vec<sumtype<const term2 *, const form2 *>> &v)
 {
 	auto ref = [&] <typename U> (const sptr<U> &p) {
 		bool process = true;
 		bool record = false;
 		if (is_terminal(*p))
-			process = false;
-		else if (p.use_count() > 1)
-			record = process = !m.contains(p.get());
+			return;
+		if (p.use_count() > 1) {
+			process = !m.contains(p.get());
+			record = true;
+		}
 		if (process)
 			refs(*p, m, v);
-		if (record && m.emplace(p.get()).second)
+		if (record && !m[p.get()]++)
 			v.emplace_back(p.get());
 	};
 
@@ -153,21 +155,23 @@ template <typename T>
 static void lets(FILE *f, const T &g)
 {
 	using E = sumtype<const term2 *, const form2 *>;
-	hset<void *> m;
+	hmap<const void *,size_t> m;
 	vec<E> v;
 	refs(g, m, v);
-	if (!empty(v)) {
-		for (const E &e : v)
-			e.match([&](const auto *p) {
+	for (const E &e : v)
+		e.match([&](const auto *p) {
+			auto it = m.find(p);
+			assert(it != end(m));
+			if (it->second > 1) {
 				fprintf(f, "(let ((|:%p| ", p);
 				dump_smt2(f, *p, m);
 				fprintf(f, ")) ");
-			});
-		dump_smt2(f, g, m);
-		for (size_t i=0; i<size(v); i++)
-			fprintf(f, ")");
-	} else
-		dump_smt2(f, g, m);
+			} else
+				m.erase(it);
+		});
+	dump_smt2(f, g, m);
+	for (size_t i=0; i<size(m); i++)
+		fprintf(f, ")");
 }
 
 void smlp::dump_smt2(FILE *f, const form2 &e, bool let)
@@ -175,7 +179,7 @@ void smlp::dump_smt2(FILE *f, const form2 &e, bool let)
 	if (let)
 		lets(f, e);
 	else
-		dump_smt2(f, e, hset<void *>{});
+		dump_smt2(f, e, hmap<const void *,size_t>{});
 }
 
 void smlp::dump_smt2(FILE *f, const term2 &e, bool let)
@@ -183,7 +187,7 @@ void smlp::dump_smt2(FILE *f, const term2 &e, bool let)
 	if (let)
 		lets(f, e);
 	else
-		dump_smt2(f, e, hset<void *>{});
+		dump_smt2(f, e, hmap<const void *,size_t>{});
 }
 
 void smlp::dump_smt2(FILE *f, const domain &d)
@@ -197,7 +201,7 @@ void smlp::dump_smt2(FILE *f, const domain &d)
 		assert(t);
 		fprintf(f, "(declare-const %s %s)\n", var.c_str(), t);
 		fprintf(f, "(assert ");
-		dump_smt2(f, domain_constraint(var, rng), {});
+		dump_smt2(f, domain_constraint(var, rng), hmap<const void *,size_t>{});
 		fprintf(f, ")\n");
 	}
 }
