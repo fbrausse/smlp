@@ -322,22 +322,14 @@ static str smt2_logic_str(const domain &dom, const sptr<expr2> &e)
 	return logic;
 }
 
-static term2s And(vec<term2s> args)
+template <decltype(lbop2::op) op>
+static term2s mk_lbop2(vec<term2s> args)
 {
 	vec<sptr<form2>> b;
 	b.reserve(args.size());
 	for (term2s &t : args)
 		b.emplace_back(move(*t.get<sptr<form2>>()));
-	return make2f(lbop2 { lbop2::AND, move(b) });
-}
-
-static term2s Or(vec<term2s> args)
-{
-	vec<sptr<form2>> b;
-	b.reserve(args.size());
-	for (term2s &t : args)
-		b.emplace_back(move(*t.get<sptr<form2>>()));
-	return make2f(lbop2 { lbop2::OR, move(b) });
+	return make2f(lbop2 { op, move(b) });
 }
 
 [[noreturn]]
@@ -504,7 +496,10 @@ int main(int argc, char **argv)
 		expr e = parse_infix(alpha_s, false);
 		::dump_pe(stderr, e);
 		fprintf(stderr, "---------- extra alpha done\n");
-		term2s a = unroll(e, { {"And", And}, {"Or", Or} });
+		term2s a = unroll(e, {
+			{"And", mk_lbop2<lbop2::AND>},
+			{"Or", mk_lbop2<lbop2::OR>}
+		});
 		fprintf(stderr, "extra alpha: ");
 		a.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
 		fprintf(stderr, "\n");
@@ -518,7 +513,10 @@ int main(int argc, char **argv)
 		expr e = parse_infix(beta_s, false);
 		::dump_pe(stderr, e);
 		fprintf(stderr, "---------- extra beta done\n");
-		term2s b = unroll(e, { {"And", And}, {"Or", Or} });
+		term2s b = unroll(e, {
+			{"And", mk_lbop2<lbop2::AND>},
+			{"Or", mk_lbop2<lbop2::OR>}
+		});
 		fprintf(stderr, "extra beta: ");
 		b.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
 		fprintf(stderr, "\n");
