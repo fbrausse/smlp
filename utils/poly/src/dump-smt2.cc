@@ -19,7 +19,7 @@ static void dump_smt2_n(FILE *f, const char *op, const vec<sptr<T>> &args)
 	fprintf(f, ")");
 }
 
-static void dump_smt2_bin(FILE *f, const char *op, const expr2 &l, const expr2 &r)
+static void dump_smt2_bin(FILE *f, const char *op, const term2 &l, const term2 &r)
 {
 	fprintf(f, "(%s ", op);
 	dump_smt2(f, l);
@@ -77,7 +77,7 @@ void smlp::dump_smt2(FILE *f, const form2 &e)
 	);
 }
 
-void smlp::dump_smt2(FILE *f, const expr2 &e)
+void smlp::dump_smt2(FILE *f, const term2 &e)
 {
 	e.match(
 	[&](const name &n){ fprintf(f, "%s", n.id.c_str()); },

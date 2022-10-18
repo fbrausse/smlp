@@ -35,7 +35,7 @@ z3::expr z3_solver::interp(const sptr<form2> &f, hmap<void *, z3::expr> &m)
 	return it->second;
 }
 
-z3::expr z3_solver::interp(const sptr<expr2> &e, hmap<void *, z3::expr> &m)
+z3::expr z3_solver::interp(const sptr<term2> &e, hmap<void *, z3::expr> &m)
 {
 	auto it = m.find(e.get());
 	if (it == m.end())
@@ -65,7 +65,7 @@ z3::expr z3_solver::interp(const form2 &f, hmap<void *, z3::expr> &m)
 	);
 }
 
-z3::expr z3_solver::interp(const expr2 &e, hmap<void *, z3::expr> &m)
+z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 {
 	return e.match(
 	[&](const name &n){
@@ -117,7 +117,7 @@ result z3_solver::check()
 	case z3::sat: {
 		z3::model m = slv.get_model();
 		assert(m.num_consts() == size(symbols));
-		hmap<str,sptr<expr2>> r;
+		hmap<str,sptr<term2>> r;
 		for (size_t i=0; i<size(symbols); i++)
 		{
 			z3::func_decl fd = m.get_const_decl(i);
@@ -137,7 +137,7 @@ result z3_solver::check()
 				c.value = kay::Q(num.c_str());
 			else
 				c.value = kay::Z(num.c_str());
-			r[id] = make2e(move(c));
+			r[id] = make2t(move(c));
 			//std::cerr << to_string(r[id]->get<cnst2>()->value) << "\n";
 		}
 		//fprintf(stderr, "z3 model:\n");

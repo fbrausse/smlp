@@ -10,7 +10,7 @@
 
 namespace smlp {
 
-struct sat { hmap<str,sptr<expr2>> model; };
+struct sat { hmap<str,sptr<term2>> model; };
 struct unsat {};
 struct unknown { str reason; };
 
@@ -22,9 +22,9 @@ class z3_solver {
 	z3::solver slv;
 	hmap<str,z3::expr> symbols;
 
-	z3::expr interp(const sptr<expr2> &e, hmap<void *, z3::expr> &m);
+	z3::expr interp(const sptr<term2> &e, hmap<void *, z3::expr> &m);
 	z3::expr interp(const sptr<form2> &f, hmap<void *, z3::expr> &m);
-	z3::expr interp(const expr2 &e, hmap<void *, z3::expr> &m);
+	z3::expr interp(const term2 &e, hmap<void *, z3::expr> &m);
 	z3::expr interp(const form2 &f, hmap<void *, z3::expr> &m);
 public:
 	explicit z3_solver(const domain &d, const char *logic = nullptr);

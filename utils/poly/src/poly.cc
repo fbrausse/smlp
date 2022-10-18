@@ -33,7 +33,7 @@ struct problem {
 struct maxprob {
 
 	domain dom;
-	expr2  obj;
+	term2  obj;
 	sptr<form2> theta;
 	sptr<form2> alpha = true2;
 	sptr<form2> beta  = true2;
@@ -48,7 +48,7 @@ struct maxprob_solver {
 struct pareto {
 
 	domain dom;
-	vec<expr2> objs;
+	vec<term2> objs;
 	sptr<form2> alpha = true2;
 	sptr<form2> beta  = true2;
 };
@@ -106,23 +106,23 @@ struct Match {
 	term2s operator()(vec<term2s> args)
 	{
 		assert(args.size() >= 2);
-		const sptr<expr2> &var = *args.front().get<sptr<expr2>>();
-		sptr<expr2> r = move(*args.back().get<sptr<expr2>>());
+		const sptr<term2> &var = *args.front().get<sptr<term2>>();
+		sptr<term2> r = move(*args.back().get<sptr<term2>>());
 		int k = args.size()-3;
 		if (!r) {
 			vec<sptr<form2>> disj;
 			for (int i=k; i >= 1; i-=2)
-				disj.emplace_back(make2f(prop2 { EQ, var, *args[i].get<sptr<expr2>>() }));
+				disj.emplace_back(make2f(prop2 { EQ, var, *args[i].get<sptr<term2>>() }));
 			constraints.emplace_back(make2f(lbop2 { lbop2::OR, move(disj) }));
-			r = move(*args[k+1].get<sptr<expr2>>());
+			r = move(*args[k+1].get<sptr<term2>>());
 			k -= 2;
 		}
 		for (int i=k; i >= 1; i-=2) {
-			sptr<expr2> *rhs = args[i].get<sptr<expr2>>();
-			sptr<expr2> *yes = args[i+1].get<sptr<expr2>>();
+			sptr<term2> *rhs = args[i].get<sptr<term2>>();
+			sptr<term2> *yes = args[i+1].get<sptr<term2>>();
 			assert(rhs);
 			assert(yes);
-			r = make2e(ite2 {
+			r = make2t(ite2 {
 				make2f(prop2 { EQ, var, move(*rhs) }),
 				move(*yes),
 				move(r),
@@ -132,11 +132,11 @@ struct Match {
 	}
 };
 
-static sptr<form2> id_theta(bool /* left */, const hmap<str,sptr<expr2>> &v)
+static sptr<form2> id_theta(bool /* left */, const hmap<str,sptr<term2>> &v)
 {
 	vec<sptr<form2>> conj;
 	for (const auto &[n,e] : v)
-		conj.emplace_back(make2f(prop2 { EQ, make2e(name { n }), e }));
+		conj.emplace_back(make2f(prop2 { EQ, make2t(name { n }), e }));
 	return make2f(lbop2 { lbop2::AND, move(conj) });
 }
 
@@ -157,7 +157,7 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 	/* interpret symbols of known non-recursive functions and numeric
 	 * constants */
 	Match match;
-	sptr<expr2> e2 = *unroll(e, { {"Match", std::ref(match)} }).get<sptr<expr2>>();
+	sptr<term2> e2 = *unroll(e, { {"Match", std::ref(match)} }).get<sptr<term2>>();
 
 	return pre_problem {
 		move(d),
@@ -180,9 +180,9 @@ static result solve_exists(const domain &dom,
 
 struct smlp_result {
 	kay::Q threshold;
-	hmap<str,sptr<expr2>> point;
+	hmap<str,sptr<term2>> point;
 
-	kay::Q center_value(const sptr<expr2> &obj) const
+	kay::Q center_value(const sptr<term2> &obj) const
 	{
 		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
 	}
@@ -191,12 +191,12 @@ struct smlp_result {
 static pair<vec<smlp_result>,opt<kay::Q>>
 optimize_EA(cmp_t direction,
             const domain &dom,
-            const sptr<expr2> &objective,
+            const sptr<term2> &objective,
             const sptr<form2> &alpha,
             const sptr<form2> &beta,
             ival &obj_range,
             const kay::Q &max_prec,
-            const fun<sptr<form2>(bool left, const hmap<str,sptr<expr2>> &)> theta,
+            const fun<sptr<form2>(bool left, const hmap<str,sptr<term2>> &)> theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
@@ -224,7 +224,7 @@ optimize_EA(cmp_t direction,
 
 	while (length(obj_range) > max_prec) {
 		kay::Q T = mid(obj_range);
-		sptr<expr2> threshold = make2e(cnst2 { T });
+		sptr<term2> threshold = make2t(cnst2 { T });
 
 		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
 		z3_solver exists(dom, logic);
@@ -290,7 +290,7 @@ static void sigint_handler(int sig)
 	raise(sig);
 }
 
-static void print_model(FILE *f, const hmap<str,sptr<expr2>> &model, int indent)
+static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 {
 	size_t k = 0;
 	for (const auto &[n,_] : model)
@@ -300,7 +300,7 @@ static void print_model(FILE *f, const hmap<str,sptr<expr2>> &model, int indent)
 		        to_string(c->get<cnst2>()->value).c_str());
 }
 
-static str smt2_logic_str(const domain &dom, const sptr<expr2> &e)
+static str smt2_logic_str(const domain &dom, const sptr<term2> &e)
 {
 	bool reals = false;
 	bool ints = false;
@@ -529,7 +529,7 @@ int main(int argc, char **argv)
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
-		sptr<expr2> rhs = *unroll(cnst { argv[optind] }, {}).get<sptr<expr2>>();
+		sptr<term2> rhs = *unroll(cnst { argv[optind] }, {}).get<sptr<term2>>();
 
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {
@@ -600,7 +600,7 @@ int main(int argc, char **argv)
 				        s.threshold.get_str().c_str(),
 				        s.threshold.get_d(),
 				        c.get_str().c_str(), c.get_d());
-				hmap<str,sptr<expr2>> repl = s.point;
+				hmap<str,sptr<term2>> repl = s.point;
 				for (int i=1; i<=4; i++) {
 					repl["stackup"]->get<cnst2>()->value = kay::Z(i);
 					kay::Q v = to_Q(cnst_fold(lhs, repl)->get<cnst2>()->value);

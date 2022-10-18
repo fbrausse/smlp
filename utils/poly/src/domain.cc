@@ -108,8 +108,8 @@ form2 smlp::domain_constraint(const str &var, const component &c)
 		for (const kay::Q &q : lst.values)
 			args.emplace_back(make2f(prop2 {
 				EQ,
-				make2e(name { var }),
-				make2e(cnst2 { q })
+				make2t(name { var }),
+				make2t(cnst2 { q })
 			}));
 		return lbop2 { lbop2::OR, move(args) };
 	},
@@ -117,13 +117,13 @@ form2 smlp::domain_constraint(const str &var, const component &c)
 		vec<sptr<form2>> args;
 		args.emplace_back(make2f(prop2 {
 			GE,
-			make2e(name { var }),
-			make2e(cnst2 { iv.lo })
+			make2t(name { var }),
+			make2t(cnst2 { iv.lo })
 		}));
 		args.emplace_back(make2f(prop2 {
 			LE,
-			make2e(name { var }),
-			make2e(cnst2 { iv.hi }),
+			make2t(name { var }),
+			make2t(cnst2 { iv.hi }),
 		}));
 		return lbop2 { lbop2::AND, move(args) };
 	});
