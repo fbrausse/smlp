@@ -33,8 +33,8 @@ static void dump_smt2(FILE *f, const form2 &e, const hmap<const void *,size_t> &
 template <typename T>
 static void dump_smt2(FILE *f, const sptr<T> &p, const hmap<const void *,size_t> &m)
 {
-	if (m.contains(p.get()))
-		fprintf(f, "|:%p|", p.get());
+	if (auto it = m.find(p.get()); it != end(m))
+		fprintf(f, "|:%zu|", it->second);
 	else
 		dump_smt2(f, *p, m);
 }
@@ -158,19 +158,22 @@ static void lets(FILE *f, const T &g)
 	hmap<const void *,size_t> m;
 	vec<E> v;
 	refs(g, m, v);
+	size_t n = 0;
 	for (const E &e : v)
 		e.match([&](const auto *p) {
 			auto it = m.find(p);
 			assert(it != end(m));
 			if (it->second > 1) {
-				fprintf(f, "(let ((|:%p| ", p);
+				fprintf(f, "(let ((|:%zu| ", n);
+				it->second = n++;
 				dump_smt2(f, *p, m);
 				fprintf(f, ")) ");
 			} else
 				m.erase(it);
 		});
+	assert(size(m) == n);
 	dump_smt2(f, g, m);
-	for (size_t i=0; i<size(m); i++)
+	for (size_t i=0; i<n; i++)
 		fprintf(f, ")");
 }
 
