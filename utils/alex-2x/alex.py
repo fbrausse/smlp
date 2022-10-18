@@ -112,7 +112,7 @@ for k in alpha:
 	assert prep_name(k) in df.columns, (k, prep_name(k))
 
 with open('Makefile', 'w') as f:
-	print('ALPHA = And(%s)' %
+	print('export ALPHA = And(%s)' %
 		', '.join(['%s > %s' % (prep_name(k), v) for k,v in alpha.items()]),
 		file=f)
 	print("""
