@@ -114,9 +114,9 @@ inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a term2 term. */
-using term2s = sumtype<sptr<term2>,sptr<form2>>;
-term2s unroll(const expr &e,
-              const hmap<str,fun<term2s(vec<term2s>)>> &funs);
+using expr2s = sumtype<sptr<term2>,sptr<form2>>;
+expr2s unroll(const expr &e,
+              const hmap<str,fun<expr2s(vec<expr2s>)>> &funs);
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */
 sptr<term2> subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl);

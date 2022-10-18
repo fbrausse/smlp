@@ -63,10 +63,10 @@ bool cnst2::operator==(const cnst2 &b) const
 	return value == b.value;
 }
 
-term2s smlp::unroll(const expr &e,
-                    const hmap<str,fun<term2s(vec<term2s>)>> &funs)
+expr2s smlp::unroll(const expr &e,
+                    const hmap<str,fun<expr2s(vec<expr2s>)>> &funs)
 {
-	return e.match<term2s>(
+	return e.match<expr2s>(
 	[&](const name &n) { return make2t(n); },
 	[&](const cnst &c) -> sptr<term2> {
 		if (c.value == "None")
@@ -98,7 +98,7 @@ term2s smlp::unroll(const expr &e,
 		});
 	},
 	[&](const call &c) {
-		vec<term2s> args;
+		vec<expr2s> args;
 		args.reserve(c.args.size());
 		for (const expr &e : c.args)
 			args.push_back(unroll(e, funs));

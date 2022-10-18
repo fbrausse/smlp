@@ -103,7 +103,7 @@ struct Match {
 	 * order for Match() to produce a value. */
 	vec<sptr<form2>> constraints;
 
-	term2s operator()(vec<term2s> args)
+	expr2s operator()(vec<expr2s> args)
 	{
 		assert(args.size() >= 2);
 		const sptr<term2> &var = *args.front().get<sptr<term2>>();
@@ -323,11 +323,11 @@ static str smt2_logic_str(const domain &dom, const sptr<term2> &e)
 }
 
 template <decltype(lbop2::op) op>
-static term2s mk_lbop2(vec<term2s> args)
+static expr2s mk_lbop2(vec<expr2s> args)
 {
 	vec<sptr<form2>> b;
 	b.reserve(args.size());
-	for (term2s &t : args)
+	for (expr2s &t : args)
 		b.emplace_back(move(*t.get<sptr<form2>>()));
 	return make2f(lbop2 { op, move(b) });
 }
@@ -496,7 +496,7 @@ int main(int argc, char **argv)
 		expr e = parse_infix(alpha_s, false);
 		::dump_pe(stderr, e);
 		fprintf(stderr, "---------- extra alpha done\n");
-		term2s a = unroll(e, {
+		expr2s a = unroll(e, {
 			{"And", mk_lbop2<lbop2::AND>},
 			{"Or", mk_lbop2<lbop2::OR>}
 		});
@@ -513,7 +513,7 @@ int main(int argc, char **argv)
 		expr e = parse_infix(beta_s, false);
 		::dump_pe(stderr, e);
 		fprintf(stderr, "---------- extra beta done\n");
-		term2s b = unroll(e, {
+		expr2s b = unroll(e, {
 			{"And", mk_lbop2<lbop2::AND>},
 			{"Or", mk_lbop2<lbop2::OR>}
 		});
