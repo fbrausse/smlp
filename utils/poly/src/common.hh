@@ -58,6 +58,11 @@ template <typename K, typename V,
           typename Eq = std::equal_to<K>>
 using hmap = std::unordered_map<K,V,Hash,Eq>;
 
+template <typename K,
+          typename Hash = std::hash<K>,
+          typename Eq = std::equal_to<K>>
+using hset = std::unordered_set<K,Hash,Eq>;
+
 using str = std::string;
 
 template <typename T>

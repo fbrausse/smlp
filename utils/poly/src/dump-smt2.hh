@@ -14,8 +14,8 @@ namespace smlp {
  * constraints in SMT-LIB2 format.
  */
 
-void dump_smt2(FILE *f, const form2 &e);
-void dump_smt2(FILE *f, const term2 &e);
+void dump_smt2(FILE *f, const form2 &e, bool let = true);
+void dump_smt2(FILE *f, const term2 &e, bool let = true);
 void dump_smt2(FILE *f, const domain &d);
 
 }

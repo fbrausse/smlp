@@ -114,7 +114,7 @@ inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a term2 term. */
-using expr2s = sumtype<sptr<term2>,sptr<form2>>;
+typedef sumtype<sptr<term2>,sptr<form2>> expr2s;
 expr2s unroll(const expr &e,
               const hmap<str,fun<expr2s(vec<expr2s>)>> &funs);
 
