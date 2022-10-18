@@ -27,27 +27,45 @@ z3_solver::z3_solver(const domain &d, const char *logic)
 	}
 }
 
-z3::expr z3_solver::interp(const form2 &f)
+z3::expr z3_solver::interp(const sptr<form2> &f, hmap<void *, z3::expr> &m)
+{
+	auto it = m.find(f.get());
+	if (it == m.end())
+		it = m.emplace(f.get(), interp(*f, m)).first;
+	return it->second;
+}
+
+z3::expr z3_solver::interp(const sptr<expr2> &e, hmap<void *, z3::expr> &m)
+{
+	auto it = m.find(e.get());
+	if (it == m.end())
+		it = m.emplace(e.get(), interp(*e, m)).first;
+	return it->second;
+}
+
+z3::expr z3_solver::interp(const form2 &f, hmap<void *, z3::expr> &m)
 {
 	return f.match(
 	[&](const prop2 &p) {
-		return do_cmp(interp(*p.left), p.cmp, interp(*p.right));
+		return do_cmp(interp(p.left, m), p.cmp, interp(p.right, m));
 	},
 	[&](const lbop2 &b) {
 		z3::expr_vector a(ctx);
 		for (const sptr<form2> &f : b.args)
-			a.push_back(interp(*f));
+			a.push_back(interp(f, m));
 		switch (b.op) {
 		case lbop2::OR: return z3::mk_or(a);
 		case lbop2::AND: return z3::mk_and(a);
 		}
 		unreachable();
 	},
-	[&](const lneg2 &n) { return !interp(*n.arg); }
+	[&](const lneg2 &n) {
+		return !interp(n.arg, m);
+	}
 	);
 }
 
-z3::expr z3_solver::interp(const expr2 &e)
+z3::expr z3_solver::interp(const expr2 &e, hmap<void *, z3::expr> &m)
 {
 	return e.match(
 	[&](const name &n){
@@ -65,11 +83,11 @@ z3::expr z3_solver::interp(const expr2 &e)
 		);
 	},
 	[&](const ite2 &i){
-		return ite(interp(*i.cond), interp(*i.yes), interp(*i.no));
+		return ite(interp(i.cond, m), interp(i.yes, m), interp(i.no, m));
 	},
 	[&](const bop2 &b){
-		z3::expr l = interp(*b.left);
-		z3::expr r = interp(*b.right);
+		z3::expr l = interp(b.left, m);
+		z3::expr r = interp(b.right, m);
 		switch (b.op) {
 		case bop::ADD: return l + r;
 		case bop::SUB: return l - r;
@@ -78,7 +96,7 @@ z3::expr z3_solver::interp(const expr2 &e)
 		unreachable();
 	},
 	[&](const uop2 &u){
-		z3::expr a = interp(*u.operand);
+		z3::expr a = interp(u.operand, m);
 		switch (u.op) {
 		case uop::UADD: return a;
 		case uop::USUB: return -a;

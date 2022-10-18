@@ -361,7 +361,7 @@ Options [defaults]:\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
-  -F IFORMAT   determines the format of the EXPR-FILE; can be one of: 'infix',\n\
+  -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
   -n           dry run, do not solve the problem [no]\n\
@@ -464,7 +464,7 @@ int main(int argc, char **argv)
 
 	auto &[dom,lhs,funs,alpha,pc,theta] = pp;
 
-	fprintf(stderr, "defined outputs:");
+	fprintf(stderr, "defined outputs:\n");
 	for (const auto &[k,e] : funs) {
 		fprintf(stderr, "- '%s': ", k.c_str());
 		smlp::dump_smt2(stderr, *e);
@@ -511,9 +511,6 @@ int main(int argc, char **argv)
 		alpha = make2f(lbop2 { lbop2::AND, { alpha, move(*a.get<sptr<form2>>()) } });
 	}
 	alpha = subst(alpha, funs);
-	fprintf(stderr, "alpha: ");
-	smlp::dump_smt2(stderr, *alpha);
-	fprintf(stderr, "\n");
 
 	sptr<form2> beta = true2;
 	if (beta_s) {
