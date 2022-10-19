@@ -254,7 +254,7 @@ optimize_EA(cmp_t direction,
 	 *
 	 * domain constraints from 'dom' have to hold for x and y.
 	 */
-
+/*
 	fprintf(stderr, "dom: ");
 	dump_smt2(stderr, dom);
 	fprintf(stderr, "alpha: ");
@@ -262,7 +262,7 @@ optimize_EA(cmp_t direction,
 	fprintf(stderr, "\nbeta: ");
 	dump_smt2(stderr, *beta);
 	fprintf(stderr, "\n");
-
+*/
 	vec<smlp_result> results, counter_examples;
 
 	while (length(obj_range) > max_prec) {
@@ -346,13 +346,15 @@ optimize_EA(cmp_t direction,
 
 static void alarm_handler(int sig)
 {
-	if (z3::context *p = z3_solver::is_checking)
+	if (interruptible *p = interruptible::is_active)
 		p->interrupt();
 	signal(sig, alarm_handler);
 }
 
 static void sigint_handler(int sig)
 {
+	if (interruptible *p = interruptible::is_active)
+		p->interrupt();
 	signal(sig, sigint_handler);
 	raise(sig);
 }
@@ -569,13 +571,17 @@ int main(int argc, char **argv)
 	smlp::dump_smt2(stderr, *alpha);
 	fprintf(stderr, "\n");
 
+	fprintf(stderr, "eta: ");
+	smlp::dump_smt2(stderr, *eta);
+	fprintf(stderr, "\n");
+/*
 	fprintf(stderr, "defined outputs:\n");
 	for (const auto &[k,e] : funs) {
 		fprintf(stderr, "- '%s': ", k.c_str());
 		smlp::dump_smt2(stderr, *e);
 		fprintf(stderr, "\n");
 	}
-
+*/
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
 	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
@@ -605,10 +611,10 @@ int main(int argc, char **argv)
 	optind++;
 
 	if (alpha_s) {
+		expr e = parse_infix(alpha_s, false);/*
 		fprintf(stderr, "---------- extra alpha:\n");
-		expr e = parse_infix(alpha_s, false);
 		::dump_pe(stderr, e);
-		fprintf(stderr, "---------- extra alpha done\n");
+		fprintf(stderr, "---------- extra alpha done\n");*/
 		expr2s a = unroll(e, {
 			{"And", mk_lbop2<lbop2::AND>},
 			{"Or", mk_lbop2<lbop2::OR>}
@@ -622,10 +628,10 @@ int main(int argc, char **argv)
 
 	sptr<form2> beta = true2;
 	if (beta_s) {
+		expr e = parse_infix(beta_s, false);/*
 		fprintf(stderr, "---------- extra beta:\n");
-		expr e = parse_infix(beta_s, false);
 		::dump_pe(stderr, e);
-		fprintf(stderr, "---------- extra beta done\n");
+		fprintf(stderr, "---------- extra beta done\n");*/
 		expr2s b = unroll(e, {
 			{"And", mk_lbop2<lbop2::AND>},
 			{"Or", mk_lbop2<lbop2::OR>}
@@ -636,6 +642,9 @@ int main(int argc, char **argv)
 		beta = make2f(lbop2 { lbop2::AND, { beta, move(*b.get<sptr<form2>>()) } });
 	}
 	beta = subst(beta, funs);
+
+	fprintf(stderr, "domain:\n");
+	smlp::dump_smt2(stderr, dom);
 
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
@@ -648,6 +657,7 @@ int main(int argc, char **argv)
 		problem p = {
 			move(dom),
 			lbop2 { lbop2::AND, {
+				eta,
 				alpha,
 				make2f(prop2 { (cmp_t)c, lhs, rhs, }) }
 			},

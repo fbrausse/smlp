@@ -16,7 +16,17 @@ struct unknown { str reason; };
 
 typedef sumtype<sat,unsat,unknown> result;
 
-class z3_solver {
+struct interruptible {
+
+	virtual void interrupt() = 0;
+
+	static interruptible *is_active;
+
+protected:
+	~interruptible() = default;
+};
+
+class z3_solver final : interruptible {
 
 	z3::context ctx;
 	z3::solver slv;
@@ -31,7 +41,7 @@ public:
 
 	result check();
 
-	static z3::context *is_checking;
+	void interrupt() override { ctx.interrupt(); }
 
 	void add(const form2 &f)
 	{

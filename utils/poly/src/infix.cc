@@ -215,7 +215,7 @@ static str read_all(FILE *f)
 {
 	str r;
 	static char BUF[4096];
-	for (size_t rd; (rd = fread(BUF, 1, sizeof(BUF), f)) > 0;)
+	while (size_t rd = fread(BUF, 1, sizeof(BUF), f))
 		r.append(BUF, rd);
 	return r;
 }

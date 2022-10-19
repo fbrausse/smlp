@@ -105,13 +105,13 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 	);
 }
 
-z3::context *z3_solver::is_checking;
+interruptible *interruptible::is_active;
 
 result z3_solver::check()
 {
-	is_checking = &ctx;
+	interruptible::is_active = this;
 	z3::check_result r = slv.check();
-	is_checking = nullptr;
+	interruptible::is_active = nullptr;
 	switch (r) {
 	case z3::sat: {
 		z3::model m = slv.get_model();
