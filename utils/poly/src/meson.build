@@ -96,6 +96,7 @@ hdrs = [
 	'domain.hh',
 	'dump-smt2.hh',
 	'z3-solver.hh',
+	'poly.hh',
   'nn.hh',
 ]
 srcs = [
@@ -106,7 +107,8 @@ srcs = [
 	'domain.cc',
 	'dump-smt2.cc',
 	'z3-solver.cc',
-  'nn.cc',
+	'nn.cc',
+	'poly.cc',
 ]
 
 # not yet: need a library first

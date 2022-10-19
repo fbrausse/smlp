@@ -13,4 +13,5 @@ implementation file is here:
              SMT-LIB2
 - z3-solver: an abstraction of the Z3 API, allowing to put formulas, expr2 and
              domain constraints into the Z3 solver
-- poly.cc: the main program
+- poly: parsing polynomial expressions from JMP
+- smlp.cc: the main program
