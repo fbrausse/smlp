@@ -54,6 +54,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	kjson::json io_bnds = iv::nn::common::json_parse(io_bounds);
 	vec<sptr<term2>> in_vars;
 	hmap<str,ival> in_bnds;
+	vec<sptr<form2>> eta; /* conjunction, for candidates */
 
 	domain dom;
 	hmap<str,size_t> name2spec;
@@ -72,15 +73,19 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			assert(s["range"] == "float");
 			c.type = component::REAL;
 		}
-		if (s.contains("safe")) {
-			vec<kay::Q> safe;
-			for (const kjson::json &v : s["safe"])
-				safe.emplace_back(v.template get<kay::Q>());
-			c.range = list { move(safe) };
-		}
 		dom.emplace_back(id, move(c));
 		in_vars.emplace_back(make2t(name { id }));
 		in_bnds.emplace(move(id), ival { lo, hi });
+		if (s.contains("safe")) {
+			vec<sptr<form2>> safe;
+			for (const kjson::json &v : s["safe"])
+				safe.emplace_back(make2f(prop2 {
+					EQ,
+					in_vars.back(),
+					make2t(cnst2 { v.template get<kay::Q>() }),
+				}));
+			eta.emplace_back(make2f(lbop2 { lbop2::OR, move(safe) }));
+		}
 	}
 	// dump_smt2(stdout, dom);
 	// dump_smt2(stdout, lbop2 { lbop2::AND, move(in_bnds) });
@@ -209,6 +214,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		move(obj),
 		move(outs),
 		move(in_bnds),
+		make2f(lbop2 { lbop2::AND, move(eta) }),
 		true2,
 		move(theta),
 	};

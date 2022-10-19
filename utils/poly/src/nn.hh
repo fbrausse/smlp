@@ -7,10 +7,11 @@ namespace smlp {
 
 struct pre_problem {
 	domain dom;
-	sptr<term2> obj;
-	hmap<str,sptr<term2>> funcs;
-	hmap<str,ival> input_bounds;
-	sptr<form2> partial_domain = true2;
+	sptr<term2> obj; /* objective */
+	hmap<str,sptr<term2>> funcs; /* named responses / outputs */
+	hmap<str,ival> input_bounds; /* alpha */
+	sptr<form2> eta = true2; /* corresponds to "safe" list in .spec */
+	sptr<form2> partial_domain = true2; /* constraints from evaluating partial functions */
 	fun<sptr<form2>(bool,const hmap<str,sptr<term2>> &)> theta;
 };
 

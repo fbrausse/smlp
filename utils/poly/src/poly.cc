@@ -176,6 +176,7 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 		move(e2),
 		{},
 		{},
+		true2,
 		make2f(lbop2 { lbop2::AND, move(match.constraints) }),
 		id_theta,
 	};
@@ -238,6 +239,7 @@ optimize_EA(cmp_t direction,
             const sptr<term2> &objective,
             const sptr<form2> &alpha,
             const sptr<form2> &beta,
+            const sptr<form2> &eta,
             ival &obj_range,
             const kay::Q &max_prec,
             const fun<sptr<form2>(bool left, const hmap<str,sptr<term2>> &)> theta,
@@ -248,10 +250,9 @@ optimize_EA(cmp_t direction,
 	/* optimize T in obj_range such that (assuming direction is >=):
 	 *
 	 * E x . eta x /\
-	 * A y . eta y -> theta x y -> alpha y -> (beta y /\ obj y >= T)
+	 * A y . theta x y -> alpha y -> (beta y /\ obj y >= T)
 	 *
-	 * In this implementation, eta is represented as the domain constraints
-	 * from 'dom'.
+	 * domain constraints from 'dom' have to hold for x and y.
 	 */
 
 	fprintf(stderr, "dom: ");
@@ -273,6 +274,7 @@ optimize_EA(cmp_t direction,
 
 		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
 		z3_solver exists(dom, logic);
+		exists.add(*eta);
 		exists.add(*alpha);
 		exists.add(*beta);
 		exists.add(prop2 { direction, objective, threshold });
@@ -293,9 +295,9 @@ optimize_EA(cmp_t direction,
 			auto &candidate = e.get<sat>()->model;
 
 			z3_solver forall(dom, logic);
-			/* ! ( eta y -> theta x y -> alpha y -> beta y /\ obj y >= T ) =
-			 * ! ( ! eta y \/ ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
-			 * eta y /\ theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
+			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
+			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
+			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
 			forall.add(*theta(true, candidate));
 			forall.add(*alpha);
 			forall.add(lbop2 { lbop2::OR, {
@@ -535,7 +537,7 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
-	auto &[dom,lhs,funs,in_bnds,pc,theta] = pp;
+	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
 
 	if (inject_reals)
 		for (const auto &[n,i] : in_bnds) {
@@ -682,7 +684,8 @@ int main(int argc, char **argv)
 	} else if (solve) {
 		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
 		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
-		                                 alpha, beta, obj_range, max_p,
+		                                 alpha, beta, eta,
+		                                 obj_range, max_p,
 		                                 theta, logic.c_str());
 		if (empty(r)) {
 			fprintf(stderr,
