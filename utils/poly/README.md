@@ -8,6 +8,7 @@ poly is a program to solve polynomial inequalities over the reals.
 usage: ./poly [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
 
 Options [defaults]:
+  -1           use single objective from GEN instead of all H5-NN outputs [no]
   -a ALPHA     additional ALPHA constraints restricting candidates *and*
                counter-examples (only points in regions satsifying ALPHA
                are considered counter-examples to safety) [true]

@@ -171,7 +171,8 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			                   { obj }, false)[0];
 	} else {
 		/* Pareto */
-		assert(false); /* not implemented, yet */
+		assert(size(out) == 1); /* not implemented, yet */
+		obj = out[0];
 		assert(!out_bounds); /* not implemented, yet */
 	}
 

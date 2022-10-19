@@ -410,6 +410,7 @@ usage: %s [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]\n\
 		fprintf(f,"\
 \n\
 Options [defaults]:\n\
+  -1           use single objective from GEN instead of all H5-NN outputs [no]\n\
   -a ALPHA     additional ALPHA constraints restricting candidates *and*\n\
                counter-examples (only points in regions satsifying ALPHA\n\
                are considered counter-examples to safety) [true]\n\
