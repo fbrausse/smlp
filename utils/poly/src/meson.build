@@ -99,7 +99,7 @@ hdrs = [
   'nn.hh',
 ]
 srcs = [
-	'poly.cc',
+	'smlp.cc',
 	'prefix.cc',
 	'infix.cc',
 	'expr2.cc',
@@ -112,7 +112,7 @@ srcs = [
 # not yet: need a library first
 # install_headers(hdrs, subdir: 'smlp' / 'poly')
 
-executable('poly', srcs,
+executable('smlp', srcs,
            dependencies: poly_deps,
            override_options: 'cpp_std=c++20',
            install: true

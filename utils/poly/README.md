@@ -1,11 +1,11 @@
-# poly
+# smlp
 
-poly is a program to solve polynomial inequalities over the reals.
+smlp is a program to solve and optimize polynomials and NNs over integers and reals.
 
 ## Usage
 
 ```
-usage: ./poly [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
+usage: smlp [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
 
 Options [defaults]:
   -1           use single objective from GEN instead of all H5-NN outputs [no]
@@ -63,7 +63,7 @@ Run:
 
 	$ mkdir build && meson setup build && meson compile -C build
 
-The resulting binary will be located in build/src/poly.
+The resulting binary will be located in build/src/smlp.
 
 A compiler supporting C++20 is required as well as:
 
