@@ -538,20 +538,19 @@ int main(int argc, char **argv)
 	auto &[dom,lhs,funs,in_bnds,pc,theta] = pp;
 
 	if (inject_reals)
-		for (auto it = begin(in_bnds); it != end(in_bnds);) {
-			const auto &[n,i] = *it;
+		for (const auto &[n,i] : in_bnds) {
 			component *c = dom[n];
 			assert(c);
-			if (c->type == component::INT && c->range.get<entire>()) {
-				list l;
-				using namespace kay;
-				for (kay::Z z = ceil(i.lo); z <= floor(i.hi); z++)
-					l.values.emplace_back(z);
-				c->range = move(l);
-				c->type = component::REAL;
-				it = in_bnds.erase(it);
-			} else
-				++it;
+			if (c->type != component::INT)
+				continue;
+			if (!c->range.get<entire>())
+				continue;
+			list l;
+			using namespace kay;
+			for (kay::Z z = ceil(i.lo); z <= floor(i.hi); z++)
+				l.values.emplace_back(z);
+			c->range = move(l);
+			c->type = component::REAL;
 		}
 
 	vec<sptr<form2>> alpha_conj;
