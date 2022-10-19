@@ -53,22 +53,6 @@ struct pareto {
 	sptr<form2> beta  = true2;
 };
 
-struct file {
-
-	FILE *f;
-
-	file(const char *path, const char *mode)
-	: f(fopen(path, mode))
-	{}
-
-	~file() { if (f) fclose(f); }
-
-	file(const file &) = delete;
-	file & operator=(const file &) = delete;
-
-	operator FILE *() const { return f; }
-};
-
 }
 
 static void dump_smt2(FILE *f, const char *logic, const problem &p)
@@ -223,6 +207,9 @@ optimize_EA(cmp_t direction,
 	opt<kay::Q> known_safe;
 
 	while (length(obj_range) > max_prec) {
+		printf("o,%f,%f,%f\n",
+		       obj_range.lo.get_d(), obj_range.hi.get_d(),
+		       max_prec.get_d());
 		kay::Q T = mid(obj_range);
 		sptr<term2> threshold = make2t(cnst2 { T });
 
@@ -236,6 +223,7 @@ optimize_EA(cmp_t direction,
 			result e = exists.check();
 			if (unknown *u = e.get<unknown>())
 				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
+			printf("a,%s,%f\n", e.get<unsat>() ? "unsat" : "sat", T.get_d());
 			if (e.get<unsat>()) {
 				if (is_less(direction))
 					obj_range.lo = T;
@@ -255,11 +243,29 @@ optimize_EA(cmp_t direction,
 				make2f(lneg2 { beta }),
 				make2f(prop2 { ~direction, objective, threshold })
 			} });
+			/*
+			file test("ce.smt2", "w");
+			smlp::dump_smt2(test, dom);
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, *theta(true, candidate));
+			fprintf(test, ")\n");
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, *alpha);
+			fprintf(test, ")\n");
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, lbop2 { lbop2::OR, {
+				make2f(lneg2 { beta }),
+				make2f(prop2 { ~direction, objective, threshold })
+			} });
+			fprintf(test, ")\n");
+			*/
 
 			result a = forall.check();
 			if (unknown *u = a.get<unknown>())
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
+			printf("b,%s,%f\n", a.get<unsat>() ? "unsat" : "sat", T.get_d());
 			if (a.get<unsat>()) {
+				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
 				results.emplace_back(T, candidate);
 				known_safe = T;
 				if (is_less(direction))
@@ -396,7 +402,7 @@ int main(int argc, char **argv)
 	int         timeout       = 0;
 	bool        clamp_inputs  = false;
 	const char *out_bounds    = nullptr;
-	str         max_prec      = "0.05";
+	const char *max_prec      = "0.05";
 	const char *alpha_s       = nullptr;
 	const char *beta_s        = nullptr;
 
@@ -571,9 +577,10 @@ int main(int argc, char **argv)
 			);
 	} else {
 		ival obj_range(0,30);
+		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
 		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs,
 		                         alpha, beta, obj_range,
-		                         kay::Q_from_str(max_prec.data()),
+		                         max_p,
 		                         theta, logic.c_str());
 		if (empty(r)) {
 			fprintf(stderr,

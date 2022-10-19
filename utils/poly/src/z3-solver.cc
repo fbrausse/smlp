@@ -77,7 +77,6 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 	},
 	[&](const cnst2 &c){
 		return c.value.match(
-		[&](const str &) -> z3::expr { abort(); },
 		[&](const kay::Z &v){ return ctx.int_val(v.get_str().c_str()); },
 		[&](const kay::Q &v){ return ctx.real_val(v.get_str().c_str()); }
 		);

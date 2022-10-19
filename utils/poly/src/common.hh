@@ -89,6 +89,8 @@ using std::to_string;
 using std::max;
 using std::min;
 
+using std::swap;
+
 // helper type for the visitor #4
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 // explicit deduction guide (not needed as of C++20)
@@ -122,6 +124,37 @@ struct sumtype : std::variant<Ts...> {
 	{
 		return std::get_if<T>(this);
 	}
+};
+
+struct file {
+
+	FILE *f;
+
+	file() : f(nullptr) {}
+
+	file(const char *path, const char *mode)
+	: f(fopen(path, mode))
+	{}
+
+	file(int fd, const char *mode)
+	: f(fdopen(fd, mode))
+	{}
+
+	~file() { if (f) fclose(f); }
+
+	file(const file &) = delete;
+	file(file &&o) : f(o.f) { o.f = nullptr; }
+
+	friend void swap(file &a, file &b)
+	{
+		swap(a.f, b.f);
+	}
+
+	file & operator=(file o) { swap(*this, o); return *this; }
+
+	operator FILE *() const { return f; }
+
+	void close() { assert(f); fclose(f); f = nullptr; }
 };
 
 } // end namespace smlp
