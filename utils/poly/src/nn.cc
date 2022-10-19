@@ -53,7 +53,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 
 	kjson::json io_bnds = iv::nn::common::json_parse(io_bounds);
 	vec<sptr<term2>> in_vars;
-	vec<sptr<form2>> in_bnds;
+	hmap<str,ival> in_bnds;
 
 	domain dom;
 	hmap<str,size_t> name2spec;
@@ -80,10 +80,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		}
 		dom.emplace_back(id, move(c));
 		in_vars.emplace_back(make2t(name { id }));
-		in_bnds.emplace_back(make2f(lbop2 { lbop2::AND, {
-			make2f(prop2 { GE, in_vars.back(), make2t(cnst2 { lo }) }),
-			make2f(prop2 { LE, in_vars.back(), make2t(cnst2 { hi }) }),
-		}}));
+		in_bnds.emplace(move(id), ival { lo, hi });
 	}
 	// dump_smt2(stdout, dom);
 	// dump_smt2(stdout, lbop2 { lbop2::AND, move(in_bnds) });
@@ -211,9 +208,8 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		move(dom),
 		move(obj),
 		move(outs),
-		make2f(lbop2 { lbop2::AND, move(in_bnds), }),
+		move(in_bnds),
 		true2,
 		move(theta),
 	};
 }
-

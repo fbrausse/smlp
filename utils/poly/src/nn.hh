@@ -9,7 +9,7 @@ struct pre_problem {
 	domain dom;
 	sptr<term2> obj;
 	hmap<str,sptr<term2>> funcs;
-	sptr<form2> input_constraints = true2;
+	hmap<str,ival> input_bounds;
 	sptr<form2> partial_domain = true2;
 	fun<sptr<form2>(bool,const hmap<str,sptr<term2>> &)> theta;
 };

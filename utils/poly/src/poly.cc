@@ -175,7 +175,7 @@ static pre_problem parse_poly_problem(const char *simple_domain_path,
 		move(d),
 		move(e2),
 		{},
-		true2,
+		{},
 		make2f(lbop2 { lbop2::AND, move(match.constraints) }),
 		id_theta,
 	};
@@ -200,16 +200,23 @@ struct smlp_result {
 	}
 };
 
-static void trace_result(FILE *f, const char *lbl, const result &r, const kay::Q &T, double t)
+static void trace_result(FILE *f, const char *lbl, const result &r,
+                         const kay::Q &T, double t)
 {
 	const char *state = nullptr;
 	vec<str> info;
 	r.match(
 	[&](const sat &s) {
 		state = "sat";
-		for (const auto &[n,t] : s.model) {
-			info.emplace_back(n);
-			info.emplace_back(to_string(t->get<cnst2>()->value));
+		vec<const decltype(s.model)::value_type *> v;
+		for (const auto &p : s.model)
+			v.push_back(&p);
+		sort(begin(v), end(v), [](const auto *a, const auto *b) {
+			return a->first < b->first;
+		});
+		for (const auto *p : v) {
+			info.emplace_back(p->first);
+			info.emplace_back(to_string(p->second->get<cnst2>()->value));
 		}
 	},
 	[&](const unsat &) { state = "unsat"; },
@@ -225,7 +232,7 @@ static void trace_result(FILE *f, const char *lbl, const result &r, const kay::Q
 	fprintf(f, "\n");
 }
 
-static pair<vec<smlp_result>,opt<kay::Q>>
+static vec<smlp_result>
 optimize_EA(cmp_t direction,
             const domain &dom,
             const sptr<term2> &objective,
@@ -256,8 +263,6 @@ optimize_EA(cmp_t direction,
 	fprintf(stderr, "\n");
 
 	vec<smlp_result> results, counter_examples;
-
-	opt<kay::Q> known_safe;
 
 	while (length(obj_range) > max_prec) {
 		printf("r,%g,%g,%g\n",
@@ -322,7 +327,6 @@ optimize_EA(cmp_t direction,
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
 				results.emplace_back(T, candidate);
-				known_safe = T;
 				if (is_less(direction))
 					obj_range.hi = T;
 				else
@@ -335,7 +339,7 @@ optimize_EA(cmp_t direction,
 		}
 	}
 
-	return { move(results), move(known_safe) };
+	return results;
 }
 
 static void alarm_handler(int sig)
@@ -421,6 +425,9 @@ Options [defaults]:\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv) [none]\n\
   -p           dump the expression in Polish notation to stdout [no]\n\
   -P PREC      maximum precision to obtain the optimization result for [0.05]\n\
+  -r           re-cast bounded integer variables as reals with equality\n\
+               constraints\n\
+  -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
 \n\
@@ -454,15 +461,17 @@ int main(int argc, char **argv)
 	bool        dump_smt2     = false;
 	bool        infix         = true;
 	bool        python_compat = false;
+	bool        inject_reals  = false;
 	int         timeout       = 0;
 	bool        clamp_inputs  = false;
 	const char *out_bounds    = nullptr;
 	const char *max_prec      = "0.05";
 	const char *alpha_s       = nullptr;
 	const char *beta_s        = nullptr;
+	ival        obj_range     = { 0, 1 };
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:F:hnO:pP:st:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:F:hnO:pP:rR:st:")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_s = optarg; break;
@@ -488,6 +497,17 @@ int main(int argc, char **argv)
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
 		case 'P': max_prec = optarg; break;
+		case 'r': inject_reals = true; break;
+		case 'R': {
+			char *comma = strchr(optarg, ',');
+			if (!comma || !comma[1])
+				DIE(1,"error: '-R' expects two comma-separated "
+				      "parameters, got: '%s'",optarg);
+			*comma = '\0';
+			obj_range.lo = kay::Q_from_str(optarg);
+			obj_range.hi = kay::Q_from_str(comma+1);
+			break;
+		}
 		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 't': timeout = atoi(optarg); break;
@@ -515,7 +535,37 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
-	auto &[dom,lhs,funs,alpha,pc,theta] = pp;
+	auto &[dom,lhs,funs,in_bnds,pc,theta] = pp;
+
+	if (inject_reals)
+		for (auto it = begin(in_bnds); it != end(in_bnds);) {
+			const auto &[n,i] = *it;
+			component *c = dom[n];
+			assert(c);
+			if (c->type == component::INT && c->range.get<entire>()) {
+				list l;
+				using namespace kay;
+				for (kay::Z z = ceil(i.lo); z <= floor(i.hi); z++)
+					l.values.emplace_back(z);
+				c->range = move(l);
+				c->type = component::REAL;
+				it = in_bnds.erase(it);
+			} else
+				++it;
+		}
+
+	vec<sptr<form2>> alpha_conj;
+	for (const auto &[n,i] : in_bnds) {
+		sptr<term2> v = make2t(name { n });
+		alpha_conj.emplace_back(make2f(lbop2 { lbop2::AND, {
+			make2f(prop2 { GE, v, make2t(cnst2 { i.lo }) }),
+			make2f(prop2 { LE, v, make2t(cnst2 { i.hi }) }),
+		} }));
+	}
+	sptr<form2> alpha = make2f(lbop2 { lbop2::AND, move(alpha_conj) });
+	fprintf(stderr, "alpha from in-bnds: ");
+	smlp::dump_smt2(stderr, *alpha);
+	fprintf(stderr, "\n");
 
 	fprintf(stderr, "defined outputs:\n");
 	for (const auto &[k,e] : funs) {
@@ -630,13 +680,11 @@ int main(int argc, char **argv)
 				fprintf(stderr, "unknown: %s\n", u.reason.c_str());
 			}
 			);
-	} else {
-		ival obj_range(0,30);
+	} else if (solve) {
 		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
-		auto [r,t] = optimize_EA((cmp_t)c, dom, lhs,
-		                         alpha, beta, obj_range,
-		                         max_p,
-		                         theta, logic.c_str());
+		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
+		                                 alpha, beta, obj_range, max_p,
+		                                 theta, logic.c_str());
 		if (empty(r)) {
 			fprintf(stderr,
 			        "no solution for objective in theta in "
@@ -646,11 +694,8 @@ int main(int argc, char **argv)
 			        obj_range.lo.get_d(), obj_range.hi.get_d());
 		} else {
 			fprintf(stderr,
-			        "%s of objective in theta known safe threshold %s ~ %f, search range in "
-			        "[%s, %s] ~ [%f, %f] around:\n",
+			        "%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
 			        is_less((cmp_t)c) ? "min max" : "max min",
-			        t ? t->get_str().c_str() : "(none)",
-			        t ? t->get_d() : 0.0,
 			        obj_range.lo.get_str().c_str(),
 			        obj_range.hi.get_str().c_str(),
 			        obj_range.lo.get_d(), obj_range.hi.get_d());

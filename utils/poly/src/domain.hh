@@ -98,6 +98,14 @@ struct domain : vec<pair<str,component>> {
 				return &c;
 		return nullptr;
 	}
+
+	component * operator[](const std::string_view &s)
+	{
+		for (auto &[n,c] : *this)
+			if (n == s)
+				return &c;
+		return nullptr;
+	}
 };
 
 form2 domain_constraints(const domain &d);
