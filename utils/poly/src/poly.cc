@@ -14,6 +14,8 @@
 #include "z3-solver.hh"
 #include "nn.hh"
 
+#include <time.h>
+
 using namespace smlp;
 
 namespace {
@@ -51,6 +53,32 @@ struct pareto {
 	vec<term2> objs;
 	sptr<form2> alpha = true2;
 	sptr<form2> beta  = true2;
+};
+
+struct timing : timespec {
+
+	timing()
+	{
+		if (clock_gettime(CLOCK_MONOTONIC, this) == -1)
+			throw std::error_code(errno, std::system_category());
+	}
+
+	friend timing & operator-=(timing &a, const timing &b)
+	{
+		a.tv_sec -= b.tv_sec;
+		if ((a.tv_nsec -= b.tv_nsec) < 0) {
+			a.tv_sec--;
+			a.tv_nsec += 1e9;
+		}
+		return a;
+	}
+
+	friend timing operator-(timing a, const timing &b)
+	{
+		return a -= b;
+	}
+
+	operator double() const { return tv_sec + tv_nsec / 1e9; }
 };
 
 }
@@ -172,6 +200,31 @@ struct smlp_result {
 	}
 };
 
+static void trace_result(FILE *f, const char *lbl, const result &r, const kay::Q &T, double t)
+{
+	const char *state = nullptr;
+	vec<str> info;
+	r.match(
+	[&](const sat &s) {
+		state = "sat";
+		for (const auto &[n,t] : s.model) {
+			info.emplace_back(n);
+			info.emplace_back(to_string(t->get<cnst2>()->value));
+		}
+	},
+	[&](const unsat &) { state = "unsat"; },
+	[&](const unknown &u) {
+		state = "unknown";
+		info.emplace_back(u.reason);
+	}
+	);
+	assert(state);
+	fprintf(f, "%s,%s,%g,%5.3f", lbl, state, T.get_d(), t);
+	for (const str &s : info)
+		fprintf(f, ",%s", s.c_str());
+	fprintf(f, "\n");
+}
+
 static pair<vec<smlp_result>,opt<kay::Q>>
 optimize_EA(cmp_t direction,
             const domain &dom,
@@ -207,7 +260,7 @@ optimize_EA(cmp_t direction,
 	opt<kay::Q> known_safe;
 
 	while (length(obj_range) > max_prec) {
-		printf("o,%f,%f,%f\n",
+		printf("r,%g,%g,%g\n",
 		       obj_range.lo.get_d(), obj_range.hi.get_d(),
 		       max_prec.get_d());
 		kay::Q T = mid(obj_range);
@@ -220,10 +273,11 @@ optimize_EA(cmp_t direction,
 		exists.add(prop2 { direction, objective, threshold });
 
 		while (true) {
+			timing e0;
 			result e = exists.check();
+			trace_result(stdout, "a", e, T, timing() - e0);
 			if (unknown *u = e.get<unknown>())
 				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
-			printf("a,%s,%f\n", e.get<unsat>() ? "unsat" : "sat", T.get_d());
 			if (e.get<unsat>()) {
 				if (is_less(direction))
 					obj_range.lo = T;
@@ -260,10 +314,11 @@ optimize_EA(cmp_t direction,
 			fprintf(test, ")\n");
 			*/
 
+			timing a0;
 			result a = forall.check();
+			trace_result(stdout, "b", a, T, timing() - a0);
 			if (unknown *u = a.get<unknown>())
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
-			printf("b,%s,%f\n", a.get<unsat>() ? "unsat" : "sat", T.get_d());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
 				results.emplace_back(T, candidate);
