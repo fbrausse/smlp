@@ -67,10 +67,10 @@ template <typename T>
 static inline auto do_cmp(const T &l, cmp_t c, const T &r)
 {
 	switch (c) {
-	case LE: return l <  r;
-	case LT: return l <= r;
-	case GE: return l >  r;
-	case GT: return l >= r;
+	case LE: return l <= r;
+	case LT: return l <  r;
+	case GE: return l >= r;
+	case GT: return l >  r;
 	case EQ: return l == r;
 	case NE: return l != r;
 	}
