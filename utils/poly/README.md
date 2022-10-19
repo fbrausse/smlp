@@ -18,13 +18,16 @@ Options [defaults]:
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
-  -F IFORMAT   determines the format of the EXPR-FILE; can be one of: 'infix',
+  -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
                'prefix' [infix]
   -h           displays this help message
   -n           dry run, do not solve the problem [no]
   -O OUT-BNDS  scale output according to min-max output bounds (.csv) [none]
   -p           dump the expression in Polish notation to stdout [no]
   -P PREC      maximum precision to obtain the optimization result for [0.05]
+  -r           re-cast bounded integer variables as reals with equality
+               constraints
+  -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]
   -s           dump the problem in SMT-LIB2 format to stdout [no]
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
 
