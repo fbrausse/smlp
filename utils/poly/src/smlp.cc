@@ -342,6 +342,7 @@ Options [defaults]:\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
+  -d DELTA     <unsupported, no effect> [0]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
@@ -395,7 +396,7 @@ int main(int argc, char **argv)
 	const char  *max_prec      = "0.05";
 	const char  *alpha_s       = nullptr;
 	const char  *beta_s        = nullptr;
-	const char  *delta_s       = nullptr;
+	const char  *delta_s       = "0";
 	ival         obj_range     = { 0, 1 };
 	vec<strview> queries;
 
