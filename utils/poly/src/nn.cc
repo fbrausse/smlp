@@ -14,8 +14,8 @@ static sptr<term2>
 apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 {
 	sptr<term2> c = make2t(bop2 { bop::ADD,
-		make2t(bop2 { bop::MUL, make2t(cnst2 { sc.a }), in }),
-		make2t(cnst2 { sc.b })
+		make2t(bop2 { bop::MUL, make2t(cnst2 { kay::Q(sc.a) }), in }),
+		make2t(cnst2 { kay::Q(sc.b) })
 	});
 	if (clamp_outputs) {
 		sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
@@ -64,12 +64,12 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	hmap<str,size_t> name2spec;
 	for (size_t i=0; i<input_dim(mf2.spec); i++) {
 		kjson::json s = mf2.spec.spec[mf2.spec.dom2spec[i]];
-		str id = s["label"].template get<str>();
+		str id = s["label"].get<str>();
 		name2spec[id] = mf2.spec.dom2spec[i];
 
 		kjson::json bnds = io_bnds[id];
-		kay::Q lo = bnds["min"].template get<kay::Q>();
-		kay::Q hi = bnds["max"].template get<kay::Q>();
+		kay::Q lo = bnds["min"].get<kay::Q>();
+		kay::Q hi = bnds["max"].get<kay::Q>();
 		component c;
 		if (s["range"] == "int")
 			c.type = component::INT;
@@ -86,7 +86,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 				safe.emplace_back(make2f(prop2 {
 					EQ,
 					in_vars.back(),
-					make2t(cnst2 { v.template get<kay::Q>() }),
+					make2t(cnst2 { v.get<kay::Q>() }),
 				}));
 			eta.emplace_back(make2f(lbop2 { lbop2::OR, move(safe) }));
 		}
@@ -197,9 +197,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			sptr<term2> nm = make2t(name { n });
 			sptr<term2> r;
 			if (sp.contains("rad-abs")) {
-				r = make2t(cnst2 { sp["rad-abs"].template get<kay::Q>() });
+				r = make2t(cnst2 { sp["rad-abs"].get<kay::Q>() });
 			} else if (sp.contains("rad-rel")) {
-				r = make2t(cnst2 { sp["rad-rel"].template get<kay::Q>() });
+				r = make2t(cnst2 { sp["rad-rel"].get<kay::Q>() });
 				r = make2t(bop2 { bop::MUL, move(r), abs(left ? e : nm) });
 			} else if (sp["type"] == "input")
 				continue;

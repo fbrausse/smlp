@@ -18,11 +18,14 @@ flint_dep = cxx.find_library('flint',
   header_include_directories: flint_hdrs,
   required: get_option('flint'))
 
+gmpxx_dep = dependency('gmpxx')
+
 if flint_dep.found()
   extra_defs = ['-DKAY_USE_FLINT']
   poly_deps += flint_dep
-elif cxx.check_header('gmpxx.h')
+elif gmpxx_dep.found() and cxx.check_header('gmpxx.h')
   extra_defs = ['-DKAY_USE_GMPXX']
+  poly_deps += gmpxx_dep
 else
   error('need either flint library or gmpxx headers')
 endif

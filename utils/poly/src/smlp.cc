@@ -14,6 +14,7 @@
 #include "nn.hh"
 #include "poly.hh"
 
+#include <signal.h>
 #include <time.h>
 
 using namespace smlp;
