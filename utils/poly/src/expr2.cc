@@ -326,3 +326,52 @@ bool smlp::is_nonlinear(const sptr<term2> &e)
 	}
 	);
 }
+
+static void collect_free_vars(const sptr<term2> &t, hset<str> &s);
+
+static void collect_free_vars(const sptr<form2> &f, hset<str> &s)
+{
+	f->match(
+	[&](const prop2 &p) {
+		collect_free_vars(p.left, s);
+		collect_free_vars(p.right, s);
+	},
+	[&](const lbop2 &b) {
+		for (const sptr<form2> &a : b.args)
+			collect_free_vars(a, s);
+	},
+	[&](const lneg2 &n) { collect_free_vars(n.arg, s); }
+	);
+}
+
+static void collect_free_vars(const sptr<term2> &t, hset<str> &s)
+{
+	t->match(
+	[&](const name &n) { s.emplace(n.id); },
+	[](const cnst2 &) {},
+	[&](const bop2 &b) {
+		collect_free_vars(b.left, s);
+		collect_free_vars(b.right, s);
+	},
+	[&](const uop2 &u) { collect_free_vars(u.operand, s); },
+	[&](const ite2 &i) {
+		collect_free_vars(i.cond, s);
+		collect_free_vars(i.yes, s);
+		collect_free_vars(i.no, s);
+	}
+	);
+}
+
+hset<str> smlp::free_vars(const sptr<term2> &f)
+{
+	hset<str> s;
+	collect_free_vars(f, s);
+	return s;
+}
+
+hset<str> smlp::free_vars(const sptr<form2> &f)
+{
+	hset<str> s;
+	collect_free_vars(f, s);
+	return s;
+}

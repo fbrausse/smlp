@@ -141,4 +141,7 @@ static inline bool is_linear(const sptr<term2> &e)
 	return !is_ground(e) && !is_nonlinear(e);
 }
 
+hset<str> free_vars(const sptr<term2> &f);
+hset<str> free_vars(const sptr<form2> &f);
+
 }
