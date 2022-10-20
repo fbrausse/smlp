@@ -91,6 +91,8 @@ using std::min;
 
 using std::swap;
 
+using strview = std::string_view;
+
 // helper type for the visitor #4
 template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
 // explicit deduction guide (not needed as of C++20)

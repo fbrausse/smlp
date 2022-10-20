@@ -350,6 +350,8 @@ Options [defaults]:\n\
                meaningful for NNs) [none]\n\
   -p           dump the expression in Polish notation to stdout [no]\n\
   -P PREC      maximum precision to obtain the optimization result for [0.05]\n\
+  -Q QUERY     answer a query about the problem; supported QUERY:\n\
+               - vars: list all variables\n\
   -r           re-cast bounded integer variables as reals with equality\n\
                constraints\n\
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
@@ -380,24 +382,25 @@ License: Apache 2.0; part of SMLP.\n\
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
-	bool        single_obj    = false;
-	bool        solve         = true;
-	bool        dump_pe       = false;
-	bool        dump_smt2     = false;
-	bool        infix         = true;
-	bool        python_compat = false;
-	bool        inject_reals  = false;
-	int         timeout       = 0;
-	bool        clamp_inputs  = false;
-	const char *out_bounds    = nullptr;
-	const char *max_prec      = "0.05";
-	const char *alpha_s       = nullptr;
-	const char *beta_s        = nullptr;
-	const char *delta_s       = nullptr;
-	ival        obj_range     = { 0, 1 };
+	bool         single_obj    = false;
+	bool         solve         = true;
+	bool         dump_pe       = false;
+	bool         dump_smt2     = false;
+	bool         infix         = true;
+	bool         python_compat = false;
+	bool         inject_reals  = false;
+	int          timeout       = 0;
+	bool         clamp_inputs  = false;
+	const char  *out_bounds    = nullptr;
+	const char  *max_prec      = "0.05";
+	const char  *alpha_s       = nullptr;
+	const char  *beta_s        = nullptr;
+	const char  *delta_s       = nullptr;
+	ival         obj_range     = { 0, 1 };
+	vec<strview> queries;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:rR:st:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:Q:rR:st:")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_s = optarg; break;
@@ -424,6 +427,7 @@ int main(int argc, char **argv)
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
 		case 'P': max_prec = optarg; break;
+		case 'Q': queries.push_back(optarg); break;
 		case 'r': inject_reals = true; break;
 		case 'R': {
 			char *comma = strchr(optarg, ',');
@@ -457,7 +461,7 @@ int main(int argc, char **argv)
 		optind += 4;
 	} else
 #else
-	/* make compiler happy */
+	/* these are unused w/o NN support */
 	(void)single_obj;
 	(void)clamp_inputs;
 	(void)out_bounds;
@@ -515,6 +519,20 @@ int main(int argc, char **argv)
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
 	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
+
+	for (const strview &q : queries) {
+		fprintf(stderr, "query '%.*s':\n", (int)q.size(),q.data());
+		if (q == "vars") {
+			hset<str> h = free_vars(lhs);
+			vec<str> v(begin(h), end(h));
+			sort(begin(v), end(v));
+			for (const str &id : v) {
+				fprintf(stderr, "  '%s': %s\n", id.c_str(),
+				        dom[id] ? "bound" : "unbound");
+			}
+		} else
+			DIE(1,"error: unknown query '%.*s'\n",(int)q.size(),q.data());
+	}
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
