@@ -105,6 +105,9 @@ if not keras_nn.disabled() and get_option('iv-prefix') != ''
   endif
 endif
 
+keras_nn = keras_nn.disable_auto_if(
+  not (dep_have['iv'] and dep_have['hdf5'] and dep_have['kjson']))
+
 hdrs = [
 	'common.hh',
 	'expr.hh',
@@ -127,13 +130,13 @@ srcs = [
 	'poly.cc',
 ]
 
-if dep_have['iv'] and dep_have['hdf5'] and dep_have['kjson']
+if keras_nn.disabled()
+  warning('keras-nn support disabled')
+else
   warning('keras-nn support enabled')
   add_project_arguments('-DSMLP_ENABLE_KERAS_NN', language: 'cpp')
   hdrs += 'nn.hh'
   srcs += 'nn.cc'
-else
-  warning('keras-nn support disabled')
 endif
 
 # not yet: need a library first
