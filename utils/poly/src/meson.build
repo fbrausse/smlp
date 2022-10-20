@@ -134,9 +134,9 @@ srcs = [
 ]
 
 if keras_nn.disabled()
-  warning('keras-nn support disabled')
+  message('keras-nn support disabled')
 else
-  warning('keras-nn support enabled')
+  message('keras-nn support enabled')
   add_project_arguments('-DSMLP_ENABLE_KERAS_NN', language: 'cpp')
   hdrs += 'nn.hh'
   srcs += 'nn.cc'
