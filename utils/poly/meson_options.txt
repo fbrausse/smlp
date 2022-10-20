@@ -6,6 +6,10 @@ option('flint', type: 'feature', description:
 option('flint-prefix', type: 'string', description:
 	'prefix of the install path containing the flint library')
 
+# NN support
+option('keras-nn', type: 'feature', description:
+	'enable support for reasoning about Keras NNs; pulls in requirements of libraries: hdf5, kjson, iv')
+
 option('hdf5-prefix', type: 'string', description:
 	'prefix of the install path containing the hdf5 library and its C++ headers')
 

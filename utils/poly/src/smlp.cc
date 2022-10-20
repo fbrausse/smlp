@@ -318,7 +318,13 @@ static void usage(const char *program_name, int exit_code)
 {
 	FILE *f = exit_code ? stderr : stdout;
 	fprintf(f, "\
-usage: %s [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]\n\
+usage: %s [-OPTS] [--] "
+#ifdef SMLP_ENABLE_KERAS_NN
+	"{ DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS }"
+#else
+	"DOMAIN EXPR"
+#endif
+" OP [CNST]\n\
 ", program_name);
 	if (!exit_code)
 		fprintf(f,"\
@@ -435,6 +441,7 @@ int main(int argc, char **argv)
 
 	pre_problem pp;
 
+#ifdef SMLP_ENABLE_KERAS_NN
 	if (argc - optind >= 5) {
 		/* Solve NN problem */
 		const char *hdf5_path = argv[optind];
@@ -444,7 +451,9 @@ int main(int argc, char **argv)
 		pp = parse_nn(gen_path, hdf5_path, spec_path, io_bounds,
 		              out_bounds, clamp_inputs, single_obj);
 		optind += 4;
-	} else if (argc - optind >= 3) {
+	} else
+#endif
+	if (argc - optind >= 3) {
 		/* Solve polynomial problem */
 		pp = parse_poly_problem(argv[optind], argv[optind+1],
 		                        python_compat, dump_pe, infix);

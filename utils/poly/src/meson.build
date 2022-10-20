@@ -32,7 +32,9 @@ add_project_arguments(['-ffp-contract=off', '-Wno-format-zero-length'], language
 
 # manually found libraries
 # ------------------------
-foreach name, desc : {
+keras_nn = get_option('keras-nn')
+
+dep_libs = {
   'hdf5': {
     'libs_hdrs': {
       'hdf5': ['hdf5.h'],
@@ -40,6 +42,7 @@ foreach name, desc : {
       'hdf5_cpp': ['H5Cpp.h'],
     # 'hdf5_hl_cpp' : [],
     },
+    'extra': { 'required': keras_nn },
   },
   'kay': {
     'libs_hdrs': { '': ['kay' / 'numbers.hh'] },
@@ -47,11 +50,16 @@ foreach name, desc : {
   },
   'kjson': {
     'libs_hdrs': { 'kjson': ['kjson.hh'], },
+    'extra': { 'required': keras_nn },
   },
   'iv': {
     'libs_hdrs': { 'iv': [] },
+    'extra': { 'required': keras_nn },
   }
 }
+dep_have = {}
+
+foreach name, desc : dep_libs
   dirs = []
   hdrs = []
   prefix = get_option(name + '-prefix')
@@ -60,6 +68,7 @@ foreach name, desc : {
     hdrs += prefix / 'include'
   endif
   idirs = include_directories(hdrs)
+  have_all = true
   foreach lib, hs : desc['libs_hdrs']
     if lib == ''
       foreach h : hs
@@ -67,24 +76,33 @@ foreach name, desc : {
           include_directories : idirs,
           kwargs: desc.get('extra', {}))
       endforeach
-      poly_deps += declare_dependency(include_directories: idirs)
+      dep = declare_dependency(include_directories: idirs)
     else
-      poly_deps += cxx.find_library(lib,
+      dep = cxx.find_library(lib,
         dirs: dirs,
         has_headers: hs,
         header_include_directories: idirs,
         kwargs: desc.get('extra', {}))
     endif
+    poly_deps += dep
+    if not dep.found()
+      have_all = false
+    endif
   endforeach
+  dep_have += {name: have_all}
 endforeach
 
-if get_option('iv-prefix') != ''
-  poly_deps += declare_dependency(
+if not keras_nn.disabled() and get_option('iv-prefix') != ''
+  dep = declare_dependency(
     include_directories: [
       get_option('iv-prefix') / 'include',
       get_option('iv-prefix') / 'src',
-    ]
+    ],
   )
+  poly_deps += dep
+  if not dep.found()
+    dep_have.set('iv', false)
+  endif
 endif
 
 hdrs = [
@@ -97,7 +115,6 @@ hdrs = [
 	'dump-smt2.hh',
 	'z3-solver.hh',
 	'poly.hh',
-  'nn.hh',
 ]
 srcs = [
 	'smlp.cc',
@@ -107,9 +124,17 @@ srcs = [
 	'domain.cc',
 	'dump-smt2.cc',
 	'z3-solver.cc',
-	'nn.cc',
 	'poly.cc',
 ]
+
+if dep_have['iv'] and dep_have['hdf5'] and dep_have['kjson']
+  warning('keras-nn support enabled')
+  add_project_arguments('-DSMLP_ENABLE_KERAS_NN', language: 'cpp')
+  hdrs += 'nn.hh'
+  srcs += 'nn.cc'
+else
+  warning('keras-nn support disabled')
+endif
 
 # not yet: need a library first
 # install_headers(hdrs, subdir: 'smlp' / 'poly')
