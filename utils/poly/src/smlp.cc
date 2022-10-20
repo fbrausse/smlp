@@ -529,7 +529,7 @@ int main(int argc, char **argv)
 			sort(begin(v), end(v));
 			for (const str &id : v) {
 				fprintf(stderr, "  '%s': %s\n", id.c_str(),
-				        dom[id] ? "bound" : "unbound");
+				        dom[id] ? "bound" : "free");
 			}
 		} else
 			DIE(1,"error: unknown query '%.*s'\n",(int)q.size(),q.data());
