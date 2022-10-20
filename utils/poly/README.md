@@ -19,13 +19,17 @@ Options [defaults]:
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
+  -d DELTA     <unsupported, no effect> [0]
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
                'prefix' [infix]
   -h           displays this help message
   -n           dry run, do not solve the problem [no]
-  -O OUT-BNDS  scale output according to min-max output bounds (.csv) [none]
+  -O OUT-BNDS  scale output according to min-max output bounds (.csv, only
+               meaningful for NNs) [none]
   -p           dump the expression in Polish notation to stdout [no]
   -P PREC      maximum precision to obtain the optimization result for [0.05]
+  -Q QUERY     answer a query about the problem; supported QUERY:
+               - vars: list all variables
   -r           re-cast bounded integer variables as reals with equality
                constraints
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]
@@ -54,7 +58,7 @@ License: Apache 2.0; part of SMLP.
 Assuming files `domain` and `expression` are in the current directory, this would
 be a sample to execute poly:
 
-	$ build/src/poly domain expression '>=' 0.42
+	$ build/src/smlp domain expression '>=' 0.42
 
 ## Build instructions
 
