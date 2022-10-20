@@ -48,7 +48,7 @@ struct Match {
 };
 }
 
-static sptr<form2> id_theta(bool /* left */, const hmap<str,sptr<term2>> &v)
+static sptr<form2> id_theta(opt<kay::Q> /* delta */, const hmap<str,sptr<term2>> &v)
 {
 	vec<sptr<form2>> conj;
 	for (const auto &[n,e] : v)

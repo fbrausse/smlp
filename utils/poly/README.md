@@ -19,7 +19,7 @@ Options [defaults]:
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
-  -d DELTA     <unsupported, no effect> [0]
+  -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
                'prefix' [infix]
   -h           displays this help message

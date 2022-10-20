@@ -189,7 +189,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 
 	/* construct theta */
 	auto theta = [spec=move(mf2.spec.spec), name2spec=move(name2spec)]
-	             (bool left, const hmap<str,sptr<term2>> &v) {
+	             (opt<kay::Q> delta, const hmap<str,sptr<term2>> &v) {
 		vec<sptr<form2>> conj;
 		for (const auto &[n,e] : v) {
 			auto it = name2spec.find(n);
@@ -198,10 +198,16 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			sptr<term2> nm = make2t(name { n });
 			sptr<term2> r;
 			if (sp.contains("rad-abs")) {
-				r = make2t(cnst2 { sp["rad-abs"].get<kay::Q>() });
+				kay::Q rad = sp["rad-abs"].get<kay::Q>();
+				if (delta)
+					rad *= (1 + *delta);
+				r = make2t(cnst2 { move(rad) });
 			} else if (sp.contains("rad-rel")) {
-				r = make2t(cnst2 { sp["rad-rel"].get<kay::Q>() });
-				r = make2t(bop2 { bop::MUL, move(r), abs(left ? e : nm) });
+				kay::Q rad = sp["rad-rel"].get<kay::Q>();
+				if (delta)
+					rad *= (1 + *delta);
+				r = make2t(cnst2 { move(rad) });
+				r = make2t(bop2 { bop::MUL, move(r), abs(!delta ? e : nm) });
 			} else if (sp["type"] == "input")
 				continue;
 			else

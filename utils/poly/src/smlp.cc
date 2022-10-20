@@ -150,7 +150,7 @@ optimize_EA(cmp_t direction,
             const kay::Q &delta,
             ival &obj_range,
             const kay::Q &max_prec,
-            const fun<sptr<form2>(bool left, const hmap<str,sptr<term2>> &)> theta,
+            const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
@@ -206,7 +206,7 @@ optimize_EA(cmp_t direction,
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
 			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
-			forall.add(*theta(true, candidate));
+			forall.add(*theta({}, candidate));
 			forall.add(*alpha);
 			forall.add(lbop2 { lbop2::OR, {
 				make2f(lneg2 { beta }),
@@ -245,7 +245,7 @@ optimize_EA(cmp_t direction,
 			}
 			auto &counter_example = a.get<sat>()->model;
 			counter_examples.emplace_back(T, counter_example);
-			exists.add(lneg2 { theta(false, counter_example) });
+			exists.add(lneg2 { theta({ delta }, counter_example) });
 		}
 	}
 
@@ -337,7 +337,7 @@ Options [defaults]:\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
-  -d DELTA     <unsupported, no effect> [0]\n\
+  -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
