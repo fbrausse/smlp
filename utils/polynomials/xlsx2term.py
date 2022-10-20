@@ -8,7 +8,9 @@ ws = wb['formula_EH_16']
 it = iter(ws.values)
 hdr = next(it)
 assert hdr == ('Term', 'Coefficient')
+icp = next(it)
+assert icp[0] == 'Intercept'
 with open('infix.term', 'x') as f:
-	print('0', file=f)
+	print(icp[1], file=f)
 	for term, coeff in it:
 		print('+%s*%s' % (coeff, term), file=f)
