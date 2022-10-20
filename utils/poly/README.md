@@ -86,6 +86,15 @@ A compiler supporting C++20 is required as well as:
   The default is `auto`.
 - Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
 
+### NN support
+
+The usage output shown above is for a build that includes NN-support. This
+requires more dependencies:
+
+- kjson <https://github.com/fbrausse/kjson>
+- hdf5 and its C++ bindings <https://www.hdfgroup.org/HDF5>
+- sources of libiv (*not published, yet*)
+
 ## Legal info
 
 All source files in this distribution are:
