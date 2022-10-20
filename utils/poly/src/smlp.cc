@@ -314,18 +314,18 @@ static expr2s mk_lbop2(vec<expr2s> args)
 	return make2f(lbop2 { op, move(b) });
 }
 
+#ifdef SMLP_ENABLE_KERAS_NN
+# define USAGE "{ DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS }"
+#else
+# define USAGE "DOMAIN EXPR"
+#endif
+
 [[noreturn]]
 static void usage(const char *program_name, int exit_code)
 {
 	FILE *f = exit_code ? stderr : stdout;
 	fprintf(f, "\
-usage: %s [-OPTS] [--] "
-#ifdef SMLP_ENABLE_KERAS_NN
-	"{ DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS }"
-#else
-	"DOMAIN EXPR"
-#endif
-" OP [CNST]\n\
+usage: %s [-OPTS] [--] " USAGE " OP [CNST]\n\
 ", program_name);
 	if (!exit_code)
 		fprintf(f,"\
@@ -346,7 +346,8 @@ Options [defaults]:\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
   -n           dry run, do not solve the problem [no]\n\
-  -O OUT-BNDS  scale output according to min-max output bounds (.csv) [none]\n\
+  -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
+               meaningful for NNs) [none]\n\
   -p           dump the expression in Polish notation to stdout [no]\n\
   -P PREC      maximum precision to obtain the optimization result for [0.05]\n\
   -r           re-cast bounded integer variables as reals with equality\n\
@@ -455,6 +456,11 @@ int main(int argc, char **argv)
 		              out_bounds, clamp_inputs, single_obj);
 		optind += 4;
 	} else
+#else
+	/* make compiler happy */
+	(void)single_obj;
+	(void)clamp_inputs;
+	(void)out_bounds;
 #endif
 	if (argc - optind >= 3) {
 		/* Solve polynomial problem */
