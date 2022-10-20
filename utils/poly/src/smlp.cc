@@ -42,12 +42,6 @@ struct maxprob {
 	sptr<form2> beta  = true2;
 };
 
-struct maxprob_solver {
-
-	vec<kay::Q> Ts; /* ordered list of thresholds to test */
-	
-};
-
 struct pareto {
 
 	domain dom;
