@@ -2,6 +2,7 @@
 #include <nn.hh>
 
 #define SAFE_UNROLL_MAX 0
+#undef unreachable
 #include <nn-common.hh>
 
 using namespace smlp;
@@ -62,7 +63,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 
 	domain dom;
 	hmap<str,size_t> name2spec;
-	for (size_t i=0; i<input_dim(mf2.spec); i++) {
+	for (ssize_t i=0; i<input_dim(mf2.spec); i++) {
 		kjson::json s = mf2.spec.spec[mf2.spec.dom2spec[i]];
 		str id = s["label"].get<str>();
 		name2spec[id] = mf2.spec.dom2spec[i];
@@ -111,7 +112,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	 *   var_fun<keras::linear,keras::relu>
 	 */
 	iv::nn::common::sequential_dense &m = mf2.model;
-	size_t n_layers = size(m.funs);
+	// size_t n_layers = size(m.funs);
 	size_t layer = 0;
 	vec<sptr<term2>> out = in_scaled;
 	for (const auto &f : m.funs) {
@@ -145,7 +146,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		out = move(next);
 	}
 
-	assert(size(out) == output_dim(mf2.spec));
+	assert(compatible((dim)size(out), output_dim(mf2.spec)));
 	if (mf2.out_scaler)
 		out = apply_scaler(*mf2.out_scaler, out, false);
 
@@ -173,7 +174,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		fprintf(stderr, "obj response idx: %zd\n", mf2.objective.idx[0]);
 		ssize_t idx = mf2.objective.idx[0];
 		assert(idx >= 0);
-		assert(idx < size(out));
+		assert((size_t)idx < size(out));
 		obj = out[idx];
 
 		if (out_bounds)

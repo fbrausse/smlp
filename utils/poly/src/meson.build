@@ -18,16 +18,19 @@ flint_dep = cxx.find_library('flint',
   header_include_directories: flint_hdrs,
   required: get_option('flint'))
 
-gmpxx_dep = dependency('gmpxx')
-
 if flint_dep.found()
   extra_defs = ['-DKAY_USE_FLINT']
   poly_deps += flint_dep
-elif gmpxx_dep.found() and cxx.check_header('gmpxx.h')
-  extra_defs = ['-DKAY_USE_GMPXX']
-  poly_deps += gmpxx_dep
+  message('using Flint for Z and Q')
 else
-  error('need either flint library or gmpxx headers')
+  gmpxx_dep = dependency('gmpxx')
+  if gmpxx_dep.found() and cxx.check_header('gmpxx.h')
+    extra_defs = ['-DKAY_USE_GMPXX']
+    poly_deps += gmpxx_dep
+    message('using gmpxx for Z and Q')
+  else
+    error('need either flint library or gmpxx headers')
+  endif
 endif
 
 add_project_arguments(extra_defs, language: 'cpp')
