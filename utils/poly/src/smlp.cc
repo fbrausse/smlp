@@ -152,6 +152,7 @@ optimize_EA(cmp_t direction,
             const sptr<form2> &alpha,
             const sptr<form2> &beta,
             const sptr<form2> &eta,
+            const kay::Q &delta,
             ival &obj_range,
             const kay::Q &max_prec,
             const fun<sptr<form2>(bool left, const hmap<str,sptr<term2>> &)> theta,
@@ -391,10 +392,11 @@ int main(int argc, char **argv)
 	const char *max_prec      = "0.05";
 	const char *alpha_s       = nullptr;
 	const char *beta_s        = nullptr;
+	const char *delta_s       = nullptr;
 	ival        obj_range     = { 0, 1 };
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:F:hnO:pP:rR:st:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:rR:st:")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_s = optarg; break;
@@ -407,6 +409,7 @@ int main(int argc, char **argv)
 				DIE(1,"error: option '-C' only supports "
 				      "'python'\n");
 			break;
+		case 'd': delta_s = optarg; break;
 		case 'F':
 			if (optarg == "infix"sv)
 				infix = true;
@@ -617,6 +620,7 @@ int main(int argc, char **argv)
 		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
 		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
 		                                 alpha, beta, eta,
+		                                 kay::Q_from_str(str(delta_s).data()),
 		                                 obj_range, max_p,
 		                                 theta, logic.c_str());
 		if (empty(r)) {

@@ -7,31 +7,35 @@
 using namespace smlp;
 using namespace iv::functions;
 
-using scaler = pointwise<affine1<double,double>>;
+using scaler = affine1<double,double>;
+using pt_scaler = pointwise<scaler>;
+
+static sptr<term2>
+apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
+{
+	sptr<term2> c = make2t(bop2 { bop::ADD,
+		make2t(bop2 { bop::MUL, make2t(cnst2 { sc.a }), in }),
+		make2t(cnst2 { sc.b })
+	});
+	if (clamp_outputs) {
+		sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
+		sptr<term2> one  = make2t(cnst2 { kay::Z(1) });
+		c = make2t(ite2 { make2f(prop2 { LT, c, zero }), zero, c });
+		c = make2t(ite2 { make2f(prop2 { GT, c, one }), one, c });
+	}
+	return c;
+}
 
 static vec<sptr<term2>>
-apply_scaler(const scaler &scaler_pt,
+apply_scaler(const pt_scaler &sc,
              const vec<sptr<term2>> &in, bool clamp_outputs)
 {
-
 	size_t n = size(in);
-	assert(n == size(scaler_pt.f));
+	assert(n == size(sc.f));
 	vec<sptr<term2>> in_scaled;
-	for (size_t i=0; i<n; i++) {
-		const affine1<double,double> &comp = scaler_pt.f[i];
-		sptr<term2> c = make2t(bop2 { bop::ADD,
-			make2t(bop2 { bop::MUL, make2t(cnst2 { comp.a }), in[i] }),
-			make2t(cnst2 { comp.b })
-		});
-		if (clamp_outputs) {
-			sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
-			sptr<term2> one  = make2t(cnst2 { kay::Z(1) });
-			c = make2t(ite2 { make2f(prop2 { LT, c, zero }), zero, c });
-			c = make2t(ite2 { make2f(prop2 { GT, c, one }), one, c });
-		}
-		in_scaled.emplace_back(move(c));
-	}
-
+	in_scaled.reserve(n);
+	for (size_t i=0; i<n; i++)
+		in_scaled.emplace_back(apply_scaler(sc.f[i], in[i], clamp_outputs));
 	return in_scaled;
 }
 
@@ -90,7 +94,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	// dump_smt2(stdout, dom);
 	// dump_smt2(stdout, lbop2 { lbop2::AND, move(in_bnds) });
 
-	const opt_fun<pointwise<affine1<double, double>>> &in_scaler_opt = mf2.in_scaler;
+	const opt_fun<pt_scaler> &in_scaler_opt = mf2.in_scaler;
 	assert(in_scaler_opt);
 	vec<sptr<term2>> in_scaled = apply_scaler(*in_scaler_opt, in_vars, clamp_inputs);
 
@@ -157,6 +161,12 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		if (comp["type"] == "response")
 			out_names.emplace_back(comp["label"].get<std::string_view>());
 
+	assert(size(out_names) == size(out));
+
+	hmap<str,sptr<term2>> outs;
+	for (size_t i=0; i<size(out); i++)
+		outs[out_names[i]] = out[i];
+
 	sptr<term2> obj;
 	if (single_obj) {
 		/* apply mf2.objective: select right output(s) */
@@ -167,8 +177,8 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		obj = out[idx];
 
 		if (out_bounds)
-			obj = apply_scaler(scaler({ mf2.objective_scaler(out_bounds) }),
-			                   { obj }, false)[0];
+			obj = apply_scaler(mf2.objective_scaler(out_bounds),
+			                   obj, false);
 	} else {
 		/* Pareto */
 		assert(size(out) == 1); /* not implemented, yet */
@@ -203,12 +213,6 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		}
 		return make2f(lbop2 { lbop2::AND, move(conj) });
 	};
-
-	assert(size(out_names) == size(out));
-
-	hmap<str,sptr<term2>> outs;
-	for (size_t i=0; i<size(out); i++)
-		outs[out_names[i]] = out[i];
 
 	return pre_problem {
 		move(dom),
