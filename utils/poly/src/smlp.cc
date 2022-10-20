@@ -665,12 +665,6 @@ int main(int argc, char **argv)
 				        s.threshold.get_str().c_str(),
 				        s.threshold.get_d(),
 				        c.get_str().c_str(), c.get_d());
-				hmap<str,sptr<term2>> repl = s.point;
-				for (int i=1; i<=4; i++) {
-					repl["stackup"]->get<cnst2>()->value = kay::Z(i);
-					kay::Q v = to_Q(cnst_fold(lhs, repl)->get<cnst2>()->value);
-					fprintf(stderr, "  stackup=%d: %s ~ %f\n", i, v.get_str().c_str(), v.get_d());
-				}
 			}
 		}
 	}
