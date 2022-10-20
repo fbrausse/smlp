@@ -1,12 +1,13 @@
 option('kay-prefix', type: 'string', description:
 	'prefix of the include path containing the kay library')
 
+# optional Flint usage instead of gmpxx
 option('flint', type: 'feature', description:
 	'use the flint library for Z and Q')
 option('flint-prefix', type: 'string', description:
 	'prefix of the install path containing the flint library')
 
-# NN support
+# optional NN support
 option('keras-nn', type: 'feature', description:
 	'enable support for reasoning about Keras NNs; pulls in requirements of libraries: hdf5, kjson, iv')
 

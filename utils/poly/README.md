@@ -67,7 +67,7 @@ Run:
 
 	$ mkdir build && meson setup build && meson compile -C build
 
-The resulting binary will be located in build/src/smlp.
+The resulting binary will be located in `build/src/smlp`.
 
 A compiler supporting C++20 is required as well as:
 
@@ -76,11 +76,14 @@ A compiler supporting C++20 is required as well as:
   Use the parameter `-Dkay-prefix=PATH` for the `meson setup` command to
   specify the location of the kay library.
 - GMP <https://gmplib.org> and either
-  - its C++ bindings, or
+  - its C++ bindings called `gmpxx`, or
   - Flint <http://flintlib.org>
 
     Use `-Dflint-prefix=PATH` for the `meson setup` command to specify a
     non-standard location of the flint library.
+
+  Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`.
+  The default is `auto`.
 - Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
 
 ## Legal info
