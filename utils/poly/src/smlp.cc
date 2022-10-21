@@ -377,32 +377,41 @@ License: Apache 2.0; part of SMLP.\n\
 	exit(exit_code);
 }
 
+static sptr<form2> parse_infix_form2(const char *s)
+{
+	static const unroll_funs_t logic = {
+		{"And", mk_lbop2<lbop2::AND>},
+		{"Or", mk_lbop2<lbop2::OR>}
+	};
+	return *unroll(parse_infix(s, false), logic).get<sptr<form2>>();
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
-	bool         single_obj    = false;
-	bool         solve         = true;
-	bool         dump_pe       = false;
-	bool         dump_smt2     = false;
-	bool         infix         = true;
-	bool         python_compat = false;
-	bool         inject_reals  = false;
-	int          timeout       = 0;
-	bool         clamp_inputs  = false;
-	const char  *out_bounds    = nullptr;
-	const char  *max_prec      = "0.05";
-	vec<str>     alpha_s       = {};
-	vec<str>     beta_s        = {};
-	const char  *delta_s       = "0";
-	ival         obj_range     = { 0, 1 };
-	vec<strview> queries;
+	bool             single_obj    = false;
+	bool             solve         = true;
+	bool             dump_pe       = false;
+	bool             dump_smt2     = false;
+	bool             infix         = true;
+	bool             python_compat = false;
+	bool             inject_reals  = false;
+	int              timeout       = 0;
+	bool             clamp_inputs  = false;
+	const char      *out_bounds    = nullptr;
+	const char      *max_prec      = "0.05";
+	vec<sptr<form2>> alpha_conj    = {};
+	vec<sptr<form2>> beta_conj     = {};
+	const char      *delta_s       = "0";
+	ival             obj_range     = { 0, 1 };
+	vec<strview>     queries;
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:Q:rR:st:")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
-		case 'a': alpha_s.emplace_back(optarg); break;
-		case 'b': beta_s.emplace_back(optarg); break;
+		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
+		case 'b': beta_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'c': clamp_inputs = true; break;
 		case 'C':
 			if (optarg == "python"sv)
@@ -490,7 +499,6 @@ int main(int argc, char **argv)
 			c->type = component::REAL;
 		}
 
-	vec<sptr<form2>> alpha_conj;
 	for (const auto &[n,i] : in_bnds) {
 		sptr<term2> v = make2t(name { n });
 		alpha_conj.emplace_back(make2f(lbop2 { lbop2::AND, {
@@ -499,9 +507,16 @@ int main(int argc, char **argv)
 		} }));
 	}
 	sptr<form2> alpha = make2f(lbop2 { lbop2::AND, move(alpha_conj) });
-	fprintf(stderr, "alpha from in-bnds: ");
+	fprintf(stderr, "alpha: ");
 	smlp::dump_smt2(stderr, *alpha);
 	fprintf(stderr, "\n");
+	alpha = subst(alpha, funs);
+
+	sptr<form2> beta = make2f(lbop2 { lbop2::AND, move(beta_conj) });
+	fprintf(stderr, "beta: ");
+	smlp::dump_smt2(stderr, *beta);
+	fprintf(stderr, "\n");
+	beta = subst(beta, funs);
 
 	fprintf(stderr, "eta: ");
 	smlp::dump_smt2(stderr, *eta);
@@ -555,39 +570,6 @@ int main(int argc, char **argv)
 	if (c == ARRAY_SIZE(cmp_s))
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
-
-	for (str &s : alpha_s) {
-		expr e = parse_infix(move(s), false);/*
-		fprintf(stderr, "---------- extra alpha:\n");
-		::dump_pe(stderr, e);
-		fprintf(stderr, "---------- extra alpha done\n");*/
-		expr2s a = unroll(e, {
-			{"And", mk_lbop2<lbop2::AND>},
-			{"Or", mk_lbop2<lbop2::OR>}
-		});
-		fprintf(stderr, "extra alpha: ");
-		a.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
-		fprintf(stderr, "\n");
-		alpha = make2f(lbop2 { lbop2::AND, { alpha, move(*a.get<sptr<form2>>()) } });
-	}
-	alpha = subst(alpha, funs);
-
-	sptr<form2> beta = true2;
-	for (str &s : beta_s) {
-		expr e = parse_infix(move(s), false);/*
-		fprintf(stderr, "---------- extra beta:\n");
-		::dump_pe(stderr, e);
-		fprintf(stderr, "---------- extra beta done\n");*/
-		expr2s b = unroll(e, {
-			{"And", mk_lbop2<lbop2::AND>},
-			{"Or", mk_lbop2<lbop2::OR>}
-		});
-		fprintf(stderr, "extra beta: ");
-		b.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
-		fprintf(stderr, "\n");
-		beta = make2f(lbop2 { lbop2::AND, { beta, move(*b.get<sptr<form2>>()) } });
-	}
-	beta = subst(beta, funs);
 
 	fprintf(stderr, "domain:\n");
 	smlp::dump_smt2(stderr, dom);
