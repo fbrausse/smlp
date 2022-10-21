@@ -1,4 +1,5 @@
 
+config = configuration_data()
 cxx = meson.get_compiler('cpp')
 
 poly_deps = []
@@ -19,13 +20,13 @@ flint_dep = cxx.find_library('flint',
   required: get_option('flint'))
 
 if flint_dep.found()
-  extra_defs = ['-DKAY_USE_FLINT']
+  config.set('KAY_USE_FLINT', 1)
   poly_deps += flint_dep
   message('using Flint for Z and Q')
 else
   gmpxx_dep = dependency('gmpxx')
   if gmpxx_dep.found() and cxx.check_header('gmpxx.h')
-    extra_defs = ['-DKAY_USE_GMPXX']
+    config.set('KAY_USE_GMPXX', 1)
     poly_deps += gmpxx_dep
     message('using gmpxx for Z and Q')
   else
@@ -33,7 +34,6 @@ else
   endif
 endif
 
-add_project_arguments(extra_defs, language: 'cpp')
 add_project_arguments(['-ffp-contract=off', '-Wno-format-zero-length'], language: 'cpp')
 
 # manually found libraries
@@ -140,13 +140,19 @@ if keras_nn.disabled()
   message('keras-nn support disabled')
 else
   message('keras-nn support enabled')
-  add_project_arguments('-DSMLP_ENABLE_KERAS_NN', language: 'cpp')
+  config.set('SMLP_ENABLE_KERAS_NN', 1)
   hdrs += 'nn.hh'
   srcs += 'nn.cc'
 endif
 
 # not yet: need a library first
 # install_headers(hdrs, subdir: 'smlp' / 'poly')
+
+configure_file(
+  input: '..'/'include'/'config.h.meson',
+  configuration: config,
+  output: 'config.h'
+)
 
 executable('smlp', srcs,
            dependencies: poly_deps,
