@@ -329,9 +329,11 @@ Options [defaults]:\n\
   -1           use single objective from GEN instead of all H5-NN outputs [no]\n\
   -a ALPHA     additional ALPHA constraints restricting candidates *and*\n\
                counter-examples (only points in regions satsifying ALPHA\n\
-               are considered counter-examples to safety) [true]\n\
+               are considered counter-examples to safety); can be given multiple\n\
+               times, the conjunction of all is used [true]\n\
   -b BETA      additional BETA constraints restricting only candidates\n\
-               (all points in safe regions satisfy BETA) [true]\n\
+               (all points in safe regions satisfy BETA); can be given multiple\n\
+               times, the conjunction of all is used [true]\n\
   -c           clamp inputs (only meaningful for NNs) [no]\n\
   -C COMPAT    use a compatibility layer, can be given multiple times; supported\n\
                values for COMPAT:\n\
@@ -367,7 +369,7 @@ switch.\n\
 The problem to be solved is specified by the two parameters OP CNST where OP is\n\
 one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell\n\
 to avoid unwanted redirections. CNST is a rational constant in the same format\n\
-as those in the EXPR-FILE (if any).\n\
+as those in the EXPR file (if any).\n\
 \n\
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
 License: Apache 2.0; part of SMLP.\n\
@@ -389,8 +391,8 @@ int main(int argc, char **argv)
 	bool         clamp_inputs  = false;
 	const char  *out_bounds    = nullptr;
 	const char  *max_prec      = "0.05";
-	const char  *alpha_s       = nullptr;
-	const char  *beta_s        = nullptr;
+	vec<str>     alpha_s       = {};
+	vec<str>     beta_s        = {};
 	const char  *delta_s       = "0";
 	ival         obj_range     = { 0, 1 };
 	vec<strview> queries;
@@ -399,8 +401,8 @@ int main(int argc, char **argv)
 	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:Q:rR:st:")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
-		case 'a': alpha_s = optarg; break;
-		case 'b': beta_s = optarg; break;
+		case 'a': alpha_s.emplace_back(optarg); break;
+		case 'b': beta_s.emplace_back(optarg); break;
 		case 'c': clamp_inputs = true; break;
 		case 'C':
 			if (optarg == "python"sv)
@@ -554,8 +556,8 @@ int main(int argc, char **argv)
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
 
-	if (alpha_s) {
-		expr e = parse_infix(alpha_s, false);/*
+	for (str &s : alpha_s) {
+		expr e = parse_infix(move(s), false);/*
 		fprintf(stderr, "---------- extra alpha:\n");
 		::dump_pe(stderr, e);
 		fprintf(stderr, "---------- extra alpha done\n");*/
@@ -571,8 +573,8 @@ int main(int argc, char **argv)
 	alpha = subst(alpha, funs);
 
 	sptr<form2> beta = true2;
-	if (beta_s) {
-		expr e = parse_infix(beta_s, false);/*
+	for (str &s : beta_s) {
+		expr e = parse_infix(move(s), false);/*
 		fprintf(stderr, "---------- extra beta:\n");
 		::dump_pe(stderr, e);
 		fprintf(stderr, "---------- extra beta done\n");*/

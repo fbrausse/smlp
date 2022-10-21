@@ -11,9 +11,11 @@ Options [defaults]:
   -1           use single objective from GEN instead of all H5-NN outputs [no]
   -a ALPHA     additional ALPHA constraints restricting candidates *and*
                counter-examples (only points in regions satsifying ALPHA
-               are considered counter-examples to safety) [true]
+               are considered counter-examples to safety); can be given multiple
+               times, the conjunction of all is used [true]
   -b BETA      additional BETA constraints restricting only candidates
-               (all points in safe regions satisfy BETA) [true]
+               (all points in safe regions satisfy BETA); can be given multiple
+               times, the conjunction of all is used [true]
   -c           clamp inputs (only meaningful for NNs) [no]
   -C COMPAT    use a compatibility layer, can be given multiple times; supported
                values for COMPAT:
@@ -49,7 +51,7 @@ switch.
 The problem to be solved is specified by the two parameters OP CNST where OP is
 one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell
 to avoid unwanted redirections. CNST is a rational constant in the same format
-as those in the EXPR-FILE (if any).
+as those in the EXPR file (if any).
 
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.
 License: Apache 2.0; part of SMLP.
