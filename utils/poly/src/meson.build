@@ -36,6 +36,11 @@ endif
 
 add_project_arguments(['-ffp-contract=off', '-Wno-format-zero-length'], language: 'cpp')
 
+link_args = []
+if get_option('static')
+  link_args += '-static'
+endif
+
 # manually found libraries
 # ------------------------
 keras_nn = get_option('keras-nn')
@@ -157,5 +162,6 @@ configure_file(
 executable('smlp', srcs,
            dependencies: poly_deps,
            override_options: 'cpp_std=c++20',
-           install: true
+           install: true,
+	link_args: link_args
           )
