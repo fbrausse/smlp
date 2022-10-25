@@ -87,8 +87,8 @@ A compiler supporting C++20 is required as well as:
     Use `-Dflint-prefix=PATH` for the `meson setup` command to specify a
     non-standard location of the flint library.
 
-  Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`.
-  The default is `auto`.
+  Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`
+  or vice-versa. The default is `auto`: Flint if found, otherwise `gmpxx`.
 - Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
 
 ### NN support
