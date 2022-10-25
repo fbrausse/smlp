@@ -328,15 +328,17 @@ Options [defaults]:\n\
                counter-examples (only points in regions satsifying ALPHA\n\
                are considered counter-examples to safety); can be given multiple\n\
                times, the conjunction of all is used [true]\n\
-  -b BETA      additional BETA constraints restricting only candidates\n\
-               (all points in safe regions satisfy BETA); can be given multiple\n\
-               times, the conjunction of all is used [true]\n\
+  -b BETA      additional BETA constraints restricting candidates and safe\n\
+               regions (all points in safe regions satisfy BETA); can be given\n\
+               multiple times, the conjunction of all is used [true]\n\
   -c           clamp inputs (only meaningful for NNs) [no]\n\
   -C COMPAT    use a compatibility layer, can be given multiple times; supported\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]\n\
+  -e ETA       additional ETA constraints restricting only candidates, can be\n\
+               given multiple times, the conjunction of all is used [true]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
@@ -458,12 +460,13 @@ int main(int argc, char **argv)
 	const char      *max_prec      = "0.05";
 	vec<sptr<form2>> alpha_conj    = {};
 	vec<sptr<form2>> beta_conj     = {};
+	vec<sptr<form2>> eta_conj      = {};
 	const char      *delta_s       = "0";
 	ival             obj_range     = { 0, 1 };
 	vec<strview>     queries;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:Q:rR:st:V")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:e:F:hnO:pP:Q:rR:st:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -477,6 +480,7 @@ int main(int argc, char **argv)
 				      "'python'\n");
 			break;
 		case 'd': delta_s = optarg; break;
+		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'F':
 			if (optarg == "infix"sv)
 				infix = true;
@@ -575,9 +579,12 @@ int main(int argc, char **argv)
 	fprintf(stderr, "\n");
 	beta = subst(beta, funs);
 
+	eta_conj.emplace_back(move(eta));
+	eta = make2f(lbop2 { lbop2::AND, move(eta_conj) });
 	fprintf(stderr, "eta: ");
 	smlp::dump_smt2(stderr, *eta);
 	fprintf(stderr, "\n");
+	eta = subst(eta, funs);
 /*
 	fprintf(stderr, "defined outputs:\n");
 	for (const auto &[k,e] : funs) {
