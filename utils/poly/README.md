@@ -13,15 +13,17 @@ Options [defaults]:
                counter-examples (only points in regions satsifying ALPHA
                are considered counter-examples to safety); can be given multiple
                times, the conjunction of all is used [true]
-  -b BETA      additional BETA constraints restricting only candidates
-               (all points in safe regions satisfy BETA); can be given multiple
-               times, the conjunction of all is used [true]
+  -b BETA      additional BETA constraints restricting candidates and safe
+               regions (all points in safe regions satisfy BETA); can be given
+               multiple times, the conjunction of all is used [true]
   -c           clamp inputs (only meaningful for NNs) [no]
   -C COMPAT    use a compatibility layer, can be given multiple times; supported
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]
+  -e ETA       additional ETA constraints restricting only candidates, can be
+               given multiple times, the conjunction of all is used [true]
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
                'prefix' [infix]
   -h           displays this help message
