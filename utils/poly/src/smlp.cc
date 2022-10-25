@@ -14,6 +14,13 @@
 #include "nn.hh"
 #include "poly.hh"
 
+#ifdef SMLP_ENABLE_KERAS_NN
+# include <H5public.h>
+# include <kjson.h>
+#endif
+
+#include <z3_version.h>
+
 #include <signal.h>
 #include <time.h>
 
@@ -355,6 +362,7 @@ Options [defaults]:\n\
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
+  -V           display version information\n\
 \n\
 The DOMAIN is a text file containing the bounds for all variables in the\n\
 form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either\n\
@@ -375,6 +383,47 @@ Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
 License: Apache 2.0; part of SMLP.\n\
 ");
 	exit(exit_code);
+}
+
+static void version_info()
+{
+	printf("SMLP version %d.%d.%d\n", SMLP_VERSION_MAJOR,
+	       SMLP_VERSION_MINOR, SMLP_VERSION_PATCH);
+	printf("Built with features:"
+#ifdef KAY_USE_FLINT
+	       " flint"
+#endif
+#ifdef SMLP_ENABLE_KERAS_NN
+	       " keras-nn"
+#endif
+	       "\n");
+	printf("Libraries:\n");
+	printf("  GMP version %d.%d.%d linked %s\n",
+	       __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR,
+	       __GNU_MP_VERSION_PATCHLEVEL, __gmp_version);
+#ifdef KAY_USE_FLINT
+	printf("  Flint version %s linked %s\n",
+	       FLINT_VERSION, flint_version);
+	/*
+	printf("  MPFR version %s linked %s\n",
+	       MPFR_VERSION_STRING, mpfr_get_version());*/
+#endif
+	unsigned maj, min, pat, rev;
+	Z3_get_version(&maj, &min, &pat, &rev);
+	printf("  Z3 version %d.%d.%d linked %d.%d.%d\n",
+	       Z3_MAJOR_VERSION, Z3_MINOR_VERSION,
+	       Z3_BUILD_NUMBER, maj, min, pat);
+#ifdef SMLP_ENABLE_KERAS_NN
+	uint32_t kjson_v = kjson_version();
+	printf("  kjson version %d.%d.%d linked %d.%d.%d\n",
+	       KJSON_VERSION >> 16, (KJSON_VERSION >> 8) & 0xff,
+	       KJSON_VERSION & 0xff, kjson_v >> 16,
+	       (kjson_v >> 8) & 0xff, kjson_v & 0xff);
+	H5get_libversion(&maj, &min, &pat);
+	printf("  HDF5 version %d.%d.%d linked %d.%d.%d\n",
+	       H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE,
+	       maj, min, pat);
+#endif
 }
 
 static sptr<form2> parse_infix_form2(const char *s)
@@ -407,7 +456,7 @@ int main(int argc, char **argv)
 	vec<strview>     queries;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:Q:rR:st:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:Q:rR:st:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -449,6 +498,7 @@ int main(int argc, char **argv)
 		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 't': timeout = atoi(optarg); break;
+		case 'V': version_info(); exit(0);
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
 		              optopt);
 		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);

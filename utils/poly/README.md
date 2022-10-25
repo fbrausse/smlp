@@ -37,6 +37,7 @@ Options [defaults]:
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]
   -s           dump the problem in SMT-LIB2 format to stdout [no]
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
+  -V           display version information
 
 The DOMAIN is a text file containing the bounds for all variables in the
 form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either

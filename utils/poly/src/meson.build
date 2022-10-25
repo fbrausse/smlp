@@ -1,5 +1,10 @@
 
 config = configuration_data()
+version = meson.project_version().split('.')
+config.set('SMLP_VERSION_MAJOR', version[0])
+config.set('SMLP_VERSION_MINOR', version[1])
+config.set('SMLP_VERSION_PATCH', version[2])
+
 cxx = meson.get_compiler('cpp')
 
 poly_deps = []
