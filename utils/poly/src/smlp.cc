@@ -11,6 +11,7 @@
 #include "domain.hh"
 #include "dump-smt2.hh"
 #include "z3-solver.hh"
+#include "ext-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
 
@@ -96,13 +97,23 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	fprintf(f, "(get-model)\n");
 }
 
+static const char *ext_solver_cmd;
+
+static uptr<solver> mk_solver(const char *logic = nullptr)
+{
+	if (ext_solver_cmd)
+		return std::make_unique<ext_solver>(ext_solver_cmd, logic);
+	return std::make_unique<z3_solver>(logic);
+}
+
 static result solve_exists(const domain &dom,
                            const form2 &f,
                            const char *logic = nullptr)
 {
-	z3_solver s(dom, logic);
-	s.add(f);
-	return s.check();
+	uptr<solver> s = mk_solver(logic);
+	s->declare(dom);
+	s->add(f);
+	return s->check();
 }
 
 struct smlp_result {
@@ -188,7 +199,8 @@ optimize_EA(cmp_t direction,
 		sptr<term2> threshold = make2t(cnst2 { T });
 
 		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
-		z3_solver exists(dom, logic);
+		z3_solver exists(logic);
+		exists.declare(dom);
 		exists.add(*eta);
 		exists.add(*alpha);
 		exists.add(*beta);
@@ -209,7 +221,8 @@ optimize_EA(cmp_t direction,
 			}
 			auto &candidate = e.get<sat>()->model;
 
-			z3_solver forall(dom, logic);
+			z3_solver forall(logic);
+			forall.declare(dom);
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
 			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
@@ -353,6 +366,8 @@ Options [defaults]:\n\
                constraints\n\
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
+  -S EXT-CMD   invoke external SMT solver instead of the built-in one via\n\
+               'sh -c EXT-CMD' []\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
   -V           display version information\n\
 \n\
@@ -466,7 +481,8 @@ int main(int argc, char **argv)
 	vec<strview>     queries;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:e:F:hnO:pP:Q:rR:st:V")) != -1;)
+	for (int opt; (opt = getopt(argc, argv,
+	                            ":1a:b:cC:d:e:F:hnO:pP:Q:rR:sS:t:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -508,6 +524,7 @@ int main(int argc, char **argv)
 		}
 		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
+		case 'S': ext_solver_cmd = optarg; break;
 		case 't': timeout = atoi(optarg); break;
 		case 'V': version_info(); exit(0);
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
@@ -585,14 +602,7 @@ int main(int argc, char **argv)
 	smlp::dump_smt2(stderr, *eta);
 	fprintf(stderr, "\n");
 	eta = subst(eta, funs);
-/*
-	fprintf(stderr, "defined outputs:\n");
-	for (const auto &[k,e] : funs) {
-		fprintf(stderr, "- '%s': ", k.c_str());
-		smlp::dump_smt2(stderr, *e);
-		fprintf(stderr, "\n");
-	}
-*/
+
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
 	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
@@ -603,17 +613,17 @@ int main(int argc, char **argv)
 			hset<str> h = free_vars(lhs);
 			vec<str> v(begin(h), end(h));
 			sort(begin(v), end(v));
-			for (const str &id : v) {
+			for (const str &id : v)
 				fprintf(stderr, "  '%s': %s\n", id.c_str(),
 				        dom[id] ? "bound" : "free");
-			}
 		} else
 			DIE(1,"error: unknown query '%.*s'\n",(int)q.size(),q.data());
 	}
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	z3_solver ood(dom, logic.c_str());
+	z3_solver ood(logic.c_str());
+	ood.declare(dom);
 	ood.add(lneg2 { pc });
 	ood.check().match(
 	[](const sat &s) {

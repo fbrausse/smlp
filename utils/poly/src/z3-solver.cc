@@ -10,11 +10,15 @@
 
 using namespace smlp;
 
-z3_solver::z3_solver(const domain &d, const char *logic)
+z3_solver::z3_solver(const char *logic)
 : slv(ctx)
 {
 	if (logic)
 		slv.set("logic", logic);
+}
+
+void z3_solver::declare(const domain &d)
+{
 	for (const auto &[var,rng] : d) {
 		const char *s = var.c_str();
 		z3::expr e(ctx);

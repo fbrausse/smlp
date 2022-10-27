@@ -134,6 +134,10 @@ hdrs = [
 	'dump-smt2.hh',
 	'z3-solver.hh',
 	'poly.hh',
+	'sexpr.hh',
+	'sexpr-detail.hh',
+	'solver.hh',
+	'ext-solver.hh',
 ]
 srcs = [
 	'smlp.cc',
@@ -144,6 +148,8 @@ srcs = [
 	'dump-smt2.cc',
 	'z3-solver.cc',
 	'poly.cc',
+	'sexpr.cc',
+	'ext-solver.cc',
 ]
 
 if keras_nn.disabled()
@@ -167,6 +173,7 @@ configure_file(
 executable('smlp', srcs,
            dependencies: poly_deps,
            override_options: 'cpp_std=c++20',
+	include_directories: include_directories('../include'),
            install: true,
 	link_args: link_args
           )

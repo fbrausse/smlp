@@ -4,17 +4,11 @@
  * Copyright 2022 The University of Manchester
  */
 
-#include "domain.hh"
+#include "solver.hh"
 
 #include <z3++.h>
 
 namespace smlp {
-
-struct sat { hmap<str,sptr<term2>> model; };
-struct unsat {};
-struct unknown { str reason; };
-
-typedef sumtype<sat,unsat,unknown> result;
 
 struct interruptible {
 
@@ -26,7 +20,7 @@ protected:
 	~interruptible() = default;
 };
 
-class z3_solver final : interruptible {
+class z3_solver : public solver, public interruptible {
 
 	z3::context ctx;
 	z3::solver slv;
@@ -37,13 +31,15 @@ class z3_solver final : interruptible {
 	z3::expr interp(const term2 &e, hmap<void *, z3::expr> &m);
 	z3::expr interp(const form2 &f, hmap<void *, z3::expr> &m);
 public:
-	explicit z3_solver(const domain &d, const char *logic = nullptr);
+	explicit z3_solver(const char *logic = nullptr);
 
-	result check();
+	void declare(const domain &d) override;
+
+	result check() override;
 
 	void interrupt() override { ctx.interrupt(); }
 
-	void add(const form2 &f)
+	void add(const form2 &f) override
 	{
 		hmap<void *, z3::expr> m;
 		slv.add(interp(f, m));
