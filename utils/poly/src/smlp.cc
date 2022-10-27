@@ -629,10 +629,10 @@ int main(int argc, char **argv)
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	z3_solver ood(logic.c_str());
-	ood.declare(dom);
-	ood.add(lneg2 { pc });
-	ood.check().match(
+	uptr<solver> ood = mk_solver(false, logic.c_str());
+	ood->declare(dom);
+	ood->add(lneg2 { pc });
+	ood->check().match(
 	[](const sat &s) {
 		fprintf(stderr, "error: DOMAIN constraints do not imply that "
 		                "all function parameters are inside the "
