@@ -12,7 +12,7 @@ struct pre_problem {
 	hmap<str,ival> input_bounds; /* alpha */
 	sptr<form2> eta = true2; /* corresponds to "safe" list in .spec */
 	sptr<form2> partial_domain = true2; /* constraints from evaluating partial functions */
-	fun<sptr<form2>(bool,const hmap<str,sptr<term2>> &)> theta;
+	fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> theta;
 };
 
 pre_problem parse_nn(const char *gen_path, const char *hdf5_path,

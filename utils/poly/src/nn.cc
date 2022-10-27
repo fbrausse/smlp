@@ -11,6 +11,9 @@ using namespace iv::functions;
 using scaler = affine1<double,double>;
 using pt_scaler = pointwise<scaler>;
 
+static const sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
+static const sptr<term2> one  = make2t(cnst2 { kay::Z(1) });
+
 static sptr<term2>
 apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 {
@@ -19,8 +22,6 @@ apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 		make2t(cnst2 { kay::Q(sc.b) })
 	});
 	if (clamp_outputs) {
-		sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
-		sptr<term2> one  = make2t(cnst2 { kay::Z(1) });
 		c = make2t(ite2 { make2f(prop2 { LT, c, zero }), zero, c });
 		c = make2t(ite2 { make2f(prop2 { GT, c, one }), one, c });
 	}
@@ -98,9 +99,6 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	const opt_fun<pt_scaler> &in_scaler_opt = mf2.in_scaler;
 	assert(in_scaler_opt);
 	vec<sptr<term2>> in_scaled = apply_scaler(*in_scaler_opt, in_vars, clamp_inputs);
-
-	sptr<term2> zero = make2t(cnst2 { kay::Q(0) });
-	sptr<term2> one = make2t(cnst2 { kay::Q(1) });
 
 	/* sequential_dense is
 	 *   finite_composition<dense_layer<keras::activation>>
@@ -189,7 +187,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 
 	/* construct theta */
 	auto theta = [spec=move(mf2.spec.spec), name2spec=move(name2spec)]
-	             (bool left, const hmap<str,sptr<term2>> &v) {
+	             (opt<kay::Q> delta, const hmap<str,sptr<term2>> &v) {
 		vec<sptr<form2>> conj;
 		for (const auto &[n,e] : v) {
 			auto it = name2spec.find(n);
@@ -198,10 +196,16 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			sptr<term2> nm = make2t(name { n });
 			sptr<term2> r;
 			if (sp.contains("rad-abs")) {
-				r = make2t(cnst2 { sp["rad-abs"].get<kay::Q>() });
+				kay::Q rad = sp["rad-abs"].get<kay::Q>();
+				if (delta)
+					rad *= (1 + *delta);
+				r = make2t(cnst2 { move(rad) });
 			} else if (sp.contains("rad-rel")) {
-				r = make2t(cnst2 { sp["rad-rel"].get<kay::Q>() });
-				r = make2t(bop2 { bop::MUL, move(r), abs(left ? e : nm) });
+				kay::Q rad = sp["rad-rel"].get<kay::Q>();
+				if (delta)
+					rad *= (1 + *delta);
+				r = make2t(cnst2 { move(rad) });
+				r = make2t(bop2 { bop::MUL, move(r), abs(!delta ? e : nm) });
 			} else if (sp["type"] == "input")
 				continue;
 			else

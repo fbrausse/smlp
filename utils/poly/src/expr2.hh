@@ -115,8 +115,8 @@ inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a term2 term. */
 typedef sumtype<sptr<term2>,sptr<form2>> expr2s;
-expr2s unroll(const expr &e,
-              const hmap<str,fun<expr2s(vec<expr2s>)>> &funs);
+typedef hmap<str,fun<expr2s(vec<expr2s>)>> unroll_funs_t;
+expr2s unroll(const expr &e, const unroll_funs_t &funs);
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */
 sptr<term2> subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl);
@@ -133,7 +133,8 @@ bool is_ground(const sptr<form2> &f);
 sptr<term2> cnst_fold(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl);
 sptr<form2> cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl);
 
-/* Determine whether 'e' contains non-linear terms */
+/* Determine whether a formula or term contains non-linear (sub-)terms */
+bool is_nonlinear(const sptr<form2> &f);
 bool is_nonlinear(const sptr<term2> &e);
 
 static inline bool is_linear(const sptr<term2> &e)

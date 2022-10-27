@@ -1,3 +1,8 @@
+# link options
+option('static', type: 'boolean', value: false, description:
+	'whether or not to enable static linking of the executable')
+
+# kay header-only library
 option('kay-prefix', type: 'string', description:
 	'prefix of the include path containing the kay library')
 

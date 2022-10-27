@@ -1,0 +1,10 @@
+
+#pragma once
+
+#mesondefine KAY_USE_GMPXX
+#mesondefine KAY_USE_FLINT
+#mesondefine SMLP_ENABLE_KERAS_NN
+
+#mesondefine SMLP_VERSION_MAJOR
+#mesondefine SMLP_VERSION_MINOR
+#mesondefine SMLP_VERSION_PATCH

@@ -32,6 +32,7 @@ struct Match {
 			r = move(*args[k+1].get<sptr<term2>>());
 			k -= 2;
 		}
+		assert(r);
 		for (int i=k; i >= 1; i-=2) {
 			sptr<term2> *rhs = args[i].get<sptr<term2>>();
 			sptr<term2> *yes = args[i+1].get<sptr<term2>>();
@@ -48,7 +49,7 @@ struct Match {
 };
 }
 
-static sptr<form2> id_theta(bool /* left */, const hmap<str,sptr<term2>> &v)
+static sptr<form2> id_theta(opt<kay::Q> /* delta */, const hmap<str,sptr<term2>> &v)
 {
 	vec<sptr<form2>> conj;
 	for (const auto &[n,e] : v)

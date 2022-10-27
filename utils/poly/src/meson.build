@@ -1,4 +1,10 @@
 
+config = configuration_data()
+version = meson.project_version().split('.')
+config.set('SMLP_VERSION_MAJOR', version[0])
+config.set('SMLP_VERSION_MINOR', version[1])
+config.set('SMLP_VERSION_PATCH', version[2])
+
 cxx = meson.get_compiler('cpp')
 
 poly_deps = []
@@ -19,13 +25,13 @@ flint_dep = cxx.find_library('flint',
   required: get_option('flint'))
 
 if flint_dep.found()
-  extra_defs = ['-DKAY_USE_FLINT']
+  config.set('KAY_USE_FLINT', 1)
   poly_deps += flint_dep
   message('using Flint for Z and Q')
 else
   gmpxx_dep = dependency('gmpxx')
   if gmpxx_dep.found() and cxx.check_header('gmpxx.h')
-    extra_defs = ['-DKAY_USE_GMPXX']
+    config.set('KAY_USE_GMPXX', 1)
     poly_deps += gmpxx_dep
     message('using gmpxx for Z and Q')
   else
@@ -33,8 +39,12 @@ else
   endif
 endif
 
-add_project_arguments(extra_defs, language: 'cpp')
 add_project_arguments(['-ffp-contract=off', '-Wno-format-zero-length'], language: 'cpp')
+
+link_args = []
+if get_option('static')
+  link_args += '-static'
+endif
 
 # manually found libraries
 # ------------------------
@@ -124,6 +134,10 @@ hdrs = [
 	'dump-smt2.hh',
 	'z3-solver.hh',
 	'poly.hh',
+	'sexpr.hh',
+	'sexpr-detail.hh',
+	'solver.hh',
+	'ext-solver.hh',
 ]
 srcs = [
 	'smlp.cc',
@@ -134,13 +148,15 @@ srcs = [
 	'dump-smt2.cc',
 	'z3-solver.cc',
 	'poly.cc',
+	'sexpr.cc',
+	'ext-solver.cc',
 ]
 
 if keras_nn.disabled()
   message('keras-nn support disabled')
 else
   message('keras-nn support enabled')
-  add_project_arguments('-DSMLP_ENABLE_KERAS_NN', language: 'cpp')
+  config.set('SMLP_ENABLE_KERAS_NN', 1)
   hdrs += 'nn.hh'
   srcs += 'nn.cc'
 endif
@@ -148,8 +164,16 @@ endif
 # not yet: need a library first
 # install_headers(hdrs, subdir: 'smlp' / 'poly')
 
+configure_file(
+  input: '..'/'include'/'config.h.meson',
+  configuration: config,
+  output: 'config.h'
+)
+
 executable('smlp', srcs,
            dependencies: poly_deps,
            override_options: 'cpp_std=c++20',
-           install: true
+	include_directories: include_directories('../include'),
+           install: true,
+	link_args: link_args
           )

@@ -11,18 +11,23 @@ Options [defaults]:
   -1           use single objective from GEN instead of all H5-NN outputs [no]
   -a ALPHA     additional ALPHA constraints restricting candidates *and*
                counter-examples (only points in regions satsifying ALPHA
-               are considered counter-examples to safety) [true]
-  -b BETA      additional BETA constraints restricting only candidates
-               (all points in safe regions satisfy BETA) [true]
+               are considered counter-examples to safety); can be given multiple
+               times, the conjunction of all is used [true]
+  -b BETA      additional BETA constraints restricting candidates and safe
+               regions (all points in safe regions satisfy BETA); can be given
+               multiple times, the conjunction of all is used [true]
   -c           clamp inputs (only meaningful for NNs) [no]
   -C COMPAT    use a compatibility layer, can be given multiple times; supported
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
-  -d DELTA     <unsupported, no effect> [0]
+  -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]
+  -e ETA       additional ETA constraints restricting only candidates, can be
+               given multiple times, the conjunction of all is used [true]
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
                'prefix' [infix]
   -h           displays this help message
+  -I EXT-INC   optional external incremental SMT solver [value for -S]
   -n           dry run, do not solve the problem [no]
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only
                meaningful for NNs) [none]
@@ -34,7 +39,11 @@ Options [defaults]:
                constraints
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]
   -s           dump the problem in SMT-LIB2 format to stdout [no]
+  -S EXT-CMD   invoke external SMT solver instead of the built-in one via
+               'SHELL -c EXT-CMD' where SHELL is taken from the environment or
+               'sh' if that variable is not set []
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
+  -V           display version information
 
 The DOMAIN is a text file containing the bounds for all variables in the
 form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either
@@ -49,7 +58,14 @@ switch.
 The problem to be solved is specified by the two parameters OP CNST where OP is
 one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell
 to avoid unwanted redirections. CNST is a rational constant in the same format
-as those in the EXPR-FILE (if any).
+as those in the EXPR file (if any).
+
+Exit codes are as follows:
+  0: normal operation
+  1: invalid user input
+  2: unexpected SMT solver output (e.g., 'unknown' on interruption)
+  3: unhandled SMT solver result (e.g., non-rational assignments)
+  4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')
 
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.
 License: Apache 2.0; part of SMLP.
@@ -82,8 +98,8 @@ A compiler supporting C++20 is required as well as:
     Use `-Dflint-prefix=PATH` for the `meson setup` command to specify a
     non-standard location of the flint library.
 
-  Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`.
-  The default is `auto`.
+  Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`
+  or vice-versa. The default is `auto`: Flint if found, otherwise `gmpxx`.
 - Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
 
 ### NN support

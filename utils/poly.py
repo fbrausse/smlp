@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 Z3 = False # True: solve with Z3; False: evaluate using interval arithmetic
-DUMP_AST = True
+DUMP_AST = False
 
 import sys
 from copy import copy

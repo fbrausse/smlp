@@ -56,6 +56,8 @@ def parse_args(argv):
 	               help='constraints on the region (premise of counter-examples)')
 	p.add_argument('--beta', type=str,
 	               help='constraints on the output (conclusion of counter-examples)')
+	p.add_argument('--eta', type=str,
+	               help='constraints only on the candidates')
 	p.add_argument('-g', '--model-gen', type=str, required=True,
 	               help='the model_gen*.json file containing the training / '+
 	                    'preprocessing parameters')
@@ -543,7 +545,7 @@ class Instance:
 	def __init__(self, spec_path, model, gen, data_bounds, use_input_bounds,
 	             input_bounds, resp_bounds, T_resp_bounds, data_path=None,
 	             bo_cex = None, more_constraints : str = None,
-	             alpha : str = None, beta : str = None):
+	             alpha : str = None, beta : str = None, eta : str = None):
 
 		with open(spec_path, 'r') as f:
 			all_spec = json.load(f, parse_float=Fraction)
@@ -565,6 +567,7 @@ class Instance:
 		self.more_constraints = more_constraints
 		self.alpha = alpha
 		self.beta = beta
+		self.eta = eta
 
 		self.counter_ex_finders = []
 		if data_path is not None:
@@ -775,7 +778,12 @@ class Instance:
 			else:
 				constraints = z3.And(constraints, beta)
 
-		return solver, obj_term, in_vars, constraints
+		eta = None
+		if self.eta is not None:
+			eta = eval(compile(self.eta, '<string>', 'eval'), {}, namespace)
+			log(2, 'eta:', eta.sexpr())
+
+		return solver, obj_term, in_vars, eta, constraints
 
 	def _intersect(self, a, b):
 		if a is None:
@@ -880,7 +888,7 @@ class Instance:
 	# yields a sequence of candidate solutions i_star
 	def exists(self, catv, excluded, excluded_safe, center_threshold,
 	           output=None, bo_cad = None, ctx=None, extra_eta=None):
-		solver, obj_term, in_vars, constraints = timed(
+		solver, obj_term, in_vars, eta, constraints = timed(
 			lambda: self._init_solver(ctx=ctx),
 			'a init_solver()',
 			lambda *args: log(2, *args))
@@ -905,6 +913,9 @@ class Instance:
 			log(1, 'excluding safe', excluded_safe[catv])
 			solver.add(*[Or(*[v != w for v,w in zip(in_vars, e)])
 			             for e in excluded_safe[catv]])
+
+		if eta is not None:
+			solver.add(eta)
 
 		if extra_eta is not None:
 			extra_eta(in_vars, self.spec, solver)
@@ -983,10 +994,11 @@ class Instance:
 
 
 	def is_safe(self, catv, i_star, threshold, output=None, check_safe=0, ctx=None):
-		solver, obj_term, in_vars, constraints = timed(
+		solver, obj_term, in_vars, eta, constraints = timed(
 			lambda: self._init_solver(ctx=ctx),
 			'b init_solver()',
 			lambda *args: log(2, *args))
+		# eta is unused for counter-examples
 		Cat(in_vars, self.cati, catv)(solver)
 		eps_res = unknown
 		for k,f in self.counter_ex_finders:
@@ -1364,7 +1376,7 @@ def main(argv):
 	inst = Instance(args.spec, load_model(args.nn_model), model_gen, data_bounds,
 	                args.bounds is not None, bounds, resp_bounds, T_resp_bounds,
 	                args.data, args.bo_cex, args.more_constraints, args.alpha,
-	                args.beta)
+	                args.beta, args.eta)
 
 	excluded = {} # dict from catv -> [[x1,x2,...,xn], ...]
 	if args.trace_exclude is not None and os.path.exists(args.trace_exclude):

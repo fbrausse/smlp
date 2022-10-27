@@ -11,8 +11,16 @@
 #include "domain.hh"
 #include "dump-smt2.hh"
 #include "z3-solver.hh"
+#include "ext-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
+
+#ifdef SMLP_ENABLE_KERAS_NN
+# include <H5public.h>
+# include <kjson.h>
+#endif
+
+#include <z3_version.h>
 
 #include <signal.h>
 #include <time.h>
@@ -89,13 +97,51 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	fprintf(f, "(get-model)\n");
 }
 
+static const char *ext_solver_cmd;
+static const char *inc_solver_cmd;
+
+static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
+{
+	const char *ext = ext_solver_cmd;
+	const char *inc = inc_solver_cmd;
+	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
+	if (cmd)
+		return std::make_unique<ext_solver>(cmd, logic);
+	return std::make_unique<z3_solver>(logic);
+}
+
+template <typename T>
+static str smt2_logic_str(const domain &dom, const T &e)
+{
+	bool reals = false;
+	bool ints = false;
+	for (const auto &[_,rng] : dom)
+		switch (rng.type) {
+		case component::INT: ints = true; break;
+		case component::REAL: reals = true; break;
+		}
+	str logic = "QF_";
+	if (ints || reals) {
+		logic += is_nonlinear(e) ? 'N' : 'L';
+		if (ints)
+			logic += 'I';
+		if (reals)
+			logic += 'R';
+		logic += 'A';
+	} else
+		logic += "UF";
+	return logic;
+}
+
 static result solve_exists(const domain &dom,
-                           const form2 &f,
+                           const sptr<form2> &f,
                            const char *logic = nullptr)
 {
-	z3_solver s(dom, logic);
-	s.add(f);
-	return s.check();
+	uptr<solver> s = mk_solver(false,
+		logic ? logic : smt2_logic_str(dom, f).c_str());
+	s->declare(dom);
+	s->add(*f);
+	return s->check();
 }
 
 struct smlp_result {
@@ -150,7 +196,7 @@ optimize_EA(cmp_t direction,
             const kay::Q &delta,
             ival &obj_range,
             const kay::Q &max_prec,
-            const fun<sptr<form2>(bool left, const hmap<str,sptr<term2>> &)> theta,
+            const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
@@ -181,15 +227,16 @@ optimize_EA(cmp_t direction,
 		sptr<term2> threshold = make2t(cnst2 { T });
 
 		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
-		z3_solver exists(dom, logic);
-		exists.add(*eta);
-		exists.add(*alpha);
-		exists.add(*beta);
-		exists.add(prop2 { direction, objective, threshold });
+		uptr<solver> exists = mk_solver(true, logic);
+		exists->declare(dom);
+		exists->add(*eta);
+		exists->add(*alpha);
+		exists->add(*beta);
+		exists->add(prop2 { direction, objective, threshold });
 
 		while (true) {
 			timing e0;
-			result e = exists.check();
+			result e = exists->check();
 			trace_result(stdout, "a", e, T, timing() - e0);
 			if (unknown *u = e.get<unknown>())
 				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
@@ -202,13 +249,14 @@ optimize_EA(cmp_t direction,
 			}
 			auto &candidate = e.get<sat>()->model;
 
-			z3_solver forall(dom, logic);
+			uptr<solver> forall = mk_solver(false, logic);
+			forall->declare(dom);
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
 			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
-			forall.add(*theta(true, candidate));
-			forall.add(*alpha);
-			forall.add(lbop2 { lbop2::OR, {
+			forall->add(*theta({}, candidate));
+			forall->add(*alpha);
+			forall->add(lbop2 { lbop2::OR, {
 				make2f(lneg2 { beta }),
 				make2f(prop2 { ~direction, objective, threshold })
 			} });
@@ -230,7 +278,7 @@ optimize_EA(cmp_t direction,
 			*/
 
 			timing a0;
-			result a = forall.check();
+			result a = forall->check();
 			trace_result(stdout, "b", a, T, timing() - a0);
 			if (unknown *u = a.get<unknown>())
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
@@ -245,7 +293,7 @@ optimize_EA(cmp_t direction,
 			}
 			auto &counter_example = a.get<sat>()->model;
 			counter_examples.emplace_back(T, counter_example);
-			exists.add(lneg2 { theta(false, counter_example) });
+			exists->add(lneg2 { theta({ delta }, counter_example) });
 		}
 	}
 
@@ -277,38 +325,6 @@ static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 		        to_string(c->get<cnst2>()->value).c_str());
 }
 
-static str smt2_logic_str(const domain &dom, const sptr<term2> &e)
-{
-	bool reals = false;
-	bool ints = false;
-	for (const auto &[_,rng] : dom)
-		switch (rng.type) {
-		case component::INT: ints = true; break;
-		case component::REAL: reals = true; break;
-		}
-	str logic = "QF_";
-	if (ints || reals) {
-		logic += is_nonlinear(e) ? 'N' : 'L';
-		if (ints)
-			logic += 'I';
-		if (reals)
-			logic += 'R';
-		logic += 'A';
-	} else
-		logic += "UF";
-	return logic;
-}
-
-template <decltype(lbop2::op) op>
-static expr2s mk_lbop2(vec<expr2s> args)
-{
-	vec<sptr<form2>> b;
-	b.reserve(args.size());
-	for (expr2s &t : args)
-		b.emplace_back(move(*t.get<sptr<form2>>()));
-	return make2f(lbop2 { op, move(b) });
-}
-
 #ifdef SMLP_ENABLE_KERAS_NN
 # define USAGE "{ DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS }"
 #else
@@ -329,18 +345,23 @@ Options [defaults]:\n\
   -1           use single objective from GEN instead of all H5-NN outputs [no]\n\
   -a ALPHA     additional ALPHA constraints restricting candidates *and*\n\
                counter-examples (only points in regions satsifying ALPHA\n\
-               are considered counter-examples to safety) [true]\n\
-  -b BETA      additional BETA constraints restricting only candidates\n\
-               (all points in safe regions satisfy BETA) [true]\n\
+               are considered counter-examples to safety); can be given multiple\n\
+               times, the conjunction of all is used [true]\n\
+  -b BETA      additional BETA constraints restricting candidates and safe\n\
+               regions (all points in safe regions satisfy BETA); can be given\n\
+               multiple times, the conjunction of all is used [true]\n\
   -c           clamp inputs (only meaningful for NNs) [no]\n\
   -C COMPAT    use a compatibility layer, can be given multiple times; supported\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
-  -d DELTA     <unsupported, no effect> [0]\n\
+  -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]\n\
+  -e ETA       additional ETA constraints restricting only candidates, can be\n\
+               given multiple times, the conjunction of all is used [true]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
+  -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
                meaningful for NNs) [none]\n\
@@ -352,7 +373,11 @@ Options [defaults]:\n\
                constraints\n\
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
+  -S EXT-CMD   invoke external SMT solver instead of the built-in one via\n\
+               'SHELL -c EXT-CMD' where SHELL is taken from the environment or\n\
+               'sh' if that variable is not set []\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
+  -V           display version information\n\
 \n\
 The DOMAIN is a text file containing the bounds for all variables in the\n\
 form 'NAME -- RANGE' where NAME is the name of the variable and RANGE is either\n\
@@ -367,7 +392,14 @@ switch.\n\
 The problem to be solved is specified by the two parameters OP CNST where OP is\n\
 one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell\n\
 to avoid unwanted redirections. CNST is a rational constant in the same format\n\
-as those in the EXPR-FILE (if any).\n\
+as those in the EXPR file (if any).\n\
+\n\
+Exit codes are as follows:\n\
+  0: normal operation\n\
+  1: invalid user input\n\
+  2: unexpected SMT solver output (e.g., 'unknown' on interruption)\n\
+  3: unhandled SMT solver result (e.g., non-rational assignments)\n\
+  4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')\n\
 \n\
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
 License: Apache 2.0; part of SMLP.\n\
@@ -375,32 +407,108 @@ License: Apache 2.0; part of SMLP.\n\
 	exit(exit_code);
 }
 
+static void version_info()
+{
+	printf("SMLP version %d.%d.%d\n", SMLP_VERSION_MAJOR,
+	       SMLP_VERSION_MINOR, SMLP_VERSION_PATCH);
+	printf("Built with features:"
+#ifdef KAY_USE_FLINT
+	       " flint"
+#endif
+#ifdef SMLP_ENABLE_KERAS_NN
+	       " keras-nn"
+#endif
+	       "\n");
+	printf("Libraries:\n");
+	printf("  GMP version %d.%d.%d linked %s\n",
+	       __GNU_MP_VERSION, __GNU_MP_VERSION_MINOR,
+	       __GNU_MP_VERSION_PATCHLEVEL, __gmp_version);
+#ifdef KAY_USE_FLINT
+	printf("  Flint version %s linked %s\n",
+	       FLINT_VERSION, flint_version);
+	/*
+	printf("  MPFR version %s linked %s\n",
+	       MPFR_VERSION_STRING, mpfr_get_version());*/
+#endif
+	unsigned maj, min, pat, rev;
+	Z3_get_version(&maj, &min, &pat, &rev);
+	printf("  Z3 version %d.%d.%d linked %d.%d.%d\n",
+	       Z3_MAJOR_VERSION, Z3_MINOR_VERSION,
+	       Z3_BUILD_NUMBER, maj, min, pat);
+#ifdef SMLP_ENABLE_KERAS_NN
+	uint32_t kjson_v = kjson_version();
+	printf("  kjson version %d.%d.%d linked %d.%d.%d\n",
+	       KJSON_VERSION >> 16, (KJSON_VERSION >> 8) & 0xff,
+	       KJSON_VERSION & 0xff, kjson_v >> 16,
+	       (kjson_v >> 8) & 0xff, kjson_v & 0xff);
+	H5get_libversion(&maj, &min, &pat);
+	printf("  HDF5 version %d.%d.%d linked %d.%d.%d\n",
+	       H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE,
+	       maj, min, pat);
+#endif
+}
+
+template <decltype(lbop2::op) op>
+static expr2s mk_lbop2(vec<expr2s> args)
+{
+	vec<sptr<form2>> b;
+	b.reserve(args.size());
+	for (expr2s &t : args)
+		b.emplace_back(move(*t.get<sptr<form2>>()));
+	return make2f(lbop2 { op, move(b) });
+}
+
+static expr2s mk_lneg2(vec<expr2s> args)
+{
+	assert(size(args) == 1);
+	return make2f(lneg2 { move(*args.front().get<sptr<form2>>()) });
+}
+
+static sptr<form2> parse_infix_form2(const char *s)
+{
+	static const unroll_funs_t logic = {
+		{"And", mk_lbop2<lbop2::AND>},
+		{"Or", mk_lbop2<lbop2::OR>},
+		{"Not", mk_lneg2},
+	};
+	return *unroll(parse_infix(s, false), logic).get<sptr<form2>>();
+}
+
+static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
+{
+	fprintf(f, "%s", pre);
+	smlp::dump_smt2(f, *g);
+	fprintf(f, "\n");
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
-	bool         single_obj    = false;
-	bool         solve         = true;
-	bool         dump_pe       = false;
-	bool         dump_smt2     = false;
-	bool         infix         = true;
-	bool         python_compat = false;
-	bool         inject_reals  = false;
-	int          timeout       = 0;
-	bool         clamp_inputs  = false;
-	const char  *out_bounds    = nullptr;
-	const char  *max_prec      = "0.05";
-	const char  *alpha_s       = nullptr;
-	const char  *beta_s        = nullptr;
-	const char  *delta_s       = "0";
-	ival         obj_range     = { 0, 1 };
-	vec<strview> queries;
+	bool             single_obj    = false;
+	bool             solve         = true;
+	bool             dump_pe       = false;
+	bool             dump_smt2     = false;
+	bool             infix         = true;
+	bool             python_compat = false;
+	bool             inject_reals  = false;
+	int              timeout       = 0;
+	bool             clamp_inputs  = false;
+	const char      *out_bounds    = nullptr;
+	const char      *max_prec      = "0.05";
+	vec<sptr<form2>> alpha_conj    = {};
+	vec<sptr<form2>> beta_conj     = {};
+	vec<sptr<form2>> eta_conj      = {};
+	const char      *delta_s       = "0";
+	ival             obj_range     = { 0, 1 };
+	vec<strview>     queries;
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv, ":1a:b:cC:d:F:hnO:pP:Q:rR:st:")) != -1;)
+	for (int opt; (opt = getopt(argc, argv,
+	                            ":1a:b:cC:d:e:F:hI:nO:pP:Q:rR:sS:t:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
-		case 'a': alpha_s = optarg; break;
-		case 'b': beta_s = optarg; break;
+		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
+		case 'b': beta_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'c': clamp_inputs = true; break;
 		case 'C':
 			if (optarg == "python"sv)
@@ -410,6 +518,7 @@ int main(int argc, char **argv)
 				      "'python'\n");
 			break;
 		case 'd': delta_s = optarg; break;
+		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'F':
 			if (optarg == "infix"sv)
 				infix = true;
@@ -420,6 +529,7 @@ int main(int argc, char **argv)
 				      "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
+		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
 		case 'P': max_prec = optarg; break;
@@ -437,7 +547,9 @@ int main(int argc, char **argv)
 		}
 		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
+		case 'S': ext_solver_cmd = optarg; break;
 		case 't': timeout = atoi(optarg); break;
+		case 'V': version_info(); exit(0);
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
 		              optopt);
 		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
@@ -482,13 +594,12 @@ int main(int argc, char **argv)
 				continue;
 			list l;
 			using namespace kay;
-			for (kay::Z z = ceil(i.lo); z <= floor(i.hi); z++)
+			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
 				l.values.emplace_back(z);
 			c->range = move(l);
 			c->type = component::REAL;
 		}
 
-	vec<sptr<form2>> alpha_conj;
 	for (const auto &[n,i] : in_bnds) {
 		sptr<term2> v = make2t(name { n });
 		alpha_conj.emplace_back(make2f(lbop2 { lbop2::AND, {
@@ -497,21 +608,21 @@ int main(int argc, char **argv)
 		} }));
 	}
 	sptr<form2> alpha = make2f(lbop2 { lbop2::AND, move(alpha_conj) });
-	fprintf(stderr, "alpha from in-bnds: ");
-	smlp::dump_smt2(stderr, *alpha);
-	fprintf(stderr, "\n");
+	dump_smt2_line(stderr, "alpha:", alpha);
+	alpha = subst(alpha, funs);
 
-	fprintf(stderr, "eta: ");
-	smlp::dump_smt2(stderr, *eta);
-	fprintf(stderr, "\n");
-/*
-	fprintf(stderr, "defined outputs:\n");
-	for (const auto &[k,e] : funs) {
-		fprintf(stderr, "- '%s': ", k.c_str());
-		smlp::dump_smt2(stderr, *e);
-		fprintf(stderr, "\n");
-	}
-*/
+	sptr<form2> beta = make2f(lbop2 { lbop2::AND, move(beta_conj) });
+	dump_smt2_line(stderr, "beta: ", beta);
+	beta = subst(beta, funs);
+
+	eta_conj.emplace_back(move(eta));
+	eta = make2f(lbop2 { lbop2::AND, move(eta_conj) });
+	dump_smt2_line(stderr, "eta: ", eta);
+	eta = subst(eta, funs);
+
+	fprintf(stderr, "domain:\n");
+	smlp::dump_smt2(stderr, dom);
+
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
 	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
@@ -522,28 +633,27 @@ int main(int argc, char **argv)
 			hset<str> h = free_vars(lhs);
 			vec<str> v(begin(h), end(h));
 			sort(begin(v), end(v));
-			for (const str &id : v) {
+			for (const str &id : v)
 				fprintf(stderr, "  '%s': %s\n", id.c_str(),
 				        dom[id] ? "bound" : "free");
-			}
 		} else
 			DIE(1,"error: unknown query '%.*s'\n",(int)q.size(),q.data());
 	}
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	z3_solver ood(dom, logic.c_str());
-	ood.add(lneg2 { pc });
-	ood.check().match(
-	[](const sat &s) {
-		fprintf(stderr, "error: DOMAIN constraints do not imply that "
-		                "all function parameters are inside the "
-		                "respective function's domain, e.g.:\n");
-		print_model(stderr, s.model, 2);
+	result ood = solve_exists(dom, make2f(lbop2 { lbop2::AND, {
+		alpha,
+		make2f(lneg2 { pc })
+	} }));
+	if (sat *s = ood.get<sat>()) {
+		fprintf(stderr,
+		        "error: ALPHA and DOMAIN constraints do not imply that "
+		        "all function parameters are inside the respective "
+		        "function's domain, e.g.:\n");
+		print_model(stderr, s->model, 2);
 		DIE(4, "");
-	},
-	[](const auto &) {}
-	);
+	}
 
 	/* find out about the OP comparison operation */
 	size_t c;
@@ -553,42 +663,6 @@ int main(int argc, char **argv)
 	if (c == ARRAY_SIZE(cmp_s))
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
-
-	if (alpha_s) {
-		expr e = parse_infix(alpha_s, false);/*
-		fprintf(stderr, "---------- extra alpha:\n");
-		::dump_pe(stderr, e);
-		fprintf(stderr, "---------- extra alpha done\n");*/
-		expr2s a = unroll(e, {
-			{"And", mk_lbop2<lbop2::AND>},
-			{"Or", mk_lbop2<lbop2::OR>}
-		});
-		fprintf(stderr, "extra alpha: ");
-		a.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
-		fprintf(stderr, "\n");
-		alpha = make2f(lbop2 { lbop2::AND, { alpha, move(*a.get<sptr<form2>>()) } });
-	}
-	alpha = subst(alpha, funs);
-
-	sptr<form2> beta = true2;
-	if (beta_s) {
-		expr e = parse_infix(beta_s, false);/*
-		fprintf(stderr, "---------- extra beta:\n");
-		::dump_pe(stderr, e);
-		fprintf(stderr, "---------- extra beta done\n");*/
-		expr2s b = unroll(e, {
-			{"And", mk_lbop2<lbop2::AND>},
-			{"Or", mk_lbop2<lbop2::OR>}
-		});
-		fprintf(stderr, "extra beta: ");
-		b.match([](const auto &v) { smlp::dump_smt2(stderr, *v); });
-		fprintf(stderr, "\n");
-		beta = make2f(lbop2 { lbop2::AND, { beta, move(*b.get<sptr<form2>>()) } });
-	}
-	beta = subst(beta, funs);
-
-	fprintf(stderr, "domain:\n");
-	smlp::dump_smt2(stderr, dom);
 
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
@@ -620,7 +694,7 @@ int main(int argc, char **argv)
 
 		/* optionally solve the problem */
 		if (solve)
-			solve_exists(p.dom, p.p, logic.c_str()).match(
+			solve_exists(p.dom, make2f(p.p), logic.c_str()).match(
 			[&,lhs=lhs](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
