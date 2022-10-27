@@ -1,0 +1,19 @@
+2022-10-27 poly-v0.2.0
+
+ * add -Dstatic=(true|false) meson option
+ * add -V for version info
+ * add support for Not() for ALPHA, BETA
+ * add support for -e ETA
+ * update usage in readme
+ * add some detail in build instructions
+ * initial support for external solver
+ * fix parsing model of ext-solver + add -I INC-CMD
+ * ext-solver prints (first) error in check()
+ * cleanup ext-solver model parsing
+ * run ext-solver in ${SHELL:-sh} instead of sh
+ * perform ood-check using ext-solver if specified
+ * include exit-code description in help message
+
+2022-10-24 poly-v0.1.0
+
+ * initial release
