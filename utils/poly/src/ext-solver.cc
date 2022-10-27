@@ -177,6 +177,9 @@ result ext_solver::check()
 	if (out_s.c == '(') {
 		opt<sexpr> e = out_s.compound();
 		assert(e);
+		es::formatter f;
+		f.f = stderr;
+		f.emit(*e);
 		abort();
 	}
 	opt<slit> res = out_s.atom();
