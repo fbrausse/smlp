@@ -34,7 +34,6 @@ private:
 	size_t n_vars = 0;
 
 	str get_info(const char *what);
-	str read_line();
 };
 
 }

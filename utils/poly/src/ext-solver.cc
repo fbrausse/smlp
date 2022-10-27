@@ -99,13 +99,14 @@ ext_solver::ext_solver(const char *cmd, const char *logic)
 	setvbuf(in, NULL, _IOLBF, 0);
 
 	fprintf(in, "(set-option :print-success false)\n");
-	fprintf(in, "(set-option :produce-models true)\n");
 
 	name = get_info(":name");
 	version = get_info(":version");
 	fprintf(stderr, "ext-solver pid %d: %s %s\n",
 	        pid, name.c_str(), version.c_str());
 
+	if (name != "ksmt")
+		fprintf(in, "(set-option :produce-models true)\n");
 	if (logic)
 		fprintf(in, "(set-logic %s)\n", logic);
 }
@@ -195,6 +196,7 @@ result ext_solver::check()
 		f.emit(*e);
 		abort();
 	}
+
 	opt<slit> res = out_s.atom();
 	assert(res);
 	if (*res == "unsat")
@@ -219,7 +221,7 @@ result ext_solver::check()
 	assert(no);
 	const sexpr &n = *no;
 	size_t off = 0;
-	if (name == "cvc4") {
+	if (name == "cvc4" || name == "ksmt") {
 		assert(std::get<slit>(n[0]) == "model");
 		off = 1;
 	}
@@ -237,4 +239,3 @@ void ext_solver::add(const form2 &f)
 	dump_smt2(in, f);
 	fprintf(in, ")\n");
 }
-
