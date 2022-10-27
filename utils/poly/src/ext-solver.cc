@@ -7,8 +7,9 @@
 #include "ext-solver.hh"
 #include "dump-smt2.hh"
 
-#include <unistd.h> /* pipe(), dup2() */
-#include <fcntl.h>  /* O_CLOEXEC */
+#include <unistd.h>   /* pipe(), dup2() */
+#include <fcntl.h>    /* O_CLOEXEC */
+#include <sys/wait.h> /* waitpid() */
 
 using namespace smlp;
 
@@ -59,8 +60,18 @@ process::process(const char *cmd)
 
 process::~process()
 {
-	if (pid != -1)
-		kill(pid, SIGTERM);
+	if (pid != -1) {
+		in.close();
+		out.close();
+		err.close();
+		int status;
+		waitpid(pid, &status, WNOHANG);
+		if (!WIFEXITED(status)) {
+			kill(pid, SIGTERM);
+			waitpid(pid, &status, WUNTRACED);
+		}
+		fprintf(stderr, "child %d exited with code %d\n", pid, WEXITSTATUS(status));
+	}
 }
 
 str ext_solver::get_info(const char *what)
@@ -133,15 +144,16 @@ static pair<str,sptr<term2>> parse_smt2_asgn(const es::sexpr &a)
 	using es::arg;
 	using es::sexpr;
 
+	str v, t;
+	arg b = slit("");
 	if (size(a) == 3) {
 		/* (= name cnst) */
 		const auto &[eq,var,s] = as_tuple_ex<slit,slit,arg>(a);
 		assert(eq == "=");
-		return { var, make2t(cnst2 { Q_from_smt2(s) }) };
-	}
-	str v, t;
-	arg b = slit("");
-	if (size(a) == 4) {
+		v = var;
+		t = "Real"; /* dummy, unused */
+		b = s;
+	} else if (size(a) == 4) {
 		/* (define-const name type cnst) */
 		const auto &[def,var,ty,s] = as_tuple_ex<slit,slit,slit,arg>(a);
 		assert(def == "define-const");
@@ -160,10 +172,8 @@ static pair<str,sptr<term2>> parse_smt2_asgn(const es::sexpr &a)
 		b = s;
 	}
 
-	if (t == "Real")
-		return { v, make2t(cnst2 { Q_from_smt2(b) }) };
-	assert(t == "Int");
-	return { v, make2t(cnst2 { kay::Z(std::get<slit>(b).c_str()) }) };
+	assert(t == "Real" || t == "Int");
+	return { v, make2t(cnst2 { Q_from_smt2(b) }) };
 }
 
 result ext_solver::check()
@@ -196,9 +206,8 @@ result ext_solver::check()
 		for (size_t i=0; i<n_vars; i++) {
 			opt<sexpr> n = out_s.next();
 			assert(n);
-			const auto &[eq,var,s] = as_tuple_ex<slit,slit,arg>(*n);
-			assert(eq == "=");
-			auto [it,ins] = m.emplace(var, make2t(cnst2 { Q_from_smt2(s) }));
+			assert(size(*n) == 3);
+			auto [it,ins] = m.insert(parse_smt2_asgn(*n));
 			assert(ins);
 		}
 		return sat { move(m) };
