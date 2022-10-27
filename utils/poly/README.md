@@ -60,6 +60,13 @@ one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell
 to avoid unwanted redirections. CNST is a rational constant in the same format
 as those in the EXPR file (if any).
 
+Exit codes are as follows:
+  0: normal operation
+  1: invalid user input
+  2: unexpected SMT solver output (e.g., 'unknown' on interruption)
+  3: unhandled SMT solver result (e.g., non-rational assignments)
+  4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')
+
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.
 License: Apache 2.0; part of SMLP.
 ```
