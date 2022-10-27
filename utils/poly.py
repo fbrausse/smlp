@@ -263,7 +263,7 @@ if __name__ == '__main__':
 		c = compile(s, '<string>', 'eval')
 
 	f = { 'Match': Match } # functions (global)
-	T = 0.95
+	T = 0.122949 #0.271459 #0.95
 
 	if DUMP_AST:
 		import ast
@@ -285,9 +285,10 @@ if __name__ == '__main__':
 			else:
 				assert False, type(rng)
 		Y = eval(c, f, v)
-		solver.add(Y >= T)
+		solver.add(Y >=T)
 		print(solver.to_smt2())
 		res = solver.check()   # exists X, Y >= T
+                #print(solver.model())
 	else:
 		_log('dom:', str(domain))
 		v = {k:w for k,w in domain.items() if isinstance(w, Interval)} # variables (local)
