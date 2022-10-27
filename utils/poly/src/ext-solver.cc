@@ -63,18 +63,18 @@ process::process(const char *cmd)
 
 process::~process()
 {
-	if (pid != -1) {
-		in.close();
-		out.close();
-		err.close();
-		int status;
-		waitpid(pid, &status, WNOHANG);
-		if (!WIFEXITED(status)) {
-			kill(pid, SIGTERM);
-			waitpid(pid, &status, WUNTRACED);
-		}
-		fprintf(stderr, "child %d exited with code %d\n", pid, WEXITSTATUS(status));
+	if (pid == -1)
+		return;
+	in.close();
+	out.close();
+	err.close();
+	int status;
+	waitpid(pid, &status, WNOHANG);
+	if (!WIFEXITED(status)) {
+		kill(pid, SIGTERM);
+		waitpid(pid, &status, WUNTRACED);
 	}
+	fprintf(stderr, "child %d exited with code %d\n", pid, WEXITSTATUS(status));
 }
 
 str ext_solver::get_info(const char *what)

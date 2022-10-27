@@ -32,6 +32,7 @@ struct Match {
 			r = move(*args[k+1].get<sptr<term2>>());
 			k -= 2;
 		}
+		assert(r);
 		for (int i=k; i >= 1; i-=2) {
 			sptr<term2> *rhs = args[i].get<sptr<term2>>();
 			sptr<term2> *yes = args[i+1].get<sptr<term2>>();
