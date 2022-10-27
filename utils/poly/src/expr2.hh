@@ -133,7 +133,8 @@ bool is_ground(const sptr<form2> &f);
 sptr<term2> cnst_fold(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl);
 sptr<form2> cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl);
 
-/* Determine whether 'e' contains non-linear terms */
+/* Determine whether a formula or term contains non-linear (sub-)terms */
+bool is_nonlinear(const sptr<form2> &f);
 bool is_nonlinear(const sptr<term2> &e);
 
 static inline bool is_linear(const sptr<term2> &e)

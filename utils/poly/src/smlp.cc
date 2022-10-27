@@ -110,13 +110,37 @@ static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 	return std::make_unique<z3_solver>(logic);
 }
 
+template <typename T>
+static str smt2_logic_str(const domain &dom, const T &e)
+{
+	bool reals = false;
+	bool ints = false;
+	for (const auto &[_,rng] : dom)
+		switch (rng.type) {
+		case component::INT: ints = true; break;
+		case component::REAL: reals = true; break;
+		}
+	str logic = "QF_";
+	if (ints || reals) {
+		logic += is_nonlinear(e) ? 'N' : 'L';
+		if (ints)
+			logic += 'I';
+		if (reals)
+			logic += 'R';
+		logic += 'A';
+	} else
+		logic += "UF";
+	return logic;
+}
+
 static result solve_exists(const domain &dom,
-                           const form2 &f,
+                           const sptr<form2> &f,
                            const char *logic = nullptr)
 {
-	uptr<solver> s = mk_solver(false, logic);
+	uptr<solver> s = mk_solver(false,
+		logic ? logic : smt2_logic_str(dom, f).c_str());
 	s->declare(dom);
-	s->add(f);
+	s->add(*f);
 	return s->check();
 }
 
@@ -301,28 +325,6 @@ static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 		        to_string(c->get<cnst2>()->value).c_str());
 }
 
-static str smt2_logic_str(const domain &dom, const sptr<term2> &e)
-{
-	bool reals = false;
-	bool ints = false;
-	for (const auto &[_,rng] : dom)
-		switch (rng.type) {
-		case component::INT: ints = true; break;
-		case component::REAL: reals = true; break;
-		}
-	str logic = "QF_";
-	if (ints || reals) {
-		logic += is_nonlinear(e) ? 'N' : 'L';
-		if (ints)
-			logic += 'I';
-		if (reals)
-			logic += 'R';
-		logic += 'A';
-	} else
-		logic += "UF";
-	return logic;
-}
-
 #ifdef SMLP_ENABLE_KERAS_NN
 # define USAGE "{ DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS }"
 #else
@@ -472,6 +474,13 @@ static sptr<form2> parse_infix_form2(const char *s)
 	return *unroll(parse_infix(s, false), logic).get<sptr<form2>>();
 }
 
+static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
+{
+	fprintf(f, "%s", pre);
+	smlp::dump_smt2(f, *g);
+	fprintf(f, "\n");
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
@@ -585,7 +594,7 @@ int main(int argc, char **argv)
 				continue;
 			list l;
 			using namespace kay;
-			for (kay::Z z = ceil(i.lo); z <= floor(i.hi); z++)
+			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
 				l.values.emplace_back(z);
 			c->range = move(l);
 			c->type = component::REAL;
@@ -599,23 +608,20 @@ int main(int argc, char **argv)
 		} }));
 	}
 	sptr<form2> alpha = make2f(lbop2 { lbop2::AND, move(alpha_conj) });
-	fprintf(stderr, "alpha: ");
-	smlp::dump_smt2(stderr, *alpha);
-	fprintf(stderr, "\n");
+	dump_smt2_line(stderr, "alpha:", alpha);
 	alpha = subst(alpha, funs);
 
 	sptr<form2> beta = make2f(lbop2 { lbop2::AND, move(beta_conj) });
-	fprintf(stderr, "beta: ");
-	smlp::dump_smt2(stderr, *beta);
-	fprintf(stderr, "\n");
+	dump_smt2_line(stderr, "beta: ", beta);
 	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
 	eta = make2f(lbop2 { lbop2::AND, move(eta_conj) });
-	fprintf(stderr, "eta: ");
-	smlp::dump_smt2(stderr, *eta);
-	fprintf(stderr, "\n");
+	dump_smt2_line(stderr, "eta: ", eta);
 	eta = subst(eta, funs);
+
+	fprintf(stderr, "domain:\n");
+	smlp::dump_smt2(stderr, dom);
 
 	/* hint for the solver: non-linear real arithmetic, potentially also
 	 * with integers */
@@ -636,19 +642,18 @@ int main(int argc, char **argv)
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	uptr<solver> ood = mk_solver(false, logic.c_str());
-	ood->declare(dom);
-	ood->add(lneg2 { pc });
-	ood->check().match(
-	[](const sat &s) {
-		fprintf(stderr, "error: DOMAIN constraints do not imply that "
-		                "all function parameters are inside the "
-		                "respective function's domain, e.g.:\n");
-		print_model(stderr, s.model, 2);
+	result ood = solve_exists(dom, make2f(lbop2 { lbop2::AND, {
+		alpha,
+		make2f(lneg2 { pc })
+	} }));
+	if (sat *s = ood.get<sat>()) {
+		fprintf(stderr,
+		        "error: ALPHA and DOMAIN constraints do not imply that "
+		        "all function parameters are inside the respective "
+		        "function's domain, e.g.:\n");
+		print_model(stderr, s->model, 2);
 		DIE(4, "");
-	},
-	[](const auto &) {}
-	);
+	}
 
 	/* find out about the OP comparison operation */
 	size_t c;
@@ -658,9 +663,6 @@ int main(int argc, char **argv)
 	if (c == ARRAY_SIZE(cmp_s))
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
-
-	fprintf(stderr, "domain:\n");
-	smlp::dump_smt2(stderr, dom);
 
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
@@ -692,7 +694,7 @@ int main(int argc, char **argv)
 
 		/* optionally solve the problem */
 		if (solve)
-			solve_exists(p.dom, p.p, logic.c_str()).match(
+			solve_exists(p.dom, make2f(p.p), logic.c_str()).match(
 			[&,lhs=lhs](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",

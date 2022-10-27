@@ -285,7 +285,7 @@ sptr<term2> smlp::cnst_fold(const sptr<term2> &e, const hmap<str,sptr<term2>> &r
 	);
 }
 
-static bool is_nonlinear(const sptr<form2> &f)
+bool smlp::is_nonlinear(const sptr<form2> &f)
 {
 	return f->match(
 	[](const prop2 &p) {
