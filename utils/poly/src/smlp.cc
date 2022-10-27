@@ -372,7 +372,8 @@ Options [defaults]:\n\
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
   -S EXT-CMD   invoke external SMT solver instead of the built-in one via\n\
-               'sh -c EXT-CMD' []\n\
+               'SHELL -c EXT-CMD' where SHELL is taken from the environment or\n\
+               'sh' if that variable is not set []\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
   -V           display version information\n\
 \n\

@@ -47,7 +47,10 @@ process::process(const char *cmd)
 			throw std::error_code(errno, std::system_category());
 		if (dup2(fileno(e.wr), STDERR_FILENO) == -1)
 			throw std::error_code(errno, std::system_category());
-		execlp("sh", "sh", "-c", cmd, NULL);
+		const char *shell = getenv("SHELL");
+		if (!shell)
+			shell = "sh";
+		execlp(shell, shell, "-c", cmd, NULL);
 		throw std::error_code(errno, std::system_category());
 	}
 	i.rd.close();

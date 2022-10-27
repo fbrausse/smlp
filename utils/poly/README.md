@@ -5,7 +5,7 @@ smlp is a program to solve and optimize polynomials and NNs over integers and re
 ## Usage
 
 ```
-usage: ./smlp [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
+usage: smlp [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
 
 Options [defaults]:
   -1           use single objective from GEN instead of all H5-NN outputs [no]
@@ -40,7 +40,8 @@ Options [defaults]:
   -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]
   -s           dump the problem in SMT-LIB2 format to stdout [no]
   -S EXT-CMD   invoke external SMT solver instead of the built-in one via
-               'sh -c EXT-CMD' []
+               'SHELL -c EXT-CMD' where SHELL is taken from the environment or
+               'sh' if that variable is not set []
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
   -V           display version information
 
