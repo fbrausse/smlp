@@ -11,6 +11,9 @@ using namespace iv::functions;
 using scaler = affine1<double,double>;
 using pt_scaler = pointwise<scaler>;
 
+static const sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
+static const sptr<term2> one  = make2t(cnst2 { kay::Z(1) });
+
 static sptr<term2>
 apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 {
@@ -19,8 +22,6 @@ apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 		make2t(cnst2 { kay::Q(sc.b) })
 	});
 	if (clamp_outputs) {
-		sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
-		sptr<term2> one  = make2t(cnst2 { kay::Z(1) });
 		c = make2t(ite2 { make2f(prop2 { LT, c, zero }), zero, c });
 		c = make2t(ite2 { make2f(prop2 { GT, c, one }), one, c });
 	}
@@ -98,9 +99,6 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	const opt_fun<pt_scaler> &in_scaler_opt = mf2.in_scaler;
 	assert(in_scaler_opt);
 	vec<sptr<term2>> in_scaled = apply_scaler(*in_scaler_opt, in_vars, clamp_inputs);
-
-	sptr<term2> zero = make2t(cnst2 { kay::Q(0) });
-	sptr<term2> one = make2t(cnst2 { kay::Q(1) });
 
 	/* sequential_dense is
 	 *   finite_composition<dense_layer<keras::activation>>
