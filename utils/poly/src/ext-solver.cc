@@ -114,15 +114,17 @@ static kay::Q Q_from_smt2(const es::arg &s)
 		return Q_from_str(str(*sls).data());
 	const auto &[sl,num,den] = as_tuple_ex<slit,arg,slit>(std::get<sexpr>(s));
 	assert(sl == "/");
-	kay::Z n, d(den);
-	if (const slit *nss = std::get_if<slit>(&num))
-		return Q(Z(nss->c_str()), move(d));
-	const auto &[sgn,ns] = as_tuple_ex<slit,slit>(std::get<sexpr>(num));
-	assert(sgn == "+" || sgn == "-");
-	n = Z(ns.c_str());
-	if (sgn == "-")
-		neg(n);
-	return Q(move(n), move(d));
+	Q n;
+	if (const slit *nss = std::get_if<slit>(&num)) {
+		n = Q_from_str(str(*nss).data());
+	} else {
+		const auto &[sgn,ns] = as_tuple_ex<slit,slit>(std::get<sexpr>(num));
+		assert(sgn == "+" || sgn == "-");
+		n = Q_from_str(str(ns).data());
+		if (sgn == "-")
+			neg(n);
+	}
+	return n / Q_from_str(str(den).data());
 }
 
 static pair<str,sptr<term2>> parse_smt2_asgn(const es::sexpr &a)
@@ -172,6 +174,11 @@ result ext_solver::check()
 
 	fprintf(in, "(check-sat)\n");
 	out_s.skip_space();
+	if (out_s.c == '(') {
+		opt<sexpr> e = out_s.compound();
+		assert(e);
+		abort();
+	}
 	opt<slit> res = out_s.atom();
 	assert(res);
 	if (*res == "unsat")

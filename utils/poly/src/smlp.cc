@@ -98,11 +98,15 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 }
 
 static const char *ext_solver_cmd;
+static const char *inc_solver_cmd;
 
-static uptr<solver> mk_solver(const char *logic = nullptr)
+static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
-	if (ext_solver_cmd)
-		return std::make_unique<ext_solver>(ext_solver_cmd, logic);
+	const char *ext = ext_solver_cmd;
+	const char *inc = inc_solver_cmd;
+	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
+	if (cmd)
+		return std::make_unique<ext_solver>(cmd, logic);
 	return std::make_unique<z3_solver>(logic);
 }
 
@@ -110,7 +114,7 @@ static result solve_exists(const domain &dom,
                            const form2 &f,
                            const char *logic = nullptr)
 {
-	uptr<solver> s = mk_solver(logic);
+	uptr<solver> s = mk_solver(false, logic);
 	s->declare(dom);
 	s->add(f);
 	return s->check();
@@ -199,16 +203,16 @@ optimize_EA(cmp_t direction,
 		sptr<term2> threshold = make2t(cnst2 { T });
 
 		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
-		z3_solver exists(logic);
-		exists.declare(dom);
-		exists.add(*eta);
-		exists.add(*alpha);
-		exists.add(*beta);
-		exists.add(prop2 { direction, objective, threshold });
+		uptr<solver> exists = mk_solver(true, logic);
+		exists->declare(dom);
+		exists->add(*eta);
+		exists->add(*alpha);
+		exists->add(*beta);
+		exists->add(prop2 { direction, objective, threshold });
 
 		while (true) {
 			timing e0;
-			result e = exists.check();
+			result e = exists->check();
 			trace_result(stdout, "a", e, T, timing() - e0);
 			if (unknown *u = e.get<unknown>())
 				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
@@ -221,14 +225,14 @@ optimize_EA(cmp_t direction,
 			}
 			auto &candidate = e.get<sat>()->model;
 
-			z3_solver forall(logic);
-			forall.declare(dom);
+			uptr<solver> forall = mk_solver(false, logic);
+			forall->declare(dom);
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
 			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
-			forall.add(*theta({}, candidate));
-			forall.add(*alpha);
-			forall.add(lbop2 { lbop2::OR, {
+			forall->add(*theta({}, candidate));
+			forall->add(*alpha);
+			forall->add(lbop2 { lbop2::OR, {
 				make2f(lneg2 { beta }),
 				make2f(prop2 { ~direction, objective, threshold })
 			} });
@@ -250,7 +254,7 @@ optimize_EA(cmp_t direction,
 			*/
 
 			timing a0;
-			result a = forall.check();
+			result a = forall->check();
 			trace_result(stdout, "b", a, T, timing() - a0);
 			if (unknown *u = a.get<unknown>())
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
@@ -265,7 +269,7 @@ optimize_EA(cmp_t direction,
 			}
 			auto &counter_example = a.get<sat>()->model;
 			counter_examples.emplace_back(T, counter_example);
-			exists.add(lneg2 { theta({ delta }, counter_example) });
+			exists->add(lneg2 { theta({ delta }, counter_example) });
 		}
 	}
 
@@ -355,6 +359,7 @@ Options [defaults]:\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
+  -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
                meaningful for NNs) [none]\n\
@@ -482,7 +487,7 @@ int main(int argc, char **argv)
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:cC:d:e:F:hnO:pP:Q:rR:sS:t:V")) != -1;)
+	                            ":1a:b:cC:d:e:F:hI:nO:pP:Q:rR:sS:t:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -507,6 +512,7 @@ int main(int argc, char **argv)
 				      "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
+		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
 		case 'P': max_prec = optarg; break;
