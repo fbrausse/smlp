@@ -144,7 +144,7 @@ struct file {
 	: f(fdopen(fd, mode))
 	{}
 
-	~file() { if (f) fclose(f); }
+	~file() { if (f) ::fclose(f); }
 
 	file(const file &) = delete;
 	file(file &&o) : f(o.f) { o.f = nullptr; }
@@ -158,7 +158,17 @@ struct file {
 
 	operator FILE *() const { return f; }
 
-	void close() { assert(f); fclose(f); f = nullptr; }
+	friend int fclose(file &f)
+	{
+		if (f.f) {
+			f.close();
+			return 0;
+		}
+		errno = EINVAL;
+		return EOF;
+	}
+
+	void close() { assert(f); *this = file(); }
 };
 
 } // end namespace smlp
