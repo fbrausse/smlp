@@ -149,19 +149,9 @@ static kay::Q Q_from_smt2(const es::arg &s)
 		return -Q_from_smt2(se[1]);
 	if (size(se) == 2 && matches(se[0], "+"))
 		return +Q_from_smt2(se[1]);
-	const auto &[sl,num,den] = as_tuple_ex<slit,arg,slit>(se);
-	assert(sl == "/");
-	Q n;
-	if (const slit *nss = std::get_if<slit>(&num)) {
-		n = Q_from_str(str(*nss).data());
-	} else {
-		const auto &[sgn,ns] = as_tuple_ex<slit,slit>(std::get<sexpr>(num));
-		assert(sgn == "+" || sgn == "-");
-		n = Q_from_str(str(ns).data());
-		if (sgn == "-")
-			neg(n);
-	}
-	return n / Q_from_str(str(den).data());
+	assert(size(se) == 3);
+	assert(matches(se[0], "/"));
+	return Q_from_smt2(se[1]) / Q_from_smt2(se[2]);
 }
 
 static pair<str,sptr<term2>> parse_smt2_asgn(const es::sexpr &a)
