@@ -79,12 +79,14 @@ be a sample to execute poly:
 ### External solvers
 
 The following SMT solvers are known to work with smlp:
-- [Z3](https://github.com/Z3Prover/z3) versions 4.8.12 and 4.11.2
-- [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) version 0.1.7
-- [Yices](http://yices.csl.sri.com) version 2.6.1, `yices-smt2`, requires the `--incremental` flag in `-I`
-- [CVC4](https://cvc4.github.io) version 1.8, `cvc4 -L smt2`, requires the `--incremental` flag in `-I`
-- [CVC5](https://cvc5.github.io) version 1.0.1, requires the `--incremental` flag in `-I`
-- [MathSAT](https://mathsat.fbk.eu) versions 5.6.3 and 5.6.8
+| Solver | Version(s) | param `-S` | param `-I` |
+|--------|------------|------------|------------|
+| [Z3](https://github.com/Z3Prover/z3) | 4.8.12, 4.11.2 | `z3 -in` | not required |
+| [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) | 0.1.7 | `ksmt` | not required |
+| [Yices](http://yices.csl.sri.com) | 2.6.1 | `yices-smt2` | `yices-smt2 --incremental` |
+| [CVC4](https://cvc4.github.io) | 1.8 | `cvc4 -L smt2` | `cvc4 -L smt2 --incremental` |
+| [CVC5](https://cvc5.github.io) | 1.0.1 | `cvc5` | `cvc5 --incremental` |
+| [MathSAT](https://mathsat.fbk.eu) | 5.6.3, 5.6.8 | `mathsat` | not required |
 
 ## Build instructions
 
