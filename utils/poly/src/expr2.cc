@@ -8,6 +8,15 @@
 
 using namespace smlp;
 
+sptr<term2> smlp::abs(const sptr<term2> &e)
+{
+	return make2t(ite2 {
+		make2f(prop2 { LT, e, zero }),
+		make2t(uop2 { uop::USUB, e }),
+		e
+	});
+}
+
 bool prop2::operator==(const prop2 &b) const
 {
 	return cmp == b.cmp &&

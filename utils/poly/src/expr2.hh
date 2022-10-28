@@ -108,9 +108,14 @@ static inline sptr<form2> make2f(Ts &&... ts)
 	return std::make_shared<form2>(std::forward<Ts>(ts)...);
 }
 
-/* Constants for true and false */
+/* Constants for true, false, 0 and 1 */
 inline const sptr<form2> true2  = make2f(lbop2 { lbop2::AND, {} });
 inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
+inline const sptr<term2> zero   = make2t(cnst2 { kay::Z(0) });
+inline const sptr<term2> one    = make2t(cnst2 { kay::Z(1) });
+
+/* Absolute value on term2 */
+sptr<term2> abs(const sptr<term2> &t);
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a term2 term. */
