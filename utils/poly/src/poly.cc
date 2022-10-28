@@ -49,11 +49,20 @@ struct Match {
 };
 }
 
-static sptr<form2> id_theta(opt<kay::Q> /* delta */, const hmap<str,sptr<term2>> &v)
+static sptr<form2> id_theta(opt<kay::Q> delta, const hmap<str,sptr<term2>> &v)
 {
+	sptr<term2> d;
+	if (delta && *delta) {
+		assert(*delta > 0);
+		d = make2t(cnst2 { move(*delta) });
+	}
 	vec<sptr<form2>> conj;
-	for (const auto &[n,e] : v)
-		conj.emplace_back(make2f(prop2 { EQ, make2t(name { n }), e }));
+	for (const auto &[n,e] : v) {
+		sptr<term2> nm = make2t(name { n });
+		conj.emplace_back(make2f(d
+			? prop2 { LE, abs(make2t(bop2 { bop::SUB, nm, e })), d }
+			: prop2 { EQ, nm, e }));
+	}
 	return make2f(lbop2 { lbop2::AND, move(conj) });
 }
 
