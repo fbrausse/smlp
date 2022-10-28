@@ -312,7 +312,7 @@ static void sigint_handler(int sig)
 	if (interruptible *p = interruptible::is_active)
 		p->interrupt();
 	signal(sig, sigint_handler);
-	raise(sig);
+	// raise(sig);
 }
 
 static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
@@ -623,10 +623,6 @@ int main(int argc, char **argv)
 	fprintf(stderr, "domain:\n");
 	smlp::dump_smt2(stderr, dom);
 
-	/* hint for the solver: non-linear real arithmetic, potentially also
-	 * with integers */
-	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
-
 	for (const strview &q : queries) {
 		fprintf(stderr, "query '%.*s':\n", (int)q.size(),q.data());
 		if (q == "vars") {
@@ -664,12 +660,16 @@ int main(int argc, char **argv)
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
 
+	/* hint for the solver: non-linear real arithmetic, potentially also
+	 * with integers */
+	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
+
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
-		sptr<term2> rhs = *unroll(cnst { argv[optind] }, {}).get<sptr<term2>>();
+		sptr<term2> rhs = make2t(cnst2 { kay::Q_from_str(argv[optind]) });
 
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {
