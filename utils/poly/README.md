@@ -76,6 +76,16 @@ be a sample to execute poly:
 
 	$ build/src/smlp domain expression '>=' 0.42
 
+### External solvers
+
+The following SMT solvers are known to work with smlp:
+- [Z3](https://github.com/Z3Prover/z3) versions 4.8.12 and 4.11.2
+- [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) version 0.1.7
+- [Yices](http://yices.csl.sri.com) version 2.6.1, `yices-smt2`, requires the `--incremental` flag in `-I`
+- [CVC4](https://cvc4.github.io) version 1.8, `cvc4 -L smt2`, requires the `--incremental` flag in `-I`
+- [CVC5](https://cvc5.github.io) version 1.0.1, requires the `--incremental` flag in `-I`
+- [MathSAT](https://mathsat.fbk.eu) versions 5.6.3 and 5.6.8
+
 ## Build instructions
 
 To build the program, meson <https://mesonbuild.com> is required.
