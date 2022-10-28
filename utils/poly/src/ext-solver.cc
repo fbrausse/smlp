@@ -102,8 +102,15 @@ ext_solver::ext_solver(const char *cmd, const char *logic)
 
 	name = get_info(":name");
 	version = get_info(":version");
+	std::string_view v = version;
+	if (name == "MathSAT5" && v.starts_with("MathSAT5 version "))
+		v = v.substr("MathSAT5 version "sv.length());
+	else if (name == "ksmt" && v.starts_with("v"))
+		v = v.substr(1);
+	auto [_,ec] = from_chars(v.data(), v.data() + v.length(), parsed_version);
+	assert(ec == std::errc {});
 	fprintf(stderr, "ext-solver pid %d: %s %s\n",
-	        pid, name.c_str(), version.c_str());
+	        pid, name.c_str(), to_string(parsed_version).c_str());
 
 	if (name != "ksmt")
 		fprintf(in, "(set-option :produce-models true)\n");
@@ -118,6 +125,14 @@ void ext_solver::declare(const domain &d)
 	n_vars = size(d);
 }
 
+static bool matches(const es::arg &a, const std::string_view &v)
+{
+	using es::slit;
+	if (const slit *s = std::get_if<slit>(&a))
+		return *s == v;
+	return false;
+}
+
 static kay::Q Q_from_smt2(const es::arg &s)
 {
 	using namespace kay;
@@ -127,7 +142,14 @@ static kay::Q Q_from_smt2(const es::arg &s)
 
 	if (const slit *sls = std::get_if<slit>(&s))
 		return Q_from_str(str(*sls).data());
-	const auto &[sl,num,den] = as_tuple_ex<slit,arg,slit>(std::get<sexpr>(s));
+	const sexpr &se = std::get<sexpr>(s);
+	if (size(se) == 2 && matches(se[0], "to_real"))
+		return Q_from_smt2(se[1]);
+	if (size(se) == 2 && matches(se[0], "-"))
+		return -Q_from_smt2(se[1]);
+	if (size(se) == 2 && matches(se[0], "+"))
+		return +Q_from_smt2(se[1]);
+	const auto &[sl,num,den] = as_tuple_ex<slit,arg,slit>(se);
 	assert(sl == "/");
 	Q n;
 	if (const slit *nss = std::get_if<slit>(&num)) {
@@ -150,8 +172,14 @@ static pair<str,sptr<term2>> parse_smt2_asgn(const es::sexpr &a)
 
 	str v, t;
 	arg b = slit("");
-	if (size(a) == 3) {
-		/* (= name cnst) */
+	if (size(a) == 2) {
+		/* (name cnst) [MathSAT 5.6.3] */
+		const auto &[var,s] = as_tuple_ex<slit,arg>(a);
+		v = var;
+		t = "Real"; /* dummy, unused */
+		b = s;
+	} else if (size(a) == 3) {
+		/* (= name cnst) [Yices 2.6.1] */
 		const auto &[eq,var,s] = as_tuple_ex<slit,slit,arg>(a);
 		assert(eq == "=");
 		v = var;
@@ -221,7 +249,8 @@ result ext_solver::check()
 	assert(no);
 	const sexpr &n = *no;
 	size_t off = 0;
-	if (name == "cvc4" || name == "ksmt") {
+	if (name == "cvc4" || name == "ksmt" ||
+	    (name == "MathSAT5" && parsed_version >= split_version {5,6,8})) {
 		assert(std::get<slit>(n[0]) == "model");
 		off = 1;
 	}
