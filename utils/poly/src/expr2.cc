@@ -8,6 +8,15 @@
 
 using namespace smlp;
 
+sptr<term2> smlp::abs(const sptr<term2> &e)
+{
+	return make2t(ite2 {
+		make2f(prop2 { LT, e, zero }),
+		make2t(uop2 { uop::USUB, e }),
+		e
+	});
+}
+
 bool prop2::operator==(const prop2 &b) const
 {
 	return cmp == b.cmp &&
@@ -74,7 +83,7 @@ expr2s smlp::unroll(const expr &e,
 		if (c.value.find('.') == str::npos &&
 		    c.value.find('e') == str::npos &&
 		    c.value.find('E') == str::npos)
-			return make2t(cnst2 { kay::Z(c.value) });
+			return make2t(cnst2 { kay::Z(c.value.c_str()) });
 		return make2t(cnst2 { kay::Q_from_str(str(c.value).data()) });
 	},
 	[&](const bop &b) {

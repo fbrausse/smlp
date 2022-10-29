@@ -11,9 +11,6 @@ using namespace iv::functions;
 using scaler = affine1<double,double>;
 using pt_scaler = pointwise<scaler>;
 
-static const sptr<term2> zero = make2t(cnst2 { kay::Z(0) });
-static const sptr<term2> one  = make2t(cnst2 { kay::Z(1) });
-
 static sptr<term2>
 apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 {
@@ -39,15 +36,6 @@ apply_scaler(const pt_scaler &sc,
 	for (size_t i=0; i<n; i++)
 		in_scaled.emplace_back(apply_scaler(sc.f[i], in[i], clamp_outputs));
 	return in_scaled;
-}
-
-static sptr<term2> abs(const sptr<term2> &e)
-{
-	return make2t(ite2 {
-		make2f(prop2 { LT, e, make2t(cnst2 { kay::Q(0) }) }),
-		make2t(uop2 { uop::USUB, e }),
-		e
-	});
 }
 
 pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,

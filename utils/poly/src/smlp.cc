@@ -10,17 +10,19 @@
 #include "expr2.hh"
 #include "domain.hh"
 #include "dump-smt2.hh"
-#include "z3-solver.hh"
 #include "ext-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
+
+#ifdef SMLP_ENABLE_Z3_API
+# include "z3-solver.hh"
+# include <z3_version.h>
+#endif
 
 #ifdef SMLP_ENABLE_KERAS_NN
 # include <H5public.h>
 # include <kjson.h>
 #endif
-
-#include <z3_version.h>
 
 #include <signal.h>
 #include <time.h>
@@ -107,7 +109,12 @@ static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
 	if (cmd)
 		return std::make_unique<ext_solver>(cmd, logic);
+#ifdef SMLP_ENABLE_Z3_API
 	return std::make_unique<z3_solver>(logic);
+#else
+	DIE(1,"error: no solver specified and none are built-in, require "
+	      "external solver via -S or -I\n");
+#endif
 }
 
 template <typename T>
@@ -196,7 +203,7 @@ optimize_EA(cmp_t direction,
             const kay::Q &delta,
             ival &obj_range,
             const kay::Q &max_prec,
-            const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> theta,
+            const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> &theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
@@ -312,7 +319,7 @@ static void sigint_handler(int sig)
 	if (interruptible *p = interruptible::is_active)
 		p->interrupt();
 	signal(sig, sigint_handler);
-	raise(sig);
+	// raise(sig);
 }
 
 static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
@@ -344,7 +351,7 @@ usage: %s [-OPTS] [--] " USAGE " OP [CNST]\n\
 Options [defaults]:\n\
   -1           use single objective from GEN instead of all H5-NN outputs [no]\n\
   -a ALPHA     additional ALPHA constraints restricting candidates *and*\n\
-               counter-examples (only points in regions satsifying ALPHA\n\
+               counter-examples (only points in regions satisfying ALPHA\n\
                are considered counter-examples to safety); can be given multiple\n\
                times, the conjunction of all is used [true]\n\
   -b BETA      additional BETA constraints restricting candidates and safe\n\
@@ -418,6 +425,9 @@ static void version_info()
 #ifdef SMLP_ENABLE_KERAS_NN
 	       " keras-nn"
 #endif
+#ifdef SMLP_ENABLE_Z3_API
+	       " z3"
+#endif
 	       "\n");
 	printf("Libraries:\n");
 	printf("  GMP version %d.%d.%d linked %s\n",
@@ -431,10 +441,12 @@ static void version_info()
 	       MPFR_VERSION_STRING, mpfr_get_version());*/
 #endif
 	unsigned maj, min, pat, rev;
+#ifdef SMLP_ENABLE_Z3_API
 	Z3_get_version(&maj, &min, &pat, &rev);
 	printf("  Z3 version %d.%d.%d linked %d.%d.%d\n",
 	       Z3_MAJOR_VERSION, Z3_MINOR_VERSION,
 	       Z3_BUILD_NUMBER, maj, min, pat);
+#endif
 #ifdef SMLP_ENABLE_KERAS_NN
 	uint32_t kjson_v = kjson_version();
 	printf("  kjson version %d.%d.%d linked %d.%d.%d\n",
@@ -446,6 +458,10 @@ static void version_info()
 	       H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE,
 	       maj, min, pat);
 #endif
+	(void)maj;
+	(void)min;
+	(void)pat;
+	(void)rev;
 }
 
 template <decltype(lbop2::op) op>
@@ -480,6 +496,8 @@ static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
 	smlp::dump_smt2(f, *g);
 	fprintf(f, "\n");
 }
+
+interruptible *interruptible::is_active;
 
 int main(int argc, char **argv)
 {
@@ -623,10 +641,6 @@ int main(int argc, char **argv)
 	fprintf(stderr, "domain:\n");
 	smlp::dump_smt2(stderr, dom);
 
-	/* hint for the solver: non-linear real arithmetic, potentially also
-	 * with integers */
-	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
-
 	for (const strview &q : queries) {
 		fprintf(stderr, "query '%.*s':\n", (int)q.size(),q.data());
 		if (q == "vars") {
@@ -646,7 +660,7 @@ int main(int argc, char **argv)
 		alpha,
 		make2f(lneg2 { pc })
 	} }));
-	if (sat *s = ood.get<sat>()) {
+	if (const sat *s = ood.get<sat>()) {
 		fprintf(stderr,
 		        "error: ALPHA and DOMAIN constraints do not imply that "
 		        "all function parameters are inside the respective "
@@ -664,12 +678,16 @@ int main(int argc, char **argv)
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
 
+	/* hint for the solver: non-linear real arithmetic, potentially also
+	 * with integers */
+	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
+
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
-		sptr<term2> rhs = *unroll(cnst { argv[optind] }, {}).get<sptr<term2>>();
+		sptr<term2> rhs = make2t(cnst2 { kay::Q_from_str(argv[optind]) });
 
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {

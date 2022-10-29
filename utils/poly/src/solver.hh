@@ -24,4 +24,12 @@ struct solver {
 	virtual result check() = 0;
 };
 
+struct interruptible {
+
+	virtual ~interruptible() = default;
+	virtual void interrupt() = 0;
+
+	static interruptible *is_active;
+};
+
 }

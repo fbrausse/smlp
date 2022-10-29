@@ -109,8 +109,6 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 	);
 }
 
-interruptible *interruptible::is_active;
-
 result z3_solver::check()
 {
 	interruptible::is_active = this;

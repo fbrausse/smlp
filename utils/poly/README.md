@@ -10,7 +10,7 @@ usage: smlp [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
 Options [defaults]:
   -1           use single objective from GEN instead of all H5-NN outputs [no]
   -a ALPHA     additional ALPHA constraints restricting candidates *and*
-               counter-examples (only points in regions satsifying ALPHA
+               counter-examples (only points in regions satisfying ALPHA
                are considered counter-examples to safety); can be given multiple
                times, the conjunction of all is used [true]
   -b BETA      additional BETA constraints restricting candidates and safe
@@ -76,6 +76,18 @@ be a sample to execute poly:
 
 	$ build/src/smlp domain expression '>=' 0.42
 
+### External solvers
+
+The following SMT solvers are known to work with smlp:
+| Solver | Version(s) | param `-S` | param `-I` |
+|--------|------------|------------|------------|
+| [Z3](https://github.com/Z3Prover/z3) | 4.8.12, 4.11.2 | `z3 -in` | not required |
+| [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) | 0.1.7 | `ksmt` | not required |
+| [Yices](http://yices.csl.sri.com) | 2.6.1 | `yices-smt2` | `yices-smt2 --incremental` |
+| [CVC4](https://cvc4.github.io) | 1.8 | `cvc4 -L smt2` | `cvc4 -L smt2 --incremental` |
+| [CVC5](https://cvc5.github.io) | 1.0.1 | `cvc5` | `cvc5 --incremental` |
+| [MathSAT](https://mathsat.fbk.eu) | 5.6.3, 5.6.8 | `mathsat` | not required |
+
 ## Build instructions
 
 To build the program, meson <https://mesonbuild.com> is required.
@@ -100,7 +112,16 @@ A compiler supporting C++20 is required as well as:
 
   Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`
   or vice-versa. The default is `auto`: Flint if found, otherwise `gmpxx`.
-- Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
+
+### Internal solver support
+
+smlp can make use of a built-in solver. So far, API usage of the following SMT
+solvers is implemented:
+
+- Z3, requires its C++ bindings <https://github.com/Z3Prover/z3>
+
+  Use one of `-Dz3=(enabled|disabled|auto)` to control the build behaviour.
+  Default is `auto`: link against Z3 if found, otherwise disable this feature.
 
 ### NN support
 
