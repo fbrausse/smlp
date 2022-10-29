@@ -7,8 +7,8 @@
 #include "ext-solver.hh"
 #include "dump-smt2.hh"
 
-#include <unistd.h>   /* pipe(), dup2() */
-#include <fcntl.h>    /* O_CLOEXEC */
+#include <unistd.h>   /* pipe2(), dup2() */
+#include <signal.h>   /* kill() */
 #include <sys/wait.h> /* waitpid() */
 
 using namespace smlp;
