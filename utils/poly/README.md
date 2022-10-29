@@ -10,7 +10,7 @@ usage: smlp [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
 Options [defaults]:
   -1           use single objective from GEN instead of all H5-NN outputs [no]
   -a ALPHA     additional ALPHA constraints restricting candidates *and*
-               counter-examples (only points in regions satsifying ALPHA
+               counter-examples (only points in regions satisfying ALPHA
                are considered counter-examples to safety); can be given multiple
                times, the conjunction of all is used [true]
   -b BETA      additional BETA constraints restricting candidates and safe

@@ -351,7 +351,7 @@ usage: %s [-OPTS] [--] " USAGE " OP [CNST]\n\
 Options [defaults]:\n\
   -1           use single objective from GEN instead of all H5-NN outputs [no]\n\
   -a ALPHA     additional ALPHA constraints restricting candidates *and*\n\
-               counter-examples (only points in regions satsifying ALPHA\n\
+               counter-examples (only points in regions satisfying ALPHA\n\
                are considered counter-examples to safety); can be given multiple\n\
                times, the conjunction of all is used [true]\n\
   -b BETA      additional BETA constraints restricting candidates and safe\n\
