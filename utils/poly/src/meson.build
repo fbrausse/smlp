@@ -170,7 +170,9 @@ else
   message('keras-nn support enabled')
   config.set('SMLP_ENABLE_KERAS_NN', 1)
   hdrs += 'nn.hh'
+  hdrs += 'ival-solver.hh'
   srcs += 'nn.cc'
+  srcs += 'ival-solver.cc'
 endif
 
 # not yet: need a library first

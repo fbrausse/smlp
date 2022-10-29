@@ -22,6 +22,7 @@
 #ifdef SMLP_ENABLE_KERAS_NN
 # include <H5public.h>
 # include <kjson.h>
+# include "ival-solver.hh"
 #endif
 
 #include <signal.h>
@@ -101,9 +102,18 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 
 static const char *ext_solver_cmd;
 static const char *inc_solver_cmd;
+static bool        intervals = false;
 
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
+	if (intervals) {
+#ifdef SMLP_ENABLE_KERAS_NN
+		return std::make_unique<ival_solver>();
+#else
+		DIE(1,"error: interval solver not available, compile smlp with "
+		      "keras-nn support\n");
+#endif
+	}
 	const char *ext = ext_solver_cmd;
 	const char *inc = inc_solver_cmd;
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
@@ -368,6 +378,7 @@ Options [defaults]:\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
+  -i           use interval evaluation (only when CNST is given) [no]\n\
   -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
@@ -522,7 +533,7 @@ int main(int argc, char **argv)
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:cC:d:e:F:hI:nO:pP:Q:rR:sS:t:V")) != -1;)
+	                            ":1a:b:cC:d:e:F:hiI:nO:pP:Q:rR:sS:t:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -547,6 +558,7 @@ int main(int argc, char **argv)
 				      "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
+		case 'i': intervals = true; break;
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
@@ -729,6 +741,9 @@ int main(int argc, char **argv)
 			}
 			);
 	} else if (solve) {
+		if (intervals)
+			DIE(1,"error: -i is not supported for optimization\n");
+
 		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
 		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
 		                                 alpha, beta, eta,
