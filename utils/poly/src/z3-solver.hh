@@ -10,14 +10,6 @@
 
 namespace smlp {
 
-struct interruptible {
-
-	virtual ~interruptible() = default;
-	virtual void interrupt() = 0;
-
-	static interruptible *is_active;
-};
-
 struct z3_solver : solver, interruptible {
 
 	explicit z3_solver(const char *logic = nullptr);

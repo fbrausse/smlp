@@ -481,6 +481,8 @@ static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
 	fprintf(f, "\n");
 }
 
+interruptible *interruptible::is_active;
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
