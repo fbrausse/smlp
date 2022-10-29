@@ -112,7 +112,16 @@ A compiler supporting C++20 is required as well as:
 
   Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`
   or vice-versa. The default is `auto`: Flint if found, otherwise `gmpxx`.
-- Z3 and its C++ bindings <https://github.com/Z3Prover/z3>
+
+### Internal solver support
+
+smlp can make use of a built-in solver. So far, API usage of the following SMT
+solvers is implemented:
+
+- Z3, requires its C++ bindings <https://github.com/Z3Prover/z3>
+
+  Use one of `-Dz3=(enabled|disabled|auto)` to control the build behaviour.
+  Default is `auto`: link against Z3 if found, otherwise disable this feature.
 
 ### NN support
 

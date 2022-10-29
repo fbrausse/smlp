@@ -8,9 +8,14 @@ config.set('SMLP_VERSION_PATCH', version[2])
 cxx = meson.get_compiler('cpp')
 
 poly_deps = []
-foreach name : ['z3', 'gmp']
+foreach name : ['gmp']
   poly_deps += dependency(name)
 endforeach
+
+z3 = get_option('z3')
+z3_dep = dependency('z3', required: z3)
+poly_deps += z3_dep
+z3 = z3.disable_auto_if(not z3_dep.found())
 
 flint_dirs = []
 flint_hdrs = []
@@ -132,7 +137,6 @@ hdrs = [
 	'expr2.hh',
 	'domain.hh',
 	'dump-smt2.hh',
-	'z3-solver.hh',
 	'poly.hh',
 	'sexpr.hh',
 	'sexpr-detail.hh',
@@ -146,11 +150,19 @@ srcs = [
 	'expr2.cc',
 	'domain.cc',
 	'dump-smt2.cc',
-	'z3-solver.cc',
 	'poly.cc',
 	'sexpr.cc',
 	'ext-solver.cc',
 ]
+
+if z3.disabled()
+  message('Built-in Z3 support disabled')
+else
+  message('Built-in Z3 support enabled')
+  config.set('SMLP_ENABLE_Z3_API', 1)
+  hdrs += 'z3-solver.hh'
+  srcs += 'z3-solver.cc'
+endif
 
 if keras_nn.disabled()
   message('keras-nn support disabled')

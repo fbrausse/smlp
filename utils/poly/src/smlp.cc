@@ -10,17 +10,19 @@
 #include "expr2.hh"
 #include "domain.hh"
 #include "dump-smt2.hh"
-#include "z3-solver.hh"
 #include "ext-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
+
+#ifdef SMLP_ENABLE_Z3_API
+# include "z3-solver.hh"
+# include <z3_version.h>
+#endif
 
 #ifdef SMLP_ENABLE_KERAS_NN
 # include <H5public.h>
 # include <kjson.h>
 #endif
-
-#include <z3_version.h>
 
 #include <signal.h>
 #include <time.h>
@@ -107,7 +109,12 @@ static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
 	if (cmd)
 		return std::make_unique<ext_solver>(cmd, logic);
+#ifdef SMLP_ENABLE_Z3_API
 	return std::make_unique<z3_solver>(logic);
+#else
+	DIE(1,"error: no solver specified and none are built-in, require "
+	      "external solver via -S or -I\n");
+#endif
 }
 
 template <typename T>
@@ -418,6 +425,9 @@ static void version_info()
 #ifdef SMLP_ENABLE_KERAS_NN
 	       " keras-nn"
 #endif
+#ifdef SMLP_ENABLE_Z3_API
+	       " z3"
+#endif
 	       "\n");
 	printf("Libraries:\n");
 	printf("  GMP version %d.%d.%d linked %s\n",
@@ -431,10 +441,12 @@ static void version_info()
 	       MPFR_VERSION_STRING, mpfr_get_version());*/
 #endif
 	unsigned maj, min, pat, rev;
+#ifdef SMLP_ENABLE_Z3_API
 	Z3_get_version(&maj, &min, &pat, &rev);
 	printf("  Z3 version %d.%d.%d linked %d.%d.%d\n",
 	       Z3_MAJOR_VERSION, Z3_MINOR_VERSION,
 	       Z3_BUILD_NUMBER, maj, min, pat);
+#endif
 #ifdef SMLP_ENABLE_KERAS_NN
 	uint32_t kjson_v = kjson_version();
 	printf("  kjson version %d.%d.%d linked %d.%d.%d\n",
@@ -446,6 +458,10 @@ static void version_info()
 	       H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE,
 	       maj, min, pat);
 #endif
+	(void)maj;
+	(void)min;
+	(void)pat;
+	(void)rev;
 }
 
 template <decltype(lbop2::op) op>
