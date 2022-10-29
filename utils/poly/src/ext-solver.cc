@@ -79,14 +79,13 @@ process::~process()
 
 str ext_solver::get_info(const char *what)
 {
-	opt<es::sexpr> reply;
 	fprintf(in, "(get-info %s)\n", what);
-	reply = out_s.next();
+	opt<es::sexpr> reply = out_s.next();
 	assert(reply);
 	assert(reply->size() == 2);
 	assert(std::get<es::slit>((*reply)[0]) == what);
 	const es::slit &s = std::get<es::slit>((*reply)[1]);
-	assert(s.length() > 0);
+	assert(s.length() >= 2);
 	assert(s[0] == '"');
 	assert(s[s.length()-1] == '"');
 	return s.substr(1, s.length() - 2);
@@ -137,7 +136,6 @@ static kay::Q Q_from_smt2(const es::arg &s)
 {
 	using namespace kay;
 	using es::slit;
-	using es::arg;
 	using es::sexpr;
 
 	if (const slit *sls = std::get_if<slit>(&s))

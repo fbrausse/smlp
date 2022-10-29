@@ -196,7 +196,7 @@ optimize_EA(cmp_t direction,
             const kay::Q &delta,
             ival &obj_range,
             const kay::Q &max_prec,
-            const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> theta,
+            const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> &theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
@@ -642,7 +642,7 @@ int main(int argc, char **argv)
 		alpha,
 		make2f(lneg2 { pc })
 	} }));
-	if (sat *s = ood.get<sat>()) {
+	if (const sat *s = ood.get<sat>()) {
 		fprintf(stderr,
 		        "error: ALPHA and DOMAIN constraints do not imply that "
 		        "all function parameters are inside the respective "
