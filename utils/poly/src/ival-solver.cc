@@ -5,8 +5,6 @@
 
 using namespace smlp;
 
-using Ival = iv::ival;
-
 using Ty = vec<iv::ival>; /* finite_union */
 
 static iv::ival hull(const Ty &t)
@@ -18,15 +16,15 @@ static iv::ival hull(const Ty &t)
 	return r;
 }
 
-static Ty eval(const hmap<str,Ty> &dom, const sptr<term2> &t, hmap<void *,Ty> &m);
+static iv::ival eval(const hmap<str,iv::ival> &dom, const sptr<term2> &t, hmap<void *,iv::ival> &m);
 
-static Ty eval(const hmap<str,Ty> &dom, const term2 &t, hmap<void *,Ty> &m)
+static iv::ival eval(const hmap<str,iv::ival> &dom, const term2 &t, hmap<void *,iv::ival> &m)
 {
 	return t.match(
 	[](const cnst2 &c) {
-		return Ty { c.value.match(
-		[](const auto &v) { return Ival(v); }
-		) };
+		return c.value.match(
+		[](const auto &v) { return iv::ival(v); }
+		);
 	},
 	[&](const name &n) {
 		auto it = dom.find(n.id);
@@ -34,49 +32,26 @@ static Ty eval(const hmap<str,Ty> &dom, const term2 &t, hmap<void *,Ty> &m)
 		return it->second;
 	},
 	[&](const uop2 &u) {
-		Ty r;
-		for (iv::ival i : eval(dom, u.operand, m)) {
-			switch (u.op) {
-			case uop::UADD: break;
-			case uop::USUB: neg(i); break;
-			}
-			r.push_back(i);
+		iv::ival i = eval(dom, u.operand, m);
+		switch (u.op) {
+		case uop::UADD: break;
+		case uop::USUB: neg(i); break;
 		}
-		return r;
+		return i;
 	},
 	[&](const bop2 &b) {
-		Ty ret;
-		Ty l = eval(dom, b.left, m);
-		Ty r = eval(dom, b.right, m);
-		if (size(l) > size(r))
-			for (const iv::ival &i : l) {
-				Ty k;
-				for (iv::ival j : r) {
-					switch (b.op) {
-					case bop::ADD: j += i; break;
-					case bop::SUB: j = i - j; break;
-					case bop::MUL: j *= i; break;
-					}
-					k.push_back(j);
-				}
-				ret.push_back(hull(k));
-			}
-		else
-			for (const iv::ival &j : r) {
-				Ty k;
-				for (iv::ival i : l) {
-					switch (b.op) {
-					case bop::ADD: i += j; break;
-					case bop::SUB: i -= j; break;
-					case bop::MUL: i *= j; break;
-					}
-					k.push_back(i);
-				}
-				ret.push_back(hull(k));
-			}
-		return ret;
+		iv::ival l = eval(dom, b.left, m);
+		if (b.op == bop::MUL && *b.left == *b.right)
+			return square(l);
+		iv::ival r = eval(dom, b.right, m);
+		switch (b.op) {
+		case bop::ADD: l += r; break;
+		case bop::SUB: l -= r; break;
+		case bop::MUL: l *= r; break;
+		}
+		return l;
 	},
-	[](const ite2 &) -> Ty { abort(); }
+	[](const ite2 &) -> iv::ival { abort(); }
 	);
 }
 
@@ -124,29 +99,39 @@ static const struct res {
 	{
 		return a = a || b;
 	}
+
+	friend std::ostream & operator<<(std::ostream &s, const res &r)
+	{
+		switch (r.v) {
+		case YES: s << "YES"; break;
+		case NO: s << "NO"; break;
+		case MAYBE: s << "MAYBE"; break;
+		}
+		return s;
+	}
 } YES = { res::YES }
 , NO = { res::NO }
 , MAYBE = { res::MAYBE };
 }
 
-static res eval(const hmap<str,Ty> &dom, const form2 &f, hmap<void *,Ty> &m)
+static res eval(const hmap<str,iv::ival> &dom, const form2 &f, hmap<void *,iv::ival> &m)
 {
 	return f.match(
 	[&](const prop2 &p) {
-		Ty r = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);
-		for (const iv::ival &i : r)
-			std::cerr << "eval: " << i << "\n";
-		iv::ival v = hull(r);
-		std::cerr << "hull: " << v << "\n";
+		iv::ival v = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);
+		std::cerr << "eval: " << v;
+		res r;
 		switch (p.cmp) {
-		case LT: return hi(v) < 0 ? YES : lo(v) >= 0 ? NO : MAYBE;
-		case LE: return hi(v) <= 0 ? YES : lo(v) > 0 ? NO : MAYBE;
-		case GT: return lo(v) > 0 ? YES : hi(v) <= 0 ? NO : MAYBE;
-		case GE: return lo(v) >= 0 ? YES : hi(v) < 0 ? NO : MAYBE;
-		case EQ: return sgn(v) == iv::ZERO ? YES : sgn(v) == iv::OV_ZERO ? MAYBE : NO;
-		case NE: return sgn(v) == iv::ZERO ? NO : sgn(v) == iv::OV_ZERO ? MAYBE : YES;
+		case LT: r = hi(v) < 0 ? YES : lo(v) >= 0 ? NO : MAYBE; break;
+		case LE: r = hi(v) <= 0 ? YES : lo(v) > 0 ? NO : MAYBE; break;
+		case GT: r = lo(v) > 0 ? YES : hi(v) <= 0 ? NO : MAYBE; break;
+		case GE: r = lo(v) >= 0 ? YES : hi(v) < 0 ? NO : MAYBE; break;
+		case EQ: r = sgn(v) == iv::ZERO ? YES : sgn(v) == iv::OV_ZERO ? MAYBE : NO; break;
+		case NE: r = sgn(v) == iv::ZERO ? NO : sgn(v) == iv::OV_ZERO ? MAYBE : YES; break;
+		default: abort();
 		}
-		unreachable();
+		std::cerr << " -> " << r << "\n";
+		return r;
 	},
 	[&](const lbop2 &b) {
 		res r = b.op == lbop2::AND ? YES : NO;
@@ -161,7 +146,7 @@ static res eval(const hmap<str,Ty> &dom, const form2 &f, hmap<void *,Ty> &m)
 	);
 }
 
-static Ty eval(const hmap<str,Ty> &dom, const sptr<term2> &t, hmap<void *,Ty> &m)
+static iv::ival eval(const hmap<str,iv::ival> &dom, const sptr<term2> &t, hmap<void *,iv::ival> &m)
 {
 	auto it = m.find(t.get());
 	if (it == m.end())
@@ -169,31 +154,59 @@ static Ty eval(const hmap<str,Ty> &dom, const sptr<term2> &t, hmap<void *,Ty> &m
 	return it->second;
 }
 
+static iv::ival to_ival(const kay::Q &q)
+{
+	if (q.get_den() == 1)
+		return iv::ival(q.get_num());
+	return iv::ival(q);
+}
+
+template <typename F>
+static void forall_products(const vec<pair<str,list>> &p,
+                            hmap<str,iv::ival> q, F f, size_t i=0)
+{
+	assert(i <= size(p));
+	if (i < size(p)) {
+		const auto &[var,l] = p[i];
+		for (const kay::Q &r : l.values) {
+			q[var] = to_ival(r);
+			forall_products(p, q, f, i+1);
+		}
+	} else
+		f(std::move(q));
+}
+
 result ival_solver::check()
 {
 	iv::rounding_mode rnd(FE_DOWNWARD);
-	hmap<str,Ty> d;
-	for (const auto &[var,c] : dom) {
-		Ty rng;
-		c.range.match(
-		[](const entire &) { abort(); },
-		[&](const list &l) {
-			for (const kay::Q &v : l.values)
-				rng.emplace_back(v);
+	hmap<str,iv::ival> c;
+	vec<pair<str,list>> d;
+	for (const auto &[var,k] : dom)
+		k.range.match(
+		[&](const entire &) {
+			c.emplace(var, iv::endpts { -INFINITY, INFINITY });
 		},
+		[&](const list &l) { d.emplace_back(var, l); },
 		[&](const ival &i) {
-			rng.emplace_back(iv::endpts {
-				lo(iv::ival(i.lo)),
-				hi(iv::ival(i.hi)),
+			c.emplace(var, iv::endpts {
+				lo(to_ival(i.lo)),
+				hi(to_ival(i.hi)),
 			});
 		}
 		);
-		d.emplace(var, move(rng));
-	}
-	hmap<void *,Ty> m;
-	res r = YES;
-	for (const form2 &f : asserts)
-		r &= eval(d, f, m);
+	res r = NO;
+	forall_products(d, move(c), [&](const hmap<str,iv::ival> &dom) {
+		hmap<void *,iv::ival> m;
+		res s = YES;
+		for (const auto &[var,_] : d) {
+			assert(ispoint(dom.find(var)->second));
+			fprintf(stderr, "%s:%2g ", var.c_str(),
+			        lo(dom.find(var)->second));
+		}
+		for (const form2 &f : asserts)
+			s &= !eval(dom, f, m);
+		r |= !s;
+	});
 	if (r == YES) {
 		hmap<str,sptr<term2>> model;
 		for (const auto &[var,c] : dom)
