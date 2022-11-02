@@ -155,4 +155,14 @@ static inline sptr<form2> conj(vec<sptr<form2>> l)
 	return make2f(lbop2 { lbop2::AND, { move(l) } });
 }
 
+static inline sptr<form2> disj(vec<sptr<form2>> l)
+{
+	return make2f(lbop2 { lbop2::OR, { move(l) } });
+}
+
+static inline sptr<form2> neg(sptr<form2> f)
+{
+	return make2f(lneg2 { move(f) });
+}
+
 }

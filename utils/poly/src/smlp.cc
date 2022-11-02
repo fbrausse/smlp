@@ -250,13 +250,16 @@ optimize_EA(cmp_t direction,
 		kay::Q T = mid(obj_range);
 		sptr<term2> threshold = make2t(cnst2 { T });
 
-		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
+		/* eta x /\ alpha x /\ (beta x /\ obj x >= T) */
+		sptr<form2> target = conj({
+			beta,
+			make2f(prop2 { direction, objective, threshold })
+		});
 		uptr<solver> exists = mk_solver(true, logic);
 		exists->declare(dom);
 		exists->add(eta);
 		exists->add(alpha);
-		exists->add(beta);
-		exists->add(make2f(prop2 { direction, objective, threshold }));
+		exists->add(target);
 
 		while (true) {
 			timing e0;
@@ -277,13 +280,10 @@ optimize_EA(cmp_t direction,
 			forall->declare(dom);
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
-			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
+			 * theta x y /\ alpha y /\ ! ( beta y /\ obj y >= T) */
 			forall->add(theta({}, candidate));
 			forall->add(alpha);
-			forall->add(make2f(lbop2 { lbop2::OR, {
-				make2f(lneg2 { beta }),
-				make2f(prop2 { ~direction, objective, threshold })
-			} }));
+			forall->add(neg(target));
 			/*
 			file test("ce.smt2", "w");
 			smlp::dump_smt2(test, dom);
