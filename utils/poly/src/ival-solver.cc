@@ -178,7 +178,10 @@ static void forall_products(const vec<pair<str,list>> &p,
 
 result ival_solver::check()
 {
+	/* need directed rounding downward for iv::ival */
 	iv::rounding_mode rnd(FE_DOWNWARD);
+
+	/* Replace the domain with intervals, collect discrete vars in d */
 	hmap<str,iv::ival> c;
 	vec<pair<str,list>> d;
 	for (const auto &[var,k] : dom)
@@ -194,6 +197,9 @@ result ival_solver::check()
 			});
 		}
 		);
+
+	/* For any combination of assignments to discrete vars interval-evaluate
+	 * the formula. */
 	res r = NO;
 	forall_products(d, move(c), [&](const hmap<str,iv::ival> &dom) {
 		hmap<void *,iv::ival> m;
@@ -207,7 +213,10 @@ result ival_solver::check()
 			s &= !eval(dom, f, m);
 		r |= !s;
 	});
+
 	if (r == YES) {
+		/* any value from the interval will do; they are non-empty by
+		 * construction */
 		hmap<str,sptr<term2>> model;
 		for (const auto &[var,c] : dom)
 			model.emplace(var, make2t(c.range.match(
@@ -217,7 +226,10 @@ result ival_solver::check()
 			)));
 		return sat { move(model) };
 	}
-	if (r == NO)
+	if (r == NO) {
+		/* no value from at least one interval satisfies the formula */
 		return unsat {};
+	}
+	/* some values do, others do not satisfy the formula */
 	return unknown { "overlap" };
 }
