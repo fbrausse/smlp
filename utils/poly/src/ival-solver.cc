@@ -180,7 +180,7 @@ static void forall_products(const vec<pair<str,vec<iv::ival>>> &p,
 		}
 		q.erase(var);
 	} else
-		f(std::move(q));
+		f(q);
 }
 
 static vec<iv::ival> split_ival(const iv::ival &v)
@@ -239,13 +239,18 @@ result ival_solver::check()
 		if (s == MAYBE) {
 			/* single sub-division of all domain elements */
 			vec<pair<str,vec<iv::ival>>> sp;
-			for (const auto &[var,v] : dom)
+			kay::Z n = 1;
+			for (const auto &[var,v] : dom) {
 				sp.emplace_back(var, split_ival(v));
+				n *= size(sp.back().second);
+			}
+			fprintf(stderr, "checking %s subdivisions...\n", n.get_str().c_str());
 			hmap<str,iv::ival> ndom;
 			res t = NO;
 			forall_products(sp, ndom, [&t,this](const hmap<str,iv::ival> &ndom) {
 				t |= eval(ndom, conj);
 			});
+			std::cerr << "subdivisions produced " << t << "\n";
 			s = t;
 		}
 		if (s == YES && !sat_model)
