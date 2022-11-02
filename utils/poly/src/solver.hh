@@ -24,6 +24,36 @@ struct solver {
 	virtual result check() = 0;
 };
 
+struct solver_seq : solver {
+
+	const vec<uptr<solver>> solvers;
+
+	explicit solver_seq(vec<uptr<solver>> solvers)
+	: solvers(move(solvers))
+	{ assert(!empty(this->solvers)); }
+
+	void declare(const domain &d) override
+	{
+		for (const uptr<solver> &s : solvers)
+			s->declare(d);
+	}
+
+	void add(const form2 &f) override
+	{
+		for (const uptr<solver> &s : solvers)
+			s->add(f);
+	}
+
+	result check() override
+	{
+		result r;
+		for (const uptr<solver> &s : solvers)
+			if (!(r = s->check()).get<unknown>())
+				return r;
+		return r;
+	}
+};
+
 struct interruptible {
 
 	virtual ~interruptible() = default;

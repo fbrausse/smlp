@@ -106,9 +106,10 @@ static bool        intervals = false;
 
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
+	vec<uptr<solver>> solvers;
 	if (intervals) {
 #ifdef SMLP_ENABLE_KERAS_NN
-		return std::make_unique<ival_solver>();
+		solvers.emplace_back(std::make_unique<ival_solver>());
 #else
 		DIE(1,"error: interval solver not available, compile smlp with "
 		      "keras-nn support\n");
@@ -118,13 +119,14 @@ static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 	const char *inc = inc_solver_cmd;
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
 	if (cmd)
-		return std::make_unique<ext_solver>(cmd, logic);
+		solvers.emplace_back(std::make_unique<ext_solver>(cmd, logic));
 #ifdef SMLP_ENABLE_Z3_API
-	return std::make_unique<z3_solver>(logic);
-#else
-	DIE(1,"error: no solver specified and none are built-in, require "
-	      "external solver via -S or -I\n");
+	solvers.emplace_back(std::make_unique<z3_solver>(logic));
 #endif
+	if (empty(solvers))
+		DIE(1,"error: no solver specified and none are built-in, require "
+		      "external solver via -S or -I\n");
+	return std::make_unique<solver_seq>(move(solvers));
 }
 
 template <typename T>

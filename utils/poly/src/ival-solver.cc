@@ -163,7 +163,7 @@ static iv::ival to_ival(const kay::Q &q)
 
 template <typename F>
 static void forall_products(const vec<pair<str,list>> &p,
-                            hmap<str,iv::ival> q, F f, size_t i=0)
+                            hmap<str,iv::ival> &q, F &&f, size_t i=0)
 {
 	assert(i <= size(p));
 	if (i < size(p)) {
@@ -172,6 +172,7 @@ static void forall_products(const vec<pair<str,list>> &p,
 			q[var] = to_ival(r);
 			forall_products(p, q, f, i+1);
 		}
+		q.erase(var);
 	} else
 		f(std::move(q));
 }
@@ -201,7 +202,7 @@ result ival_solver::check()
 	/* For any combination of assignments to discrete vars interval-evaluate
 	 * the formula. */
 	res r = NO;
-	forall_products(d, move(c), [&](const hmap<str,iv::ival> &dom) {
+	forall_products(d, c, [&](const hmap<str,iv::ival> &dom) {
 		hmap<void *,iv::ival> m;
 		res s = YES;
 		for (const auto &[var,_] : d) {
