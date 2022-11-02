@@ -1,3 +1,17 @@
+2022-11-02 poly-v0.3.0
+
+ * prepare making z3-solver optional
+ * make z3-solver optional
+ * fix typo in help message
+ * cleanup includes
+ * add first version of an interval solver
+ * do not capture stderr of external solvers
+ * ival-solver: eval combinations separately
+ * comment ival-solver code
+ * sequence ival- and other solvers
+ * sanitize solver::add() API + ival-solver sub-divides once on MAYBE
+ * include sub-division log messages
+
 2022-10-29 poly-v0.2.1
 
  * add support for ksmt
