@@ -81,7 +81,7 @@ struct ext_solver : process, solver {
 
 	explicit ext_solver(const char *cmd, const char *logic = nullptr);
 	void declare(const domain &d) override;
-	void add(const form2 &f) override;
+	void add(const sptr<form2> &f) override;
 	result check() override;
 
 private:

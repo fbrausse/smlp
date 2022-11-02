@@ -7,8 +7,8 @@
 #include "ext-solver.hh"
 #include "dump-smt2.hh"
 
-#include <unistd.h>   /* pipe(), dup2() */
-#include <fcntl.h>    /* O_CLOEXEC */
+#include <unistd.h>   /* pipe2(), dup2() */
+#include <signal.h>   /* kill() */
 #include <sys/wait.h> /* waitpid() */
 
 using namespace smlp;
@@ -33,20 +33,21 @@ struct Pipe {
 
 process::process(const char *cmd)
 {
-	Pipe i, o, e;
+	Pipe i, o/*, e*/;
 	pid = fork();
 	if (pid == -1)
 		throw std::error_code(errno, std::system_category());
 	if (!pid) {
 		i.wr.close();
 		o.rd.close();
-		e.rd.close();
+		// e.rd.close();
 		if (dup2(fileno(i.rd), STDIN_FILENO) == -1)
 			throw std::error_code(errno, std::system_category());
 		if (dup2(fileno(o.wr), STDOUT_FILENO) == -1)
 			throw std::error_code(errno, std::system_category());
+		/*
 		if (dup2(fileno(e.wr), STDERR_FILENO) == -1)
-			throw std::error_code(errno, std::system_category());
+			throw std::error_code(errno, std::system_category());*/
 		const char *shell = getenv("SHELL");
 		if (!shell)
 			shell = "sh";
@@ -55,10 +56,10 @@ process::process(const char *cmd)
 	}
 	i.rd.close();
 	o.wr.close();
-	e.wr.close();
+	// e.wr.close();
 	in = move(i.wr);
 	out = move(o.rd);
-	err = move(e.rd);
+	// err = move(e.rd);
 }
 
 process::~process()
@@ -67,7 +68,7 @@ process::~process()
 		return;
 	in.close();
 	out.close();
-	err.close();
+	// err.close();
 	int status;
 	waitpid(pid, &status, WNOHANG);
 	if (!WIFEXITED(status)) {
@@ -250,9 +251,9 @@ result ext_solver::check()
 	return sat { move(m) };
 }
 
-void ext_solver::add(const form2 &f)
+void ext_solver::add(const sptr<form2> &f)
 {
 	fprintf(in, "(assert ");
-	dump_smt2(in, f);
+	dump_smt2(in, *f);
 	fprintf(in, ")\n");
 }

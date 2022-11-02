@@ -22,6 +22,7 @@
 #ifdef SMLP_ENABLE_KERAS_NN
 # include <H5public.h>
 # include <kjson.h>
+# include "ival-solver.hh"
 #endif
 
 #include <signal.h>
@@ -101,20 +102,31 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 
 static const char *ext_solver_cmd;
 static const char *inc_solver_cmd;
+static bool        intervals = false;
 
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
+	vec<uptr<solver>> solvers;
+	if (intervals) {
+#ifdef SMLP_ENABLE_KERAS_NN
+		solvers.emplace_back(std::make_unique<ival_solver>());
+#else
+		DIE(1,"error: interval solver not available, compile smlp with "
+		      "keras-nn support\n");
+#endif
+	}
 	const char *ext = ext_solver_cmd;
 	const char *inc = inc_solver_cmd;
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
 	if (cmd)
-		return std::make_unique<ext_solver>(cmd, logic);
+		solvers.emplace_back(std::make_unique<ext_solver>(cmd, logic));
 #ifdef SMLP_ENABLE_Z3_API
-	return std::make_unique<z3_solver>(logic);
-#else
-	DIE(1,"error: no solver specified and none are built-in, require "
-	      "external solver via -S or -I\n");
+	solvers.emplace_back(std::make_unique<z3_solver>(logic));
 #endif
+	if (empty(solvers))
+		DIE(1,"error: no solver specified and none are built-in, require "
+		      "external solver via -S or -I\n");
+	return std::make_unique<solver_seq>(move(solvers));
 }
 
 template <typename T>
@@ -147,7 +159,7 @@ static result solve_exists(const domain &dom,
 	uptr<solver> s = mk_solver(false,
 		logic ? logic : smt2_logic_str(dom, f).c_str());
 	s->declare(dom);
-	s->add(*f);
+	s->add(f);
 	return s->check();
 }
 
@@ -236,10 +248,10 @@ optimize_EA(cmp_t direction,
 		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
 		uptr<solver> exists = mk_solver(true, logic);
 		exists->declare(dom);
-		exists->add(*eta);
-		exists->add(*alpha);
-		exists->add(*beta);
-		exists->add(prop2 { direction, objective, threshold });
+		exists->add(eta);
+		exists->add(alpha);
+		exists->add(beta);
+		exists->add(make2f(prop2 { direction, objective, threshold }));
 
 		while (true) {
 			timing e0;
@@ -261,12 +273,12 @@ optimize_EA(cmp_t direction,
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
 			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
-			forall->add(*theta({}, candidate));
-			forall->add(*alpha);
-			forall->add(lbop2 { lbop2::OR, {
+			forall->add(theta({}, candidate));
+			forall->add(alpha);
+			forall->add(make2f(lbop2 { lbop2::OR, {
 				make2f(lneg2 { beta }),
 				make2f(prop2 { ~direction, objective, threshold })
-			} });
+			} }));
 			/*
 			file test("ce.smt2", "w");
 			smlp::dump_smt2(test, dom);
@@ -300,7 +312,7 @@ optimize_EA(cmp_t direction,
 			}
 			auto &counter_example = a.get<sat>()->model;
 			counter_examples.emplace_back(T, counter_example);
-			exists->add(lneg2 { theta({ delta }, counter_example) });
+			exists->add(make2f(lneg2 { theta({ delta }, counter_example) }));
 		}
 	}
 
@@ -368,6 +380,7 @@ Options [defaults]:\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
+  -i           use interval evaluation (only when CNST is given) [no]\n\
   -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
@@ -522,7 +535,7 @@ int main(int argc, char **argv)
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:cC:d:e:F:hI:nO:pP:Q:rR:sS:t:V")) != -1;)
+	                            ":1a:b:cC:d:e:F:hiI:nO:pP:Q:rR:sS:t:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -547,6 +560,7 @@ int main(int argc, char **argv)
 				      "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
+		case 'i': intervals = true; break;
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
@@ -729,6 +743,9 @@ int main(int argc, char **argv)
 			}
 			);
 	} else if (solve) {
+		if (intervals)
+			DIE(1,"error: -i is not supported for optimization\n");
+
 		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
 		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
 		                                 alpha, beta, eta,
