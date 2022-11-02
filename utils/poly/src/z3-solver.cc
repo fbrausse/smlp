@@ -27,7 +27,7 @@ void z3_solver::declare(const domain &d)
 		case component::REAL: e = ctx.real_const(s); break;
 		}
 		symbols.emplace(var, move(e));
-		add(domain_constraint(var, rng));
+		add(make2f(domain_constraint(var, rng)));
 	}
 }
 

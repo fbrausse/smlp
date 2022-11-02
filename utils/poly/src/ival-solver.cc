@@ -154,6 +154,12 @@ static iv::ival eval(const hmap<str,iv::ival> &dom, const sptr<term2> &t, hmap<v
 	return it->second;
 }
 
+static res eval(const hmap<str,iv::ival> &dom, const form2 &f)
+{
+	hmap<void *,iv::ival> m;
+	return eval(dom, f, m);
+}
+
 static iv::ival to_ival(const kay::Q &q)
 {
 	if (q.get_den() == 1)
@@ -162,19 +168,30 @@ static iv::ival to_ival(const kay::Q &q)
 }
 
 template <typename F>
-static void forall_products(const vec<pair<str,list>> &p,
+static void forall_products(const vec<pair<str,vec<iv::ival>>> &p,
                             hmap<str,iv::ival> &q, F &&f, size_t i=0)
 {
 	assert(i <= size(p));
 	if (i < size(p)) {
 		const auto &[var,l] = p[i];
-		for (const kay::Q &r : l.values) {
-			q[var] = to_ival(r);
+		for (const iv::ival &r : l) {
+			q[var] = r;
 			forall_products(p, q, f, i+1);
 		}
 		q.erase(var);
 	} else
 		f(std::move(q));
+}
+
+static vec<iv::ival> split_ival(const iv::ival &v)
+{
+	double m = mid(v);
+	iv::ival a = iv::endpts { lo(v), m };
+	vec<iv::ival> r = { a };
+	double bl = nextafter(m, INFINITY);
+	if (bl <= hi(v))
+		r.emplace_back(iv::endpts { bl, hi(v) });
+	return r;
 }
 
 result ival_solver::check()
@@ -184,13 +201,18 @@ result ival_solver::check()
 
 	/* Replace the domain with intervals, collect discrete vars in d */
 	hmap<str,iv::ival> c;
-	vec<pair<str,list>> d;
+	vec<pair<str,vec<iv::ival>>> d;
 	for (const auto &[var,k] : dom)
 		k.range.match(
 		[&](const entire &) {
 			c.emplace(var, iv::endpts { -INFINITY, INFINITY });
 		},
-		[&](const list &l) { d.emplace_back(var, l); },
+		[&](const list &l) {
+			vec<iv::ival> ivs;
+			for (const kay::Q &v : l.values)
+				ivs.emplace_back(to_ival(v));
+			d.emplace_back(var, move(ivs));
+		},
 		[&](const ival &i) {
 			c.emplace(var, iv::endpts {
 				lo(to_ival(i.lo)),
@@ -200,31 +222,43 @@ result ival_solver::check()
 		);
 
 	/* For any combination of assignments to discrete vars interval-evaluate
-	 * the formula. */
+	 * the formula. It is SAT if there is (at least) one combination that
+	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
+	 * one combination that makes it MAYBE and all others evaluate to NO. */
 	res r = NO;
+	opt<hmap<str,iv::ival>> sat_model;
 	forall_products(d, c, [&](const hmap<str,iv::ival> &dom) {
-		hmap<void *,iv::ival> m;
-		res s = YES;
+		if (r == YES)
+			return;
 		for (const auto &[var,_] : d) {
 			assert(ispoint(dom.find(var)->second));
 			fprintf(stderr, "%s:%2g ", var.c_str(),
 			        lo(dom.find(var)->second));
 		}
-		for (const form2 &f : asserts)
-			s &= !eval(dom, f, m);
-		r |= !s;
+		res s = eval(dom, conj);
+		if (s == MAYBE) {
+			/* single sub-division of all domain elements */
+			vec<pair<str,vec<iv::ival>>> sp;
+			for (const auto &[var,v] : dom)
+				sp.emplace_back(var, split_ival(v));
+			hmap<str,iv::ival> ndom;
+			res t = NO;
+			forall_products(sp, ndom, [&t,this](const hmap<str,iv::ival> &ndom) {
+				t |= eval(ndom, conj);
+			});
+			s = t;
+		}
+		if (s == YES && !sat_model)
+			sat_model = dom;
+		r |= s;
 	});
 
 	if (r == YES) {
-		/* any value from the interval will do; they are non-empty by
+		/* any value from the intervals will do; they are non-empty by
 		 * construction */
 		hmap<str,sptr<term2>> model;
-		for (const auto &[var,c] : dom)
-			model.emplace(var, make2t(c.range.match(
-				[](const entire &) { return cnst2 { kay::Z(0) }; },
-				[](const list &l) { return cnst2 { l.values.front() }; },
-				[](const ival &i) { return cnst2 { mid(i) }; }
-			)));
+		for (const auto &[var,c] : *sat_model)
+			model.emplace(var, make2t(cnst2 { kay::Q(mid(c)) }));
 		return sat { move(model) };
 	}
 	if (r == NO) {

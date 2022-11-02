@@ -15,16 +15,16 @@ struct ival_solver : solver {
 		dom = d;
 	}
 
-	void add(const form2 &f) override
+	void add(const sptr<form2> &f) override
 	{
-		asserts.push_back(f);
+		conj.args.push_back(f);
 	}
 
 	result check() override;
 
 private:
 	domain dom;
-	vec<form2> asserts;
+	lbop2 conj { lbop2::AND, {} };
 };
 
 }

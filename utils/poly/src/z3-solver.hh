@@ -18,7 +18,7 @@ struct z3_solver : solver, interruptible {
 
 	void interrupt() override { ctx.interrupt(); }
 
-	void add(const form2 &f) override
+	void add(const sptr<form2> &f) override
 	{
 		hmap<void *, z3::expr> m;
 		slv.add(interp(f, m));

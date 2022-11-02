@@ -20,7 +20,7 @@ struct solver {
 
 	virtual ~solver() = default;
 	virtual void declare(const domain &d) = 0;
-	virtual void add(const form2 &f) = 0;
+	virtual void add(const sptr<form2> &f) = 0;
 	virtual result check() = 0;
 };
 
@@ -38,7 +38,7 @@ struct solver_seq : solver {
 			s->declare(d);
 	}
 
-	void add(const form2 &f) override
+	void add(const sptr<form2> &f) override
 	{
 		for (const uptr<solver> &s : solvers)
 			s->add(f);

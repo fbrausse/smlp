@@ -251,9 +251,9 @@ result ext_solver::check()
 	return sat { move(m) };
 }
 
-void ext_solver::add(const form2 &f)
+void ext_solver::add(const sptr<form2> &f)
 {
 	fprintf(in, "(assert ");
-	dump_smt2(in, f);
+	dump_smt2(in, *f);
 	fprintf(in, ")\n");
 }

@@ -159,7 +159,7 @@ static result solve_exists(const domain &dom,
 	uptr<solver> s = mk_solver(false,
 		logic ? logic : smt2_logic_str(dom, f).c_str());
 	s->declare(dom);
-	s->add(*f);
+	s->add(f);
 	return s->check();
 }
 
@@ -248,10 +248,10 @@ optimize_EA(cmp_t direction,
 		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
 		uptr<solver> exists = mk_solver(true, logic);
 		exists->declare(dom);
-		exists->add(*eta);
-		exists->add(*alpha);
-		exists->add(*beta);
-		exists->add(prop2 { direction, objective, threshold });
+		exists->add(eta);
+		exists->add(alpha);
+		exists->add(beta);
+		exists->add(make2f(prop2 { direction, objective, threshold }));
 
 		while (true) {
 			timing e0;
@@ -273,12 +273,12 @@ optimize_EA(cmp_t direction,
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
 			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
-			forall->add(*theta({}, candidate));
-			forall->add(*alpha);
-			forall->add(lbop2 { lbop2::OR, {
+			forall->add(theta({}, candidate));
+			forall->add(alpha);
+			forall->add(make2f(lbop2 { lbop2::OR, {
 				make2f(lneg2 { beta }),
 				make2f(prop2 { ~direction, objective, threshold })
-			} });
+			} }));
 			/*
 			file test("ce.smt2", "w");
 			smlp::dump_smt2(test, dom);
@@ -312,7 +312,7 @@ optimize_EA(cmp_t direction,
 			}
 			auto &counter_example = a.get<sat>()->model;
 			counter_examples.emplace_back(T, counter_example);
-			exists->add(lneg2 { theta({ delta }, counter_example) });
+			exists->add(make2f(lneg2 { theta({ delta }, counter_example) }));
 		}
 	}
 
