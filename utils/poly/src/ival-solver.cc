@@ -204,16 +204,16 @@ result ival_solver::check()
 	vec<pair<str,vec<iv::ival>>> d;
 	for (const auto &[var,k] : dom)
 		k.range.match(
-		[&](const entire &) {
+		[&,var=var](const entire &) {
 			c.emplace(var, iv::endpts { -INFINITY, INFINITY });
 		},
-		[&](const list &l) {
+		[&,var=var](const list &l) {
 			vec<iv::ival> ivs;
 			for (const kay::Q &v : l.values)
 				ivs.emplace_back(to_ival(v));
 			d.emplace_back(var, move(ivs));
 		},
-		[&](const ival &i) {
+		[&,var=var](const ival &i) {
 			c.emplace(var, iv::endpts {
 				lo(to_ival(i.lo)),
 				hi(to_ival(i.hi)),

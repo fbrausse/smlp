@@ -167,6 +167,11 @@ struct smlp_result {
 	kay::Q threshold;
 	hmap<str,sptr<term2>> point;
 
+	smlp_result(kay::Q threshold, hmap<str,sptr<term2>> point)
+	: threshold(move(threshold))
+	, point(move(point))
+	{}
+
 	kay::Q center_value(const sptr<term2> &obj) const
 	{
 		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
@@ -670,10 +675,7 @@ int main(int argc, char **argv)
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	result ood = solve_exists(dom, make2f(lbop2 { lbop2::AND, {
-		alpha,
-		make2f(lneg2 { pc })
-	} }));
+	result ood = solve_exists(dom, conj({ alpha, make2f(lneg2 { pc }) }));
 	if (const sat *s = ood.get<sat>()) {
 		fprintf(stderr,
 		        "error: ALPHA and DOMAIN constraints do not imply that "
@@ -692,7 +694,7 @@ int main(int argc, char **argv)
 		DIE(1,"OP '%s' unknown\n",argv[optind]);
 	optind++;
 
-	/* hint for the solver: non-linear real arithmetic, potentially also
+	/* hint for the solver: (non-)linear real arithmetic, potentially also
 	 * with integers */
 	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
 

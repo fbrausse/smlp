@@ -150,4 +150,9 @@ static inline bool is_linear(const sptr<term2> &e)
 hset<str> free_vars(const sptr<term2> &f);
 hset<str> free_vars(const sptr<form2> &f);
 
+static inline sptr<form2> conj(vec<sptr<form2>> l)
+{
+	return make2f(lbop2 { lbop2::AND, { move(l) } });
+}
+
 }

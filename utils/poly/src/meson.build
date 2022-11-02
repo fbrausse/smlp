@@ -44,7 +44,10 @@ else
   endif
 endif
 
-add_project_arguments(['-ffp-contract=off', '-Wno-format-zero-length'], language: 'cpp')
+add_project_arguments([
+  '-ffp-contract=off',
+  '-Wno-format-zero-length',
+  '-Wno-unqualified-std-cast-call'], language: 'cpp')
 
 link_args = []
 if get_option('static')
