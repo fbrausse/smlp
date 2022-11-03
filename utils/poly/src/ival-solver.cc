@@ -240,6 +240,16 @@ static sptr<form2> in_domain(const hmap<str,dbl::ival> &dom)
 	return conj(move(c));
 }
 
+static hmap<str,sptr<term2>>
+gradient(const domain &dom, const sptr<term2> &t, bool only_cont = false)
+{
+	hmap<str,sptr<term2>> nabla;
+	for (const auto &[var,c] : dom)
+		if (!only_cont || !c.range.get<list>())
+			nabla[var] = derivative(t, var);
+	return nabla;
+}
+
 result ival_solver::check()
 {
 	opt<hmap<str,dbl::ival>> sat_model;
@@ -329,6 +339,39 @@ result ival_solver::check()
 		/* no value from at least one interval satisfies the formula */
 		return unsat {};
 	}
+
+	struct {
+		const domain &dom;
+		hmap<str,sptr<term2>> derivatives;
+		void operator()(const sptr<form2> &f)
+		{
+			f->match(
+			[&](const prop2 &p) {
+				assert(p.right->get<cnst2>());
+				assert(empty(derivatives));
+				derivatives = gradient(dom, p.left, true);
+			},
+			[this](const lbop2 &l) {
+				for (const sptr<form2> &g : l.args)
+					(*this)(g);
+			},
+			[this](const lneg2 &n) {
+				(*this)(n.arg);
+			}
+			);
+		}
+	} check { dom, {} };
+	for (const sptr<form2> &a : conj.args)
+		check(a);
+	assert(!empty(check.derivatives));
+	uptr<solver> eq0 = mk_solver0(false, logic ? logic->c_str() : nullptr);
+	eq0->declare(dom);
+	for (const auto &[var,t] : check.derivatives) {
+		sptr<term2> s = simplify(t);
+		eq0->add(make2f(prop2 { EQ, s, zero }));
+	}
+	vec<hmap<str,sptr<term2>>> critical = all_solutions(*eq0);
+	fprintf(stderr, "#critical: %zu\n", size(critical));
 
 #if 0
 	for (const auto &reg : maybes) {

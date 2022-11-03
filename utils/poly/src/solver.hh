@@ -22,6 +22,18 @@ struct solver {
 	virtual void declare(const domain &d) = 0;
 	virtual void add(const sptr<form2> &f) = 0;
 	virtual result check() = 0;
+
+	friend vec<hmap<str,sptr<term2>>> all_solutions(solver &s)
+	{
+		vec<hmap<str,sptr<term2>>> v;
+		sat *c;
+		for (result r; (c = (r = s.check()).get<sat>());) {
+			v.emplace_back(move(c->model));
+			for (const auto &[var,t] : v.back())
+				s.add(make2f(prop2 { NE, make2t(name { var }), t }));
+		}
+		return v;
+	}
 };
 
 struct solver_seq : solver {
