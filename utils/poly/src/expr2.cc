@@ -384,3 +384,175 @@ hset<str> smlp::free_vars(const sptr<form2> &f)
 	collect_free_vars(f, s);
 	return s;
 }
+
+sptr<term2> smlp::derivative(const sptr<term2> &t, const str &var)
+{
+	return t->match(
+	[&](const name &n) { return n.id == var ? one : zero; },
+	[&](const cnst2 &) { return zero; },
+	[&](const bop2 &b) {
+		switch (b.op) {
+		case bop::ADD:
+		case bop::SUB:
+			return make2t(bop2 { b.op,
+				derivative(b.left, var),
+				derivative(b.right, var)
+			});
+		case bop::MUL:
+			return make2t(bop2 { bop::ADD,
+				make2t(bop2 { bop::MUL,
+					derivative(b.left, var),
+					b.right,
+				}),
+				make2t(bop2 { bop::MUL,
+					b.left,
+					derivative(b.right, var),
+				}),
+			});
+		}
+		unreachable();
+	},
+	[&](const uop2 &u) {
+		return make2t(uop2 { u.op, derivative(u.operand, var) });
+	},
+	[&](const ite2 &) -> sptr<term2> { return nullptr; }
+	);
+}
+
+template <typename T>
+static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
+{
+	auto it = m.find(t.get());
+	if (it == end(m))
+		it = m.emplace(t.get(), t->match(
+		[&](const name &) -> expr2s { return t; },
+		[&](const cnst2 &c) -> expr2s {
+			if (c.value.get<kay::Z>())
+				return t;
+			const kay::Q *q = c.value.get<kay::Q>();
+			kay::Q r = *q;
+			canonicalize(r);
+			if (r.get_den() == 1)
+				return make2t(cnst2 { move(r.get_num()) });
+			if (r.get_num() == q->get_num() &&
+			    r.get_den() == q->get_den())
+				return t;
+			return make2t(cnst2 { move(r) });
+		},
+		[&](const bop2 &b) -> expr2s {
+			sptr<term2> l = simplify(b.left, m);
+			sptr<term2> r = simplify(b.right, m);
+			switch (b.op) {
+			case bop::ADD:
+			case bop::SUB:
+				if (*l == *zero)
+					return r;
+				if (*r == *zero)
+					return l;
+				if (*l == *r)
+					return b.op == bop::SUB
+					     ? zero
+					     : make2t(bop2 { bop::MUL,
+						make2t(cnst2 { kay::Z(2) }),
+						l
+					});
+				break;
+			case bop::MUL:
+				if (*l == *zero)
+					return zero;
+				if (*r == *zero)
+					return zero;
+				if (*l == *one)
+					return r;
+				if (*r == *one)
+					return l;
+				break;
+			}
+			if (l == b.left && r == b.right)
+				return t;
+			return make2t(bop2 { b.op, move(l), move(r) });
+		},
+		[&](const uop2 &u) -> expr2s {
+			sptr<term2> o = simplify(u.operand, m);
+			if (*o == *zero)
+				return zero;
+			if (u.op == uop::UADD)
+				return o;
+			if (const cnst2 *c = o->get<cnst2>())
+				return c->value.match(
+				[](const auto &v) { return make2t(cnst2 { -v }); }
+				);
+			if (o == u.operand)
+				return t;
+			return make2t(uop2 { u.op, move(o) });
+		},
+		[&](const ite2 &i) -> expr2s {
+			sptr<form2> c = simplify(i.cond, m);
+			sptr<term2> y = simplify(i.yes, m);
+			sptr<term2> n = simplify(i.no, m);
+			if (*c == *true2)
+				return y;
+			if (*c == *false2)
+				return n;
+			if (*y == *n)
+				return y;
+			return make2t(ite2 { move(c), move(y), move(n), });
+		},
+		[&](const prop2 &p) -> expr2s {
+			sptr<term2> l = simplify(p.left, m);
+			sptr<term2> r = simplify(p.right, m);
+			if (const cnst2 *lc = l->get<cnst2>())
+			if (const cnst2 *rc = r->get<cnst2>())
+				return do_cmp(to_Q(lc->value), p.cmp,
+				              to_Q(rc->value)) ? true2 : false2;
+			if (l == p.left && r == p.right)
+				return t;
+			return make2f(prop2 { p.cmp, move(l), move(r) });
+		},
+		[&](const lbop2 &b) -> expr2s {
+			vec<sptr<form2>> a;
+			for (const sptr<form2> &f : b.args) {
+				sptr<form2> g = simplify(f, m);
+				if (*g == *true2) {
+					switch (b.op) {
+					case lbop2::AND: continue;
+					case lbop2::OR: return true2;
+					}
+					unreachable();
+				}
+				if (*g == *false2) {
+					switch (b.op) {
+					case lbop2::AND: return false2;
+					case lbop2::OR: continue;
+					}
+					unreachable();
+				}
+				a.emplace_back(move(g));
+			}
+			return make2f(lbop2 { b.op, move(a) });
+		},
+		[&](const lneg2 &n) -> expr2s {
+			sptr<form2> o = simplify(n.arg, m);
+			if (*o == *true2)
+				return false2;
+			if (*o == *false2)
+				return true2;
+			if (o == n.arg)
+				return t;
+			return make2f(lneg2 { move(o) });
+		}
+		)).first;
+	return *it->second.template get<sptr<T>>();
+}
+
+sptr<term2> smlp::simplify(const sptr<term2> &t)
+{
+	hmap<void *,expr2s> m;
+	return ::simplify(t, m);
+}
+
+sptr<form2> smlp::simplify(const sptr<form2> &f)
+{
+	hmap<void *,expr2s> m;
+	return ::simplify(f, m);
+}

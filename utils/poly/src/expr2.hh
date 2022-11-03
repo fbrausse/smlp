@@ -165,4 +165,9 @@ static inline sptr<form2> neg(sptr<form2> f)
 	return make2f(lneg2 { move(f) });
 }
 
+sptr<term2> derivative(const sptr<term2> &t, const str &var);
+
+sptr<term2> simplify(const sptr<term2> &t);
+sptr<form2> simplify(const sptr<form2> &t);
+
 }
