@@ -191,6 +191,31 @@ static void forall_products(const vec<pair<str,vec<dbl::ival>>> &p,
 		f(q);
 }
 
+static res eval_products(const vec<pair<str,vec<dbl::ival>>> &p,
+                         hmap<str,dbl::ival> &q,
+                         opt<hmap<str,dbl::ival>> &sat_model,
+                         vec<hmap<str,dbl::ival>> &maybes,
+                         vec<hmap<str,dbl::ival>> &nos,
+                         const form2 &conj)
+{
+	res r = NO;
+	forall_products(p, q, [&](const hmap<str,dbl::ival> &dom) {
+		if (r == YES)
+			return;
+		res s = eval(dom, conj);
+		switch (s.v) {
+		case res::YES:
+			if (!sat_model)
+				sat_model = dom;
+			break;
+		case res::NO: nos.push_back(dom); break;
+		case res::MAYBE: maybes.push_back(dom); break;
+		}
+		r |= s;
+	});
+	return r;
+}
+
 static vec<dbl::ival> split_ival(const dbl::ival &v)
 {
 	double m = mid(v);
@@ -233,58 +258,42 @@ result ival_solver::check()
 	 * the formula. It is SAT if there is (at least) one combination that
 	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
 	 * one combination that makes it MAYBE and all others evaluate to NO. */
-	res r = NO;
 	opt<hmap<str,dbl::ival>> sat_model;
-	vec<hmap<str,dbl::ival>> maybes;
-	forall_products(d, c, [&](const hmap<str,dbl::ival> &dom) {
-		if (r == YES)
-			return;
-		for (const auto &[var,_] : d) {
-			assert(ispoint(dom.find(var)->second));/*
-			fprintf(stderr, "%s:%2g ", var.c_str(),
-			        lo(dom.find(var)->second));*/
-		}
-		res s = eval(dom, conj);
-		if (s == MAYBE)
-			maybes.push_back(dom);
-		if (s == YES && !sat_model)
-			sat_model = dom;
-		r |= s;
-	});
+	vec<hmap<str,dbl::ival>> maybes, nos;
+	res r = eval_products(d, c, sat_model, maybes, nos, conj);
+	fprintf(stderr, "lvl -1 it +%zun%zu\n",
+	        size(maybes), size(nos));
+
 	for (size_t i=0, j; r == MAYBE && i < max_subdivs; i++) {
 		vec<hmap<str,dbl::ival>> maybes2;
 		r = NO;
 		j = 0;
+		vec<pair<str,vec<dbl::ival>>> sp;
 		for (const hmap<str,dbl::ival> &dom : maybes) {
 			if (r == YES)
 				break;
 			/* single sub-division of all domain elements */
-			vec<pair<str,vec<dbl::ival>>> sp;
 			kay::Z n = 1;
+			sp.clear();
 			for (const auto &[var,v] : dom) {
 				sp.emplace_back(var, split_ival(v));
 				n *= size(sp.back().second);
 			}
-			fprintf(stderr, "lvl %zu it %zu/%zu+%zu: checking %s subdivisions...",
-			        i, j++, size(maybes), size(maybes2),
+			fprintf(stderr, "lvl %zu it %zu/%zu+%zun%zu: checking %s subdivisions...",
+			        i, j++, size(maybes), size(maybes2), size(nos),
 			        n.get_str().c_str());
 			fflush(stderr);
 			hmap<str,dbl::ival> ndom;
-			res s = NO;
-			size_t old = size(maybes2);
-			forall_products(sp, ndom, [&](const hmap<str,dbl::ival> &ndom) {
-				if (s == YES)
-					return;
-				res t = eval(ndom, conj);
-				if (t == MAYBE)
-					maybes2.push_back(ndom);
-				if (t == YES && !sat_model)
-					sat_model = ndom;
-				s |= t;
-			});
+			size_t old_m = size(maybes2);
+			size_t old_n = size(nos);
+			res s = eval_products(sp, ndom, sat_model, maybes2, nos, conj);
+			if (s == NO) {
+				nos.erase(begin(nos) + old_n, end(nos));
+				nos.push_back(dom);
+			}
 			std::cerr << " -> " << s;
 			if (s == MAYBE)
-				std::cerr << " * " << (size(maybes2) - old);
+				std::cerr << " * " << (size(maybes2) - old_m);
 			std::cerr << "\n";
 			r |= s;
 		}
