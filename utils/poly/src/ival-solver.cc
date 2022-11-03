@@ -6,56 +6,6 @@
 using namespace smlp;
 using namespace kay;
 
-using Ty = vec<dbl::ival>; /* finite_union */
-
-static dbl::ival hull(const Ty &t)
-{
-	assert(!empty(t));
-	dbl::ival r = t.front();
-	for (size_t i=1; i<size(t); i++)
-		r = convex_hull(r, t[i]);
-	return r;
-}
-
-static dbl::ival eval(const hmap<str,dbl::ival> &dom, const sptr<term2> &t, hmap<void *,dbl::ival> &m);
-
-static dbl::ival eval(const hmap<str,dbl::ival> &dom, const term2 &t, hmap<void *,dbl::ival> &m)
-{
-	return t.match(
-	[](const cnst2 &c) {
-		return c.value.match(
-		[](const auto &v) { return dbl::ival(v); }
-		);
-	},
-	[&](const name &n) {
-		auto it = dom.find(n.id);
-		assert(it != dom.end());
-		return it->second;
-	},
-	[&](const uop2 &u) {
-		dbl::ival i = eval(dom, u.operand, m);
-		switch (u.op) {
-		case uop::UADD: break;
-		case uop::USUB: neg(i); break;
-		}
-		return i;
-	},
-	[&](const bop2 &b) {
-		dbl::ival l = eval(dom, b.left, m);
-		if (b.op == bop::MUL && *b.left == *b.right)
-			return square(l);
-		dbl::ival r = eval(dom, b.right, m);
-		switch (b.op) {
-		case bop::ADD: l += r; break;
-		case bop::SUB: l -= r; break;
-		case bop::MUL: l *= r; break;
-		}
-		return l;
-	},
-	[](const ite2 &) -> dbl::ival { abort(); }
-	);
-}
-
 #include <iostream>
 
 namespace {
@@ -113,6 +63,53 @@ static const struct res {
 } YES = { res::YES }
 , NO = { res::NO }
 , MAYBE = { res::MAYBE };
+}
+
+static dbl::ival eval(const hmap<str,dbl::ival> &dom, const sptr<term2> &t, hmap<void *,dbl::ival> &m);
+static res eval(const hmap<str,dbl::ival> &dom, const form2 &t, hmap<void *,dbl::ival> &m);
+
+static dbl::ival eval(const hmap<str,dbl::ival> &dom, const term2 &t, hmap<void *,dbl::ival> &m)
+{
+	return t.match(
+	[](const cnst2 &c) {
+		return c.value.match(
+		[](const auto &v) { return dbl::ival(v); }
+		);
+	},
+	[&](const name &n) {
+		auto it = dom.find(n.id);
+		assert(it != dom.end());
+		return it->second;
+	},
+	[&](const uop2 &u) {
+		dbl::ival i = eval(dom, u.operand, m);
+		switch (u.op) {
+		case uop::UADD: break;
+		case uop::USUB: neg(i); break;
+		}
+		return i;
+	},
+	[&](const bop2 &b) {
+		dbl::ival l = eval(dom, b.left, m);
+		if (b.op == bop::MUL && *b.left == *b.right)
+			return square(l);
+		dbl::ival r = eval(dom, b.right, m);
+		switch (b.op) {
+		case bop::ADD: l += r; break;
+		case bop::SUB: l -= r; break;
+		case bop::MUL: l *= r; break;
+		}
+		return l;
+	},
+	[&](const ite2 &i) {
+		switch (eval(dom, *i.cond, m).v) {
+		case res::YES: return eval(dom, i.yes, m);
+		case res::NO: return eval(dom, i.no, m);
+		case res::MAYBE: return convex_hull(eval(dom, i.yes, m), eval(dom, i.no, m));
+		}
+		unreachable();
+	}
+	);
 }
 
 static res eval(const hmap<str,dbl::ival> &dom, const form2 &f, hmap<void *,dbl::ival> &m)
@@ -197,7 +194,7 @@ static vec<dbl::ival> split_ival(const dbl::ival &v)
 
 result ival_solver::check()
 {
-	/* need directed rounding downward for iv::ival */
+	/* need directed rounding downward for dbl::ival */
 	dbl::rounding_mode rnd(FE_DOWNWARD);
 
 	/* Replace the domain with intervals, collect discrete vars in d */
@@ -258,8 +255,9 @@ result ival_solver::check()
 				sp.emplace_back(var, split_ival(v));
 				n *= size(sp.back().second);
 			}
-			fprintf(stderr, "lvl %zu it %zu/%zu: checking %s subdivisions...",
-			        i, j++, size(maybes), n.get_str().c_str());
+			fprintf(stderr, "lvl %zu it %zu/%zu+%zu: checking %s subdivisions...",
+			        i, j++, size(maybes), size(maybes2),
+			        n.get_str().c_str());
 			fflush(stderr);
 			hmap<str,dbl::ival> ndom;
 			res s = NO;
@@ -276,8 +274,7 @@ result ival_solver::check()
 			});
 			std::cerr << " -> " << s;
 			if (s == MAYBE)
-				std::cerr << " * " << (size(maybes2) - old)
-				          << " [acc " << size(maybes2) << "]";
+				std::cerr << " * " << (size(maybes2) - old);
 			std::cerr << "\n";
 			r |= s;
 		}
