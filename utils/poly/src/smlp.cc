@@ -104,23 +104,27 @@ static const char *ext_solver_cmd;
 static const char *inc_solver_cmd;
 static long        intervals = -1;
 
-static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
+uptr<solver> mk_solver0(bool incremental, const char *logic = nullptr);
+
+uptr<solver> mk_solver0(bool incremental, const char *logic)
 {
-	vec<uptr<solver>> solvers;
-	if (intervals >= 0)
-		solvers.emplace_back(std::make_unique<ival_solver>(intervals));
 	const char *ext = ext_solver_cmd;
 	const char *inc = inc_solver_cmd;
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
 	if (cmd)
-		solvers.emplace_back(std::make_unique<ext_solver>(cmd, logic));
+		return std::make_unique<ext_solver>(cmd, logic);
 #ifdef SMLP_ENABLE_Z3_API
-	solvers.emplace_back(std::make_unique<z3_solver>(logic));
+	return std::make_unique<z3_solver>(logic);
 #endif
-	if (empty(solvers))
-		DIE(1,"error: no solver specified and none are built-in, require "
-		      "external solver via -S or -I\n");
-	return std::make_unique<solver_seq>(move(solvers));
+	DIE(1,"error: no solver specified and none are built-in, require "
+	      "external solver via -S or -I\n");
+}
+
+static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
+{
+	if (intervals >= 0)
+		return std::make_unique<ival_solver>(intervals, logic);
+	return mk_solver0(incremental, logic);
 }
 
 template <typename T>
@@ -572,7 +576,7 @@ int main(int argc, char **argv)
 		case 'i': {
 			if (from_string(optarg, intervals))
 				break;
-			DIE(1,"error: SUBDIVS argument to '-i' must be numeric");
+			DIE(1,"error: SUBDIVS argument to '-i' must be numeric\n");
 		}
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;

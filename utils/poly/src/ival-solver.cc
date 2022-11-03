@@ -227,8 +227,26 @@ static vec<dbl::ival> split_ival(const dbl::ival &v)
 	return r;
 }
 
+extern uptr<solver> mk_solver0(bool incremental, const char *logic = nullptr);
+
+static sptr<form2> in_domain(const hmap<str,dbl::ival> &dom)
+{
+	vec<sptr<form2>> c;
+	for (const auto &[var,k] : dom) {
+		sptr<term2> v = make2t(name { var });
+		c.emplace_back(make2f(prop2 { GE, v, make2t(cnst2 { kay::Q(lo(k)) }) }));
+		c.emplace_back(make2f(prop2 { LE, v, make2t(cnst2 { kay::Q(hi(k)) }) }));
+	}
+	return conj(move(c));
+}
+
 result ival_solver::check()
 {
+	opt<hmap<str,dbl::ival>> sat_model;
+	vec<hmap<str,dbl::ival>> maybes, nos;
+	res r;
+
+	{
 	/* need directed rounding downward for dbl::ival */
 	dbl::rounding_mode rnd(FE_DOWNWARD);
 
@@ -258,9 +276,7 @@ result ival_solver::check()
 	 * the formula. It is SAT if there is (at least) one combination that
 	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
 	 * one combination that makes it MAYBE and all others evaluate to NO. */
-	opt<hmap<str,dbl::ival>> sat_model;
-	vec<hmap<str,dbl::ival>> maybes, nos;
-	res r = eval_products(d, c, sat_model, maybes, nos, conj);
+	r = eval_products(d, c, sat_model, maybes, nos, conj);
 	fprintf(stderr, "lvl -1 it +%zun%zu\n",
 	        size(maybes), size(nos));
 
@@ -299,6 +315,7 @@ result ival_solver::check()
 		}
 		maybes = move(maybes2);
 	}
+	}
 
 	if (r == YES) {
 		/* any value from the intervals will do; they are non-empty by
@@ -312,6 +329,33 @@ result ival_solver::check()
 		/* no value from at least one interval satisfies the formula */
 		return unsat {};
 	}
+
+#if 0
+	for (const auto &reg : maybes) {
+		uptr<solver> s = mk_solver0(false, logic ? logic->c_str() : nullptr);
+		s->declare(dom);
+		s->add(make2f(conj));
+		s->add(in_domain(reg));
+		result r = s->check();
+		if (!r.get<unsat>())
+			return r;
+	}
+	return unsat {};
+#else
+	uptr<solver> s = mk_solver0(false, logic ? logic->c_str() : nullptr);
+	s->declare(dom);
+	s->add(make2f(conj));
+	if (1) {
+		vec<sptr<form2>> d;
+		for (const auto &dom : maybes)
+			d.emplace_back(in_domain(dom));
+		s->add(disj(move(d)));
+	}
+	if (0)
+		for (const auto &dom : nos)
+			s->add(neg(in_domain(dom)));
+	return s->check();
+#endif
 	/* some values do, others do not satisfy the formula */
 	return unknown { "overlap" };
 }
