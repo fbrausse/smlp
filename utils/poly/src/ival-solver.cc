@@ -1,29 +1,30 @@
 
 #include "ival-solver.hh"
 
-#include <iv/ival.hh>
+#include <kay/dbl-ival.hh>
 
 using namespace smlp;
+using namespace kay;
 
-using Ty = vec<iv::ival>; /* finite_union */
+using Ty = vec<dbl::ival>; /* finite_union */
 
-static iv::ival hull(const Ty &t)
+static dbl::ival hull(const Ty &t)
 {
 	assert(!empty(t));
-	iv::ival r = t.front();
+	dbl::ival r = t.front();
 	for (size_t i=1; i<size(t); i++)
 		r = convex_hull(r, t[i]);
 	return r;
 }
 
-static iv::ival eval(const hmap<str,iv::ival> &dom, const sptr<term2> &t, hmap<void *,iv::ival> &m);
+static dbl::ival eval(const hmap<str,dbl::ival> &dom, const sptr<term2> &t, hmap<void *,dbl::ival> &m);
 
-static iv::ival eval(const hmap<str,iv::ival> &dom, const term2 &t, hmap<void *,iv::ival> &m)
+static dbl::ival eval(const hmap<str,dbl::ival> &dom, const term2 &t, hmap<void *,dbl::ival> &m)
 {
 	return t.match(
 	[](const cnst2 &c) {
 		return c.value.match(
-		[](const auto &v) { return iv::ival(v); }
+		[](const auto &v) { return dbl::ival(v); }
 		);
 	},
 	[&](const name &n) {
@@ -32,7 +33,7 @@ static iv::ival eval(const hmap<str,iv::ival> &dom, const term2 &t, hmap<void *,
 		return it->second;
 	},
 	[&](const uop2 &u) {
-		iv::ival i = eval(dom, u.operand, m);
+		dbl::ival i = eval(dom, u.operand, m);
 		switch (u.op) {
 		case uop::UADD: break;
 		case uop::USUB: neg(i); break;
@@ -40,10 +41,10 @@ static iv::ival eval(const hmap<str,iv::ival> &dom, const term2 &t, hmap<void *,
 		return i;
 	},
 	[&](const bop2 &b) {
-		iv::ival l = eval(dom, b.left, m);
+		dbl::ival l = eval(dom, b.left, m);
 		if (b.op == bop::MUL && *b.left == *b.right)
 			return square(l);
-		iv::ival r = eval(dom, b.right, m);
+		dbl::ival r = eval(dom, b.right, m);
 		switch (b.op) {
 		case bop::ADD: l += r; break;
 		case bop::SUB: l -= r; break;
@@ -51,7 +52,7 @@ static iv::ival eval(const hmap<str,iv::ival> &dom, const term2 &t, hmap<void *,
 		}
 		return l;
 	},
-	[](const ite2 &) -> iv::ival { abort(); }
+	[](const ite2 &) -> dbl::ival { abort(); }
 	);
 }
 
@@ -114,23 +115,23 @@ static const struct res {
 , MAYBE = { res::MAYBE };
 }
 
-static res eval(const hmap<str,iv::ival> &dom, const form2 &f, hmap<void *,iv::ival> &m)
+static res eval(const hmap<str,dbl::ival> &dom, const form2 &f, hmap<void *,dbl::ival> &m)
 {
 	return f.match(
 	[&](const prop2 &p) {
-		iv::ival v = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);
-		std::cerr << "eval: " << v;
+		dbl::ival v = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);
+		// std::cerr << "eval: " << v;
 		res r;
 		switch (p.cmp) {
 		case LT: r = hi(v) < 0 ? YES : lo(v) >= 0 ? NO : MAYBE; break;
 		case LE: r = hi(v) <= 0 ? YES : lo(v) > 0 ? NO : MAYBE; break;
 		case GT: r = lo(v) > 0 ? YES : hi(v) <= 0 ? NO : MAYBE; break;
 		case GE: r = lo(v) >= 0 ? YES : hi(v) < 0 ? NO : MAYBE; break;
-		case EQ: r = sgn(v) == iv::ZERO ? YES : sgn(v) == iv::OV_ZERO ? MAYBE : NO; break;
-		case NE: r = sgn(v) == iv::ZERO ? NO : sgn(v) == iv::OV_ZERO ? MAYBE : YES; break;
+		case EQ: r = sgn(v) == dbl::ZERO ? YES : sgn(v) == dbl::OV_ZERO ? MAYBE : NO; break;
+		case NE: r = sgn(v) == dbl::ZERO ? NO : sgn(v) == dbl::OV_ZERO ? MAYBE : YES; break;
 		default: abort();
 		}
-		std::cerr << " -> " << r << "\n";
+		// std::cerr << " -> " << r << "\n";
 		return r;
 	},
 	[&](const lbop2 &b) {
@@ -146,7 +147,7 @@ static res eval(const hmap<str,iv::ival> &dom, const form2 &f, hmap<void *,iv::i
 	);
 }
 
-static iv::ival eval(const hmap<str,iv::ival> &dom, const sptr<term2> &t, hmap<void *,iv::ival> &m)
+static dbl::ival eval(const hmap<str,dbl::ival> &dom, const sptr<term2> &t, hmap<void *,dbl::ival> &m)
 {
 	auto it = m.find(t.get());
 	if (it == m.end())
@@ -154,27 +155,27 @@ static iv::ival eval(const hmap<str,iv::ival> &dom, const sptr<term2> &t, hmap<v
 	return it->second;
 }
 
-static res eval(const hmap<str,iv::ival> &dom, const form2 &f)
+static res eval(const hmap<str,dbl::ival> &dom, const form2 &f)
 {
-	hmap<void *,iv::ival> m;
+	hmap<void *,dbl::ival> m;
 	return eval(dom, f, m);
 }
 
-static iv::ival to_ival(const kay::Q &q)
+static dbl::ival to_ival(const kay::Q &q)
 {
 	if (q.get_den() == 1)
-		return iv::ival(q.get_num());
-	return iv::ival(q);
+		return dbl::ival(q.get_num());
+	return dbl::ival(q);
 }
 
 template <typename F>
-static void forall_products(const vec<pair<str,vec<iv::ival>>> &p,
-                            hmap<str,iv::ival> &q, F &&f, size_t i=0)
+static void forall_products(const vec<pair<str,vec<dbl::ival>>> &p,
+                            hmap<str,dbl::ival> &q, F &&f, size_t i=0)
 {
 	assert(i <= size(p));
 	if (i < size(p)) {
 		const auto &[var,l] = p[i];
-		for (const iv::ival &r : l) {
+		for (const dbl::ival &r : l) {
 			q[var] = r;
 			forall_products(p, q, f, i+1);
 		}
@@ -183,38 +184,38 @@ static void forall_products(const vec<pair<str,vec<iv::ival>>> &p,
 		f(q);
 }
 
-static vec<iv::ival> split_ival(const iv::ival &v)
+static vec<dbl::ival> split_ival(const dbl::ival &v)
 {
 	double m = mid(v);
-	iv::ival a = iv::endpts { lo(v), m };
-	vec<iv::ival> r = { a };
+	dbl::ival a = dbl::endpts { lo(v), m };
+	vec<dbl::ival> r = { a };
 	double bl = nextafter(m, INFINITY);
 	if (bl <= hi(v))
-		r.emplace_back(iv::endpts { bl, hi(v) });
+		r.emplace_back(dbl::endpts { bl, hi(v) });
 	return r;
 }
 
 result ival_solver::check()
 {
 	/* need directed rounding downward for iv::ival */
-	iv::rounding_mode rnd(FE_DOWNWARD);
+	dbl::rounding_mode rnd(FE_DOWNWARD);
 
 	/* Replace the domain with intervals, collect discrete vars in d */
-	hmap<str,iv::ival> c;
-	vec<pair<str,vec<iv::ival>>> d;
+	hmap<str,dbl::ival> c;
+	vec<pair<str,vec<dbl::ival>>> d;
 	for (const auto &[var,k] : dom)
 		k.range.match(
 		[&,var=var](const entire &) {
-			c.emplace(var, iv::endpts { -INFINITY, INFINITY });
+			c.emplace(var, dbl::endpts { -INFINITY, INFINITY });
 		},
 		[&,var=var](const list &l) {
-			vec<iv::ival> ivs;
+			vec<dbl::ival> ivs;
 			for (const kay::Q &v : l.values)
 				ivs.emplace_back(to_ival(v));
 			d.emplace_back(var, move(ivs));
 		},
 		[&,var=var](const ival &i) {
-			c.emplace(var, iv::endpts {
+			c.emplace(var, dbl::endpts {
 				lo(to_ival(i.lo)),
 				hi(to_ival(i.hi)),
 			});
@@ -226,37 +227,62 @@ result ival_solver::check()
 	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
 	 * one combination that makes it MAYBE and all others evaluate to NO. */
 	res r = NO;
-	opt<hmap<str,iv::ival>> sat_model;
-	forall_products(d, c, [&](const hmap<str,iv::ival> &dom) {
+	opt<hmap<str,dbl::ival>> sat_model;
+	vec<hmap<str,dbl::ival>> maybes;
+	forall_products(d, c, [&](const hmap<str,dbl::ival> &dom) {
 		if (r == YES)
 			return;
 		for (const auto &[var,_] : d) {
-			assert(ispoint(dom.find(var)->second));
+			assert(ispoint(dom.find(var)->second));/*
 			fprintf(stderr, "%s:%2g ", var.c_str(),
-			        lo(dom.find(var)->second));
+			        lo(dom.find(var)->second));*/
 		}
 		res s = eval(dom, conj);
-		if (s == MAYBE) {
+		if (s == MAYBE)
+			maybes.push_back(dom);
+		if (s == YES && !sat_model)
+			sat_model = dom;
+		r |= s;
+	});
+	for (size_t i=0, j; r == MAYBE && i < max_subdivs; i++) {
+		vec<hmap<str,dbl::ival>> maybes2;
+		r = NO;
+		j = 0;
+		for (const hmap<str,dbl::ival> &dom : maybes) {
+			if (r == YES)
+				break;
 			/* single sub-division of all domain elements */
-			vec<pair<str,vec<iv::ival>>> sp;
+			vec<pair<str,vec<dbl::ival>>> sp;
 			kay::Z n = 1;
 			for (const auto &[var,v] : dom) {
 				sp.emplace_back(var, split_ival(v));
 				n *= size(sp.back().second);
 			}
-			fprintf(stderr, "checking %s subdivisions...\n", n.get_str().c_str());
-			hmap<str,iv::ival> ndom;
-			res t = NO;
-			forall_products(sp, ndom, [&t,this](const hmap<str,iv::ival> &ndom) {
-				t |= eval(ndom, conj);
+			fprintf(stderr, "lvl %zu it %zu/%zu: checking %s subdivisions...",
+			        i, j++, size(maybes), n.get_str().c_str());
+			fflush(stderr);
+			hmap<str,dbl::ival> ndom;
+			res s = NO;
+			size_t old = size(maybes2);
+			forall_products(sp, ndom, [&](const hmap<str,dbl::ival> &ndom) {
+				if (s == YES)
+					return;
+				res t = eval(ndom, conj);
+				if (t == MAYBE)
+					maybes2.push_back(ndom);
+				if (t == YES && !sat_model)
+					sat_model = ndom;
+				s |= t;
 			});
-			std::cerr << "subdivisions produced " << t << "\n";
-			s = t;
+			std::cerr << " -> " << s;
+			if (s == MAYBE)
+				std::cerr << " * " << (size(maybes2) - old)
+				          << " [acc " << size(maybes2) << "]";
+			std::cerr << "\n";
+			r |= s;
 		}
-		if (s == YES && !sat_model)
-			sat_model = dom;
-		r |= s;
-	});
+		maybes = move(maybes2);
+	}
 
 	if (r == YES) {
 		/* any value from the intervals will do; they are non-empty by

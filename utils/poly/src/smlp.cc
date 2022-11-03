@@ -102,14 +102,14 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 
 static const char *ext_solver_cmd;
 static const char *inc_solver_cmd;
-static bool        intervals = false;
+static long        intervals = -1;
 
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
 	vec<uptr<solver>> solvers;
-	if (intervals) {
+	if (intervals >= 0) {
 #ifdef SMLP_ENABLE_KERAS_NN
-		solvers.emplace_back(std::make_unique<ival_solver>());
+		solvers.emplace_back(std::make_unique<ival_solver>(intervals));
 #else
 		DIE(1,"error: interval solver not available, compile smlp with "
 		      "keras-nn support\n");
@@ -385,7 +385,8 @@ Options [defaults]:\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
-  -i           use interval evaluation (only when CNST is given) [no]\n\
+  -i SUBDIVS   use interval evaluation (only when CNST is given) with SUBDIVS\n\
+               subdivision [no]\n\
   -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
@@ -517,6 +518,15 @@ static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
 
 interruptible *interruptible::is_active;
 
+template <typename T>
+static bool from_string(const char *s, T &v)
+{
+	using std::from_chars;
+	using kay::from_chars;
+	auto [end,ec] = from_chars(s, s + strlen(s), v);
+	return !*end && ec == std::errc {};
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
@@ -540,7 +550,7 @@ int main(int argc, char **argv)
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:cC:d:e:F:hiI:nO:pP:Q:rR:sS:t:V")) != -1;)
+	                            ":1a:b:cC:d:e:F:hi:I:nO:pP:Q:rR:sS:t:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -565,7 +575,11 @@ int main(int argc, char **argv)
 				      "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
-		case 'i': intervals = true; break;
+		case 'i': {
+			if (from_string(optarg, intervals))
+				break;
+			DIE(1,"error: SUBDIVS argument to '-i' must be numeric");
+		}
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
@@ -703,7 +717,11 @@ int main(int argc, char **argv)
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
-		sptr<term2> rhs = make2t(cnst2 { kay::Q_from_str(argv[optind]) });
+		kay::Q cnst;
+		if (!from_string(argv[optind], cnst))
+			DIE(1,"CNST must be a numeric constant\n");
+		fprintf(stderr, "cnst: %s\n", cnst.get_str().c_str());
+		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
 
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {
@@ -724,7 +742,7 @@ int main(int argc, char **argv)
 			alarm(timeout);
 		}
 
-		signal(SIGINT, sigint_handler);
+		// signal(SIGINT, sigint_handler);
 
 		/* optionally solve the problem */
 		if (solve)

@@ -27,7 +27,8 @@ Options [defaults]:
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
                'prefix' [infix]
   -h           displays this help message
-  -i           use interval evaluation (only when CNST is given) [no]
+  -i SUBDIVS   use interval evaluation (only when CNST is given) with SUBDIVS
+               subdivision [no]
   -I EXT-INC   optional external incremental SMT solver [value for -S]
   -n           dry run, do not solve the problem [no]
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only

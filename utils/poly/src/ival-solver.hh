@@ -7,7 +7,9 @@ namespace smlp {
 
 struct ival_solver : solver {
 
-	ival_solver() = default;
+	ival_solver(size_t max_subdivs = 0)
+	: max_subdivs(max_subdivs)
+	{}
 
 	void declare(const domain &d) override
 	{
@@ -25,6 +27,7 @@ struct ival_solver : solver {
 private:
 	domain dom;
 	lbop2 conj { lbop2::AND, {} };
+	size_t max_subdivs;
 };
 
 }
