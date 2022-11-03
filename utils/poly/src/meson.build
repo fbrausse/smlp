@@ -145,6 +145,7 @@ hdrs = [
 	'sexpr-detail.hh',
 	'solver.hh',
 	'ext-solver.hh',
+	'ival-solver.hh',
 ]
 srcs = [
 	'smlp.cc',
@@ -156,6 +157,7 @@ srcs = [
 	'poly.cc',
 	'sexpr.cc',
 	'ext-solver.cc',
+	'ival-solver.cc',
 ]
 
 if z3.disabled()
@@ -173,9 +175,7 @@ else
   message('keras-nn support enabled')
   config.set('SMLP_ENABLE_KERAS_NN', 1)
   hdrs += 'nn.hh'
-  hdrs += 'ival-solver.hh'
   srcs += 'nn.cc'
-  srcs += 'ival-solver.cc'
 endif
 
 # not yet: need a library first

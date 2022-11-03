@@ -11,6 +11,7 @@
 #include "domain.hh"
 #include "dump-smt2.hh"
 #include "ext-solver.hh"
+#include "ival-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
 
@@ -22,7 +23,6 @@
 #ifdef SMLP_ENABLE_KERAS_NN
 # include <H5public.h>
 # include <kjson.h>
-# include "ival-solver.hh"
 #endif
 
 #include <signal.h>
@@ -107,14 +107,8 @@ static long        intervals = -1;
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
 	vec<uptr<solver>> solvers;
-	if (intervals >= 0) {
-#ifdef SMLP_ENABLE_KERAS_NN
+	if (intervals >= 0)
 		solvers.emplace_back(std::make_unique<ival_solver>(intervals));
-#else
-		DIE(1,"error: interval solver not available, compile smlp with "
-		      "keras-nn support\n");
-#endif
-	}
 	const char *ext = ext_solver_cmd;
 	const char *inc = inc_solver_cmd;
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
