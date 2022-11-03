@@ -1,12 +1,17 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2022 Franz Brausse <franz.brausse@manchester.ac.uk>
+ * Copyright 2022 The University of Manchester
+ */
 
 #include "ival-solver.hh"
 
 #include <kay/dbl-ival.hh>
 
+#include <iostream>
+
 using namespace smlp;
 using namespace kay;
-
-#include <iostream>
 
 namespace {
 static const struct res {
@@ -51,14 +56,19 @@ static const struct res {
 		return a = a || b;
 	}
 
-	friend std::ostream & operator<<(std::ostream &s, const res &r)
+	friend str to_string(const res &r)
 	{
 		switch (r.v) {
-		case YES: s << "YES"; break;
-		case NO: s << "NO"; break;
-		case MAYBE: s << "MAYBE"; break;
+		case YES: return "YES";
+		case NO: return "NO";
+		case MAYBE: return "MAYBE";
 		}
-		return s;
+		unreachable();
+	}
+
+	friend std::ostream & operator<<(std::ostream &s, const res &r)
+	{
+		return s << to_string(r);
 	}
 } YES = { res::YES }
 , NO = { res::NO }
