@@ -28,9 +28,11 @@ struct solver {
 		vec<hmap<str,sptr<term2>>> v;
 		sat *c;
 		for (result r; (c = (r = s.check()).get<sat>());) {
+			vec<sptr<form2>> ne;
 			v.emplace_back(move(c->model));
 			for (const auto &[var,t] : v.back())
-				s.add(make2f(prop2 { NE, make2t(name { var }), t }));
+				ne.push_back(make2f(prop2 { NE, make2t(name { var }), t }));
+			s.add(disj(move(ne)));
 		}
 		return v;
 	}

@@ -100,10 +100,11 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	fprintf(f, "(get-model)\n");
 }
 
-static const char *ext_solver_cmd;
-static const char *inc_solver_cmd;
-static long        intervals = -1;
+static char *ext_solver_cmd;
+static char *inc_solver_cmd;
+static long  intervals = -1;
 
+namespace smlp {
 uptr<solver> mk_solver0(bool incremental, const char *logic = nullptr);
 
 uptr<solver> mk_solver0(bool incremental, const char *logic)
@@ -120,15 +121,8 @@ uptr<solver> mk_solver0(bool incremental, const char *logic)
 	      "external solver via -S or -I\n");
 }
 
-static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
-{
-	if (intervals >= 0)
-		return std::make_unique<ival_solver>(intervals, logic);
-	return mk_solver0(incremental, logic);
-}
-
 template <typename T>
-static str smt2_logic_str(const domain &dom, const T &e)
+str smt2_logic_str(const domain &dom, const T &e)
 {
 	bool reals = false;
 	bool ints = false;
@@ -148,6 +142,15 @@ static str smt2_logic_str(const domain &dom, const T &e)
 	} else
 		logic += "UF";
 	return logic;
+}
+
+}
+
+static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
+{
+	if (intervals >= 0)
+		return std::make_unique<ival_solver>(intervals, logic);
+	return smlp::mk_solver0(incremental, logic);
 }
 
 static result solve_exists(const domain &dom,

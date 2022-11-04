@@ -5,13 +5,14 @@
  */
 
 #include "ival-solver.hh"
+#include "dump-smt2.hh"
 
 #include <kay/dbl-ival.hh>
 
 #include <iostream>
 
 using namespace smlp;
-using namespace kay;
+namespace dbl = kay::dbl;
 
 namespace {
 static const struct res {
@@ -175,14 +176,14 @@ static dbl::ival to_ival(const kay::Q &q)
 	return dbl::ival(q);
 }
 
-template <typename F>
-static void forall_products(const vec<pair<str,vec<dbl::ival>>> &p,
-                            hmap<str,dbl::ival> &q, F &&f, size_t i=0)
+template <typename T, typename F>
+static void forall_products(const vec<pair<str,vec<T>>> &p,
+                            hmap<str,T> &q, F &&f, size_t i=0)
 {
 	assert(i <= size(p));
 	if (i < size(p)) {
 		const auto &[var,l] = p[i];
-		for (const dbl::ival &r : l) {
+		for (const T &r : l) {
 			q[var] = r;
 			forall_products(p, q, f, i+1);
 		}
@@ -227,7 +228,12 @@ static vec<dbl::ival> split_ival(const dbl::ival &v)
 	return r;
 }
 
+namespace smlp {
 extern uptr<solver> mk_solver0(bool incremental, const char *logic = nullptr);
+
+template <typename T>
+extern str smt2_logic_str(const domain &dom, const T &e);
+}
 
 static sptr<form2> in_domain(const hmap<str,dbl::ival> &dom)
 {
@@ -343,13 +349,14 @@ result ival_solver::check()
 	struct {
 		const domain &dom;
 		hmap<str,sptr<term2>> derivatives;
+		bool simple = true;
 		void operator()(const sptr<form2> &f)
 		{
 			f->match(
 			[&](const prop2 &p) {
-				assert(p.right->get<cnst2>());
-				assert(empty(derivatives));
-				derivatives = gradient(dom, p.left, true);
+				simple &= p.right->get<cnst2>() != nullptr;
+				simple &= empty(derivatives);
+				derivatives = gradient(dom, p.left, false);
 			},
 			[this](const lbop2 &l) {
 				for (const sptr<form2> &g : l.args)
@@ -363,15 +370,84 @@ result ival_solver::check()
 	} check { dom, {} };
 	for (const sptr<form2> &a : conj.args)
 		check(a);
-	assert(!empty(check.derivatives));
-	uptr<solver> eq0 = mk_solver0(false, logic ? logic->c_str() : nullptr);
-	eq0->declare(dom);
-	for (const auto &[var,t] : check.derivatives) {
-		sptr<term2> s = simplify(t);
-		eq0->add(make2f(prop2 { EQ, s, zero }));
+	fprintf(stderr, "simple: %d\n", check.simple);
+	if (check.simple) {
+		assert(!empty(check.derivatives));
+		vec<sptr<form2>> c;
+		for (const auto &[var,t] : check.derivatives)
+			c.emplace_back(make2f(prop2 { EQ, simplify(t), zero }));
+		sptr<form2> f = smlp::conj(move(c));
+		/* restrict domain to only used variables, required for
+		 * all_solutions() to terminate */
+		domain sdom;
+		hset<str> vars = free_vars(f);
+		vec<pair<str,sptr<term2>>> remaining_vars;
+		for (const auto &[var,k] : dom)
+			if (vars.contains(var))
+				sdom.emplace_back(var, k);
+			else {
+				/* pick any value in the domain */
+				remaining_vars.emplace_back(var, k.range.match(
+				[](const entire &) { return zero; },
+				[](const list &l) { return make2t(cnst2 { l.values.front() }); },
+				[](const ival &i) { return make2t(cnst2 { mid(i) }); }
+				));
+			}
+		uptr<solver> eq0 = mk_solver0(false, smt2_logic_str(sdom, f).c_str());
+		eq0->declare(sdom);
+		eq0->add(f);
+		vec<hmap<str,sptr<term2>>> critical = all_solutions(*eq0);
+		fprintf(stderr, "#critical: %zu\n", size(critical));
+
+		bool bounded_domain = true;
+		vec<pair<str,vec<sptr<term2>>>> corners;
+		for (const auto &[var,k] : dom) {
+			if (k.range.get<entire>()) {
+				bounded_domain = false;
+				break;
+			}
+			vec<sptr<term2>> values;
+			if (const list *l = k.range.get<list>()) {
+				for (const kay::Q &v : l->values)
+					values.emplace_back(make2t(cnst2 { v }));
+			} else {
+				const ival *i = k.range.get<ival>();
+				assert(i);
+				values.emplace_back(make2t(cnst2 { i->lo }));
+				values.emplace_back(make2t(cnst2 { i->hi }));
+			}
+			corners.emplace_back(var, move(values));
+		}
+		fprintf(stderr, "bounded domain: %d\n", bounded_domain);
+		if (bounded_domain) {
+			opt<kay::Q> min, max;
+			hmap<str,sptr<term2>> d;
+			opt<hmap<str,sptr<term2>>> sat_model;
+			auto eval = [&,orig = simplify(make2f(conj))]
+			            (const hmap<str,sptr<term2>> &dom) {
+				if (sat_model)
+					return;
+				sptr<form2> f = cnst_fold(orig, dom);/*
+				fprintf(stderr, "crit eval: ");
+				dump_smt2(stderr, *f);
+				fprintf(stderr, "\n");*/
+				assert(*f == *true2 || *f == *false2);
+				bool s = *f == *true2;
+				if (s)
+					sat_model = dom;
+			};
+			for (hmap<str,sptr<term2>> crit : critical) {
+				crit.insert(begin(remaining_vars), end(remaining_vars));
+				eval(crit);
+			}
+			fprintf(stderr, "critical points eval: %d\n", sat_model ? true : false);
+			forall_products(corners, d, eval);
+			fprintf(stderr, "monotonicity result: %d\n", sat_model ? true : false);
+			if (sat_model)
+				return sat { move(*sat_model) };
+			return unsat {};
+		}
 	}
-	vec<hmap<str,sptr<term2>>> critical = all_solutions(*eq0);
-	fprintf(stderr, "#critical: %zu\n", size(critical));
 
 #if 0
 	for (const auto &reg : maybes) {
