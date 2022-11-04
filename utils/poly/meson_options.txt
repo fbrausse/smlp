@@ -2,6 +2,9 @@
 option('static', type: 'boolean', value: false, description:
 	'whether or not to enable static linking of the executable')
 
+option('asserts', type: 'boolean', value: true, description:
+	'whether or not assertions should be included in the build')
+
 # kay header-only library
 option('kay-prefix', type: 'string', description:
 	'prefix of the include path containing the kay library')

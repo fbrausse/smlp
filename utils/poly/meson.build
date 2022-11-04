@@ -10,4 +10,8 @@ project('poly', 'cpp', license: 'Apache-2.0', version: '0.3.0',
 	]
 )
 
+if not get_option('asserts')
+  add_global_arguments('-DNDEBUG', language: ['c','cpp'])
+endif
+
 subdir('src')
