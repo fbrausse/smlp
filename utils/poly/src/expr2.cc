@@ -529,6 +529,8 @@ static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
 				}
 				a.emplace_back(move(g));
 			}
+			if (a == b.args)
+				return t;
 			return make2f(lbop2 { b.op, move(a) });
 		},
 		[&](const lneg2 &n) -> expr2s {
