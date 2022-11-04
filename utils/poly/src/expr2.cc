@@ -431,6 +431,7 @@ static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
 				return t;
 			const kay::Q *q = c.value.get<kay::Q>();
 			kay::Q r = *q;
+			using namespace kay;
 			canonicalize(r);
 			if (r.get_den() == 1)
 				return make2t(cnst2 { move(r.get_num()) });
@@ -480,7 +481,7 @@ static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
 				return o;
 			if (const cnst2 *c = o->get<cnst2>())
 				return c->value.match(
-				[](const auto &v) { return make2t(cnst2 { -v }); }
+				[](const auto &v) { return make2t(cnst2 { kay::Q(-v) }); }
 				);
 			if (o == u.operand)
 				return t;
