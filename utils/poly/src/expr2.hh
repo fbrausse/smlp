@@ -165,6 +165,7 @@ static inline sptr<form2> neg(sptr<form2> f)
 	return make2f(lneg2 { move(f) });
 }
 
+/* returns NULL in case t contains ite2 { c, y, n } with var in free_vars(c) */
 sptr<term2> derivative(const sptr<term2> &t, const str &var);
 
 sptr<term2> simplify(const sptr<term2> &t);

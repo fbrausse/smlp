@@ -390,32 +390,36 @@ sptr<term2> smlp::derivative(const sptr<term2> &t, const str &var)
 	return t->match(
 	[&](const name &n) { return n.id == var ? one : zero; },
 	[&](const cnst2 &) { return zero; },
-	[&](const bop2 &b) {
+	[&](const bop2 &b) -> sptr<term2> {
+		sptr<term2> l = derivative(b.left, var);
+		sptr<term2> r = derivative(b.right, var);
+		if (!l || !r)
+			return nullptr;
 		switch (b.op) {
 		case bop::ADD:
 		case bop::SUB:
-			return make2t(bop2 { b.op,
-				derivative(b.left, var),
-				derivative(b.right, var)
-			});
+			return make2t(bop2 { b.op, l, r, });
 		case bop::MUL:
 			return make2t(bop2 { bop::ADD,
-				make2t(bop2 { bop::MUL,
-					derivative(b.left, var),
-					b.right,
-				}),
-				make2t(bop2 { bop::MUL,
-					b.left,
-					derivative(b.right, var),
-				}),
+				make2t(bop2 { bop::MUL, l, b.right, }),
+				make2t(bop2 { bop::MUL, b.left, r, }),
 			});
 		}
 		unreachable();
 	},
 	[&](const uop2 &u) {
-		return make2t(uop2 { u.op, derivative(u.operand, var) });
+		sptr<term2> d = derivative(u.operand, var);
+		return d ? make2t(uop2 { u.op, d }) : d;
 	},
-	[&](const ite2 &) -> sptr<term2> { return nullptr; }
+	[&](const ite2 &i) -> sptr<term2> {
+		if (free_vars(i.cond).contains(var))
+			return nullptr;
+		sptr<term2> y = derivative(i.yes, var);
+		sptr<term2> n = derivative(i.no, var);
+		if (!y || !n)
+			return nullptr;
+		return make2t(ite2 { i.cond, y, n });
+	}
 	);
 }
 
