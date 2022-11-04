@@ -336,7 +336,7 @@ result ival_solver::check()
 		return unsat {};
 	}
 
-	sptr<form2> orig = simplify(make2f(conj));
+	sptr<form2> orig = to_nnf(simplify(make2f(conj)));
 	struct {
 		const domain &dom;
 		lbop2 grad_eq_0 = { lbop2::AND, {} };

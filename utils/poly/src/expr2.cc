@@ -563,3 +563,37 @@ sptr<form2> smlp::simplify(const sptr<form2> &f)
 	hmap<void *,expr2s> m;
 	return ::simplify(f, m);
 }
+
+static sptr<form2> to_nnf(const sptr<form2> &f, bool phase,
+                          hmap<void *,sptr<form2>> &p,
+                          hmap<void *,sptr<form2>> &n)
+{
+	hmap<void *,sptr<form2>> &m = phase ? p : n;
+	auto it = m.find(f.get());
+	if (it == end(m))
+		it = m.emplace(f.get(), f->match(
+		[&](const prop2 &p) {
+			if (phase)
+				return f;
+			return make2f(prop2 { !p.cmp, p.left, p.right });
+		},
+		[&](const lbop2 &b) {
+			vec<sptr<form2>> a;
+			for (const sptr<form2> &f : b.args)
+				a.emplace_back(to_nnf(f, phase, p, n));
+			if (phase && a == b.args)
+				return f;
+			return make2f(lbop2 { phase ? b.op : !b.op, move(a) });
+		},
+		[&](const lneg2 &l) {
+			return to_nnf(l.arg, !phase, p, n);
+		}
+		)).first;
+	return it->second;
+}
+
+sptr<form2> smlp::to_nnf(const sptr<form2> &f)
+{
+	hmap<void *,sptr<form2>> p, n;
+	return ::to_nnf(f, true, p, n);
+}

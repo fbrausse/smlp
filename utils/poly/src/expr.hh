@@ -50,7 +50,7 @@ static inline cmp_t operator-(cmp_t c)
 }
 
 /* Negate a cmp_t */
-static inline cmp_t operator~(cmp_t c)
+static inline cmp_t operator!(cmp_t c)
 {
 	switch (c) {
 	case LE: return GT;

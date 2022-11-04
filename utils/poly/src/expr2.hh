@@ -30,6 +30,15 @@ struct prop2 {
 struct lbop2 {
 	enum { AND, OR } op; vec<sptr<form2>> args;
 	bool operator==(const lbop2 &b) const;
+
+	friend decltype(op) operator!(decltype(op) o)
+	{
+		switch (o) {
+		case AND: return OR;
+		case OR: return AND;
+		}
+		unreachable();
+	}
 };
 struct lneg2 {
 	sptr<form2> arg;
@@ -170,5 +179,7 @@ sptr<term2> derivative(const sptr<term2> &t, const str &var);
 
 sptr<term2> simplify(const sptr<term2> &t);
 sptr<form2> simplify(const sptr<form2> &t);
+
+sptr<form2> to_nnf(const sptr<form2> &f);
 
 }
