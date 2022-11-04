@@ -1,3 +1,20 @@
+2022-11-02 poly-v0.4.0
+
+ * update usage in readme
+ * compat with clang>=11, gcc>=11
+ * simplify gear formula using "target" = (beta /\ f >= T)
+ * switch to kay::dbl::ival, add SUBDIVS param to -i, do not install SIGINT handler
+ * unconditionally include ival-solver
+ * ival-solver supports ite2
+ * add license headers to ival-solver
+ * ival-solver cleanup
+ * feed maybes from ival to next solver
+ * add simplify() on form2 and term2 + add derivative() on term2
+ * WIP: ival computes #critical points for simple problems
+ * add meson configure option -Dasserts=(true|false)
+ * missing case in simplify()
+ * add critical-points search after ival-solver
+
 2022-11-02 poly-v0.3.0
 
  * prepare making z3-solver optional
