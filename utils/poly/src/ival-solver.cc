@@ -246,16 +246,6 @@ static sptr<form2> in_domain(const hmap<str,dbl::ival> &dom)
 	return conj(move(c));
 }
 
-static hmap<str,sptr<term2>>
-gradient(const domain &dom, const sptr<term2> &t, bool only_cont = false)
-{
-	hmap<str,sptr<term2>> nabla;
-	for (const auto &[var,c] : dom)
-		if (!only_cont || !c.range.get<list>())
-			nabla[var] = derivative(t, var);
-	return nabla;
-}
-
 result ival_solver::check()
 {
 	opt<hmap<str,dbl::ival>> sat_model;
@@ -346,17 +336,35 @@ result ival_solver::check()
 		return unsat {};
 	}
 
+	sptr<form2> orig = simplify(make2f(conj));
 	struct {
 		const domain &dom;
-		hmap<str,sptr<term2>> derivatives;
+		lbop2 grad_eq_0 = { lbop2::AND, {} };
 		bool simple = true;
+
 		void operator()(const sptr<form2> &f)
 		{
+			if (!simple)
+				return;
 			f->match(
 			[&](const prop2 &p) {
-				simple &= p.right->get<cnst2>() != nullptr;
-				simple &= empty(derivatives);
-				derivatives = gradient(dom, p.left, false);
+				sptr<term2> diff = make2t(bop2 {
+					bop::SUB,
+					p.left,
+					p.right,
+				});
+				for (const auto &[var,_] : dom) {
+					sptr<term2> d = derivative(diff, var);
+					if (!d) {
+						simple = false;
+						break;
+					}
+					grad_eq_0.args.push_back(make2f(prop2 {
+						EQ,
+						d,
+						zero
+					}));
+				}
 			},
 			[this](const lbop2 &l) {
 				for (const sptr<form2> &g : l.args)
@@ -367,16 +375,11 @@ result ival_solver::check()
 			}
 			);
 		}
-	} check { dom, {} };
-	for (const sptr<form2> &a : conj.args)
-		check(a);
+	} check { dom, };
+	check(orig);
 	fprintf(stderr, "simple: %d\n", check.simple);
 	if (check.simple) {
-		assert(!empty(check.derivatives));
-		vec<sptr<form2>> c;
-		for (const auto &[var,t] : check.derivatives)
-			c.emplace_back(make2f(prop2 { EQ, simplify(t), zero }));
-		sptr<form2> f = smlp::conj(move(c));
+		sptr<form2> f = make2f(move(check.grad_eq_0));
 		/* restrict domain to only used variables, required for
 		 * all_solutions() to terminate */
 		domain sdom;
@@ -423,8 +426,7 @@ result ival_solver::check()
 			opt<kay::Q> min, max;
 			hmap<str,sptr<term2>> d;
 			opt<hmap<str,sptr<term2>>> sat_model;
-			auto eval = [&,orig = simplify(make2f(conj))]
-			            (const hmap<str,sptr<term2>> &dom) {
+			auto eval = [&](const hmap<str,sptr<term2>> &dom) {
 				if (sat_model)
 					return;
 				sptr<form2> f = cnst_fold(orig, dom);/*
