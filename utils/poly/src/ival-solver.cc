@@ -340,11 +340,11 @@ result ival_solver::check()
 	struct {
 		const domain &dom;
 		lbop2 grad_eq_0 = { lbop2::AND, {} };
-		bool simple = true;
+		bool deriv_exists = true;
 
 		void operator()(const sptr<form2> &f)
 		{
-			if (!simple)
+			if (!deriv_exists)
 				return;
 			f->match(
 			[&](const prop2 &p) {
@@ -356,7 +356,7 @@ result ival_solver::check()
 				for (const auto &[var,_] : dom) {
 					sptr<term2> d = derivative(diff, var);
 					if (!d) {
-						simple = false;
+						deriv_exists = false;
 						break;
 					}
 					grad_eq_0.args.push_back(make2f(prop2 {
@@ -377,8 +377,8 @@ result ival_solver::check()
 		}
 	} check { dom, };
 	check(orig);
-	fprintf(stderr, "simple: %d\n", check.simple);
-	if (check.simple) {
+	fprintf(stderr, "derivatives exist: %d\n", check.deriv_exists);
+	if (check.deriv_exists) {
 		sptr<form2> f = make2f(move(check.grad_eq_0));
 		/* restrict domain to only used variables, required for
 		 * all_solutions() to terminate */
@@ -404,6 +404,7 @@ result ival_solver::check()
 
 		bool bounded_domain = true;
 		vec<pair<str,vec<sptr<term2>>>> corners;
+		size_t n_corners = 1;
 		for (const auto &[var,k] : dom) {
 			if (k.range.get<entire>()) {
 				bounded_domain = false;
@@ -419,9 +420,11 @@ result ival_solver::check()
 				values.emplace_back(make2t(cnst2 { i->lo }));
 				values.emplace_back(make2t(cnst2 { i->hi }));
 			}
+			n_corners *= size(values);
 			corners.emplace_back(var, move(values));
 		}
-		fprintf(stderr, "bounded domain: %d\n", bounded_domain);
+		fprintf(stderr, "bounded domain: %d, #corners: %zu\n",
+		        bounded_domain, n_corners);
 		if (bounded_domain) {
 			opt<kay::Q> min, max;
 			hmap<str,sptr<term2>> d;
