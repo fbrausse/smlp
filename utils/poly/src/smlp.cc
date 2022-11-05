@@ -606,7 +606,12 @@ int main(int argc, char **argv)
 
 	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
 
-	if (inject_reals)
+	if (inject_reals) {
+		/* First convert all int-components that are unbounded in the
+		 * domain to lists where we have bounds; do not remove the
+		 * in_bnds constraints as they are useful for some solvers
+		 * (like Z3, which falls back to a slow method with mixed reals
+		 * and integers). */
 		for (const auto &[n,i] : in_bnds) {
 			component *c = dom[n];
 			assert(c);
@@ -619,8 +624,12 @@ int main(int argc, char **argv)
 			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
 				l.values.emplace_back(z);
 			c->range = move(l);
-			c->type = component::REAL;
 		}
+		/* Next, convert all lists to real */
+		for (auto &[v,c] : dom)
+			if (c.range.get<list>())
+				c.type = component::REAL;
+	}
 
 	for (const auto &[n,i] : in_bnds) {
 		sptr<term2> v = make2t(name { n });

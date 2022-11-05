@@ -81,7 +81,7 @@ static inline bool is_real(const sumtype<entire,ival,list> &c)
 	for (const kay::Q &q : c.get<list>()->values)
 		if (q.get_den() != 1)
 			return true;
-	return 1 || false; /* always real: Z3 falls back to a slow method otherwise */
+	return false;
 }
 
 /* Translates a component 'rng' and the appropriate variable name 'var' into a
