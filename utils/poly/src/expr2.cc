@@ -24,6 +24,12 @@ bool prop2::operator==(const prop2 &b) const
 	       (right == b.right || *right == *b.right);
 }
 
+std::strong_ordering prop2::operator<=>(const prop2 &b) const
+{
+	using std::tie;
+	return tie(cmp, *left, *right) <=> tie(b.cmp, *b.left, *b.right);
+}
+
 bool lbop2::operator==(const lbop2 &b) const
 {
 	if (op != b.op)
@@ -38,9 +44,30 @@ bool lbop2::operator==(const lbop2 &b) const
 	return true;
 }
 
+std::strong_ordering lbop2::operator<=>(const lbop2 &b) const
+{
+	using std::tie;
+	std::strong_ordering c = std::strong_ordering::equal;
+	if (*this == b)
+		return c;
+	if ((c = op <=> b.op) != 0)
+		return c;
+	if ((c = args.size() <=> b.args.size()) != 0)
+		return c;
+	for (size_t i=0; i<args.size(); i++)
+		if ((c = *args[i] <=> *b.args[i]) != 0)
+			return c;
+	return c;
+}
+
 bool lneg2::operator==(const lneg2 &b) const
 {
 	return arg == b.arg || *arg == *b.arg;
+}
+
+std::strong_ordering lneg2::operator<=>(const lneg2 &b) const
+{
+	return *arg <=> *b.arg;
 }
 
 bool name::operator==(const name &b) const
@@ -55,6 +82,12 @@ bool ite2::operator==(const ite2 &b) const
 	       (no == b.no || *no == *b.no);
 }
 
+std::strong_ordering ite2::operator<=>(const ite2 &b) const
+{
+	using std::tie;
+	return tie(*cond, *yes, *no) <=> tie(*b.cond, *b.yes, *b.no);
+}
+
 bool bop2::operator==(const bop2 &b) const
 {
 	return op == b.op &&
@@ -62,9 +95,21 @@ bool bop2::operator==(const bop2 &b) const
 	       (right == b.right || *right == *b.right);
 }
 
+std::strong_ordering bop2::operator<=>(const bop2 &b) const
+{
+	using std::tie;
+	return tie(op, *left, *right) <=> tie(b.op, *b.left, *b.right);
+}
+
 bool uop2::operator==(const uop2 &b) const
 {
 	return op == b.op && (operand == b.operand || *operand == *b.operand);
+}
+
+std::strong_ordering uop2::operator<=>(const uop2 &b) const
+{
+	using std::tie;
+	return tie(op, *operand) <=> tie(b.op, *b.operand);
 }
 
 bool cnst2::operator==(const cnst2 &b) const

@@ -93,6 +93,7 @@ from_chars(const char *first, const char *last, cmp_t &v)
 struct name {
 	str id;
 	bool operator==(const name &b) const;
+	std::strong_ordering operator<=>(const name &b) const = default;
 };
 struct call { sptr<expr> func; vec<expr> args; };
 struct bop { enum { ADD, SUB, MUL, } op; sptr<expr> left, right; };

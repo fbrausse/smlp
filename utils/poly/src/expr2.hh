@@ -26,10 +26,12 @@ struct form2;
 struct prop2 {
 	cmp_t cmp; sptr<term2> left, right;
 	bool operator==(const prop2 &b) const;
+	std::strong_ordering operator<=>(const prop2 &b) const;
 };
 struct lbop2 {
 	enum { AND, OR } op; vec<sptr<form2>> args;
 	bool operator==(const lbop2 &b) const;
+	std::strong_ordering operator<=>(const lbop2 &b) const;
 
 	friend decltype(op) operator!(decltype(op) o)
 	{
@@ -43,6 +45,7 @@ struct lbop2 {
 struct lneg2 {
 	sptr<form2> arg;
 	bool operator==(const lneg2 &b) const;
+	std::strong_ordering operator<=>(const lneg2 &b) const;
 };
 
 inline const char *lbop_s[] = { "and", "or" };
@@ -68,17 +71,20 @@ struct form2 : sumtype<prop2,lbop2,lneg2>
 struct ite2 {
 	sptr<form2> cond; sptr<term2> yes, no;
 	bool operator==(const ite2 &b) const;
+	std::strong_ordering operator<=>(const ite2 &b) const;
 };
 struct bop2 {
 	decltype(bop::op) op; sptr<term2> left, right;
 	bool operator==(const bop2 &b) const;
+	std::strong_ordering operator<=>(const bop2 &b) const;
 };
 struct uop2 {
 	decltype(uop::op) op; sptr<term2> operand;
 	bool operator==(const uop2 &b) const;
+	std::strong_ordering operator<=>(const uop2 &b) const;
 };
 struct cnst2 {
-	struct : sumtype<kay::Z,kay::Q> {
+	struct ZQ : sumtype<kay::Z,kay::Q> {
 
 		using sumtype<kay::Z,kay::Q>::sumtype;
 
@@ -95,8 +101,11 @@ struct cnst2 {
 			[](const auto &x) { return kay::Q(x); }
 			);
 		}
+
+		std::strong_ordering operator<=>(const ZQ &b) const = default;
 	} value;
 	bool operator==(const cnst2 &b) const;
+	std::strong_ordering operator<=>(const cnst2 &b) const = default;
 };
 
 struct term2 : sumtype<name,bop2,uop2,cnst2,ite2>
