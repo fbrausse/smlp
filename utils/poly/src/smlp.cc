@@ -26,7 +26,6 @@
 #endif
 
 #include <signal.h>
-#include <time.h>
 
 using namespace smlp;
 
@@ -61,32 +60,6 @@ struct pareto {
 	sptr<form2> beta  = true2;
 };
 
-struct timing : timespec {
-
-	timing()
-	{
-		if (clock_gettime(CLOCK_MONOTONIC, this) == -1)
-			throw std::error_code(errno, std::system_category());
-	}
-
-	friend timing & operator-=(timing &a, const timing &b)
-	{
-		a.tv_sec -= b.tv_sec;
-		if ((a.tv_nsec -= b.tv_nsec) < 0) {
-			a.tv_sec--;
-			a.tv_nsec += 1e9;
-		}
-		return a;
-	}
-
-	friend timing operator-(timing a, const timing &b)
-	{
-		return a -= b;
-	}
-
-	operator double() const { return tv_sec + tv_nsec / 1e9; }
-};
-
 }
 
 static void dump_smt2(FILE *f, const char *logic, const problem &p)
@@ -105,8 +78,6 @@ static char *inc_solver_cmd;
 static long  intervals = -1;
 
 namespace smlp {
-uptr<solver> mk_solver0(bool incremental, const char *logic = nullptr);
-
 uptr<solver> mk_solver0(bool incremental, const char *logic)
 {
 	const char *ext = ext_solver_cmd;
@@ -122,7 +93,7 @@ uptr<solver> mk_solver0(bool incremental, const char *logic)
 }
 
 template <typename T>
-str smt2_logic_str(const domain &dom, const T &e)
+str smt2_logic_str(const domain &dom, const sptr<T> &e)
 {
 	bool reals = false;
 	bool ints = false;
@@ -143,7 +114,6 @@ str smt2_logic_str(const domain &dom, const T &e)
 		logic += "UF";
 	return logic;
 }
-
 }
 
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
@@ -690,6 +660,11 @@ int main(int argc, char **argv)
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
+	fprintf(stderr, "checking for out-of-domain application of partial "
+	                "functions: (and alpha (not ");
+	smlp::dump_smt2(stderr, *pc);
+	fprintf(stderr, "))...\n");
+	fflush(stderr);
 	result ood = solve_exists(dom, conj({ alpha, make2f(lneg2 { pc }) }));
 	if (const sat *s = ood.get<sat>()) {
 		fprintf(stderr,
@@ -699,6 +674,7 @@ int main(int argc, char **argv)
 		print_model(stderr, s->model, 2);
 		DIE(4, "");
 	}
+	fprintf(stderr, "out-of-domain condition is false\n");
 
 	/* find out about the OP comparison operation */
 	size_t c;
