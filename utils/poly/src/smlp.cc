@@ -516,7 +516,7 @@ int main(int argc, char **argv)
 	vec<sptr<form2>> beta_conj     = {};
 	vec<sptr<form2>> eta_conj      = {};
 	const char      *delta_s       = "0";
-	ival             obj_range     = { 0, 1 };
+	char            *obj_range_s   = nullptr;
 	vec<strview>     queries;
 
 	/* parse options from the command-line */
@@ -557,16 +557,7 @@ int main(int argc, char **argv)
 		case 'P': max_prec = optarg; break;
 		case 'Q': queries.push_back(optarg); break;
 		case 'r': inject_reals = true; break;
-		case 'R': {
-			char *comma = strchr(optarg, ',');
-			if (!comma || !comma[1])
-				DIE(1,"error: '-R' expects two comma-separated "
-				      "parameters, got: '%s'",optarg);
-			*comma = '\0';
-			obj_range.lo = kay::Q_from_str(optarg);
-			obj_range.hi = kay::Q_from_str(comma+1);
-			break;
-		}
+		case 'R': obj_range_s = optarg; break;
 		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 'S': ext_solver_cmd = optarg; break;
@@ -702,6 +693,10 @@ int main(int argc, char **argv)
 		if (*beta != *true2)
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
+		if (obj_range_s)
+			fprintf(stderr, "warning: objective range specification "
+			                "-R is unused when CNST is given\n");
+
 		/* interpret the CNST on the right hand side */
 		kay::Q cnst;
 		if (!from_string(argv[optind], cnst))
@@ -751,6 +746,27 @@ int main(int argc, char **argv)
 	} else if (solve) {
 		if (intervals)
 			DIE(1,"error: -i is not supported for optimization\n");
+
+		ival obj_range;
+		if (obj_range_s) {
+			/* TODO: use from_chars() */
+			char *comma = strchr(obj_range_s, ',');
+			if (!comma || !comma[1])
+				DIE(1,"error: '-R' expects two comma-separated "
+				      "parameters, got: '%s'",obj_range_s);
+			*comma = '\0';
+			obj_range.lo = kay::Q_from_str(obj_range_s);
+			obj_range.hi = kay::Q_from_str(comma+1);
+		} else {
+			auto lh = dbl_interval_eval(dom, lhs);
+			if (!lh)
+				DIE(1,"error: domain is empty\n");
+			fprintf(stderr, "approximated objective range: [%g,%g], "
+			                "use -R to specify it manually\n",
+			        lh->first, lh->second);
+			obj_range.lo = kay::Q(lh->first);
+			obj_range.hi = kay::Q(lh->second);
+		}
 
 		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
 		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
