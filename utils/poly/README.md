@@ -21,7 +21,8 @@ Options [defaults]:
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
-  -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]
+  -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by
+               the constant DELTA if the radius is zero [0]
   -e ETA       additional ETA constraints restricting only candidates, can be
                given multiple times, the conjunction of all is used [true]
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
