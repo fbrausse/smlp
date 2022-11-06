@@ -163,19 +163,6 @@ static dbl::ival eval(const hmap<str,dbl::ival> &dom, const sptr<term2> &t, hmap
 	return it->second;
 }
 
-static res eval(const hmap<str,dbl::ival> &dom, const form2 &f)
-{
-	hmap<void *,dbl::ival> m;
-	return eval(dom, f, m);
-}
-
-static dbl::ival to_ival(const kay::Q &q)
-{
-	if (q.get_den() == 1)
-		return dbl::ival(q.get_num());
-	return dbl::ival(q);
-}
-
 template <typename T, typename F>
 static void forall_products(const vec<pair<str,vec<T>>> &p,
                             hmap<str,T> &q, F &&f, size_t i=0)
@@ -190,6 +177,58 @@ static void forall_products(const vec<pair<str,vec<T>>> &p,
 		q.erase(var);
 	} else
 		f(q);
+}
+
+static dbl::ival to_ival(const kay::Q &q)
+{
+	if (q.get_den() == 1)
+		return dbl::ival(q.get_num());
+	return dbl::ival(q);
+}
+
+opt<pair<double,double>>
+smlp::dbl_interval_eval(const domain &dom, const sptr<term2> &t)
+{
+	/* need directed rounding downward for dbl::ival */
+	dbl::rounding_mode rnd(FE_DOWNWARD);
+
+	/* Replace the domain with intervals, collect discrete vars in d */
+	hmap<str,dbl::ival> c;
+	vec<pair<str,vec<dbl::ival>>> d;
+	for (const auto &[var,k] : dom)
+		k.range.match(
+		[&,var=var](const entire &) {
+			c.emplace(var, dbl::endpts { -INFINITY, INFINITY });
+		},
+		[&,var=var](const list &l) {
+			vec<dbl::ival> ivs;
+			for (const kay::Q &v : l.values)
+				ivs.emplace_back(to_ival(v));
+			d.emplace_back(var, move(ivs));
+		},
+		[&,var=var](const ival &i) {
+			c.emplace(var, dbl::endpts {
+				lo(to_ival(i.lo)),
+				hi(to_ival(i.hi)),
+			});
+		}
+		);
+
+	opt<dbl::ival> r;
+	forall_products(d, c, [&r,&t](const hmap<str,dbl::ival> &dom) {
+		hmap<void *,dbl::ival> m;
+		dbl::ival s = eval(dom, t, m);
+		r = r ? convex_hull(*r, s) : s;
+	});
+	if (r)
+		return pair { lo(*r), hi(*r) };
+	return {};
+}
+
+static res eval(const hmap<str,dbl::ival> &dom, const form2 &f)
+{
+	hmap<void *,dbl::ival> m;
+	return eval(dom, f, m);
 }
 
 static res eval_products(const vec<pair<str,vec<dbl::ival>>> &p,
