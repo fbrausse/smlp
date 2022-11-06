@@ -368,7 +368,8 @@ Options [defaults]:\n\
                - vars: list all variables\n\
   -r           re-cast bounded integer variables as reals with equality\n\
                constraints\n\
-  -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
+  -R LO,HI     optimize threshold in the interval [LO,HI] [interval-evaluation\n\
+               of the LHS]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
   -S EXT-CMD   invoke external SMT solver instead of the built-in one via\n\
                'SHELL -c EXT-CMD' where SHELL is taken from the environment or\n\
