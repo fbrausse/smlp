@@ -744,9 +744,6 @@ int main(int argc, char **argv)
 			}
 			);
 	} else if (solve) {
-		if (intervals)
-			DIE(1,"error: -i is not supported for optimization\n");
-
 		ival obj_range;
 		if (obj_range_s) {
 			/* TODO: use from_chars() */
