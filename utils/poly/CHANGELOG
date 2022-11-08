@@ -1,3 +1,25 @@
+2022-11-08 poly-v0.5.0
+
+ * fix for gmpxx build
+ * derivative() returns null for (ite c y n) with var in free vars of c
+ * simplify check in critical points
+ * cleanup critical points output
+ * critical points uses NNF of formula
+ * separate critical points solver from ival-solver + more output
+ * do not assume real inputs from lists + sanitize behaviour of -r
+ * add ordering on terms and formulas
+ * document operations on expr2 terms and formulas some more
+ * add interval-evaluation API
+ * use interval approximation when -R is not given in optimization mode
+ * remove outdated guard claiming the interval-solver is not supported for optimization - it is
+ * update -R in help message / usage in readme
+ * update -d DELTA desc in usage info
+ * remove unused Makefiles
+ * support -Dstatic=true
+ * allow lhs to refer to named output symbols + use that for NNs
+ * add -C bnds-dom + check finiteness of ival evaluation
+ * more sanitization of -R LO,HI inputs
+
 2022-11-02 poly-v0.4.0
 
  * update usage in readme
