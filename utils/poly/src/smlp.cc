@@ -25,9 +25,12 @@
 # include <kjson.h>
 #endif
 
+#include <cmath>	/* isfinite() */
+
 #include <signal.h>
 
 using namespace smlp;
+using std::isfinite;
 
 namespace {
 
@@ -350,6 +353,7 @@ Options [defaults]:\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
+               - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA\n\
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by\n\
                the constant DELTA if the radius is zero [0]\n\
   -e ETA       additional ETA constraints restricting only candidates, can be\n\
@@ -368,7 +372,8 @@ Options [defaults]:\n\
   -Q QUERY     answer a query about the problem; supported QUERY:\n\
                - vars: list all variables\n\
   -r           re-cast bounded integer variables as reals with equality\n\
-               constraints\n\
+               constraints (requires -C bnds-dom); cvc5 >= 1.0.1 requires this\n\
+               option when integer variables are present\n\
   -R LO,HI     optimize threshold in the interval [LO,HI] [interval-evaluation\n\
                of the LHS]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
@@ -510,6 +515,7 @@ int main(int argc, char **argv)
 	bool             infix         = true;
 	bool             python_compat = false;
 	bool             inject_reals  = false;
+	bool             io_bnds_dom   = false;
 	int              timeout       = 0;
 	bool             clamp_inputs  = false;
 	const char      *out_bounds    = nullptr;
@@ -532,9 +538,11 @@ int main(int argc, char **argv)
 		case 'C':
 			if (optarg == "python"sv)
 				python_compat = true;
+			else if (optarg == "bnds-dom"sv)
+				io_bnds_dom = true;
 			else
 				DIE(1,"error: option '-C' only supports "
-				      "'python'\n");
+				      "'python', 'bnds-dom'\n");
 			break;
 		case 'd': delta_s = optarg; break;
 		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -599,7 +607,24 @@ int main(int argc, char **argv)
 
 	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
 
+	if (io_bnds_dom)
+		for (auto it = begin(in_bnds); it != end(in_bnds);) {
+			component *c = dom[it->first];
+			assert(c);
+			if (c->type == component::REAL && c->range.get<entire>()) {
+				c->range = it->second;
+				it = in_bnds.erase(it);
+			} else {
+				++it;
+			}
+		}
+
 	if (inject_reals) {
+		if (!io_bnds_dom)
+			DIE(1,"\
+error: -r requires -C bnds-dom: re-casting integers as reals based on IO-BOUNDS\n\
+implies that IO-BOUNDS are regarded as domain constraints.\n");
+
 		/* First convert all int-components that are unbounded in the
 		 * domain to lists where we have bounds; do not remove the
 		 * in_bnds constraints as they are useful for some solvers
@@ -765,6 +790,9 @@ int main(int argc, char **argv)
 			fprintf(stderr, "approximated objective range: [%g,%g], "
 			                "use -R to specify it manually\n",
 			        lh->first, lh->second);
+			if (!isfinite(lh->first) || !isfinite(lh->second))
+				DIE(1,"error: optimization over an unbounded "
+				      "range is not supported\n");
 			obj_range.lo = kay::Q(lh->first);
 			obj_range.hi = kay::Q(lh->second);
 		}

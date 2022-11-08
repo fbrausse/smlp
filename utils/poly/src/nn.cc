@@ -161,6 +161,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		str obj_name = gen["objective"].get<std::string>();
 		fprintf(stderr, "obj '%s' response idx: %zd\n",
 		        obj_name.c_str(), mf2.objective.idx[0]);
+		assert(mf2.objective.type == smlp_response::SMLP_RESPONSE_ID);
 		ssize_t idx = mf2.objective.idx[0];
 		assert(idx >= 0);
 		assert((size_t)idx < size(out));

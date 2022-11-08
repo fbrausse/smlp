@@ -21,6 +21,7 @@ Options [defaults]:
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
+               - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by
                the constant DELTA if the radius is zero [0]
   -e ETA       additional ETA constraints restricting only candidates, can be
@@ -39,7 +40,8 @@ Options [defaults]:
   -Q QUERY     answer a query about the problem; supported QUERY:
                - vars: list all variables
   -r           re-cast bounded integer variables as reals with equality
-               constraints
+               constraints (requires -C bnds-dom); cvc5 >= 1.0.1 requires this
+               option when integer variables are present
   -R LO,HI     optimize threshold in the interval [LO,HI] [interval-evaluation
                of the LHS]
   -s           dump the problem in SMT-LIB2 format to stdout [no]
