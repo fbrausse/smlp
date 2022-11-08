@@ -723,7 +723,7 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
 		if (obj_range_s)
-			fprintf(stderr, "warning: objective range specification "
+			fprintf(stderr, "note: objective range specification "
 			                "-R is unused when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
@@ -775,16 +775,26 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 	} else if (solve) {
 		ival obj_range;
 		if (obj_range_s) {
-			/* TODO: use from_chars() */
-			char *comma = strchr(obj_range_s, ',');
-			if (!comma || !comma[1])
-				DIE(1,"error: '-R' expects two comma-separated "
-				      "parameters, got: '%s'",obj_range_s);
-			*comma = '\0';
-			obj_range.lo = kay::Q_from_str(obj_range_s);
-			obj_range.hi = kay::Q_from_str(comma+1);
+			using kay::from_chars;
+			const char *end = obj_range_s + strlen(obj_range_s);
+			bool ok = true;
+			auto r = from_chars(obj_range_s, end, obj_range.lo);
+			ok &= r.ec == std::errc {} && *r.ptr == ',';
+			if (ok) {
+				r = from_chars(r.ptr+1, end, obj_range.hi);
+				ok &= r.ec == std::errc {} && !*r.ptr;
+			}
+			if (!ok)
+				DIE(1,"error: cannot parse argument '%s' "
+				      "to '-R' as a pair of rational numbers\n",
+				      obj_range_s);
+			fprintf(stderr, "got objective range from -R: [%s,%s]\n",
+			        obj_range.lo.get_str().c_str(),
+			        obj_range.hi.get_str().c_str());
+			if (obj_range.lo > obj_range.hi)
+				fprintf(stderr, "warning: empty objective range\n");
 		} else {
-			auto lh = dbl_interval_eval(dom, lhs);
+			opt lh = dbl_interval_eval(dom, lhs);
 			if (!lh)
 				DIE(1,"error: domain is empty\n");
 			fprintf(stderr, "approximated objective range: [%g,%g], "
