@@ -644,6 +644,8 @@ int main(int argc, char **argv)
 	dump_smt2_line(stderr, "eta: ", eta);
 	eta = subst(eta, funs);
 
+	lhs = subst(lhs, funs);
+
 	fprintf(stderr, "domain:\n");
 	smlp::dump_smt2(stderr, dom);
 
