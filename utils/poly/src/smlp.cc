@@ -39,7 +39,7 @@ namespace {
 struct problem {
 
 	domain dom;
-	form2 p;
+	sptr<form2> p;
 };
 
 /* max T, s.t.
@@ -70,7 +70,7 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	fprintf(f, "(set-logic %s)\n", logic);
 	dump_smt2(f, p.dom);
 	fprintf(f, "(assert ");
-	dump_smt2(f, p.p);
+	dump_smt2(f, *p.p);
 	fprintf(f, ")\n");
 	fprintf(f, "(check-sat)\n");
 	fprintf(f, "(get-model)\n");
@@ -494,6 +494,53 @@ static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
 	fprintf(f, "\n");
 }
 
+static ival get_obj_range(const char *obj_range_s,
+                          const domain &dom, const sptr<term2> &obj)
+{
+	ival obj_range;
+	if (obj_range_s) {
+		using kay::from_chars;
+		const char *end = obj_range_s + strlen(obj_range_s);
+		auto r = from_chars(obj_range_s, end, obj_range.lo);
+		bool ok = r.ec == std::errc {} && *r.ptr == ',';
+		if (ok) {
+			r = from_chars(r.ptr+1, end, obj_range.hi);
+			ok &= r.ec == std::errc {} && !*r.ptr;
+		}
+		if (!ok)
+			DIE(1,"error: cannot parse argument '%s' "
+			      "to '-R' as a pair of rational numbers\n",
+			      obj_range_s);
+		fprintf(stderr, "got objective range from -R: [%s,%s]\n",
+		        obj_range.lo.get_str().c_str(),
+		        obj_range.hi.get_str().c_str());
+		if (obj_range.lo > obj_range.hi)
+			fprintf(stderr, "warning: empty objective range\n");
+	} else {
+		auto lh = dbl_interval_eval(dom, obj);
+		if (!lh)
+			DIE(1,"error: domain is empty\n");
+		fprintf(stderr, "approximated objective range: [%g,%g], "
+		                "use -R to specify it manually\n",
+		        lh->first, lh->second);
+		if (!isfinite(lh->first) || !isfinite(lh->second))
+			DIE(1,"error: optimization over an unbounded "
+			      "range is not supported\n");
+		obj_range.lo = kay::Q(lh->first);
+		obj_range.hi = kay::Q(lh->second);
+	}
+	return obj_range;
+}
+
+static cmp_t parse_op(const std::string_view &s)
+{
+	size_t c;
+	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
+		if (cmp_s[c] == s)
+			return (cmp_t)c;
+	DIE(1,"error: OP '%.*s' unknown\n",(int)s.length(), s.data());
+}
+
 interruptible *interruptible::is_active;
 
 template <typename T>
@@ -503,6 +550,57 @@ static bool from_string(const char *s, T &v)
 	using kay::from_chars;
 	auto [end,ec] = from_chars(s, s + strlen(s), v);
 	return !*end && ec == std::errc {};
+}
+
+sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals)
+{
+	if (bnds_dom)
+		for (auto it = begin(input_bounds); it != end(input_bounds);) {
+			component *c = dom[it->first];
+			assert(c);
+			if (c->type == component::REAL && c->range.get<entire>()) {
+				c->range = it->second;
+				it = input_bounds.erase(it);
+			} else {
+				++it;
+			}
+		}
+
+	if (inject_reals) {
+		assert(bnds_dom);
+		/* First convert all int-components that are unbounded in the
+		 * domain to lists where we have bounds; do not remove the
+		 * in_bnds constraints as they are useful for some solvers
+		 * (like Z3, which falls back to a slow method with mixed reals
+		 * and integers). */
+		for (const auto &[n,i] : input_bounds) {
+			component *c = dom[n];
+			assert(c);
+			if (c->type != component::INT)
+				continue;
+			if (!c->range.get<entire>())
+				continue;
+			list l;
+			using namespace kay;
+			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
+				l.values.emplace_back(z);
+			c->range = move(l);
+		}
+		/* Next, convert all lists to real */
+		for (auto &[v,c] : dom)
+			if (c.range.get<list>())
+				c.type = component::REAL;
+	}
+
+	vec<sptr<form2>> c;
+	for (const auto &[n,i] : input_bounds) {
+		sptr<term2> v = make2t(name { n });
+		c.emplace_back(conj({
+			make2f(prop2 { GE, v, make2t(cnst2 { i.lo }) }),
+			make2f(prop2 { LE, v, make2t(cnst2 { i.hi }) }),
+		}));
+	}
+	return conj(move(c));
 }
 
 int main(int argc, char **argv)
@@ -524,7 +622,7 @@ int main(int argc, char **argv)
 	vec<sptr<form2>> beta_conj     = {};
 	vec<sptr<form2>> eta_conj      = {};
 	const char      *delta_s       = "0";
-	char            *obj_range_s   = nullptr;
+	const char      *obj_range_s   = nullptr;
 	vec<strview>     queries;
 
 	/* parse options from the command-line */
@@ -605,67 +703,25 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
-	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
-
-	if (io_bnds_dom)
-		for (auto it = begin(in_bnds); it != end(in_bnds);) {
-			component *c = dom[it->first];
-			assert(c);
-			if (c->type == component::REAL && c->range.get<entire>()) {
-				c->range = it->second;
-				it = in_bnds.erase(it);
-			} else {
-				++it;
-			}
-		}
-
-	if (inject_reals) {
-		if (!io_bnds_dom)
-			DIE(1,"\
+	if (!io_bnds_dom && inject_reals)
+		DIE(1,"\
 error: -r requires -C bnds-dom: re-casting integers as reals based on IO-BOUNDS\n\
 implies that IO-BOUNDS are regarded as domain constraints.\n");
+	sptr<form2> alpha = pp.interpret_input_bounds(io_bnds_dom, inject_reals);
 
-		/* First convert all int-components that are unbounded in the
-		 * domain to lists where we have bounds; do not remove the
-		 * in_bnds constraints as they are useful for some solvers
-		 * (like Z3, which falls back to a slow method with mixed reals
-		 * and integers). */
-		for (const auto &[n,i] : in_bnds) {
-			component *c = dom[n];
-			assert(c);
-			if (c->type != component::INT)
-				continue;
-			if (!c->range.get<entire>())
-				continue;
-			list l;
-			using namespace kay;
-			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
-				l.values.emplace_back(z);
-			c->range = move(l);
-		}
-		/* Next, convert all lists to real */
-		for (auto &[v,c] : dom)
-			if (c.range.get<list>())
-				c.type = component::REAL;
-	}
+	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
 
-	for (const auto &[n,i] : in_bnds) {
-		sptr<term2> v = make2t(name { n });
-		alpha_conj.emplace_back(make2f(lbop2 { lbop2::AND, {
-			make2f(prop2 { GE, v, make2t(cnst2 { i.lo }) }),
-			make2f(prop2 { LE, v, make2t(cnst2 { i.hi }) }),
-		} }));
-	}
-	sptr<form2> alpha = make2f(lbop2 { lbop2::AND, move(alpha_conj) });
-	dump_smt2_line(stderr, "alpha:", alpha);
+	alpha_conj.emplace_back(move(alpha));
+	alpha = conj(move(alpha_conj));
+	dump_smt2_line(stderr, "alpha: ", alpha);
 	alpha = subst(alpha, funs);
 
-	sptr<form2> beta = make2f(lbop2 { lbop2::AND, move(beta_conj) });
+	sptr<form2> beta = conj(move(beta_conj));
 	dump_smt2_line(stderr, "beta: ", beta);
 	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
-	eta = make2f(lbop2 { lbop2::AND, move(eta_conj) });
+	eta = conj(move(eta_conj));
 	dump_smt2_line(stderr, "eta: ", eta);
 	eta = subst(eta, funs);
 
@@ -694,25 +750,21 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 	smlp::dump_smt2(stderr, *pc);
 	fprintf(stderr, "))...\n");
 	fflush(stderr);
-	result ood = solve_exists(dom, conj({ alpha, make2f(lneg2 { pc }) }));
+	result ood = solve_exists(dom, conj({ alpha, neg(pc) }));
 	if (const sat *s = ood.get<sat>()) {
 		fprintf(stderr,
 		        "error: ALPHA and DOMAIN constraints do not imply that "
 		        "all function parameters are inside the respective "
 		        "function's domain, e.g.:\n");
 		print_model(stderr, s->model, 2);
-		DIE(4, "");
-	}
+		DIE(4,"");
+	} else if (const unknown *u = ood.get<unknown>())
+		DIE(2,"error deciding out-of-domain condition: %s\n",
+		      u->reason.c_str());
 	fprintf(stderr, "out-of-domain condition is false\n");
 
 	/* find out about the OP comparison operation */
-	size_t c;
-	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
-		if (std::string_view(cmp_s[c]) == argv[optind])
-			break;
-	if (c == ARRAY_SIZE(cmp_s))
-		DIE(1,"OP '%s' unknown\n",argv[optind]);
-	optind++;
+	cmp_t c = parse_op(argv[optind++]);
 
 	/* hint for the solver: (non-)linear real arithmetic, potentially also
 	 * with integers */
@@ -736,11 +788,7 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 		/* the problem consists of domain and the (EXPR OP CNST) constraint */
 		problem p = {
 			move(dom),
-			lbop2 { lbop2::AND, {
-				eta,
-				alpha,
-				make2f(prop2 { (cmp_t)c, lhs, rhs, }) }
-			},
+			conj({ eta, alpha, make2f(prop2 { c, lhs, rhs, }) }),
 		};
 
 		/* optionally dump the smt2 representation of the problem */
@@ -756,7 +804,7 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 
 		/* optionally solve the problem */
 		if (solve)
-			solve_exists(p.dom, make2f(p.p), logic.c_str()).match(
+			solve_exists(p.dom, p.p, logic.c_str()).match(
 			[&,lhs=lhs](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
@@ -773,42 +821,9 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 			}
 			);
 	} else if (solve) {
-		ival obj_range;
-		if (obj_range_s) {
-			using kay::from_chars;
-			const char *end = obj_range_s + strlen(obj_range_s);
-			bool ok = true;
-			auto r = from_chars(obj_range_s, end, obj_range.lo);
-			ok &= r.ec == std::errc {} && *r.ptr == ',';
-			if (ok) {
-				r = from_chars(r.ptr+1, end, obj_range.hi);
-				ok &= r.ec == std::errc {} && !*r.ptr;
-			}
-			if (!ok)
-				DIE(1,"error: cannot parse argument '%s' "
-				      "to '-R' as a pair of rational numbers\n",
-				      obj_range_s);
-			fprintf(stderr, "got objective range from -R: [%s,%s]\n",
-			        obj_range.lo.get_str().c_str(),
-			        obj_range.hi.get_str().c_str());
-			if (obj_range.lo > obj_range.hi)
-				fprintf(stderr, "warning: empty objective range\n");
-		} else {
-			opt lh = dbl_interval_eval(dom, lhs);
-			if (!lh)
-				DIE(1,"error: domain is empty\n");
-			fprintf(stderr, "approximated objective range: [%g,%g], "
-			                "use -R to specify it manually\n",
-			        lh->first, lh->second);
-			if (!isfinite(lh->first) || !isfinite(lh->second))
-				DIE(1,"error: optimization over an unbounded "
-				      "range is not supported\n");
-			obj_range.lo = kay::Q(lh->first);
-			obj_range.hi = kay::Q(lh->second);
-		}
-
+		ival obj_range = get_obj_range(obj_range_s, dom, lhs);
 		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
-		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
+		vec<smlp_result> r = optimize_EA(c, dom, lhs,
 		                                 alpha, beta, eta,
 		                                 kay::Q_from_str(str(delta_s).data()),
 		                                 obj_range, max_p,
