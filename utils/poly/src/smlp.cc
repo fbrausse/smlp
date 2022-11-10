@@ -329,6 +329,9 @@ static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 # define USAGE "DOMAIN EXPR"
 #endif
 
+#define DEF_DELTA	"0"
+#define DEF_MAX_PREC	"0.05"
+
 [[noreturn]]
 static void usage(const char *program_name, int exit_code)
 {
@@ -355,7 +358,7 @@ Options [defaults]:\n\
                          print them\n\
                - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA\n\
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by\n\
-               the constant DELTA if the radius is zero [0]\n\
+               the constant DELTA if the radius is zero [" DEF_DELTA "]\n\
   -e ETA       additional ETA constraints restricting only candidates, can be\n\
                given multiple times, the conjunction of all is used [true]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
@@ -368,7 +371,7 @@ Options [defaults]:\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
                meaningful for NNs) [none]\n\
   -p           dump the expression in Polish notation to stdout [no]\n\
-  -P PREC      maximum precision to obtain the optimization result for [0.05]\n\
+  -P PREC      maximum precision to obtain the optimization result for [" DEF_MAX_PREC "]\n\
   -Q QUERY     answer a query about the problem; supported QUERY:\n\
                - vars: list all variables\n\
   -r           re-cast bounded integer variables as reals with equality\n\
@@ -534,8 +537,7 @@ static ival get_obj_range(const char *obj_range_s,
 
 static cmp_t parse_op(const std::string_view &s)
 {
-	size_t c;
-	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
+	for (size_t c=0; c<ARRAY_SIZE(cmp_s); c++)
 		if (cmp_s[c] == s)
 			return (cmp_t)c;
 	DIE(1,"error: OP '%.*s' unknown\n",(int)s.length(), s.data());
@@ -617,11 +619,11 @@ int main(int argc, char **argv)
 	int              timeout       = 0;
 	bool             clamp_inputs  = false;
 	const char      *out_bounds    = nullptr;
-	const char      *max_prec      = "0.05";
+	const char      *max_prec      = DEF_MAX_PREC;
 	vec<sptr<form2>> alpha_conj    = {};
 	vec<sptr<form2>> beta_conj     = {};
 	vec<sptr<form2>> eta_conj      = {};
-	const char      *delta_s       = "0";
+	const char      *delta_s       = DEF_DELTA;
 	const char      *obj_range_s   = nullptr;
 	vec<strview>     queries;
 
@@ -785,7 +787,8 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 		fprintf(stderr, "cnst: %s\n", cnst.get_str().c_str());
 		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
 
-		/* the problem consists of domain and the (EXPR OP CNST) constraint */
+		/* the problem consists of domain and the eta, alpha and
+		 * (EXPR OP CNST) constraints */
 		problem p = {
 			move(dom),
 			conj({ eta, alpha, make2f(prop2 { c, lhs, rhs, }) }),

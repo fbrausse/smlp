@@ -77,14 +77,22 @@ struct simple_domain_parser {
 			switch (*delim) {
 			case ']':
 				assert(nums.size() == 2);
+				range.type = component::REAL;
 				range.range = ival { move(nums[0]), move(nums[1]) };
 				break;
 			case '}':
 				assert(!nums.empty());
+				range.type = component::INT;
+				for (const kay::Q &q : nums)
+					if (q.get_den() != 1) {
+						range.type = component::REAL;
+						break;
+					}
 				range.range = list { move(nums) };
 				break;
+			default:
+				unreachable();
 			}
-			range.type = is_real(range.range) ? component::REAL : component::INT;
 			d.emplace_back(move(name), move(range));
 		}
 		return d;

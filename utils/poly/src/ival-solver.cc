@@ -390,6 +390,11 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 	size_t n = 0;
 	for (hmap<str,sptr<term2>> crit : all_solutions(sdom, f)) {
 		crit.insert(begin(remaining_vars), end(remaining_vars));
+		fprintf(stderr, "critical point:");
+		for (const auto &[v,c] : crit)
+			fprintf(stderr, " %s=%s", v.c_str(),
+			        to_string(c->get<cnst2>()->value).c_str());
+		fprintf(stderr, "\n");
 		eval(crit);
 		n++;
 	}
