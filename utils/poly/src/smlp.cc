@@ -689,7 +689,7 @@ sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals
 		}
 
 	if (inject_reals) {
-		assert(bnds_dom);
+		assert(bnds_dom || empty(input_bounds));
 		/* First convert all int-components that are unbounded in the
 		 * domain to lists where we have bounds; do not remove the
 		 * in_bnds constraints as they are useful for some solvers
@@ -832,10 +832,10 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
-	if (!io_bnds_dom && inject_reals)
+	if (inject_reals && !(io_bnds_dom || empty(pp.input_bounds)))
 		DIE(1,"\
 error: -r requires -C bnds-dom: re-casting integers as reals based on IO-BOUNDS\n\
-implies that IO-BOUNDS are regarded as domain constraints.\n");
+implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	sptr<form2> alpha = pp.interpret_input_bounds(io_bnds_dom, inject_reals);
 
 	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
