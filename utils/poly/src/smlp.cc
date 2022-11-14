@@ -26,6 +26,7 @@
 #endif
 
 #include <cmath>	/* isfinite() */
+#include <filesystem>	/* ...::current_path() */
 
 #include <signal.h>
 
@@ -139,11 +140,13 @@ static result solve_exists(const domain &dom,
 
 struct smlp_result {
 	kay::Q threshold;
+	uptr<solver> slv;
 	hmap<str,sptr<term2>> point;
 
-	smlp_result(kay::Q threshold, hmap<str,sptr<term2>> point)
+	smlp_result(kay::Q threshold, uptr<solver> slv, hmap<str,sptr<term2>> pt)
 	: threshold(move(threshold))
-	, point(move(point))
+	, slv(move(slv))
+	, point(move(pt))
 	{}
 
 	kay::Q center_value(const sptr<term2> &obj) const
@@ -184,6 +187,105 @@ static void trace_result(FILE *f, const char *lbl, const result &r,
 	fprintf(f, "\n");
 }
 
+enum class res { MAYBE = -1, NO, YES };
+
+struct search_rng {
+
+	virtual ~search_rng() = default;
+	virtual bool has_next() const = 0;
+	virtual kay::Q query() const = 0;
+	virtual void reply(int order) = 0;
+	virtual res is_contained() const = 0;
+};
+
+struct search_base : search_rng {
+
+	res contained = res::MAYBE;
+
+	res is_contained() const override { return contained; }
+	virtual const kay::Q & lo() const = 0;
+	virtual const kay::Q & hi() const = 0;
+};
+
+struct search_ival : search_base {
+
+	ival v;
+
+	explicit search_ival(ival v)
+	: v(move(v))
+	{
+		if (this->v.lo > this->v.hi)
+			contained = res::NO;
+	}
+
+	bool has_next() const override
+	{
+		int c = cmp(v.lo, v.hi);
+		return c ? c < 0 : contained == res::MAYBE;
+	}
+
+	kay::Q query() const override { return mid(v); }
+
+	void reply(int order) override
+	{
+		if (order >= 0)
+			v.lo = mid(v);
+		if (order <= 0)
+			v.hi = mid(v);
+		if (v.lo == v.hi)
+			contained = order ? res::NO : res::YES;
+	}
+
+	const kay::Q & lo() const override { return v.lo; }
+	const kay::Q & hi() const override { return v.hi; }
+};
+
+struct bounded_search_ival : search_ival {
+
+	kay::Q prec;
+
+	explicit bounded_search_ival(ival v, kay::Q prec)
+	: search_ival { move(v) }
+	, prec(move(prec))
+	{ assert(this->prec > 0); }
+
+	bool has_next() const override { return length(v) > prec; }
+};
+
+struct search_list : search_base {
+
+	vec<kay::Q> values;
+	ssize_t l, r, m;
+
+	explicit search_list(vec<kay::Q> values)
+	: values(move(values))
+	, l(0)
+	, r(size(this->values) - 1)
+	, m(l + (r - l) / 2)
+	{
+		assert(std::is_sorted(begin(this->values), end(this->values)));
+		if (empty(this->values))
+			contained = res::NO;
+	}
+
+	bool has_next() const override { return l <= r; }
+	kay::Q query() const override { return values[m]; }
+
+	void reply(int order) override
+	{
+		if (order >= 0)
+			l = m + (order > 0 ? 1 : 0);
+		if (order <= 0)
+			r = m - 1;
+		if (r < l)
+			contained = order ? res::YES : res::NO;
+		m = l + (r - l) / 2;
+	}
+
+	const kay::Q & lo() const override { return values[l]; }
+	const kay::Q & hi() const override { return values[r]; }
+};
+
 static vec<smlp_result>
 optimize_EA(cmp_t direction,
             const domain &dom,
@@ -192,8 +294,7 @@ optimize_EA(cmp_t direction,
             const sptr<form2> &beta,
             const sptr<form2> &eta,
             const kay::Q &delta,
-            ival &obj_range,
-            const kay::Q &max_prec,
+            search_base &obj_range,
             const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> &theta,
             const char *logic = nullptr)
 {
@@ -215,13 +316,14 @@ optimize_EA(cmp_t direction,
 	dump_smt2(stderr, *beta);
 	fprintf(stderr, "\n");
 */
-	vec<smlp_result> results, counter_examples;
+	vec<smlp_result> results;
 
-	while (length(obj_range) > max_prec) {
-		printf("r,%g,%g,%g\n",
-		       obj_range.lo.get_d(), obj_range.hi.get_d(),
-		       max_prec.get_d());
-		kay::Q T = mid(obj_range);
+	while (obj_range.has_next()) {
+		kay::Q T = obj_range.query();
+		printf("r,%s,%s,%s\n",
+		       obj_range.lo().get_str().c_str(),
+		       obj_range.hi().get_str().c_str(),
+		       T.get_str().c_str());
 		sptr<term2> threshold = make2t(cnst2 { T });
 
 		/* eta x /\ alpha x /\ (beta x /\ obj x >= T) */
@@ -235,17 +337,14 @@ optimize_EA(cmp_t direction,
 		exists->add(alpha);
 		exists->add(target);
 
-		while (true) {
+		for (vec<smlp_result> counter_examples; true;) {
 			timing e0;
 			result e = exists->check();
 			trace_result(stdout, "a", e, T, timing() - e0);
 			if (unknown *u = e.get<unknown>())
 				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
 			if (e.get<unsat>()) {
-				if (is_less(direction))
-					obj_range.lo = T;
-				else
-					obj_range.hi = T;
+				obj_range.reply(is_less(direction) ? +1 : -1);
 				break;
 			}
 			auto &candidate = e.get<sat>()->model;
@@ -282,16 +381,14 @@ optimize_EA(cmp_t direction,
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
-				results.emplace_back(T, candidate);
-				if (is_less(direction))
-					obj_range.hi = T;
-				else
-					obj_range.lo = T;
+				results.emplace_back(T, move(exists), candidate);
+				obj_range.reply(is_less(direction) ? -1 : +1);
 				break;
 			}
 			auto &counter_example = a.get<sat>()->model;
-			counter_examples.emplace_back(T, counter_example);
-			exists->add(make2f(lneg2 { theta({ delta }, counter_example) }));
+			/* let's not keep the forall solver around */
+			counter_examples.emplace_back(T, nullptr, counter_example);
+			exists->add(neg(theta({ delta }, counter_example)));
 		}
 	}
 
@@ -619,13 +716,18 @@ int main(int argc, char **argv)
 	int              timeout       = 0;
 	bool             clamp_inputs  = false;
 	const char      *out_bounds    = nullptr;
-	const char      *max_prec      = DEF_MAX_PREC;
+	const char      *max_prec_s    = DEF_MAX_PREC;
 	vec<sptr<form2>> alpha_conj    = {};
 	vec<sptr<form2>> beta_conj     = {};
 	vec<sptr<form2>> eta_conj      = {};
 	const char      *delta_s       = DEF_DELTA;
 	const char      *obj_range_s   = nullptr;
 	vec<strview>     queries;
+
+	/* record args (before potential reordering) to log to trace later */
+	vec<str> args;
+	for (int i=0; i<argc; i++)
+		args.emplace_back(argv[i]);
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
@@ -664,7 +766,7 @@ int main(int argc, char **argv)
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
-		case 'P': max_prec = optarg; break;
+		case 'P': max_prec_s = optarg; break;
 		case 'Q': queries.push_back(optarg); break;
 		case 'r': inject_reals = true; break;
 		case 'R': obj_range_s = optarg; break;
@@ -824,27 +926,45 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 			}
 			);
 	} else if (solve) {
-		ival obj_range = get_obj_range(obj_range_s, dom, lhs);
-		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
-		vec<smlp_result> r = optimize_EA(c, dom, lhs,
-		                                 alpha, beta, eta,
-		                                 kay::Q_from_str(str(delta_s).data()),
-		                                 obj_range, max_p,
-		                                 theta, logic.c_str());
+		kay::Q max_prec;
+		if (!from_string(max_prec_s, max_prec) || max_prec < 0)
+			DIE(1,"error: cannot parse MAX_PREC as a non-negative "
+			      "rational constant: '%s'\n", max_prec_s);
+
+		ival range = get_obj_range(obj_range_s, dom, lhs);
+		uptr<search_base> obj_range;
+		if (max_prec)
+			obj_range = std::make_unique<bounded_search_ival>(range, max_prec);
+		else
+			obj_range = std::make_unique<search_ival>(range);
+
+		kay::Q delta;
+		if (!from_string(delta_s, delta) || delta < 0)
+			DIE(1,"error: cannot parse DELTA as a positive "
+			      "rational constant: '%s'\n", delta_s);
+
+		printf("d,%s\n", std::filesystem::current_path().c_str());
+		printf("c,%zu,", size(args));
+		for (const str &s : args)
+			fwrite(s.c_str(), 1, s.length() + 1, stdout);
+		printf("\n");
+
+		vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
+		                                 *obj_range, theta, logic.c_str());
 		if (empty(r)) {
 			fprintf(stderr,
 			        "no solution for objective in theta in "
 			        "[%s, %s] ~ [%f, %f]\n",
-			        obj_range.lo.get_str().c_str(),
-			        obj_range.hi.get_str().c_str(),
-			        obj_range.lo.get_d(), obj_range.hi.get_d());
+			        obj_range->lo().get_str().c_str(),
+			        obj_range->hi().get_str().c_str(),
+			        obj_range->lo().get_d(), obj_range->hi().get_d());
 		} else {
 			fprintf(stderr,
 			        "%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
 			        is_less((cmp_t)c) ? "min max" : "max min",
-			        obj_range.lo.get_str().c_str(),
-			        obj_range.hi.get_str().c_str(),
-			        obj_range.lo.get_d(), obj_range.hi.get_d());
+			        obj_range->lo().get_str().c_str(),
+			        obj_range->hi().get_str().c_str(),
+			        obj_range->lo().get_d(), obj_range->hi().get_d());
 			print_model(stderr, r.back().point, 2);
 			for (const auto &s : r) {
 				kay::Q c = s.center_value(lhs);
