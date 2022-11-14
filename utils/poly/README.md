@@ -138,6 +138,24 @@ requires more dependencies:
 - hdf5 and its C++ bindings <https://www.hdfgroup.org/HDF5>
 - sources of libiv (*not published, yet*)
 
+## SMLP Traces
+
+As part of the optimization procedure, SMLP produces on `stdout` a so-called
+trace. A trace is a sequence of comma-separated records that can be used to
+reconstruct the steps taken by SMLP and to reconstruct its intermediate results.
+
+Each record consists of comma-separated fields and ends with a newline symbol
+(LF). The type of the record identifies the number and format of the remaining
+fields. The following record types exist:
+
+| Type | Format | Correspondence to SMLP |
+|------|--------|------------------------|
+| d | `d,p` | `p` is the working directory where `smlp` has been executed |
+| c | `c,n,a` | command line `smlp` was invoked with; `n` is the number of arguments and `a` is the `\0`-delimited string resulting from concatenating the `n` arguments |
+| r | `r,l,h,T` | search range, `l` is the lower bound, `h` is the upper bound and `T` corresponds to the current threshold |
+| a | `a,r,T,s,as...` | candidate search result; `r` is either `sat`, `unsat` or `unknown`; `T` is the threshold this result holds for, `s` is the time in seconds needed to solve this problem and in case `r` is `sat`, `as...` contains the satisfying assignment as a sequence of comma-separated pairs `var,value` |
+| b | `b,r,T,s,as...` | counter-example search result; same fields as `a` records; it corresponds to the preceding found candidate for threshold `T` |
+
 ## Legal info
 
 All source files in this distribution are:
