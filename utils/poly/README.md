@@ -153,6 +153,7 @@ fields. The following record types exist:
 | d | `d,p` | `p` is the working directory where `smlp` has been executed |
 | c | `c,n,a` | command line `smlp` was invoked with; `n` is the number of arguments and `a` is the `\0`-delimited string resulting from concatenating the `n` arguments |
 | r | `r,l,h,T` | search range, `l` is the lower bound, `h` is the upper bound and `T` corresponds to the current threshold |
+| u | `u,l,h,c` | search space exhausted, `l` and `h` are as for the `r` type and `c` specifies whether the threshold on the safe regions is inside the initial objective range, `c` can take values `in`, `out` and `maybe` |
 | a | `a,r,T,s,as...` | candidate search result; `r` is either `sat`, `unsat` or `unknown`; `T` is the threshold this result holds for, `s` is the time in seconds needed to solve this problem and in case `r` is `sat`, `as...` contains the satisfying assignment as a sequence of comma-separated pairs `var,value` |
 | b | `b,r,T,s,as...` | counter-example search result; same fields as `a` records; it corresponds to the preceding found candidate for threshold `T` |
 

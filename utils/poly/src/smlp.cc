@@ -391,6 +391,17 @@ optimize_EA(cmp_t direction,
 			exists->add(neg(theta({ delta }, counter_example)));
 		}
 	}
+	const char *contained = nullptr;
+	switch (obj_range.is_contained()) {
+	case res::YES: contained = "in"; break;
+	case res::NO: contained = "out"; break;
+	case res::MAYBE: contained = "maybe"; break;
+	}
+	assert(contained);
+	printf("u,%s,%s,%s\n",
+	       obj_range.lo().get_str().c_str(),
+	       obj_range.hi().get_str().c_str(),
+	       contained);
 
 	return results;
 }
