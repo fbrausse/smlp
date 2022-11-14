@@ -138,6 +138,7 @@ static result solve_exists(const domain &dom,
 	return s->check();
 }
 
+namespace {
 struct smlp_result {
 	kay::Q threshold;
 	uptr<solver> slv;
@@ -154,38 +155,6 @@ struct smlp_result {
 		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
 	}
 };
-
-static void trace_result(FILE *f, const char *lbl, const result &r,
-                         const kay::Q &T, double t)
-{
-	const char *state = nullptr;
-	vec<str> info;
-	r.match(
-	[&](const sat &s) {
-		state = "sat";
-		vec<const decltype(s.model)::value_type *> v;
-		for (const auto &p : s.model)
-			v.push_back(&p);
-		sort(begin(v), end(v), [](const auto *a, const auto *b) {
-			return a->first < b->first;
-		});
-		for (const auto *p : v) {
-			info.emplace_back(p->first);
-			info.emplace_back(to_string(p->second->get<cnst2>()->value));
-		}
-	},
-	[&](const unsat &) { state = "unsat"; },
-	[&](const unknown &u) {
-		state = "unknown";
-		info.emplace_back(u.reason);
-	}
-	);
-	assert(state);
-	fprintf(f, "%s,%s,%g,%5.3f", lbl, state, T.get_d(), t);
-	for (const str &s : info)
-		fprintf(f, ",%s", s.c_str());
-	fprintf(f, "\n");
-}
 
 enum class res { MAYBE = -1, NO, YES };
 
@@ -285,6 +254,40 @@ struct search_list : search_base {
 	const kay::Q & lo() const override { return values[l]; }
 	const kay::Q & hi() const override { return values[r]; }
 };
+
+}
+
+static void trace_result(FILE *f, const char *lbl, const result &r,
+                         const kay::Q &T, double t)
+{
+	const char *state = nullptr;
+	vec<str> info;
+	r.match(
+	[&](const sat &s) {
+		state = "sat";
+		vec<const decltype(s.model)::value_type *> v;
+		for (const auto &p : s.model)
+			v.push_back(&p);
+		sort(begin(v), end(v), [](const auto *a, const auto *b) {
+			return a->first < b->first;
+		});
+		for (const auto *p : v) {
+			info.emplace_back(p->first);
+			info.emplace_back(to_string(p->second->get<cnst2>()->value));
+		}
+	},
+	[&](const unsat &) { state = "unsat"; },
+	[&](const unknown &u) {
+		state = "unknown";
+		info.emplace_back(u.reason);
+	}
+	);
+	assert(state);
+	fprintf(f, "%s,%s,%g,%5.3f", lbl, state, T.get_d(), t);
+	for (const str &s : info)
+		fprintf(f, ",%s", s.c_str());
+	fprintf(f, "\n");
+}
 
 static vec<smlp_result>
 optimize_EA(cmp_t direction,
