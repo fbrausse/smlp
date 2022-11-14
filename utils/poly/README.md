@@ -49,6 +49,9 @@ Options [defaults]:
                'SHELL -c EXT-CMD' where SHELL is taken from the environment or
                'sh' if that variable is not set []
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
+  -T THRESHS   instead of on an interval perform binary search among the
+               thresholds in the comma-separated list THRESHS; overrides -R and
+               -P
   -V           display version information
 
 The DOMAIN is a text file containing the bounds for all variables in the

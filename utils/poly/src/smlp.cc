@@ -172,8 +172,8 @@ struct search_base : search_rng {
 	res contained = res::MAYBE;
 
 	res is_contained() const override { return contained; }
-	virtual const kay::Q & lo() const = 0;
-	virtual const kay::Q & hi() const = 0;
+	virtual const kay::Q * lo() const = 0;
+	virtual const kay::Q * hi() const = 0;
 };
 
 struct search_ival : search_base {
@@ -205,8 +205,8 @@ struct search_ival : search_base {
 			contained = order ? res::NO : res::YES;
 	}
 
-	const kay::Q & lo() const override { return v.lo; }
-	const kay::Q & hi() const override { return v.hi; }
+	const kay::Q * lo() const override { return &v.lo; }
+	const kay::Q * hi() const override { return &v.hi; }
 };
 
 struct bounded_search_ival : search_ival {
@@ -247,12 +247,12 @@ struct search_list : search_base {
 		if (order <= 0)
 			r = m - 1;
 		if (r < l)
-			contained = order ? res::YES : res::NO;
+			contained = order ? res::NO : res::YES;
 		m = l + (r - l) / 2;
 	}
 
-	const kay::Q & lo() const override { return values[l]; }
-	const kay::Q & hi() const override { return values[r]; }
+	const kay::Q * lo() const override { return empty(values) ? nullptr : &values[l]; }
+	const kay::Q * hi() const override { return empty(values) ? nullptr : &values[l <= r ? r : l]; }
 };
 
 }
@@ -324,8 +324,8 @@ optimize_EA(cmp_t direction,
 	while (obj_range.has_next()) {
 		kay::Q T = obj_range.query();
 		printf("r,%s,%s,%s\n",
-		       obj_range.lo().get_str().c_str(),
-		       obj_range.hi().get_str().c_str(),
+		       obj_range.lo()->get_str().c_str(),
+		       obj_range.hi()->get_str().c_str(),
 		       T.get_str().c_str());
 		sptr<term2> threshold = make2t(cnst2 { T });
 
@@ -401,10 +401,16 @@ optimize_EA(cmp_t direction,
 	case res::MAYBE: contained = "maybe"; break;
 	}
 	assert(contained);
-	printf("u,%s,%s,%s\n",
-	       obj_range.lo().get_str().c_str(),
-	       obj_range.hi().get_str().c_str(),
-	       contained);
+	str ls, hs;
+	if (const kay::Q *l = obj_range.lo())
+		ls = l->get_str();
+	else
+		ls = "";
+	if (const kay::Q *h = obj_range.hi())
+		hs = h->get_str();
+	else
+		hs = "";
+	printf("u,%s,%s,%s\n", ls.c_str(), hs.c_str(), contained);
 
 	return results;
 }
@@ -495,6 +501,9 @@ Options [defaults]:\n\
                'SHELL -c EXT-CMD' where SHELL is taken from the environment or\n\
                'sh' if that variable is not set []\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
+  -T THRESHS   instead of on an interval perform binary search among the\n\
+               thresholds in the comma-separated list THRESHS; overrides -R and\n\
+               -P\n\
   -V           display version information\n\
 \n\
 The DOMAIN is a text file containing the bounds for all variables in the\n\
@@ -736,6 +745,7 @@ int main(int argc, char **argv)
 	vec<sptr<form2>> eta_conj      = {};
 	const char      *delta_s       = DEF_DELTA;
 	const char      *obj_range_s   = nullptr;
+	char            *threshs_s     = nullptr;
 	vec<strview>     queries;
 
 	/* record args (before potential reordering) to log to trace later */
@@ -745,7 +755,7 @@ int main(int argc, char **argv)
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:cC:d:e:F:hi:I:nO:pP:Q:rR:sS:t:V")) != -1;)
+	                            ":1a:b:cC:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -788,6 +798,7 @@ int main(int argc, char **argv)
 		case 's': dump_smt2 = true; break;
 		case 'S': ext_solver_cmd = optarg; break;
 		case 't': timeout = atoi(optarg); break;
+		case 'T': threshs_s = optarg; break;
 		case 'V': version_info(); exit(0);
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
 		              optopt);
@@ -940,17 +951,35 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 			}
 			);
 	} else if (solve) {
-		kay::Q max_prec;
-		if (!from_string(max_prec_s, max_prec) || max_prec < 0)
-			DIE(1,"error: cannot parse MAX_PREC as a non-negative "
-			      "rational constant: '%s'\n", max_prec_s);
-
-		ival range = get_obj_range(obj_range_s, dom, lhs);
 		uptr<search_base> obj_range;
-		if (max_prec)
-			obj_range = std::make_unique<bounded_search_ival>(range, max_prec);
-		else
-			obj_range = std::make_unique<search_ival>(range);
+		if (threshs_s) {
+			vec<kay::Q> vs;
+			for (char *s = NULL, *t = strtok_r(threshs_s, ",", &s);
+			     t; t = strtok_r(NULL, ",", &s)) {
+				kay::Q v;
+				if (!from_string(t, v))
+					DIE(1,"error: cannot parse '%s' in "
+					      "THRESHS as a rational constant\n",
+					      t);
+				vs.emplace_back(move(v));
+			}
+			if (empty(vs))
+				DIE(1,"error: list THRESHS cannot be empty\n");
+			std::sort(begin(vs), end(vs));
+			vs.erase(std::unique(begin(vs), end(vs)), end(vs));
+			obj_range = std::make_unique<search_list>(move(vs));
+		} else {
+			kay::Q max_prec;
+			if (!from_string(max_prec_s, max_prec) || max_prec < 0)
+				DIE(1,"error: cannot parse MAX_PREC as a non-negative "
+				      "rational constant: '%s'\n", max_prec_s);
+
+			ival range = get_obj_range(obj_range_s, dom, lhs);
+			if (max_prec)
+				obj_range = std::make_unique<bounded_search_ival>(range, max_prec);
+			else
+				obj_range = std::make_unique<search_ival>(range);
+		}
 
 		kay::Q delta;
 		if (!from_string(delta_s, delta) || delta < 0)
@@ -969,16 +998,18 @@ implies that IO-BOUNDS are regarded as domain constraints.\n");
 			fprintf(stderr,
 			        "no solution for objective in theta in "
 			        "[%s, %s] ~ [%f, %f]\n",
-			        obj_range->lo().get_str().c_str(),
-			        obj_range->hi().get_str().c_str(),
-			        obj_range->lo().get_d(), obj_range->hi().get_d());
+			        obj_range->lo()->get_str().c_str(),
+			        obj_range->hi()->get_str().c_str(),
+			        obj_range->lo()->get_d(),
+			        obj_range->hi()->get_d());
 		} else {
 			fprintf(stderr,
 			        "%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
 			        is_less((cmp_t)c) ? "min max" : "max min",
-			        obj_range->lo().get_str().c_str(),
-			        obj_range->hi().get_str().c_str(),
-			        obj_range->lo().get_d(), obj_range->hi().get_d());
+			        obj_range->lo()->get_str().c_str(),
+			        obj_range->hi()->get_str().c_str(),
+			        obj_range->lo()->get_d(),
+			        obj_range->hi()->get_d());
 			print_model(stderr, r.back().point, 2);
 			for (const auto &s : r) {
 				kay::Q c = s.center_value(lhs);
