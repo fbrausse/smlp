@@ -74,19 +74,9 @@ struct component {
 	}
 };
 
-static inline bool is_real(const sumtype<entire,ival,list> &c)
-{
-	if (c.get<entire>() || c.get<ival>())
-		return true;
-	for (const kay::Q &q : c.get<list>()->values)
-		if (q.get_den() != 1)
-			return true;
-	return 1 || false; /* always real: Z3 falls back to a slow method otherwise */
-}
-
 /* Translates a component 'rng' and the appropriate variable name 'var' into a
  * constraint in form of a 'form2' formula. */
-form2 domain_constraint(const str &var, const component &c);
+sptr<form2> domain_constraint(const str &var, const component &c);
 
 /* The domain is an (ordered) list of pairs (name, component) */
 struct domain : vec<pair<str,component>> {
@@ -108,7 +98,7 @@ struct domain : vec<pair<str,component>> {
 	}
 };
 
-form2 domain_constraints(const domain &d);
+sptr<form2> domain_constraints(const domain &d);
 
 /* Parses the DOMAIN-FILE, see poly.cc for details. */
 domain parse_simple_domain(FILE *f);

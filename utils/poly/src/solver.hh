@@ -22,7 +22,34 @@ struct solver {
 	virtual void declare(const domain &d) = 0;
 	virtual void add(const sptr<form2> &f) = 0;
 	virtual result check() = 0;
+
+	friend vec<hmap<str,sptr<term2>>> all_solutions(solver &s)
+	{
+		vec<hmap<str,sptr<term2>>> v;
+		sat *c;
+		for (result r; (c = (r = s.check()).get<sat>());) {
+			vec<sptr<form2>> ne;
+			v.emplace_back(move(c->model));
+			for (const auto &[var,t] : v.back())
+				ne.push_back(make2f(prop2 { NE, make2t(name { var }), t }));
+			s.add(disj(move(ne)));
+		}
+		return v;
+	}
 };
+
+uptr<solver> mk_solver0(bool incremental, const char *logic = nullptr);
+
+template <typename T>
+str smt2_logic_str(const domain &dom, const sptr<T> &e);
+
+inline vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f)
+{
+	uptr<solver> s = mk_solver0(true, smt2_logic_str(dom, f).c_str());
+	s->declare(dom);
+	s->add(f);
+	return all_solutions(*s);
+}
 
 struct solver_seq : solver {
 

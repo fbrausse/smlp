@@ -22,6 +22,8 @@
 #include <unordered_map>
 #include <optional>
 
+#include <time.h>
+
 #ifdef NDEBUG
 # define unreachable() __builtin_unreachable()
 #else
@@ -169,6 +171,32 @@ struct file {
 	}
 
 	void close() { assert(f); *this = file(); }
+};
+
+struct timing : timespec {
+
+	timing()
+	{
+		if (clock_gettime(CLOCK_MONOTONIC, this) == -1)
+			throw std::error_code(errno, std::system_category());
+	}
+
+	friend timing & operator-=(timing &a, const timing &b)
+	{
+		a.tv_sec -= b.tv_sec;
+		if ((a.tv_nsec -= b.tv_nsec) < 0) {
+			a.tv_sec--;
+			a.tv_nsec += 1e9;
+		}
+		return a;
+	}
+
+	friend timing operator-(timing a, const timing &b)
+	{
+		return a -= b;
+	}
+
+	operator double() const { return tv_sec + tv_nsec / 1e9; }
 };
 
 } // end namespace smlp

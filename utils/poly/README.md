@@ -21,13 +21,16 @@ Options [defaults]:
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
-  -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]
+               - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA
+  -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by
+               the constant DELTA if the radius is zero [0]
   -e ETA       additional ETA constraints restricting only candidates, can be
                given multiple times, the conjunction of all is used [true]
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
                'prefix' [infix]
   -h           displays this help message
-  -i           use interval evaluation (only when CNST is given) [no]
+  -i SUBDIVS   use interval evaluation (only when CNST is given) with SUBDIVS
+               subdivision [no]
   -I EXT-INC   optional external incremental SMT solver [value for -S]
   -n           dry run, do not solve the problem [no]
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only
@@ -37,13 +40,18 @@ Options [defaults]:
   -Q QUERY     answer a query about the problem; supported QUERY:
                - vars: list all variables
   -r           re-cast bounded integer variables as reals with equality
-               constraints
-  -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]
+               constraints (requires -C bnds-dom); cvc5 >= 1.0.1 requires this
+               option when integer variables are present
+  -R LO,HI     optimize threshold in the interval [LO,HI] [interval-evaluation
+               of the LHS]
   -s           dump the problem in SMT-LIB2 format to stdout [no]
   -S EXT-CMD   invoke external SMT solver instead of the built-in one via
                'SHELL -c EXT-CMD' where SHELL is taken from the environment or
                'sh' if that variable is not set []
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
+  -T THRESHS   instead of on an interval perform binary search among the
+               thresholds in the comma-separated list THRESHS; overrides -R and
+               -P
   -V           display version information
 
 The DOMAIN is a text file containing the bounds for all variables in the
@@ -83,7 +91,7 @@ The following SMT solvers are known to work with smlp:
 | Solver | Version(s) | param `-S` | param `-I` |
 |--------|------------|------------|------------|
 | [Z3](https://github.com/Z3Prover/z3) | 4.8.12, 4.11.2 | `z3 -in` | not required |
-| [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) | 0.1.7 | `ksmt` | not required |
+| [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) | 0.1.8 | `ksmt` | not required |
 | [Yices](http://yices.csl.sri.com) | 2.6.1 | `yices-smt2` | `yices-smt2 --incremental` |
 | [CVC4](https://cvc4.github.io) | 1.8 | `cvc4 -L smt2` | `cvc4 -L smt2 --incremental` |
 | [CVC5](https://cvc5.github.io) | 1.0.1 | `cvc5` | `cvc5 --incremental` |
@@ -98,7 +106,7 @@ Run:
 
 The resulting binary will be located in `build/src/smlp`.
 
-A compiler supporting C++20 is required as well as:
+A compiler supporting C++20 is required (GCC >= 11, Clang >= 11) as well as:
 
 - the kay library <https://github.com/fbrausse/kay>
 
@@ -132,6 +140,37 @@ requires more dependencies:
 - kjson <https://github.com/fbrausse/kjson>
 - hdf5 and its C++ bindings <https://www.hdfgroup.org/HDF5>
 - sources of libiv (*not published, yet*)
+
+## SMLP Traces
+
+As part of the optimization procedure, SMLP produces on `stdout` a so-called
+trace. A trace is a sequence of records, one per line, that can be used to
+reconstruct the steps taken by SMLP and to reconstruct its intermediate
+results.
+
+Each record consists of comma-separated fields. The first field denotes the
+type of the record and it identifies the number and format of the remaining
+fields. The following record types exist:
+
+| Type | Format | Correspondence to SMLP |
+|------|--------|------------------------|
+| d | `d,p` | `p` is the working directory where `smlp` has been executed; issued once at the beginning |
+| c | `c,n,a` | command line `smlp` was invoked with; `n` is the number of arguments and `a` is the `\0`-delimited string resulting from concatenating the `n` arguments; issued once at the beginning |
+| r | `r,l,h,T` | search range, `l` is the lower bound, `h` is the upper bound and `T` corresponds to the current threshold |
+| u | `u,l,h,c` | search space exhausted, `l` and `h` are as for the `r` type and `c` specifies whether the threshold on the safe regions is inside the initial objective range, `c` can take values `in`, `out` and `maybe` |
+| a | `a,r,T,s,as...` | candidate search result; `r` is either `sat`, `unsat` or `unknown`; `T` is the threshold this result holds for, `s` is the time in seconds needed to solve this problem and in case `r` is `sat`, `as...` contains the satisfying assignment as a sequence of comma-separated pairs `var,value` |
+| b | `b,r,T,s,as...` | counter-example search result; same fields as `a` records; it corresponds to the preceding found candidate for threshold `T` |
+
+Note that these traces are designed to be easily processed with Unix tools,
+though with Python >= 3.11 they also are, e.g.
+```
+>>> import csv
+>>> r = csv.reader(open('test.trace'))
+>>> list(r)
+```
+Python < 3.11 will [not process](https://bugs.python.org/issue27580) the `c`
+record due to embedded `'\0'` characters and Pandas will by default refuse
+traces since the number of "columns" is not constant.
 
 ## Legal info
 

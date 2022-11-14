@@ -39,6 +39,7 @@ struct simple_domain_parser {
 			next();
 			char *s = line.data();
 			char *t = line.data();
+			/* skip initial space, parse variable name */
 			s = t + strspn(t, WHITE);
 			t = s + strcspn(s, WHITE);
 			if (t == s)
@@ -47,9 +48,13 @@ struct simple_domain_parser {
 				*s = '_';
 			str name(s, t);
 			// fprintf(stderr, "debug: name: '%s'\n", name.c_str());
+
+			/* skip space after name, skip middle token */
 			s = t + strspn(t, WHITE);
 			t = s + strcspn(s, WHITE);
 			// fprintf(stderr, "debug: ignore: '%.*s'\n", (int)(t - s), s);
+
+			/* skip space after middle token, parse range */
 			s = t + strspn(t, WHITE);
 			char delim[] = { *s, '\0' };
 			switch (delim[0]) {
@@ -77,14 +82,22 @@ struct simple_domain_parser {
 			switch (*delim) {
 			case ']':
 				assert(nums.size() == 2);
+				range.type = component::REAL;
 				range.range = ival { move(nums[0]), move(nums[1]) };
 				break;
 			case '}':
 				assert(!nums.empty());
+				range.type = component::INT;
+				for (const kay::Q &q : nums)
+					if (q.get_den() != 1) {
+						range.type = component::REAL;
+						break;
+					}
 				range.range = list { move(nums) };
 				break;
+			default:
+				unreachable();
 			}
-			range.type = is_real(range.range) ? component::REAL : component::INT;
 			d.emplace_back(move(name), move(range));
 		}
 		return d;
@@ -98,41 +111,31 @@ domain smlp::parse_simple_domain(FILE *f)
 	return simple_domain_parser(f).get();
 }
 
-form2 smlp::domain_constraint(const str &var, const component &c)
+sptr<form2> smlp::domain_constraint(const str &var, const component &c)
 {
-	return c.range.match<form2>(
-	[](const entire &) { return *true2; },
+	return c.range.match(
+	[](const entire &) { return true2; },
 	[&](const list &lst) {
+		sptr<term2> v = make2t(name { var });
 		vec<sptr<form2>> args;
 		args.reserve(lst.values.size());
 		for (const kay::Q &q : lst.values)
-			args.emplace_back(make2f(prop2 {
-				EQ,
-				make2t(name { var }),
-				make2t(cnst2 { q })
-			}));
-		return lbop2 { lbop2::OR, move(args) };
+			args.emplace_back(make2f(prop2 { EQ, v, make2t(cnst2 { q }) }));
+		return disj(move(args));
 	},
 	[&](const ival &iv) {
-		vec<sptr<form2>> args;
-		args.emplace_back(make2f(prop2 {
-			GE,
-			make2t(name { var }),
-			make2t(cnst2 { iv.lo })
-		}));
-		args.emplace_back(make2f(prop2 {
-			LE,
-			make2t(name { var }),
-			make2t(cnst2 { iv.hi }),
-		}));
-		return lbop2 { lbop2::AND, move(args) };
+		sptr<term2> v = make2t(name { var });
+		return conj({
+			make2f(prop2 { GE, v, make2t(cnst2 { iv.lo }) }),
+			make2f(prop2 { LE, v, make2t(cnst2 { iv.hi }) }),
+		});
 	});
 }
 
-form2 smlp::domain_constraints(const domain &d)
+sptr<form2> smlp::domain_constraints(const domain &d)
 {
-	lbop2 conj = { lbop2::AND, {} };
+	vec<sptr<form2>> c;
 	for (const auto &[var,rng] : d)
-		conj.args.emplace_back(make2f(domain_constraint(var, rng)));
-	return conj;
+		c.emplace_back(domain_constraint(var, rng));
+	return conj(move(c));
 }

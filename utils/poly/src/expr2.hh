@@ -26,14 +26,26 @@ struct form2;
 struct prop2 {
 	cmp_t cmp; sptr<term2> left, right;
 	bool operator==(const prop2 &b) const;
+	std::strong_ordering operator<=>(const prop2 &b) const;
 };
 struct lbop2 {
 	enum { AND, OR } op; vec<sptr<form2>> args;
 	bool operator==(const lbop2 &b) const;
+	std::strong_ordering operator<=>(const lbop2 &b) const;
+
+	friend decltype(op) operator!(decltype(op) o)
+	{
+		switch (o) {
+		case AND: return OR;
+		case OR: return AND;
+		}
+		unreachable();
+	}
 };
 struct lneg2 {
 	sptr<form2> arg;
 	bool operator==(const lneg2 &b) const;
+	std::strong_ordering operator<=>(const lneg2 &b) const;
 };
 
 inline const char *lbop_s[] = { "and", "or" };
@@ -59,17 +71,20 @@ struct form2 : sumtype<prop2,lbop2,lneg2>
 struct ite2 {
 	sptr<form2> cond; sptr<term2> yes, no;
 	bool operator==(const ite2 &b) const;
+	std::strong_ordering operator<=>(const ite2 &b) const;
 };
 struct bop2 {
 	decltype(bop::op) op; sptr<term2> left, right;
 	bool operator==(const bop2 &b) const;
+	std::strong_ordering operator<=>(const bop2 &b) const;
 };
 struct uop2 {
 	decltype(uop::op) op; sptr<term2> operand;
 	bool operator==(const uop2 &b) const;
+	std::strong_ordering operator<=>(const uop2 &b) const;
 };
 struct cnst2 {
-	struct : sumtype<kay::Z,kay::Q> {
+	struct ZQ : sumtype<kay::Z,kay::Q> {
 
 		using sumtype<kay::Z,kay::Q>::sumtype;
 
@@ -86,8 +101,11 @@ struct cnst2 {
 			[](const auto &x) { return kay::Q(x); }
 			);
 		}
+
+		std::strong_ordering operator<=>(const ZQ &b) const = default;
 	} value;
 	bool operator==(const cnst2 &b) const;
+	std::strong_ordering operator<=>(const cnst2 &b) const = default;
 };
 
 struct term2 : sumtype<name,bop2,uop2,cnst2,ite2>
@@ -114,7 +132,24 @@ inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
 inline const sptr<term2> zero   = make2t(cnst2 { kay::Z(0) });
 inline const sptr<term2> one    = make2t(cnst2 { kay::Z(1) });
 
-/* Absolute value on term2 */
+/* Short forms for creating propositional formulas: conjunction, disjunction
+ * and negation */
+static inline sptr<form2> conj(vec<sptr<form2>> l)
+{
+	return make2f(lbop2 { lbop2::AND, { move(l) } });
+}
+
+static inline sptr<form2> disj(vec<sptr<form2>> l)
+{
+	return make2f(lbop2 { lbop2::OR, { move(l) } });
+}
+
+static inline sptr<form2> neg(sptr<form2> f)
+{
+	return make2f(lneg2 { move(f) });
+}
+
+/* Absolute value on term2, encoded by ite2 on comparing with zero */
 sptr<term2> abs(const sptr<term2> &t);
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
@@ -147,7 +182,26 @@ static inline bool is_linear(const sptr<term2> &e)
 	return !is_ground(e) && !is_nonlinear(e);
 }
 
+/* Names of the free variables in a term2 or a form2. As there are no
+ * quantifiers, all occurring variables are considered free. */
 hset<str> free_vars(const sptr<term2> &f);
 hset<str> free_vars(const sptr<form2> &f);
+
+/* Returns NULL in case t contains ite2 { c, y, n } with var in free_vars(c).
+ * Otherwise, if var is not free in c and the derivatives y' and n' of y and n
+ * exist, the derivative of ite2 { c, y, n } is ite2 { c, y', n' }. */
+sptr<term2> derivative(const sptr<term2> &t, const str &var);
+
+/* Similar to cnst_fold(t, {}), but short-circuit evaluation is also performed
+ * on arithmetic (bop2, uop2) terms. */
+sptr<term2> simplify(const sptr<term2> &t);
+sptr<form2> simplify(const sptr<form2> &t);
+
+/* The negation normal form of a formula has all negations pushed into the atoms
+ * (prop2). The result is free of lneg2 on the top level. The formulas making up
+ * the conditions of ite2 terms are not touched. */
+sptr<form2> to_nnf(const sptr<form2> &f);
+
+sptr<form2> all_eq(opt<kay::Q> delta, const hmap<str,sptr<term2>> &m);
 
 }

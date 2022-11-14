@@ -212,7 +212,7 @@ void smlp::dump_smt2(FILE *f, const domain &d)
 		assert(t);
 		fprintf(f, "(declare-const %s %s)\n", var.c_str(), t);
 		fprintf(f, "(assert ");
-		dump_smt2(f, domain_constraint(var, rng));
+		dump_smt2(f, *domain_constraint(var, rng));
 		fprintf(f, ")\n");
 	}
 }

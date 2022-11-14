@@ -11,6 +11,7 @@
 #include "domain.hh"
 #include "dump-smt2.hh"
 #include "ext-solver.hh"
+#include "ival-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
 
@@ -22,13 +23,15 @@
 #ifdef SMLP_ENABLE_KERAS_NN
 # include <H5public.h>
 # include <kjson.h>
-# include "ival-solver.hh"
 #endif
 
+#include <cmath>	/* isfinite() */
+#include <filesystem>	/* ...::current_path() */
+
 #include <signal.h>
-#include <time.h>
 
 using namespace smlp;
+using std::isfinite;
 
 namespace {
 
@@ -37,7 +40,7 @@ namespace {
 struct problem {
 
 	domain dom;
-	form2 p;
+	sptr<form2> p;
 };
 
 /* max T, s.t.
@@ -61,32 +64,6 @@ struct pareto {
 	sptr<form2> beta  = true2;
 };
 
-struct timing : timespec {
-
-	timing()
-	{
-		if (clock_gettime(CLOCK_MONOTONIC, this) == -1)
-			throw std::error_code(errno, std::system_category());
-	}
-
-	friend timing & operator-=(timing &a, const timing &b)
-	{
-		a.tv_sec -= b.tv_sec;
-		if ((a.tv_nsec -= b.tv_nsec) < 0) {
-			a.tv_sec--;
-			a.tv_nsec += 1e9;
-		}
-		return a;
-	}
-
-	friend timing operator-(timing a, const timing &b)
-	{
-		return a -= b;
-	}
-
-	operator double() const { return tv_sec + tv_nsec / 1e9; }
-};
-
 }
 
 static void dump_smt2(FILE *f, const char *logic, const problem &p)
@@ -94,43 +71,33 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	fprintf(f, "(set-logic %s)\n", logic);
 	dump_smt2(f, p.dom);
 	fprintf(f, "(assert ");
-	dump_smt2(f, p.p);
+	dump_smt2(f, *p.p);
 	fprintf(f, ")\n");
 	fprintf(f, "(check-sat)\n");
 	fprintf(f, "(get-model)\n");
 }
 
-static const char *ext_solver_cmd;
-static const char *inc_solver_cmd;
-static bool        intervals = false;
+static char *ext_solver_cmd;
+static char *inc_solver_cmd;
+static long  intervals = -1;
 
-static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
+namespace smlp {
+uptr<solver> mk_solver0(bool incremental, const char *logic)
 {
-	vec<uptr<solver>> solvers;
-	if (intervals) {
-#ifdef SMLP_ENABLE_KERAS_NN
-		solvers.emplace_back(std::make_unique<ival_solver>());
-#else
-		DIE(1,"error: interval solver not available, compile smlp with "
-		      "keras-nn support\n");
-#endif
-	}
 	const char *ext = ext_solver_cmd;
 	const char *inc = inc_solver_cmd;
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
 	if (cmd)
-		solvers.emplace_back(std::make_unique<ext_solver>(cmd, logic));
+		return std::make_unique<ext_solver>(cmd, logic);
 #ifdef SMLP_ENABLE_Z3_API
-	solvers.emplace_back(std::make_unique<z3_solver>(logic));
+	return std::make_unique<z3_solver>(logic);
 #endif
-	if (empty(solvers))
-		DIE(1,"error: no solver specified and none are built-in, require "
-		      "external solver via -S or -I\n");
-	return std::make_unique<solver_seq>(move(solvers));
+	DIE(1,"error: no solver specified and none are built-in, require "
+	      "external solver via -S or -I\n");
 }
 
 template <typename T>
-static str smt2_logic_str(const domain &dom, const T &e)
+str smt2_logic_str(const domain &dom, const sptr<T> &e)
 {
 	bool reals = false;
 	bool ints = false;
@@ -151,6 +118,14 @@ static str smt2_logic_str(const domain &dom, const T &e)
 		logic += "UF";
 	return logic;
 }
+}
+
+static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
+{
+	if (intervals >= 0)
+		return std::make_unique<ival_solver>(intervals, logic);
+	return smlp::mk_solver0(incremental, logic);
+}
 
 static result solve_exists(const domain &dom,
                            const sptr<form2> &f,
@@ -163,15 +138,124 @@ static result solve_exists(const domain &dom,
 	return s->check();
 }
 
+namespace {
 struct smlp_result {
 	kay::Q threshold;
+	uptr<solver> slv;
 	hmap<str,sptr<term2>> point;
+
+	smlp_result(kay::Q threshold, uptr<solver> slv, hmap<str,sptr<term2>> pt)
+	: threshold(move(threshold))
+	, slv(move(slv))
+	, point(move(pt))
+	{}
 
 	kay::Q center_value(const sptr<term2> &obj) const
 	{
 		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
 	}
 };
+
+enum class res { MAYBE = -1, NO, YES };
+
+struct search_rng {
+
+	virtual ~search_rng() = default;
+	virtual bool has_next() const = 0;
+	virtual kay::Q query() const = 0;
+	virtual void reply(int order) = 0;
+	virtual res is_contained() const = 0;
+};
+
+struct search_base : search_rng {
+
+	res contained = res::MAYBE;
+
+	res is_contained() const override { return contained; }
+	virtual const kay::Q * lo() const = 0;
+	virtual const kay::Q * hi() const = 0;
+};
+
+struct search_ival : search_base {
+
+	ival v;
+
+	explicit search_ival(ival v)
+	: v(move(v))
+	{
+		if (this->v.lo > this->v.hi)
+			contained = res::NO;
+	}
+
+	bool has_next() const override
+	{
+		int c = cmp(v.lo, v.hi);
+		return c ? c < 0 : contained == res::MAYBE;
+	}
+
+	kay::Q query() const override { return mid(v); }
+
+	void reply(int order) override
+	{
+		if (order >= 0)
+			v.lo = mid(v);
+		if (order <= 0)
+			v.hi = mid(v);
+		if (v.lo == v.hi)
+			contained = order ? res::NO : res::YES;
+	}
+
+	const kay::Q * lo() const override { return &v.lo; }
+	const kay::Q * hi() const override { return &v.hi; }
+};
+
+struct bounded_search_ival : search_ival {
+
+	kay::Q prec;
+
+	explicit bounded_search_ival(ival v, kay::Q prec)
+	: search_ival { move(v) }
+	, prec(move(prec))
+	{ assert(this->prec > 0); }
+
+	bool has_next() const override { return length(v) > prec; }
+};
+
+struct search_list : search_base {
+
+	vec<kay::Q> values;
+	ssize_t l, r, m;
+
+	explicit search_list(vec<kay::Q> values)
+	: values(move(values))
+	, l(0)
+	, r(size(this->values) - 1)
+	, m(l + (r - l) / 2)
+	{
+		assert(std::is_sorted(begin(this->values), end(this->values)));
+		if (empty(this->values))
+			contained = res::NO;
+	}
+
+	bool has_next() const override { return l <= r; }
+	kay::Q query() const override { return values[m]; }
+
+	void reply(int order) override
+	{
+		if (order >= 0)
+			l = m + (order > 0 ? 1 : 0);
+		if (order <= 0)
+			r = m - 1;
+		if (r < l)
+			contained = order ? res::NO : res::YES;
+		m = l + (r - l) / 2;
+	}
+
+	const kay::Q * lo() const override { return empty(values) ? nullptr : &values[l]; }
+	const kay::Q * hi() const override { return empty(values) ? nullptr : &values[l <= r ? r : l]; }
+};
+
+}
 
 static void trace_result(FILE *f, const char *lbl, const result &r,
                          const kay::Q &T, double t)
@@ -213,8 +297,7 @@ optimize_EA(cmp_t direction,
             const sptr<form2> &beta,
             const sptr<form2> &eta,
             const kay::Q &delta,
-            ival &obj_range,
-            const kay::Q &max_prec,
+            search_base &obj_range,
             const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> &theta,
             const char *logic = nullptr)
 {
@@ -236,34 +319,35 @@ optimize_EA(cmp_t direction,
 	dump_smt2(stderr, *beta);
 	fprintf(stderr, "\n");
 */
-	vec<smlp_result> results, counter_examples;
+	vec<smlp_result> results;
 
-	while (length(obj_range) > max_prec) {
-		printf("r,%g,%g,%g\n",
-		       obj_range.lo.get_d(), obj_range.hi.get_d(),
-		       max_prec.get_d());
-		kay::Q T = mid(obj_range);
+	while (obj_range.has_next()) {
+		kay::Q T = obj_range.query();
+		printf("r,%s,%s,%s\n",
+		       obj_range.lo()->get_str().c_str(),
+		       obj_range.hi()->get_str().c_str(),
+		       T.get_str().c_str());
 		sptr<term2> threshold = make2t(cnst2 { T });
 
-		/* eta x /\ alpha x /\ beta x /\ obj x >= T */
+		/* eta x /\ alpha x /\ (beta x /\ obj x >= T) */
+		sptr<form2> target = conj({
+			beta,
+			make2f(prop2 { direction, objective, threshold })
+		});
 		uptr<solver> exists = mk_solver(true, logic);
 		exists->declare(dom);
 		exists->add(eta);
 		exists->add(alpha);
-		exists->add(beta);
-		exists->add(make2f(prop2 { direction, objective, threshold }));
+		exists->add(target);
 
-		while (true) {
+		for (vec<smlp_result> counter_examples; true;) {
 			timing e0;
 			result e = exists->check();
 			trace_result(stdout, "a", e, T, timing() - e0);
 			if (unknown *u = e.get<unknown>())
 				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
 			if (e.get<unsat>()) {
-				if (is_less(direction))
-					obj_range.lo = T;
-				else
-					obj_range.hi = T;
+				obj_range.reply(is_less(direction) ? +1 : -1);
 				break;
 			}
 			auto &candidate = e.get<sat>()->model;
@@ -272,13 +356,10 @@ optimize_EA(cmp_t direction,
 			forall->declare(dom);
 			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
 			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
-			 * theta x y /\ alpha y /\ ( ! beta y \/ obj y < T) */
+			 * theta x y /\ alpha y /\ ! ( beta y /\ obj y >= T) */
 			forall->add(theta({}, candidate));
 			forall->add(alpha);
-			forall->add(make2f(lbop2 { lbop2::OR, {
-				make2f(lneg2 { beta }),
-				make2f(prop2 { ~direction, objective, threshold })
-			} }));
+			forall->add(neg(target));
 			/*
 			file test("ce.smt2", "w");
 			smlp::dump_smt2(test, dom);
@@ -303,18 +384,33 @@ optimize_EA(cmp_t direction,
 				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
-				results.emplace_back(T, candidate);
-				if (is_less(direction))
-					obj_range.hi = T;
-				else
-					obj_range.lo = T;
+				results.emplace_back(T, move(exists), candidate);
+				obj_range.reply(is_less(direction) ? -1 : +1);
 				break;
 			}
 			auto &counter_example = a.get<sat>()->model;
-			counter_examples.emplace_back(T, counter_example);
-			exists->add(make2f(lneg2 { theta({ delta }, counter_example) }));
+			/* let's not keep the forall solver around */
+			counter_examples.emplace_back(T, nullptr, counter_example);
+			exists->add(neg(theta({ delta }, counter_example)));
 		}
 	}
+	const char *contained = nullptr;
+	switch (obj_range.is_contained()) {
+	case res::YES: contained = "in"; break;
+	case res::NO: contained = "out"; break;
+	case res::MAYBE: contained = "maybe"; break;
+	}
+	assert(contained);
+	str ls, hs;
+	if (const kay::Q *l = obj_range.lo())
+		ls = l->get_str();
+	else
+		ls = "";
+	if (const kay::Q *h = obj_range.hi())
+		hs = h->get_str();
+	else
+		hs = "";
+	printf("u,%s,%s,%s\n", ls.c_str(), hs.c_str(), contained);
 
 	return results;
 }
@@ -350,6 +446,9 @@ static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 # define USAGE "DOMAIN EXPR"
 #endif
 
+#define DEF_DELTA	"0"
+#define DEF_MAX_PREC	"0.05"
+
 [[noreturn]]
 static void usage(const char *program_name, int exit_code)
 {
@@ -374,29 +473,37 @@ Options [defaults]:\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
-  -d DELTA     increase radius around counter-examples by factor (1+DELTA) [0]\n\
+               - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA\n\
+  -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by\n\
+               the constant DELTA if the radius is zero [" DEF_DELTA "]\n\
   -e ETA       additional ETA constraints restricting only candidates, can be\n\
                given multiple times, the conjunction of all is used [true]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
-  -i           use interval evaluation (only when CNST is given) [no]\n\
+  -i SUBDIVS   use interval evaluation (only when CNST is given) with SUBDIVS\n\
+               subdivision [no]\n\
   -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
                meaningful for NNs) [none]\n\
   -p           dump the expression in Polish notation to stdout [no]\n\
-  -P PREC      maximum precision to obtain the optimization result for [0.05]\n\
+  -P PREC      maximum precision to obtain the optimization result for [" DEF_MAX_PREC "]\n\
   -Q QUERY     answer a query about the problem; supported QUERY:\n\
                - vars: list all variables\n\
   -r           re-cast bounded integer variables as reals with equality\n\
-               constraints\n\
-  -R LO,HI     optimize threshold in the interval [LO,HI] [0,1]\n\
+               constraints (requires -C bnds-dom); cvc5 >= 1.0.1 requires this\n\
+               option when integer variables are present\n\
+  -R LO,HI     optimize threshold in the interval [LO,HI] [interval-evaluation\n\
+               of the LHS]\n\
   -s           dump the problem in SMT-LIB2 format to stdout [no]\n\
   -S EXT-CMD   invoke external SMT solver instead of the built-in one via\n\
                'SHELL -c EXT-CMD' where SHELL is taken from the environment or\n\
                'sh' if that variable is not set []\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
+  -T THRESHS   instead of on an interval perform binary search among the\n\
+               thresholds in the comma-separated list THRESHS; overrides -R and\n\
+               -P\n\
   -V           display version information\n\
 \n\
 The DOMAIN is a text file containing the bounds for all variables in the\n\
@@ -510,7 +617,113 @@ static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
 	fprintf(f, "\n");
 }
 
+static ival get_obj_range(const char *obj_range_s,
+                          const domain &dom, const sptr<term2> &obj)
+{
+	ival obj_range;
+	if (obj_range_s) {
+		using kay::from_chars;
+		const char *end = obj_range_s + strlen(obj_range_s);
+		auto r = from_chars(obj_range_s, end, obj_range.lo);
+		bool ok = r.ec == std::errc {} && *r.ptr == ',';
+		if (ok) {
+			r = from_chars(r.ptr+1, end, obj_range.hi);
+			ok &= r.ec == std::errc {} && !*r.ptr;
+		}
+		if (!ok)
+			DIE(1,"error: cannot parse argument '%s' "
+			      "to '-R' as a pair of rational numbers\n",
+			      obj_range_s);
+		fprintf(stderr, "got objective range from -R: [%s,%s]\n",
+		        obj_range.lo.get_str().c_str(),
+		        obj_range.hi.get_str().c_str());
+		if (obj_range.lo > obj_range.hi)
+			fprintf(stderr, "warning: empty objective range\n");
+	} else {
+		auto lh = dbl_interval_eval(dom, obj);
+		if (!lh)
+			DIE(1,"error: domain is empty\n");
+		fprintf(stderr, "approximated objective range: [%g,%g], "
+		                "use -R to specify it manually\n",
+		        lh->first, lh->second);
+		if (!isfinite(lh->first) || !isfinite(lh->second))
+			DIE(1,"error: optimization over an unbounded "
+			      "range is not supported\n");
+		obj_range.lo = kay::Q(lh->first);
+		obj_range.hi = kay::Q(lh->second);
+	}
+	return obj_range;
+}
+
+static cmp_t parse_op(const std::string_view &s)
+{
+	for (size_t c=0; c<ARRAY_SIZE(cmp_s); c++)
+		if (cmp_s[c] == s)
+			return (cmp_t)c;
+	DIE(1,"error: OP '%.*s' unknown\n",(int)s.length(), s.data());
+}
+
 interruptible *interruptible::is_active;
+
+template <typename T>
+static bool from_string(const char *s, T &v)
+{
+	using std::from_chars;
+	using kay::from_chars;
+	auto [end,ec] = from_chars(s, s + strlen(s), v);
+	return !*end && ec == std::errc {};
+}
+
+sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals)
+{
+	if (bnds_dom)
+		for (auto it = begin(input_bounds); it != end(input_bounds);) {
+			component *c = dom[it->first];
+			assert(c);
+			if (c->type == component::REAL && c->range.get<entire>()) {
+				c->range = it->second;
+				it = input_bounds.erase(it);
+			} else {
+				++it;
+			}
+		}
+
+	if (inject_reals) {
+		assert(bnds_dom || empty(input_bounds));
+		/* First convert all int-components that are unbounded in the
+		 * domain to lists where we have bounds; do not remove the
+		 * in_bnds constraints as they are useful for some solvers
+		 * (like Z3, which falls back to a slow method with mixed reals
+		 * and integers). */
+		for (const auto &[n,i] : input_bounds) {
+			component *c = dom[n];
+			assert(c);
+			if (c->type != component::INT)
+				continue;
+			if (!c->range.get<entire>())
+				continue;
+			list l;
+			using namespace kay;
+			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
+				l.values.emplace_back(z);
+			c->range = move(l);
+		}
+		/* Next, convert all lists to real */
+		for (auto &[v,c] : dom)
+			if (c.range.get<list>())
+				c.type = component::REAL;
+	}
+
+	vec<sptr<form2>> c;
+	for (const auto &[n,i] : input_bounds) {
+		sptr<term2> v = make2t(name { n });
+		c.emplace_back(conj({
+			make2f(prop2 { GE, v, make2t(cnst2 { i.lo }) }),
+			make2f(prop2 { LE, v, make2t(cnst2 { i.hi }) }),
+		}));
+	}
+	return conj(move(c));
+}
 
 int main(int argc, char **argv)
 {
@@ -522,20 +735,27 @@ int main(int argc, char **argv)
 	bool             infix         = true;
 	bool             python_compat = false;
 	bool             inject_reals  = false;
+	bool             io_bnds_dom   = false;
 	int              timeout       = 0;
 	bool             clamp_inputs  = false;
 	const char      *out_bounds    = nullptr;
-	const char      *max_prec      = "0.05";
+	const char      *max_prec_s    = DEF_MAX_PREC;
 	vec<sptr<form2>> alpha_conj    = {};
 	vec<sptr<form2>> beta_conj     = {};
 	vec<sptr<form2>> eta_conj      = {};
-	const char      *delta_s       = "0";
-	ival             obj_range     = { 0, 1 };
+	const char      *delta_s       = DEF_DELTA;
+	const char      *obj_range_s   = nullptr;
+	char            *threshs_s     = nullptr;
 	vec<strview>     queries;
+
+	/* record args (before potential reordering) to log to trace later */
+	vec<str> args;
+	for (int i=0; i<argc; i++)
+		args.emplace_back(argv[i]);
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:cC:d:e:F:hiI:nO:pP:Q:rR:sS:t:V")) != -1;)
+	                            ":1a:b:cC:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -544,9 +764,11 @@ int main(int argc, char **argv)
 		case 'C':
 			if (optarg == "python"sv)
 				python_compat = true;
+			else if (optarg == "bnds-dom"sv)
+				io_bnds_dom = true;
 			else
 				DIE(1,"error: option '-C' only supports "
-				      "'python'\n");
+				      "'python', 'bnds-dom'\n");
 			break;
 		case 'd': delta_s = optarg; break;
 		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -560,27 +782,23 @@ int main(int argc, char **argv)
 				      "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
-		case 'i': intervals = true; break;
+		case 'i': {
+			if (from_string(optarg, intervals))
+				break;
+			DIE(1,"error: SUBDIVS argument to '-i' must be numeric\n");
+		}
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
 		case 'p': dump_pe = true; break;
-		case 'P': max_prec = optarg; break;
+		case 'P': max_prec_s = optarg; break;
 		case 'Q': queries.push_back(optarg); break;
 		case 'r': inject_reals = true; break;
-		case 'R': {
-			char *comma = strchr(optarg, ',');
-			if (!comma || !comma[1])
-				DIE(1,"error: '-R' expects two comma-separated "
-				      "parameters, got: '%s'",optarg);
-			*comma = '\0';
-			obj_range.lo = kay::Q_from_str(optarg);
-			obj_range.hi = kay::Q_from_str(comma+1);
-			break;
-		}
+		case 'R': obj_range_s = optarg; break;
 		case 'O': out_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 'S': ext_solver_cmd = optarg; break;
 		case 't': timeout = atoi(optarg); break;
+		case 'T': threshs_s = optarg; break;
 		case 'V': version_info(); exit(0);
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
 		              optopt);
@@ -614,43 +832,29 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
+	if (inject_reals && !(io_bnds_dom || empty(pp.input_bounds)))
+		DIE(1,"\
+error: -r requires -C bnds-dom: re-casting integers as reals based on IO-BOUNDS\n\
+implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
+	sptr<form2> alpha = pp.interpret_input_bounds(io_bnds_dom, inject_reals);
+
 	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
 
-	if (inject_reals)
-		for (const auto &[n,i] : in_bnds) {
-			component *c = dom[n];
-			assert(c);
-			if (c->type != component::INT)
-				continue;
-			if (!c->range.get<entire>())
-				continue;
-			list l;
-			using namespace kay;
-			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
-				l.values.emplace_back(z);
-			c->range = move(l);
-			c->type = component::REAL;
-		}
-
-	for (const auto &[n,i] : in_bnds) {
-		sptr<term2> v = make2t(name { n });
-		alpha_conj.emplace_back(make2f(lbop2 { lbop2::AND, {
-			make2f(prop2 { GE, v, make2t(cnst2 { i.lo }) }),
-			make2f(prop2 { LE, v, make2t(cnst2 { i.hi }) }),
-		} }));
-	}
-	sptr<form2> alpha = make2f(lbop2 { lbop2::AND, move(alpha_conj) });
-	dump_smt2_line(stderr, "alpha:", alpha);
+	alpha_conj.emplace_back(move(alpha));
+	alpha = conj(move(alpha_conj));
+	dump_smt2_line(stderr, "alpha: ", alpha);
 	alpha = subst(alpha, funs);
 
-	sptr<form2> beta = make2f(lbop2 { lbop2::AND, move(beta_conj) });
+	sptr<form2> beta = conj(move(beta_conj));
 	dump_smt2_line(stderr, "beta: ", beta);
 	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
-	eta = make2f(lbop2 { lbop2::AND, move(eta_conj) });
+	eta = conj(move(eta_conj));
 	dump_smt2_line(stderr, "eta: ", eta);
 	eta = subst(eta, funs);
+
+	lhs = subst(lhs, funs);
 
 	fprintf(stderr, "domain:\n");
 	smlp::dump_smt2(stderr, dom);
@@ -670,29 +874,28 @@ int main(int argc, char **argv)
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	result ood = solve_exists(dom, make2f(lbop2 { lbop2::AND, {
-		alpha,
-		make2f(lneg2 { pc })
-	} }));
+	fprintf(stderr, "checking for out-of-domain application of partial "
+	                "functions: (and alpha (not ");
+	smlp::dump_smt2(stderr, *pc);
+	fprintf(stderr, "))...\n");
+	fflush(stderr);
+	result ood = solve_exists(dom, conj({ alpha, neg(pc) }));
 	if (const sat *s = ood.get<sat>()) {
 		fprintf(stderr,
 		        "error: ALPHA and DOMAIN constraints do not imply that "
 		        "all function parameters are inside the respective "
 		        "function's domain, e.g.:\n");
 		print_model(stderr, s->model, 2);
-		DIE(4, "");
-	}
+		DIE(4,"");
+	} else if (const unknown *u = ood.get<unknown>())
+		DIE(2,"error deciding out-of-domain condition: %s\n",
+		      u->reason.c_str());
+	fprintf(stderr, "out-of-domain condition is false\n");
 
 	/* find out about the OP comparison operation */
-	size_t c;
-	for (c=0; c<ARRAY_SIZE(cmp_s); c++)
-		if (std::string_view(cmp_s[c]) == argv[optind])
-			break;
-	if (c == ARRAY_SIZE(cmp_s))
-		DIE(1,"OP '%s' unknown\n",argv[optind]);
-	optind++;
+	cmp_t c = parse_op(argv[optind++]);
 
-	/* hint for the solver: non-linear real arithmetic, potentially also
+	/* hint for the solver: (non-)linear real arithmetic, potentially also
 	 * with integers */
 	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
 
@@ -700,17 +903,22 @@ int main(int argc, char **argv)
 		if (*beta != *true2)
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
-		/* interpret the CNST on the right hand side */
-		sptr<term2> rhs = make2t(cnst2 { kay::Q_from_str(argv[optind]) });
+		if (obj_range_s)
+			fprintf(stderr, "note: objective range specification "
+			                "-R is unused when CNST is given\n");
 
-		/* the problem consists of domain and the (EXPR OP CNST) constraint */
+		/* interpret the CNST on the right hand side */
+		kay::Q cnst;
+		if (!from_string(argv[optind], cnst))
+			DIE(1,"CNST must be a numeric constant\n");
+		fprintf(stderr, "cnst: %s\n", cnst.get_str().c_str());
+		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
+
+		/* the problem consists of domain and the eta, alpha and
+		 * (EXPR OP CNST) constraints */
 		problem p = {
 			move(dom),
-			lbop2 { lbop2::AND, {
-				eta,
-				alpha,
-				make2f(prop2 { (cmp_t)c, lhs, rhs, }) }
-			},
+			conj({ eta, alpha, make2f(prop2 { c, lhs, rhs, }) }),
 		};
 
 		/* optionally dump the smt2 representation of the problem */
@@ -722,11 +930,11 @@ int main(int argc, char **argv)
 			alarm(timeout);
 		}
 
-		signal(SIGINT, sigint_handler);
+		// signal(SIGINT, sigint_handler);
 
 		/* optionally solve the problem */
 		if (solve)
-			solve_exists(p.dom, make2f(p.p), logic.c_str()).match(
+			solve_exists(p.dom, p.p, logic.c_str()).match(
 			[&,lhs=lhs](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
 				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
@@ -743,29 +951,65 @@ int main(int argc, char **argv)
 			}
 			);
 	} else if (solve) {
-		if (intervals)
-			DIE(1,"error: -i is not supported for optimization\n");
+		uptr<search_base> obj_range;
+		if (threshs_s) {
+			vec<kay::Q> vs;
+			for (char *s = NULL, *t = strtok_r(threshs_s, ",", &s);
+			     t; t = strtok_r(NULL, ",", &s)) {
+				kay::Q v;
+				if (!from_string(t, v))
+					DIE(1,"error: cannot parse '%s' in "
+					      "THRESHS as a rational constant\n",
+					      t);
+				vs.emplace_back(move(v));
+			}
+			if (empty(vs))
+				DIE(1,"error: list THRESHS cannot be empty\n");
+			std::sort(begin(vs), end(vs));
+			vs.erase(std::unique(begin(vs), end(vs)), end(vs));
+			obj_range = std::make_unique<search_list>(move(vs));
+		} else {
+			kay::Q max_prec;
+			if (!from_string(max_prec_s, max_prec) || max_prec < 0)
+				DIE(1,"error: cannot parse MAX_PREC as a non-negative "
+				      "rational constant: '%s'\n", max_prec_s);
 
-		kay::Q max_p = kay::Q_from_str(str(max_prec).data());
-		vec<smlp_result> r = optimize_EA((cmp_t)c, dom, lhs,
-		                                 alpha, beta, eta,
-		                                 kay::Q_from_str(str(delta_s).data()),
-		                                 obj_range, max_p,
-		                                 theta, logic.c_str());
+			ival range = get_obj_range(obj_range_s, dom, lhs);
+			if (max_prec)
+				obj_range = std::make_unique<bounded_search_ival>(range, max_prec);
+			else
+				obj_range = std::make_unique<search_ival>(range);
+		}
+
+		kay::Q delta;
+		if (!from_string(delta_s, delta) || delta < 0)
+			DIE(1,"error: cannot parse DELTA as a positive "
+			      "rational constant: '%s'\n", delta_s);
+
+		printf("d,%s\n", std::filesystem::current_path().c_str());
+		printf("c,%zu,", size(args));
+		for (const str &s : args)
+			fwrite(s.c_str(), 1, s.length() + 1, stdout);
+		printf("\n");
+
+		vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
+		                                 *obj_range, theta, logic.c_str());
 		if (empty(r)) {
 			fprintf(stderr,
 			        "no solution for objective in theta in "
 			        "[%s, %s] ~ [%f, %f]\n",
-			        obj_range.lo.get_str().c_str(),
-			        obj_range.hi.get_str().c_str(),
-			        obj_range.lo.get_d(), obj_range.hi.get_d());
+			        obj_range->lo()->get_str().c_str(),
+			        obj_range->hi()->get_str().c_str(),
+			        obj_range->lo()->get_d(),
+			        obj_range->hi()->get_d());
 		} else {
 			fprintf(stderr,
 			        "%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
 			        is_less((cmp_t)c) ? "min max" : "max min",
-			        obj_range.lo.get_str().c_str(),
-			        obj_range.hi.get_str().c_str(),
-			        obj_range.lo.get_d(), obj_range.hi.get_d());
+			        obj_range->lo()->get_str().c_str(),
+			        obj_range->hi()->get_str().c_str(),
+			        obj_range->lo()->get_d(),
+			        obj_range->hi()->get_d());
 			print_model(stderr, r.back().point, 2);
 			for (const auto &s : r) {
 				kay::Q c = s.center_value(lhs);

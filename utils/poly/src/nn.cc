@@ -43,7 +43,8 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
                            const char *out_bounds, bool clamp_inputs,
                            bool single_obj)
 {
-	iv::nn::common::model_fun2 mf2(gen_path, hdf5_path, spec_path, io_bounds);
+	kjson::json gen = iv::nn::common::json_parse(gen_path);
+	iv::nn::common::model_fun2 mf2(gen, hdf5_path, spec_path, io_bounds);
 
 	kjson::json io_bnds = iv::nn::common::json_parse(io_bounds);
 	vec<sptr<term2>> in_vars;
@@ -157,11 +158,16 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	sptr<term2> obj;
 	if (single_obj) {
 		/* apply mf2.objective: select right output(s) */
-		fprintf(stderr, "obj response idx: %zd\n", mf2.objective.idx[0]);
+		str obj_name = gen["objective"].get<std::string>();
+		fprintf(stderr, "obj '%s' response idx: %zd\n",
+		        obj_name.c_str(), mf2.objective.idx[0]);
+		assert(mf2.objective.type == smlp_response::SMLP_RESPONSE_ID);
 		ssize_t idx = mf2.objective.idx[0];
 		assert(idx >= 0);
 		assert((size_t)idx < size(out));
-		obj = out[idx];
+		// obj = out[idx];
+		assert(obj_name == out_names[idx]);
+		obj = make2t(name { move(obj_name) });
 
 		if (out_bounds)
 			obj = apply_scaler(mf2.objective_scaler(out_bounds),

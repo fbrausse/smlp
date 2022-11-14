@@ -9,11 +9,11 @@ cxx = meson.get_compiler('cpp')
 
 poly_deps = []
 foreach name : ['gmp']
-  poly_deps += dependency(name)
+  poly_deps += dependency(name, static: get_option('static'))
 endforeach
 
 z3 = get_option('z3')
-z3_dep = dependency('z3', required: z3)
+z3_dep = dependency('z3', required: z3, static: get_option('static'))
 poly_deps += z3_dep
 z3 = z3.disable_auto_if(not z3_dep.found())
 
@@ -32,9 +32,10 @@ flint_dep = cxx.find_library('flint',
 if flint_dep.found()
   config.set('KAY_USE_FLINT', 1)
   poly_deps += flint_dep
+  poly_deps += dependency('mpfr')
   message('using Flint for Z and Q')
 else
-  gmpxx_dep = dependency('gmpxx')
+  gmpxx_dep = dependency('gmpxx', static: get_option('static'))
   if gmpxx_dep.found() and cxx.check_header('gmpxx.h')
     config.set('KAY_USE_GMPXX', 1)
     poly_deps += gmpxx_dep
@@ -44,7 +45,10 @@ else
   endif
 endif
 
-add_project_arguments(['-ffp-contract=off', '-Wno-format-zero-length'], language: 'cpp')
+add_project_arguments([
+  '-ffp-contract=off',
+  '-Wno-format-zero-length',
+  '-Wno-unqualified-std-cast-call'], language: 'cpp')
 
 link_args = []
 if get_option('static')
@@ -55,6 +59,9 @@ endif
 # ------------------------
 keras_nn = get_option('keras-nn')
 
+# for some unknown reason have to pass -Dhdf5-prefix=/usr/local when
+# -Dstatic=true and hdf5.a is in /usr/local.
+# Also see <https://stackoverflow.com/a/63399769>.
 dep_libs = {
   'hdf5': {
     'libs_hdrs': {
@@ -63,7 +70,7 @@ dep_libs = {
       'hdf5_cpp': ['H5Cpp.h'],
     # 'hdf5_hl_cpp' : [],
     },
-    'extra': { 'required': keras_nn },
+    'extra': { 'required': keras_nn, 'static': get_option('static') },
   },
   'kay': {
     'libs_hdrs': { '': ['kay' / 'numbers.hh'] },
@@ -71,11 +78,11 @@ dep_libs = {
   },
   'kjson': {
     'libs_hdrs': { 'kjson': ['kjson.hh'], },
-    'extra': { 'required': keras_nn },
+    'extra': { 'required': keras_nn, 'static': get_option('static') },
   },
   'iv': {
     'libs_hdrs': { 'iv': [] },
-    'extra': { 'required': keras_nn },
+    'extra': { 'required': keras_nn, 'static': get_option('static') },
   }
 }
 dep_have = {}
@@ -142,6 +149,7 @@ hdrs = [
 	'sexpr-detail.hh',
 	'solver.hh',
 	'ext-solver.hh',
+	'ival-solver.hh',
 ]
 srcs = [
 	'smlp.cc',
@@ -153,6 +161,7 @@ srcs = [
 	'poly.cc',
 	'sexpr.cc',
 	'ext-solver.cc',
+	'ival-solver.cc',
 ]
 
 if z3.disabled()
@@ -170,9 +179,7 @@ else
   message('keras-nn support enabled')
   config.set('SMLP_ENABLE_KERAS_NN', 1)
   hdrs += 'nn.hh'
-  hdrs += 'ival-solver.hh'
   srcs += 'nn.cc'
-  srcs += 'ival-solver.cc'
 endif
 
 # not yet: need a library first
