@@ -642,3 +642,20 @@ sptr<form2> smlp::to_nnf(const sptr<form2> &f)
 	hmap<void *,sptr<form2>> p, n;
 	return ::to_nnf(f, true, p, n);
 }
+
+sptr<form2> smlp::all_eq(opt<kay::Q> delta, const hmap<str,sptr<term2>> &m)
+{
+	sptr<term2> d;
+	if (delta && *delta) {
+		assert(*delta > 0);
+		d = make2t(cnst2 { move(*delta) });
+	}
+	vec<sptr<form2>> c;
+	for (const auto &[n,e] : m) {
+		sptr<term2> nm = make2t(name { n });
+		c.emplace_back(make2f(d
+			? prop2 { LE, abs(make2t(bop2 { bop::SUB, nm, e })), d }
+			: prop2 { EQ, nm, e }));
+	}
+	return conj(move(c));
+}

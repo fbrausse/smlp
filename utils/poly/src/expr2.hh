@@ -202,4 +202,6 @@ sptr<form2> simplify(const sptr<form2> &t);
  * the conditions of ite2 terms are not touched. */
 sptr<form2> to_nnf(const sptr<form2> &f);
 
+sptr<form2> all_eq(opt<kay::Q> delta, const hmap<str,sptr<term2>> &m);
+
 }
