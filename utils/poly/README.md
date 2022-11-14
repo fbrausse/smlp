@@ -91,7 +91,7 @@ The following SMT solvers are known to work with smlp:
 | Solver | Version(s) | param `-S` | param `-I` |
 |--------|------------|------------|------------|
 | [Z3](https://github.com/Z3Prover/z3) | 4.8.12, 4.11.2 | `z3 -in` | not required |
-| [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) | 0.1.7 | `ksmt` | not required |
+| [ksmt](http://informatik.uni-trier.de/~brausse/ksmt) | 0.1.8 | `ksmt` | not required |
 | [Yices](http://yices.csl.sri.com) | 2.6.1 | `yices-smt2` | `yices-smt2 --incremental` |
 | [CVC4](https://cvc4.github.io) | 1.8 | `cvc4 -L smt2` | `cvc4 -L smt2 --incremental` |
 | [CVC5](https://cvc5.github.io) | 1.0.1 | `cvc5` | `cvc5 --incremental` |
