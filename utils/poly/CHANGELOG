@@ -1,3 +1,8 @@
+2022-11-15 poly-v0.6.2
+
+ * fix cause for segfault when the search finds that the threshold is out of
+   the bounds of the -T list
+
 2022-11-15 poly-v0.6.1
 
  * -C bnds-dom now affects integer variables as well
@@ -5,7 +10,6 @@
  * - encode unbounded domains properly for fallback solver
  * - critical points are not suitable for (dis-)equality constraints
  * - protect against handling interval domains for integers
-
 
 2022-11-15 poly-v0.6.0
 
