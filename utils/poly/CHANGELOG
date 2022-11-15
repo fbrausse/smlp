@@ -1,3 +1,15 @@
+2022-11-15 poly-v0.6.0
+
+ * code simplification and cleanup
+ * documentation of trace format and rationale behind it in readme
+ * move {id_theta => all_eq}() to public API
+ * add u, trace showing final range and contained info and c,/d, trace records
+ * generalize search range for GearOpt and add option -T THRESHS
+ * relax check on -Cbnds-dom for -r: input bounds empty -> fine
+ * ksmt-0.1.7 not supported (missing (get-model)), next version will be
+ * simplify and add check for Match() signature
+ * fix infix parser: x-y+z was parsed as x-(y+z)
+
 2022-11-08 poly-v0.5.0
 
  * fix for gmpxx build

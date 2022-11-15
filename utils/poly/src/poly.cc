@@ -13,7 +13,7 @@ using namespace smlp;
 namespace {
 struct Match {
 
-	/* Match could be a partial function (if . was at the end of the arguments).
+	/* Match could be a partial function (if . was on of the arguments).
 	 * This (conjunction) of constraints are required to be satisfied in
 	 * order for Match() to produce a value. */
 	vec<sptr<form2>> constraints;
