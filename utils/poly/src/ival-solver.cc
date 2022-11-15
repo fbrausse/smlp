@@ -331,13 +331,17 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		const domain &dom;
 		vec<sptr<form2>> grad_eq_0 = {};
 		bool deriv_exists = true;
+		bool only_order_props = true;
 
 		void operator()(const sptr<form2> &f)
 		{
-			if (!deriv_exists)
+			if (!deriv_exists || !only_order_props)
 				return;
 			f->match(
 			[&](const prop2 &p) {
+				only_order_props &= is_order(p.cmp);
+				if (!only_order_props)
+					return;
 				sptr<term2> diff = make2t(bop2 {
 					bop::SUB,
 					p.left,
@@ -367,9 +371,12 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		}
 	} check { dom, };
 	check(orig);
-	fprintf(stderr, "derivatives exist: %d\n", check.deriv_exists);
+	fprintf(stderr, "derivatives exist: %d, only ordered comparisons: %d\n",
+	        check.deriv_exists, check.only_order_props);
 	if (!check.deriv_exists)
 		return unknown { "derivative may not be defined everywhere" };
+	if (!check.only_order_props)
+		return unknown { "critical points cannot solve (dis-)equality constraints" };
 
 	/* find all critical points of all functions in the problem */
 	sptr<form2> f = conj(move(check.grad_eq_0));
