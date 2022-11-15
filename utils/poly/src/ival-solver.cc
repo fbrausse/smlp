@@ -127,8 +127,11 @@ static res eval(const hmap<str,dbl::ival> &dom, const form2 &f, hmap<void *,dbl:
 {
 	return f.match(
 	[&](const prop2 &p) {
-		dbl::ival v = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);
-		// std::cerr << "eval: " << v;
+		dbl::ival v = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);/*
+		size_t hh = size(dom);
+		for (const auto &[n,v] : dom)
+			hh = (hh << 1) ^ std::hash<str>{}(n);
+		std::cerr << "eval " << hh << cmp_s[p.cmp] << ": " << v;*/
 		res r;
 		switch (p.cmp) {
 		case LT: r = hi(v) < 0 ? YES : lo(v) >= 0 ? NO : MAYBE; break;
@@ -231,6 +234,14 @@ static res eval(const hmap<str,dbl::ival> &dom, const form2 &f)
 	return eval(dom, f, m);
 }
 
+static bool is_bounded(const hmap<str,dbl::ival> &dom)
+{
+	for (const auto &[n,v] : dom)
+		if (!isbounded(v))
+			return false;
+	return true;
+}
+
 static res eval_products(const vec<pair<str,vec<dbl::ival>>> &p,
                          hmap<str,dbl::ival> &q,
                          opt<hmap<str,dbl::ival>> &sat_model,
@@ -242,7 +253,9 @@ static res eval_products(const vec<pair<str,vec<dbl::ival>>> &p,
 	forall_products(p, q, [&](const hmap<str,dbl::ival> &dom) {
 		if (r == YES)
 			return;
-		res s = eval(dom, conj);
+		res s = eval(dom, conj);/*
+		std::cerr << "subdiv on " << (is_bounded(dom) ? "bounded" : "unbounded")
+		          << " domain -> " << s << "\n";*/
 		switch (s.v) {
 		case res::YES:
 			if (!sat_model)
@@ -272,8 +285,12 @@ static sptr<form2> in_domain(const hmap<str,dbl::ival> &dom)
 	vec<sptr<form2>> c;
 	for (const auto &[var,k] : dom) {
 		sptr<term2> v = make2t(name { var });
-		c.emplace_back(make2f(prop2 { GE, v, make2t(cnst2 { kay::Q(lo(k)) }) }));
-		c.emplace_back(make2f(prop2 { LE, v, make2t(cnst2 { kay::Q(hi(k)) }) }));
+		assert(!std::isnan(lo(k)));
+		assert(!std::isnan(hi(k)));
+		if (std::isfinite(lo(k)))
+			c.emplace_back(make2f(prop2 { GE, v, make2t(cnst2 { kay::Q(lo(k)) }) }));
+		if (std::isfinite(hi(k)))
+			c.emplace_back(make2f(prop2 { LE, v, make2t(cnst2 { kay::Q(hi(k)) }) }));
 	}
 	return conj(move(c));
 }
