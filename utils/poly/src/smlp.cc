@@ -251,8 +251,8 @@ struct search_list : search_base {
 		m = l + (r - l) / 2;
 	}
 
-	const kay::Q * lo() const override { return empty(values) ? nullptr : &values[l]; }
-	const kay::Q * hi() const override { return empty(values) ? nullptr : &values[l <= r ? r : l]; }
+	const kay::Q * lo() const override { return empty(values) ? nullptr : &values[std::clamp<ssize_t>(l, 0, size(values)-1)]; }
+	const kay::Q * hi() const override { return empty(values) ? nullptr : &values[std::clamp<ssize_t>(l <= r ? r : l, 0, size(values)-1)]; }
 };
 
 }
