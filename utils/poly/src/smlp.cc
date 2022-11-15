@@ -670,18 +670,6 @@ static bool from_string(const char *s, T &v)
 
 sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals)
 {
-	if (bnds_dom)
-		for (auto it = begin(input_bounds); it != end(input_bounds);) {
-			component *c = dom[it->first];
-			assert(c);
-			if (c->type == component::REAL && c->range.get<entire>()) {
-				c->range = it->second;
-				it = input_bounds.erase(it);
-			} else {
-				++it;
-			}
-		}
-
 	if (inject_reals) {
 		assert(bnds_dom || empty(input_bounds));
 		/* First convert all int-components that are unbounded in the
@@ -707,6 +695,18 @@ sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals
 			if (c.range.get<list>())
 				c.type = component::REAL;
 	}
+
+	if (bnds_dom)
+		for (auto it = begin(input_bounds); it != end(input_bounds);) {
+			component *c = dom[it->first];
+			assert(c);
+			if (c->range.get<entire>()) {
+				c->range = it->second;
+				it = input_bounds.erase(it);
+			} else {
+				++it;
+			}
+		}
 
 	vec<sptr<form2>> c;
 	for (const auto &[n,i] : input_bounds) {
