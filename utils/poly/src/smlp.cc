@@ -97,7 +97,7 @@ uptr<solver> mk_solver0(bool incremental, const char *logic)
 }
 
 template <typename T>
-str smt2_logic_str(const domain &dom, const sptr<T> &e)
+static str smt2_logic_str(const domain &dom, const sptr<T> &e)
 {
 	bool reals = false;
 	bool ints = false;
@@ -158,20 +158,15 @@ struct smlp_result {
 
 enum class res { MAYBE = -1, NO, YES };
 
-struct search_rng {
+struct search_base {
 
-	virtual ~search_rng() = default;
+	res contained;
+
+	search_base(res contained) : contained(contained) {}
+	virtual ~search_base() = default;
 	virtual bool has_next() const = 0;
 	virtual kay::Q query() const = 0;
 	virtual void reply(int order) = 0;
-	virtual res is_contained() const = 0;
-};
-
-struct search_base : search_rng {
-
-	res contained = res::MAYBE;
-
-	res is_contained() const override { return contained; }
 	virtual const kay::Q * lo() const = 0;
 	virtual const kay::Q * hi() const = 0;
 };
@@ -181,11 +176,9 @@ struct search_ival : search_base {
 	ival v;
 
 	explicit search_ival(ival v)
-	: v(move(v))
-	{
-		if (this->v.lo > this->v.hi)
-			contained = res::NO;
-	}
+	: search_base { v.lo > v.hi ? res::NO : res::MAYBE }
+	, v(move(v))
+	{}
 
 	bool has_next() const override
 	{
@@ -212,13 +205,21 @@ struct search_ival : search_base {
 struct bounded_search_ival : search_ival {
 
 	kay::Q prec;
+	bool any;
 
 	explicit bounded_search_ival(ival v, kay::Q prec)
 	: search_ival { move(v) }
 	, prec(move(prec))
+	, any(false)
 	{ assert(this->prec > 0); }
 
-	bool has_next() const override { return length(v) > prec; }
+	bool has_next() const override { return !any || length(v) > prec; }
+
+	void reply(int order) override
+	{
+		any = true;
+		search_ival::reply(order);
+	}
 };
 
 struct search_list : search_base {
@@ -227,14 +228,13 @@ struct search_list : search_base {
 	ssize_t l, r, m;
 
 	explicit search_list(vec<kay::Q> values)
-	: values(move(values))
+	: search_base { empty(values) ? res::NO : res::MAYBE }
+	, values(move(values))
 	, l(0)
 	, r(size(this->values) - 1)
 	, m(l + (r - l) / 2)
 	{
 		assert(std::is_sorted(begin(this->values), end(this->values)));
-		if (empty(this->values))
-			contained = res::NO;
 	}
 
 	bool has_next() const override { return l <= r; }
@@ -395,22 +395,16 @@ optimize_EA(cmp_t direction,
 		}
 	}
 	const char *contained = nullptr;
-	switch (obj_range.is_contained()) {
+	switch (obj_range.contained) {
 	case res::YES: contained = "in"; break;
 	case res::NO: contained = "out"; break;
 	case res::MAYBE: contained = "maybe"; break;
 	}
 	assert(contained);
-	str ls, hs;
-	if (const kay::Q *l = obj_range.lo())
-		ls = l->get_str();
-	else
-		ls = "";
-	if (const kay::Q *h = obj_range.hi())
-		hs = h->get_str();
-	else
-		hs = "";
-	printf("u,%s,%s,%s\n", ls.c_str(), hs.c_str(), contained);
+	auto Q_str = [](const kay::Q *l) { return l ? l->get_str() : ""; };
+	printf("u,%s,%s,%s\n",
+	       Q_str(obj_range.lo()).c_str(), Q_str(obj_range.hi()).c_str(),
+	       contained);
 
 	return results;
 }
@@ -725,6 +719,40 @@ sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals
 	return conj(move(c));
 }
 
+static uptr<search_base>
+parse_search_range(char *threshs_s, const char *max_prec_s,
+                   const char *obj_range_s, const domain &dom,
+                   const sptr<term2> &lhs)
+{
+	if (threshs_s) {
+		vec<kay::Q> vs;
+		for (char *s = NULL, *t = strtok_r(threshs_s, ",", &s);
+		     t; t = strtok_r(NULL, ",", &s)) {
+			kay::Q v;
+			if (!from_string(t, v))
+				DIE(1,"error: cannot parse '%s' in "
+				      "THRESHS as a rational constant\n",
+				      t);
+			vs.emplace_back(move(v));
+		}
+		if (empty(vs))
+			DIE(1,"error: list THRESHS cannot be empty\n");
+		std::sort(begin(vs), end(vs));
+		vs.erase(std::unique(begin(vs), end(vs)), end(vs));
+		return std::make_unique<search_list>(move(vs));
+	} else {
+		kay::Q max_prec;
+		if (!from_string(max_prec_s, max_prec) || max_prec < 0)
+			DIE(1,"error: cannot parse MAX_PREC as a non-negative "
+			      "rational constant: '%s'\n", max_prec_s);
+
+		ival range = get_obj_range(obj_range_s, dom, lhs);
+		return max_prec
+		     ? std::make_unique<bounded_search_ival>(range, max_prec)
+		     : std::make_unique<search_ival>(range);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
@@ -951,35 +979,8 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			}
 			);
 	} else if (solve) {
-		uptr<search_base> obj_range;
-		if (threshs_s) {
-			vec<kay::Q> vs;
-			for (char *s = NULL, *t = strtok_r(threshs_s, ",", &s);
-			     t; t = strtok_r(NULL, ",", &s)) {
-				kay::Q v;
-				if (!from_string(t, v))
-					DIE(1,"error: cannot parse '%s' in "
-					      "THRESHS as a rational constant\n",
-					      t);
-				vs.emplace_back(move(v));
-			}
-			if (empty(vs))
-				DIE(1,"error: list THRESHS cannot be empty\n");
-			std::sort(begin(vs), end(vs));
-			vs.erase(std::unique(begin(vs), end(vs)), end(vs));
-			obj_range = std::make_unique<search_list>(move(vs));
-		} else {
-			kay::Q max_prec;
-			if (!from_string(max_prec_s, max_prec) || max_prec < 0)
-				DIE(1,"error: cannot parse MAX_PREC as a non-negative "
-				      "rational constant: '%s'\n", max_prec_s);
-
-			ival range = get_obj_range(obj_range_s, dom, lhs);
-			if (max_prec)
-				obj_range = std::make_unique<bounded_search_ival>(range, max_prec);
-			else
-				obj_range = std::make_unique<search_ival>(range);
-		}
+		uptr<search_base> obj_range = parse_search_range(
+			threshs_s, max_prec_s, obj_range_s, dom, lhs);
 
 		kay::Q delta;
 		if (!from_string(delta_s, delta) || delta < 0)

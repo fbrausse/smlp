@@ -312,7 +312,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 	 * so, produce a formula stating that all should be equal to zero */
 	struct {
 		const domain &dom;
-		lbop2 grad_eq_0 = { lbop2::AND, {} };
+		vec<sptr<form2>> grad_eq_0 = {};
 		bool deriv_exists = true;
 
 		void operator()(const sptr<form2> &f)
@@ -332,7 +332,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 						deriv_exists = false;
 						return;
 					}
-					grad_eq_0.args.push_back(make2f(prop2 {
+					grad_eq_0.push_back(make2f(prop2 {
 						EQ,
 						d,
 						zero
@@ -355,7 +355,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		return unknown { "derivative not defined everywhere" };
 
 	/* find all critical points of all functions in the problem */
-	sptr<form2> f = make2f(move(check.grad_eq_0));
+	sptr<form2> f = conj(move(check.grad_eq_0));
 	/* restrict domain to only used variables, required for
 	 * all_solutions() to terminate */
 	domain sdom;

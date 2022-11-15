@@ -18,9 +18,11 @@ struct Match {
 	 * order for Match() to produce a value. */
 	vec<sptr<form2>> constraints;
 
+	/* Match(expr, cnst1, expr1, cnst2, expr2, [...], .) */
 	expr2s operator()(vec<expr2s> args)
 	{
 		assert(args.size() >= 2);
+		assert(args.size() % 2 == 0);
 		const sptr<term2> &var = *args.front().get<sptr<term2>>();
 		sptr<term2> r = move(*args.back().get<sptr<term2>>());
 		int k = args.size()-3;
