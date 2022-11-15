@@ -161,12 +161,12 @@ struct infix_parser {
 	{
 		// fprintf(stderr, "mul: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
 		expr r = low();
-		if (t == SPECIAL && (tok == "*")) {
+		while (t == SPECIAL && (tok == "*")) {
 			next();
 			r = bop {
 				bop::MUL,
 				make1e(move(r)),
-				make1e(mul()),
+				make1e(low()),
 			};
 		}
 		return r;
@@ -177,13 +177,13 @@ struct infix_parser {
 		// fprintf(stderr, "add: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
 		expr r = mul();
 		// fprintf(stderr, "add2: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
-		if (t == SPECIAL && (tok == "+" || tok == "-")) {
+		while (t == SPECIAL && (tok == "+" || tok == "-")) {
 			decltype(bop::op) op = tok == "+" ? bop::ADD : bop::SUB;
 			next();
 			r = bop {
 				op,
 				make1e(move(r)),
-				make1e(add())
+				make1e(mul())
 			};
 		}
 		return r;

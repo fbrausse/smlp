@@ -352,7 +352,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 	check(orig);
 	fprintf(stderr, "derivatives exist: %d\n", check.deriv_exists);
 	if (!check.deriv_exists)
-		return unknown { "derivative not defined everywhere" };
+		return unknown { "derivative may not be defined everywhere" };
 
 	/* find all critical points of all functions in the problem */
 	sptr<form2> f = conj(move(check.grad_eq_0));
@@ -372,7 +372,11 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 			[](const ival &i) { return make2t(cnst2 { mid(i) }); }
 			));
 		}
-
+/*
+	fprintf(stderr, "partial derivatives equal zero: ");
+	dump_smt2(stderr, *conj({ domain_constraints(sdom), f }), false);
+	fprintf(stderr, "\n");
+*/
 	opt<hmap<str,sptr<term2>>> sat_model;
 	auto eval = [&](const hmap<str,sptr<term2>> &dom) {
 		if (sat_model)

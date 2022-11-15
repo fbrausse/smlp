@@ -13,7 +13,7 @@ using namespace smlp;
 namespace {
 struct Match {
 
-	/* Match could be a partial function (if None was on of the arguments).
+	/* Match could be a partial function (if . was at the end of the arguments).
 	 * This (conjunction) of constraints are required to be satisfied in
 	 * order for Match() to produce a value. */
 	vec<sptr<form2>> constraints;
@@ -27,10 +27,10 @@ struct Match {
 		sptr<term2> r = move(*args.back().get<sptr<term2>>());
 		int k = args.size()-3;
 		if (!r) {
-			vec<sptr<form2>> disj;
+			vec<sptr<form2>> d;
 			for (int i=k; i >= 1; i-=2)
-				disj.emplace_back(make2f(prop2 { EQ, var, *args[i].get<sptr<term2>>() }));
-			constraints.emplace_back(make2f(lbop2 { lbop2::OR, move(disj) }));
+				d.emplace_back(make2f(prop2 { EQ, var, *args[i].get<sptr<term2>>() }));
+			constraints.emplace_back(disj(move(d)));
 			r = move(*args[k+1].get<sptr<term2>>());
 			k -= 2;
 		}
@@ -90,7 +90,7 @@ pre_problem smlp::parse_poly_problem(const char *simple_domain_path,
 		{},
 		{},
 		true2,
-		make2f(lbop2 { lbop2::AND, move(match.constraints) }),
+		conj(move(match.constraints)),
 		all_eq,
 	};
 }
