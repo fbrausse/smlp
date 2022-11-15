@@ -1,3 +1,12 @@
+2022-11-15 poly-v0.6.1
+
+ * -C bnds-dom now affects integer variables as well
+ * protection for ival-solver and critical-point solver:
+ * - encode unbounded domains properly for fallback solver
+ * - critical points are not suitable for (dis-)equality constraints
+ * - protect against handling interval domains for integers
+
+
 2022-11-15 poly-v0.6.0
 
  * code simplification and cleanup
