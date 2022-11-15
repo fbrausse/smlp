@@ -464,10 +464,18 @@ result ival_solver::check()
 			d.emplace_back(var, move(ivs));
 		},
 		[&,var=var](const ival &i) {
-			c.emplace(var, dbl::endpts {
-				lo(to_ival(i.lo)),
-				hi(to_ival(i.hi)),
-			});
+			switch (k.type) {
+			case component::INT:
+				DIE(1,"error: support for integer intervals is "
+				      "not implemented in interval-solver, yet. "
+				      "Use -r to convert them to reals.\n");
+			case component::REAL:
+				c.emplace(var, dbl::endpts {
+					lo(to_ival(i.lo)),
+					hi(to_ival(i.hi)),
+				});
+				break;
+			}
 		}
 		);
 
