@@ -877,7 +877,7 @@ int main(int argc, char **argv)
 		cmd += opts;
 		cmd += " \"$@\"";
 		vec<char *> args = { shell, c, cmd.data(), };
-		for (int i=0; i<argc; i++)
+		for (int i=0; i<=argc; i++)
 			args.push_back(argv[i]);
 		execvp(shell, args.data());
 		fprintf(stderr, "could not interpret envvar SMLP_OPTS (%s), ignoring...\n", strerror(errno));
