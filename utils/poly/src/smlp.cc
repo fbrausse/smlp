@@ -866,16 +866,15 @@ static void set_loglvl(char *arg)
 
 int main(int argc, char **argv)
 {
-	if (const char *opts = getenv("SMLP_OPTS")) {
+	if (const char *opts_c = getenv("SMLP_OPTS")) {
+		str opts = opts_c;
 		unsetenv("SMLP_OPTS");
 		char *shell = getenv("SHELL");
 		char sh[] = "sh";
 		if (!shell)
 			shell = sh;
 		char c[] = "-c";
-		str cmd = "exec \"$0\" ";
-		cmd += opts;
-		cmd += " \"$@\"";
+		str cmd = "exec \"$0\" " + opts + " \"$@\"";
 		vec<char *> args = { shell, c, cmd.data(), };
 		for (int i=0; i<=argc; i++)
 			args.push_back(argv[i]);
