@@ -238,6 +238,6 @@ struct module {
 #undef BODY
 };
 
-extern module mod_ext, mod_z3, mod_ival, mod_crit;
+extern module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn;
 
 } // end namespace smlp

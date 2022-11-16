@@ -73,16 +73,16 @@ bool module::vlog(loglvl l, const char *fmt, va_list ap) const
 }
 
 /*
-static module mod_nn   { "nn"  , CSI COL_FG   COL_BLUE    "m" };
-static module mod_poly { "poly", CSI COL_FG   COL_BLUE    "m" };
-static module mod_ex   { "cand", CSI COL_FG   COL_GREEN   "m" };
-static module mod_cex  { "coex", CSI COL_FG   COL_RED     "m" };
+static module mod_poly { "poly",          CSI COL_FG   COL_BLUE    "m" };
+static module mod_ex   { "cand",          CSI COL_FG   COL_GREEN   "m" };
+static module mod_cex  { "coex",          CSI COL_FG   COL_RED     "m" };
 */
-static module mod_prob { "prob", CSI COL_FG_B COL_BLACK   "m" };
-module smlp::mod_ival  { "ival", CSI COL_FG   COL_YELLOW  "m" };
-module smlp::mod_crit  { "crit", CSI COL_FG   COL_MAGENTA "m" };
-module smlp::mod_z3    { "z3"  , CSI COL_FG_B COL_BLUE    "m" };
-module smlp::mod_ext   { "ext" , CSI COL_FG   COL_CYAN    "m" };
+static module mod_prob { "prob", SGR_BOLD CSI COL_FG_B COL_BLACK   "m" };
+module smlp::mod_ival  { "ival",          CSI COL_FG   COL_YELLOW  "m" };
+module smlp::mod_crit  { "crit",          CSI COL_FG   COL_MAGENTA "m" };
+module smlp::mod_z3    { "z3"  ,          CSI COL_FG_B COL_BLUE    "m" };
+module smlp::mod_ext   { "ext" ,          CSI COL_FG   COL_CYAN    "m" };
+module smlp::mod_nn    { "nn"  ,          CSI COL_FG   COL_BLUE    "m" };
 
 namespace {
 
@@ -1055,8 +1055,8 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			DIE(1,"-b BETA is not supported when CNST is given\n");
 
 		if (obj_range_s)
-			fprintf(stderr, "note: objective range specification "
-			                "-R is unused when CNST is given\n");
+			mod_prob.warn("note: objective range specification "
+			              "-R is unused when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
 		kay::Q cnst;
