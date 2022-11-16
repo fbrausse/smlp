@@ -295,6 +295,17 @@ static sptr<form2> in_domain(const hmap<str,dbl::ival> &dom)
 	return conj(move(c));
 }
 
+static bool contains_ite(const sptr<term2> &t)
+{
+	return t->match(
+	[](const name &) { return false; },
+	[](const cnst2 &) { return false; },
+	[](const bop2 &b) { return contains_ite(b.left) || contains_ite(b.right); },
+	[](const uop2 &u) { return contains_ite(u.operand); },
+	[](const ite2 &) { return true; }
+	);
+}
+
 static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 {
 	/* Check whether domain is bounded and if so, generate the list of its
@@ -320,8 +331,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		n_corners *= size(values);
 		corners.emplace_back(var, move(values));
 	}
-	fprintf(stderr, "bounded domain: %d, #corners: %zu\n",
-	        bounded_domain, n_corners);
+	mod_crit.note("bounded domain: %d, #corners: %zu\n", bounded_domain, n_corners);
 	if (!bounded_domain)
 		return unknown { "unbounded domain" };
 
@@ -332,6 +342,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		vec<sptr<form2>> grad_eq_0 = {};
 		bool deriv_exists = true;
 		bool only_order_props = true;
+		bool known_continuous = true;
 
 		void operator()(const sptr<form2> &f)
 		{
@@ -347,6 +358,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 					p.left,
 					p.right,
 				});
+				known_continuous &= !contains_ite(diff);
 				for (const auto &[var,_] : dom) {
 					sptr<term2> d = derivative(diff, var);
 					if (!d) {
@@ -371,8 +383,9 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		}
 	} check { dom, };
 	check(orig);
-	fprintf(stderr, "derivatives exist: %d, only ordered comparisons: %d\n",
-	        check.deriv_exists, check.only_order_props);
+	mod_crit.note("derivatives exist: %d, only ordered comparisons: %d, "
+	              "known_continuous: %d\n", check.deriv_exists,
+	              check.only_order_props, check.known_continuous);
 	if (!check.deriv_exists)
 		return unknown { "derivative may not be defined everywhere" };
 	if (!check.only_order_props)
@@ -418,22 +431,23 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 	size_t n = 0;
 	for (hmap<str,sptr<term2>> crit : all_solutions(sdom, f)) {
 		crit.insert(begin(remaining_vars), end(remaining_vars));
-		fprintf(stderr, "critical point:");
-		for (const auto &[v,c] : crit)
-			fprintf(stderr, " %s=%s", v.c_str(),
-			        to_string(c->get<cnst2>()->value).c_str());
-		fprintf(stderr, "\n");
+		if (mod_crit.note("critical point:")) {
+			for (const auto &[v,c] : crit)
+				fprintf(stderr, " %s=%s", v.c_str(),
+					to_string(c->get<cnst2>()->value).c_str());
+			fprintf(stderr, "\n");
+		}
 		eval(crit);
 		n++;
 	}
 	timing t1;
-	fprintf(stderr, "eval on %zu critical points: %d in %.3fs\n",
-	        n, sat_model ? true : false, (double)(t1 - t0));
+	mod_crit.note("eval on %zu critical points: %d in %.3fs\n",
+	              n, sat_model ? true : false, (double)(t1 - t0));
 	hmap<str,sptr<term2>> empty;
 	forall_products(corners, empty, eval);
 	timing t2;
-	fprintf(stderr, "monotonicity result: %d in %.3fs\n",
-	        sat_model ? true : false, (double)(t2 - t1));
+	mod_crit.note("monotonicity result: %d in %.3fs\n",
+	              sat_model ? true : false, (double)(t2 - t1));
 	if (sat_model)
 		return sat { move(*sat_model) };
 	return unsat {};
@@ -484,8 +498,7 @@ result ival_solver::check()
 	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
 	 * one combination that makes it MAYBE and all others evaluate to NO. */
 	r = eval_products(d, c, sat_model, maybes, nos, conj);
-	fprintf(stderr, "lvl -1 it +%zun%zu\n",
-	        size(maybes), size(nos));
+	mod_ival.note("lvl -1 it +%zun%zu\n", size(maybes), size(nos));
 
 	for (size_t i=0, j; r == MAYBE && i < max_subdivs; i++) {
 		vec<hmap<str,dbl::ival>> maybes2;

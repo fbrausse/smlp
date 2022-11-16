@@ -16,12 +16,13 @@ Options [defaults]:
   -b BETA      additional BETA constraints restricting candidates and safe
                regions (all points in safe regions satisfy BETA); can be given
                multiple times, the conjunction of all is used [true]
-  -c           clamp inputs (only meaningful for NNs) [no]
+  -c COLOR     control colored output: COLOR can be one of: on, off, auto [auto]
   -C COMPAT    use a compatibility layer, can be given multiple times; supported
                values for COMPAT:
                - python: reinterpret floating point constants as python would
                          print them
                - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA
+               - clamp: clamp inputs (only meaningful for NNs) [no]
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by
                the constant DELTA if the radius is zero [0]
   -e ETA       additional ETA constraints restricting only candidates, can be
@@ -52,6 +53,12 @@ Options [defaults]:
   -T THRESHS   instead of on an interval perform binary search among the
                thresholds in the comma-separated list THRESHS; overrides -R and
                -P
+  -v[LOGLVL]   increases the verbosity of all modules or sets it as specified in
+               LOGLVL: comma-separated list of entries of the form [MODULE=]LVL
+               where LVL is one of none, error, warn, info, note, debug; see
+               below for values of the optional MODULE to restrict the level to;
+               if LOGLVL is given, there must not be a space between it and '-v'
+               [note]
   -V           display version information
 
 The DOMAIN is a text file containing the bounds for all variables in the
@@ -75,6 +82,9 @@ Exit codes are as follows:
   2: unexpected SMT solver output (e.g., 'unknown' on interruption)
   3: unhandled SMT solver result (e.g., non-rational assignments)
   4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')
+
+For log detail setting -v, MODULE can be one of:
+  cand, coex, crit, ext, ival, nn, poly, prob, z3
 
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.
 License: Apache 2.0; part of SMLP.

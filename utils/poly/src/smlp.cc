@@ -33,6 +33,55 @@
 using namespace smlp;
 using std::isfinite;
 
+#define CSI		"\x1b["
+#define SGR_DFL		CSI "m"
+#define SGR_BOLD	CSI "1m"
+#define COL_FG		"3"
+#define COL_BG		"4"
+#define COL_FG_B	"9"
+#define COL_BG_B	"10"
+#define COL_BLACK	"0"
+#define COL_RED		"1"
+#define COL_GREEN	"2"
+#define COL_YELLOW	"3"
+#define COL_BLUE	"4"
+#define COL_MAGENTA	"5"
+#define COL_CYAN	"6"
+#define COL_WHITE	"7"
+
+static hmap<strview,module *> modules;
+
+static bool log_color = isatty(STDERR_FILENO);
+
+module::module(const char *name, const char *color, loglvl lvl)
+: name(name)
+, color(color)
+, lvl(lvl)
+{
+	auto [it,ins] = modules.emplace(name, this);
+	assert(ins);
+}
+
+bool module::vlog(loglvl l, const char *fmt, va_list ap) const
+{
+	if (l > lvl)
+		return false;
+	fprintf(stderr, "%s[%4s]%s ",
+	        log_color ? color : "", name, log_color ? SGR_DFL : "");
+	vfprintf(stderr, fmt, ap);
+	return true;
+}
+
+static module mod_nn   { "nn"  , CSI COL_FG   COL_BLUE    "m" };
+static module mod_poly { "poly", CSI COL_FG   COL_BLUE    "m" };
+static module mod_ex   { "cand", CSI COL_FG   COL_GREEN   "m" };
+static module mod_cex  { "coex", CSI COL_FG   COL_RED     "m" };
+static module mod_prob { "prob", CSI COL_FG_B COL_BLACK   "m" };
+module smlp::mod_ival { "ival", CSI COL_FG   COL_YELLOW  "m" };
+module smlp::mod_crit { "crit", CSI COL_FG   COL_MAGENTA "m" };
+static module mod_z3   { "z3"  , CSI COL_FG_B COL_BLUE    "m" };
+static module mod_ext  { "ext" , CSI COL_FG   COL_CYAN    "m" };
+
 namespace {
 
 // using domain_ref = typename domain::const_iterator;
@@ -450,7 +499,7 @@ static void usage(const char *program_name, int exit_code)
 	fprintf(f, "\
 usage: %s [-OPTS] [--] " USAGE " OP [CNST]\n\
 ", program_name);
-	if (!exit_code)
+	if (!exit_code) {
 		fprintf(f,"\
 \n\
 Options [defaults]:\n\
@@ -462,12 +511,13 @@ Options [defaults]:\n\
   -b BETA      additional BETA constraints restricting candidates and safe\n\
                regions (all points in safe regions satisfy BETA); can be given\n\
                multiple times, the conjunction of all is used [true]\n\
-  -c           clamp inputs (only meaningful for NNs) [no]\n\
+  -c COLOR     control colored output: COLOR can be one of: on, off, auto [auto]\n\
   -C COMPAT    use a compatibility layer, can be given multiple times; supported\n\
                values for COMPAT:\n\
                - python: reinterpret floating point constants as python would\n\
                          print them\n\
                - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA\n\
+               - clamp: clamp inputs (only meaningful for NNs) [no]\n\
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by\n\
                the constant DELTA if the radius is zero [" DEF_DELTA "]\n\
   -e ETA       additional ETA constraints restricting only candidates, can be\n\
@@ -498,6 +548,12 @@ Options [defaults]:\n\
   -T THRESHS   instead of on an interval perform binary search among the\n\
                thresholds in the comma-separated list THRESHS; overrides -R and\n\
                -P\n\
+  -v[LOGLVL]   increases the verbosity of all modules or sets it as specified in\n\
+               LOGLVL: comma-separated list of entries of the form [MODULE=]LVL\n\
+               where LVL is one of none, error, warn, info, note, debug; see\n\
+               below for values of the optional MODULE to restrict the level to;\n\
+               if LOGLVL is given, there must not be a space between it and '-v'\n\
+               [note]\n\
   -V           display version information\n\
 \n\
 The DOMAIN is a text file containing the bounds for all variables in the\n\
@@ -522,9 +578,19 @@ Exit codes are as follows:\n\
   3: unhandled SMT solver result (e.g., non-rational assignments)\n\
   4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')\n\
 \n\
+For log detail setting -v, MODULE can be one of:\n\
+");
+	vec<strview> mods(size(modules));
+	transform(begin(modules), end(modules), begin(mods), [](const auto &p) { return p.first; });
+	std::sort(begin(mods), end(mods));
+	for (size_t i=0; i<size(mods); i++)
+		fprintf(f, "%s%.*s", i ? ", " : "  ", (int)mods[i].length(), mods[i].data());
+	fprintf(f,"\n\
+\n\
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
 License: Apache 2.0; part of SMLP.\n\
 ");
+	}
 	exit(exit_code);
 }
 
@@ -637,8 +703,8 @@ static ival get_obj_range(const char *obj_range_s,
 		auto lh = dbl_interval_eval(dom, obj);
 		if (!lh)
 			DIE(1,"error: domain is empty\n");
-		fprintf(stderr, "approximated objective range: [%g,%g], "
-		                "use -R to specify it manually\n",
+		mod_prob.info("approximated objective range: [%g,%g], "
+		              "use -R to specify it manually\n",
 		        lh->first, lh->second);
 		if (!isfinite(lh->first) || !isfinite(lh->second))
 			DIE(1,"error: optimization over an unbounded "
@@ -753,6 +819,46 @@ parse_search_range(char *threshs_s, const char *max_prec_s,
 	}
 }
 
+static void set_loglvl(char *arg)
+{
+	if (!arg) {
+		for (const auto &[n,m] : modules)
+			m->lvl = (loglvl)((int)m->lvl + 1);
+		return;
+	}
+	hmap<strview,loglvl> values = {
+		{ "none" , QUIET },
+		{ "error", ERROR },
+		{ "warn" , WARN },
+		{ "info" , INFO },
+		{ "note" , NOTE },
+		{ "debug", DEBUG },
+	};
+	for (char *s = NULL, *t = strtok_r(arg, ",", &s); t;
+	     t = strtok_r(NULL, ",", &s)) {
+		char *ss, *mod = strtok_r(t, "=", &ss);
+		assert(mod);
+		char *lvl = strtok_r(NULL, "=", &ss);
+		if (!lvl)
+			swap(mod, lvl);
+		if (mod && lvl)
+			mod_prob.dbg("setting log-level of '%s' to '%s'\n", mod, lvl);
+		else
+			mod_prob.dbg("setting log-level to '%s'\n", lvl);
+		auto jt = values.find(lvl);
+		if (jt == end(values))
+			DIE(1,"error: unknown log level '%s' given in LOGLVL\n", lvl);
+		if (mod) {
+			auto it = modules.find(mod);
+			if (it == end(modules))
+				DIE(1,"error: unknown module '%s' given in LOGLVL\n",mod);
+			it->second->lvl = jt->second;
+		} else
+			for (const auto &[n,m] : modules)
+				m->lvl = jt->second;
+	}
+}
+
 int main(int argc, char **argv)
 {
 	/* these determine the mode of operation of this program */
@@ -783,20 +889,30 @@ int main(int argc, char **argv)
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:cC:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:V")) != -1;)
+	                            ":1a:b:c:C:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:v::V")) != -1;)
 		switch (opt) {
 		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'b': beta_conj.emplace_back(parse_infix_form2(optarg)); break;
-		case 'c': clamp_inputs = true; break;
+		case 'c':
+			if (optarg == "on"sv)
+				log_color = true;
+			else if (optarg == "off"sv)
+				log_color = false;
+			else if (optarg != "auto"sv)
+				DIE(1,"error: option '-c' only supports 'on', "
+				      "'off', 'auto'\n");
+			break;
 		case 'C':
 			if (optarg == "python"sv)
 				python_compat = true;
 			else if (optarg == "bnds-dom"sv)
 				io_bnds_dom = true;
+			else if (optarg == "clamp"sv)
+				clamp_inputs = true;
 			else
 				DIE(1,"error: option '-C' only supports "
-				      "'python', 'bnds-dom'\n");
+				      "'python', 'bnds-dom', 'clamp'\n");
 			break;
 		case 'd': delta_s = optarg; break;
 		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -827,6 +943,7 @@ int main(int argc, char **argv)
 		case 'S': ext_solver_cmd = optarg; break;
 		case 't': timeout = atoi(optarg); break;
 		case 'T': threshs_s = optarg; break;
+		case 'v': set_loglvl(optarg); break;
 		case 'V': version_info(); exit(0);
 		case ':': DIE(1,"error: option '-%c' requires an argument\n",
 		              optopt);
@@ -870,22 +987,25 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 	alpha_conj.emplace_back(move(alpha));
 	alpha = conj(move(alpha_conj));
-	dump_smt2_line(stderr, "alpha: ", alpha);
+	if (mod_prob.note("alpha: "))
+		dump_smt2_line(stderr, "", alpha);
 	alpha = subst(alpha, funs);
 
 	sptr<form2> beta = conj(move(beta_conj));
-	dump_smt2_line(stderr, "beta: ", beta);
+	if (mod_prob.note("beta : "))
+		dump_smt2_line(stderr, "", beta);
 	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
 	eta = conj(move(eta_conj));
-	dump_smt2_line(stderr, "eta: ", eta);
+	if (mod_prob.note("eta  : "))
+		dump_smt2_line(stderr, "", eta);
 	eta = subst(eta, funs);
 
 	lhs = subst(lhs, funs);
 
-	fprintf(stderr, "domain:\n");
-	smlp::dump_smt2(stderr, dom);
+	if (mod_prob.note("domain:\n"))
+		smlp::dump_smt2(stderr, dom);
 
 	for (const strview &q : queries) {
 		fprintf(stderr, "query '%.*s':\n", (int)q.size(),q.data());
@@ -902,11 +1022,12 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
-	fprintf(stderr, "checking for out-of-domain application of partial "
-	                "functions: (and alpha (not ");
-	smlp::dump_smt2(stderr, *pc);
-	fprintf(stderr, "))...\n");
-	fflush(stderr);
+
+	if (mod_prob.note("checking for out-of-domain application of partial "
+	                  "functions: (and alpha (not ")) {
+		smlp::dump_smt2(stderr, *pc);
+		fprintf(stderr, "))...\n");
+	}
 	result ood = solve_exists(dom, conj({ alpha, neg(pc) }));
 	if (const sat *s = ood.get<sat>()) {
 		fprintf(stderr,
@@ -918,7 +1039,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	} else if (const unknown *u = ood.get<unknown>())
 		DIE(2,"error deciding out-of-domain condition: %s\n",
 		      u->reason.c_str());
-	fprintf(stderr, "out-of-domain condition is false\n");
+	mod_prob.note("out-of-domain condition is false\n");
 
 	/* find out about the OP comparison operation */
 	cmp_t c = parse_op(argv[optind++]);
@@ -939,7 +1060,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		kay::Q cnst;
 		if (!from_string(argv[optind], cnst))
 			DIE(1,"CNST must be a numeric constant\n");
-		fprintf(stderr, "cnst: %s\n", cnst.get_str().c_str());
+		mod_prob.dbg("cnst: %s\n", cnst.get_str().c_str());
 		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
 
 		/* the problem consists of domain and the eta, alpha and
@@ -965,7 +1086,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			solve_exists(p.dom, p.p, logic.c_str()).match(
 			[&,lhs=lhs](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
-				fprintf(stderr, "sat, lhs value: %s ~ %g, model:\n",
+				mod_prob.info("sat, lhs value: %s ~ %g, model:\n",
 				        q.get_str().c_str(), q.get_d());
 				print_model(stderr, s.model, 2);
 				for (const auto &[n,c] : s.model) {
@@ -973,9 +1094,9 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 					assert(p.dom[n]->contains(q));
 				}
 			},
-			[](const unsat &) { fprintf(stderr, "unsat\n"); },
+			[](const unsat &) { mod_prob.info("unsat\n"); },
 			[](const unknown &u) {
-				fprintf(stderr, "unknown: %s\n", u.reason.c_str());
+				mod_prob.info("unknown: %s\n", u.reason.c_str());
 			}
 			);
 	} else if (solve) {
@@ -996,29 +1117,29 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
 		                                 *obj_range, theta, logic.c_str());
 		if (empty(r)) {
-			fprintf(stderr,
-			        "no solution for objective in theta in "
-			        "[%s, %s] ~ [%f, %f]\n",
-			        obj_range->lo()->get_str().c_str(),
-			        obj_range->hi()->get_str().c_str(),
-			        obj_range->lo()->get_d(),
-			        obj_range->hi()->get_d());
+			mod_prob.info(
+				"no solution for objective in theta in "
+				"[%s, %s] ~ [%f, %f]\n",
+				obj_range->lo()->get_str().c_str(),
+				obj_range->hi()->get_str().c_str(),
+				obj_range->lo()->get_d(),
+				obj_range->hi()->get_d());
 		} else {
-			fprintf(stderr,
-			        "%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
-			        is_less((cmp_t)c) ? "min max" : "max min",
-			        obj_range->lo()->get_str().c_str(),
-			        obj_range->hi()->get_str().c_str(),
-			        obj_range->lo()->get_d(),
-			        obj_range->hi()->get_d());
-			print_model(stderr, r.back().point, 2);
+			if (mod_prob.info(
+				"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
+				is_less((cmp_t)c) ? "min max" : "max min",
+				obj_range->lo()->get_str().c_str(),
+				obj_range->hi()->get_str().c_str(),
+				obj_range->lo()->get_d(),
+				obj_range->hi()->get_d()))
+				print_model(stderr, r.back().point, 2);
 			for (const auto &s : r) {
 				kay::Q c = s.center_value(lhs);
-				fprintf(stderr,
-				        "T: %s ~ %f -> center: %s ~ %f\n",
-				        s.threshold.get_str().c_str(),
-				        s.threshold.get_d(),
-				        c.get_str().c_str(), c.get_d());
+				mod_prob.note(
+					"T: %s ~ %f -> center: %s ~ %f\n",
+					s.threshold.get_str().c_str(),
+					s.threshold.get_d(),
+					c.get_str().c_str(), c.get_d());
 			}
 		}
 	}

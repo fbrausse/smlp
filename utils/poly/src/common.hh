@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <cstdarg>
 
 #include <string>
 #include <vector>
@@ -198,5 +199,45 @@ struct timing : timespec {
 
 	operator double() const { return tv_sec + tv_nsec / 1e9; }
 };
+
+enum loglvl : int {
+	QUIET,
+	ERROR,
+	WARN,
+	INFO,
+	NOTE,
+	DEBUG,
+};
+
+struct module {
+
+	const char *name;
+	const char *color;
+	loglvl lvl;
+
+	module(const char *name, const char *color, loglvl lvl = NOTE);
+
+	bool logs(loglvl l) const { return l <= lvl; }
+
+	bool vlog(loglvl, const char *fmt, va_list) const;
+	std::ostream & slog(loglvl) const;
+
+#define BODY(level) { \
+		va_list ap;                    \
+		va_start(ap,fmt);              \
+		bool r = vlog(level, fmt, ap); \
+		va_end(ap);                    \
+		return r;                      \
+	}
+	[[gnu::format(printf,3,4)]] bool log(loglvl level, const char *fmt, ...) const BODY(level)
+	[[gnu::format(printf,2,3)]] bool err(const char *fmt, ...) const BODY(ERROR)
+	[[gnu::format(printf,2,3)]] bool warn(const char *fmt, ...) const BODY(WARN)
+	[[gnu::format(printf,2,3)]] bool info(const char *fmt, ...) const BODY(INFO)
+	[[gnu::format(printf,2,3)]] bool note(const char *fmt, ...) const BODY(NOTE)
+	[[gnu::format(printf,2,3)]] bool dbg(const char *fmt, ...) const BODY(DEBUG)
+#undef BODY
+};
+
+extern module mod_ival, mod_crit;
 
 } // end namespace smlp
