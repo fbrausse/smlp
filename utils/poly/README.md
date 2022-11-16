@@ -8,7 +8,6 @@ smlp is a program to solve and optimize polynomials and NNs over integers and re
 usage: smlp [-OPTS] [--] { DOMAIN EXPR | H5-NN SPEC GEN IO-BOUNDS } OP [CNST]
 
 Options [defaults]:
-  -1           use single objective from GEN instead of all H5-NN outputs [no]
   -a ALPHA     additional ALPHA constraints restricting candidates *and*
                counter-examples (only points in regions satisfying ALPHA
                are considered counter-examples to safety); can be given multiple
@@ -23,6 +22,8 @@ Options [defaults]:
                          print them
                - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA
                - clamp: clamp inputs (only meaningful for NNs) [no]
+               - gen-obj: use single objective from GEN instead of all H5-NN
+                          outputs [no]
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by
                the constant DELTA if the radius is zero [0]
   -e ETA       additional ETA constraints restricting only candidates, can be
@@ -76,15 +77,17 @@ one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell
 to avoid unwanted redirections. CNST is a rational constant in the same format
 as those in the EXPR file (if any).
 
+For log detail setting -v, MODULE can be one of:
+  crit, ext, ival, nn, prob, z3
+
+Options are first read from the environment variable SMLP_OPTS, if set.
+
 Exit codes are as follows:
   0: normal operation
   1: invalid user input
   2: unexpected SMT solver output (e.g., 'unknown' on interruption)
   3: unhandled SMT solver result (e.g., non-rational assignments)
   4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')
-
-For log detail setting -v, MODULE can be one of:
-  cand, coex, crit, ext, ival, nn, poly, prob, z3
 
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.
 License: Apache 2.0; part of SMLP.

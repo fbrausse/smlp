@@ -505,7 +505,6 @@ usage: %s [-OPTS] [--] " USAGE " OP [CNST]\n\
 		fprintf(f,"\
 \n\
 Options [defaults]:\n\
-  -1           use single objective from GEN instead of all H5-NN outputs [no]\n\
   -a ALPHA     additional ALPHA constraints restricting candidates *and*\n\
                counter-examples (only points in regions satisfying ALPHA\n\
                are considered counter-examples to safety); can be given multiple\n\
@@ -520,6 +519,8 @@ Options [defaults]:\n\
                          print them\n\
                - bnds-dom: the IO-BOUNDS are domain constraints, not just ALPHA\n\
                - clamp: clamp inputs (only meaningful for NNs) [no]\n\
+               - gen-obj: use single objective from GEN instead of all H5-NN\n\
+                          outputs [no]\n\
   -d DELTA     increase radius around counter-examples by factor (1+DELTA) or by\n\
                the constant DELTA if the radius is zero [" DEF_DELTA "]\n\
   -e ETA       additional ETA constraints restricting only candidates, can be\n\
@@ -910,9 +911,8 @@ int main(int argc, char **argv)
 
 	/* parse options from the command-line */
 	for (int opt; (opt = getopt(argc, argv,
-	                            ":1a:b:c:C:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:v::V")) != -1;)
+	                            ":a:b:c:C:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:v::V")) != -1;)
 		switch (opt) {
-		case '1': single_obj = true; break;
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'b': beta_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'c':
@@ -931,9 +931,11 @@ int main(int argc, char **argv)
 				io_bnds_dom = true;
 			else if (optarg == "clamp"sv)
 				clamp_inputs = true;
+			else if (optarg == "gen-obj"sv)
+				single_obj = true;
 			else
 				DIE(1,"error: option '-C' only supports "
-				      "'python', 'bnds-dom', 'clamp'\n");
+				      "'python', 'bnds-dom', 'clamp', 'gen-obj'\n");
 			break;
 		case 'd': delta_s = optarg; break;
 		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
