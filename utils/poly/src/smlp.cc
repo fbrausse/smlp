@@ -539,8 +539,8 @@ Options [defaults]:\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' [infix]\n\
   -h           displays this help message\n\
-  -i SUBDIVS   use interval evaluation (only when CNST is given) with SUBDIVS\n\
-               subdivision [no]\n\
+  -i SUBDIVS   use interval evaluation with SUBDIVS subdivisions and fall back\n\
+               to the critical points solver before solving symbolically [no]\n\
   -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
@@ -564,10 +564,9 @@ Options [defaults]:\n\
                -P\n\
   -v[LOGLVL]   increases the verbosity of all modules or sets it as specified in\n\
                LOGLVL: comma-separated list of entries of the form [MODULE=]LVL\n\
-               where LVL is one of none, error, warn, info, note, debug; see\n\
-               below for values of the optional MODULE to restrict the level to;\n\
-               if LOGLVL is given, there must not be a space between it and '-v'\n\
-               [note]\n\
+               where LVL is one of none, error, warn, info, note, debug [note];\n\
+               see below for values of the optional MODULE to restrict the level\n\
+               to; if LOGLVL is given there must not be space between it and -v\n\
   -V           display version information\n\
 \n\
 The DOMAIN is a text file containing the bounds for all variables in the\n\
