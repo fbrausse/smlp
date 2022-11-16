@@ -518,9 +518,10 @@ result ival_solver::check()
 				n *= size(sp.back().second);
 			}
 			N += n;
-			fprintf(stderr, "lvl %zu it %zu/%zu+%zun%zu: checking %s subdivisions...",
-			        i, j++, size(maybes), size(maybes2), size(nos),
-			        n.get_str().c_str());
+			bool logs = mod_ival.note(
+				"lvl %zu it %zu/%zu+%zun%zu: checking %s subdivisions...",
+				i, j++, size(maybes), size(maybes2), size(nos),
+				n.get_str().c_str());
 			fflush(stderr);
 			hmap<str,dbl::ival> ndom;
 			size_t old_m = size(maybes2);
@@ -530,15 +531,17 @@ result ival_solver::check()
 				nos.erase(begin(nos) + old_n, end(nos));
 				nos.push_back(dom);
 			}
-			std::cerr << " -> " << s;
-			if (s == MAYBE)
-				std::cerr << " * " << (size(maybes2) - old_m);
-			std::cerr << "\n";
+			if (logs) {
+				std::cerr << " -> " << s;
+				if (s == MAYBE)
+					std::cerr << " * " << (size(maybes2) - old_m);
+				std::cerr << "\n";
+			}
 			r |= s;
 		}
 		timing t1;
-		fprintf(stderr, "checked %s subdivisions in %.3gs\n",
-		        N.get_str().c_str(), (double)(t1 - t0));
+		mod_ival.note("checked %s subdivisions in %.3gs\n",
+			N.get_str().c_str(), (double)(t1 - t0));
 		maybes = move(maybes2);
 	}
 	}

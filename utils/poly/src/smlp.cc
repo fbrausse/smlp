@@ -66,21 +66,23 @@ bool module::vlog(loglvl l, const char *fmt, va_list ap) const
 {
 	if (l > lvl)
 		return false;
-	fprintf(stderr, "%s[%4s]%s ",
+	fprintf(stderr, "%s[%-4s]%s ",
 	        log_color ? color : "", name, log_color ? SGR_DFL : "");
 	vfprintf(stderr, fmt, ap);
 	return true;
 }
 
+/*
 static module mod_nn   { "nn"  , CSI COL_FG   COL_BLUE    "m" };
 static module mod_poly { "poly", CSI COL_FG   COL_BLUE    "m" };
 static module mod_ex   { "cand", CSI COL_FG   COL_GREEN   "m" };
 static module mod_cex  { "coex", CSI COL_FG   COL_RED     "m" };
+*/
 static module mod_prob { "prob", CSI COL_FG_B COL_BLACK   "m" };
-module smlp::mod_ival { "ival", CSI COL_FG   COL_YELLOW  "m" };
-module smlp::mod_crit { "crit", CSI COL_FG   COL_MAGENTA "m" };
-static module mod_z3   { "z3"  , CSI COL_FG_B COL_BLUE    "m" };
-static module mod_ext  { "ext" , CSI COL_FG   COL_CYAN    "m" };
+module smlp::mod_ival  { "ival", CSI COL_FG   COL_YELLOW  "m" };
+module smlp::mod_crit  { "crit", CSI COL_FG   COL_MAGENTA "m" };
+module smlp::mod_z3    { "z3"  , CSI COL_FG_B COL_BLUE    "m" };
+module smlp::mod_ext   { "ext" , CSI COL_FG   COL_CYAN    "m" };
 
 namespace {
 
@@ -694,11 +696,11 @@ static ival get_obj_range(const char *obj_range_s,
 			DIE(1,"error: cannot parse argument '%s' "
 			      "to '-R' as a pair of rational numbers\n",
 			      obj_range_s);
-		fprintf(stderr, "got objective range from -R: [%s,%s]\n",
+		mod_prob.note("got objective range from -R: [%s,%s]\n",
 		        obj_range.lo.get_str().c_str(),
 		        obj_range.hi.get_str().c_str());
 		if (obj_range.lo > obj_range.hi)
-			fprintf(stderr, "warning: empty objective range\n");
+			mod_prob.warn("warning: empty objective range\n");
 	} else {
 		auto lh = dbl_interval_eval(dom, obj);
 		if (!lh)

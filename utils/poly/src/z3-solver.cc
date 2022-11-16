@@ -112,6 +112,7 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 result z3_solver::check()
 {
 	interruptible::is_active = this;
+	mod_z3.info("solving...\n");
 	z3::check_result r = slv.check();
 	interruptible::is_active = nullptr;
 	switch (r) {

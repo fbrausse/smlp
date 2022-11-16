@@ -75,7 +75,7 @@ process::~process()
 		kill(pid, SIGTERM);
 		waitpid(pid, &status, WUNTRACED);
 	}
-	fprintf(stderr, "child %d exited with code %d\n", pid, WEXITSTATUS(status));
+	mod_ext.info("child %d exited with code %d\n", pid, WEXITSTATUS(status));
 }
 
 str ext_solver::get_info(const char *what)
@@ -109,8 +109,8 @@ ext_solver::ext_solver(const char *cmd, const char *logic)
 		v = v.substr(1);
 	auto [_,ec] = from_chars(v.data(), v.data() + v.length(), parsed_version);
 	assert(ec == std::errc {});
-	fprintf(stderr, "ext-solver pid %d: %s %s\n",
-	        pid, name.c_str(), to_string(parsed_version).c_str());
+	mod_ext.info("ext-solver pid %d: %s %s\n", pid, name.c_str(),
+		to_string(parsed_version).c_str());
 
 	if (name != "ksmt")
 		fprintf(in, "(set-option :produce-models true)\n");
@@ -202,6 +202,8 @@ result ext_solver::check()
 	using es::slit;
 	using es::arg;
 	using es::sexpr;
+
+	mod_ext.info("solving...\n");
 
 	fprintf(in, "(check-sat)\n");
 	out_s.skip_space();
