@@ -573,13 +573,6 @@ one of '<=', '<', '>=', '>', '==' and '!='. Remember quoting the OP on the shell
 to avoid unwanted redirections. CNST is a rational constant in the same format\n\
 as those in the EXPR file (if any).\n\
 \n\
-Exit codes are as follows:\n\
-  0: normal operation\n\
-  1: invalid user input\n\
-  2: unexpected SMT solver output (e.g., 'unknown' on interruption)\n\
-  3: unhandled SMT solver result (e.g., non-rational assignments)\n\
-  4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')\n\
-\n\
 For log detail setting -v, MODULE can be one of:\n\
 ");
 	vec<strview> mods(size(modules));
@@ -588,6 +581,15 @@ For log detail setting -v, MODULE can be one of:\n\
 	for (size_t i=0; i<size(mods); i++)
 		fprintf(f, "%s%.*s", i ? ", " : "  ", (int)mods[i].length(), mods[i].data());
 	fprintf(f,"\n\
+\n\
+Options are first read from the environment variable SMLP_OPTS, if set.\n\
+\n\
+Exit codes are as follows:\n\
+  0: normal operation\n\
+  1: invalid user input\n\
+  2: unexpected SMT solver output (e.g., 'unknown' on interruption)\n\
+  3: unhandled SMT solver result (e.g., non-rational assignments)\n\
+  4: partial function applicable outside of its domain (e.g., 'Match(expr, .)')\n\
 \n\
 Developed by Franz Brausse <franz.brausse@manchester.ac.uk>.\n\
 License: Apache 2.0; part of SMLP.\n\
@@ -863,6 +865,23 @@ static void set_loglvl(char *arg)
 
 int main(int argc, char **argv)
 {
+	if (const char *opts = getenv("SMLP_OPTS")) {
+		unsetenv("SMLP_OPTS");
+		char *shell = getenv("SHELL");
+		char sh[] = "sh";
+		if (!shell)
+			shell = sh;
+		char c[] = "-c";
+		str cmd = "\"$0\" ";
+		cmd += opts;
+		cmd += " \"$@\"";
+		vec<char *> args = { shell, c, cmd.data(), argv[0], };
+		for (int i=0; i<argc; i++)
+			args.push_back(argv[i]);
+		execvp(shell, args.data());
+		fprintf(stderr, "could not interpret envvar SMLP_OPTS (%s), ignoring...\n", strerror(errno));
+	}
+
 	/* these determine the mode of operation of this program */
 	bool             single_obj    = false;
 	bool             solve         = true;
