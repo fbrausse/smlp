@@ -873,10 +873,10 @@ int main(int argc, char **argv)
 		if (!shell)
 			shell = sh;
 		char c[] = "-c";
-		str cmd = "\"$0\" ";
+		str cmd = "exec \"$0\" ";
 		cmd += opts;
 		cmd += " \"$@\"";
-		vec<char *> args = { shell, c, cmd.data(), argv[0], };
+		vec<char *> args = { shell, c, cmd.data(), };
 		for (int i=0; i<argc; i++)
 			args.push_back(argv[i]);
 		execvp(shell, args.data());
