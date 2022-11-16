@@ -66,8 +66,19 @@ bool module::vlog(loglvl l, const char *fmt, va_list ap) const
 {
 	if (l > lvl)
 		return false;
-	fprintf(stderr, "%s[%-4s]%s ",
-	        log_color ? color : "", name, log_color ? SGR_DFL : "");
+	const char *lvl = nullptr;
+	const char *col = "";
+	switch (l) {
+	case QUIET: break;
+	case ERROR: lvl = "error"; col = CSI COL_FG_B COL_RED "m"; break;
+	case WARN : lvl = "warn" ; col = CSI COL_FG_B COL_YELLOW "m"; break;
+	case INFO : lvl = "info" ; break;
+	case NOTE : lvl = "note" ; break;
+	case DEBUG: lvl = "debug"; col = CSI COL_FG   COL_GREEN "m"; break;
+	}
+	fprintf(stderr, "%s[%-4s]%s %s%-5s%s: ",
+	        log_color ? color : "", name, log_color ? SGR_DFL : "",
+	        log_color ? col : "", lvl, log_color ? SGR_DFL : "");
 	vfprintf(stderr, fmt, ap);
 	return true;
 }
