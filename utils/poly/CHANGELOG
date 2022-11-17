@@ -1,3 +1,16 @@
+2022-11-17 poly-v0.7.0
+
+ * moved old options -1 and -c to -C gen-obj and -C clamp
+ * introduced structured and colored log output for clarity:
+   - verbosity controlled by new option -v
+   - log levels are: none, error, warn, info, note, debug; default: note
+   - color controlled by repurposed option -c
+   - solvers are more verbose in what they are doing
+ * support reading options from envvar SMLP_OPTS (if set); parsing the envvar
+   string is done by the shell (envvar SHELL if set, 'sh' otherwise), as if
+   SMLP was invoked by
+     ${SHELL} -c 'exec "$0" ${SMLP_OPTS} "$@"' smlp arguments...
+
 2022-11-15 poly-v0.6.2
 
  * fix cause for segfault when the search finds that the threshold is out of

@@ -77,7 +77,7 @@ to avoid unwanted redirections. CNST is a rational constant in the same format
 as those in the EXPR file (if any).
 
 For log detail setting -v, MODULE can be one of:
-  crit, ext, ival, nn, prob, z3
+  crit, ext, ival, nn, poly, prob, smlp, z3
 
 Options are first read from the environment variable SMLP_OPTS, if set.
 
