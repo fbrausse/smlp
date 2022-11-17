@@ -331,7 +331,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		n_corners *= size(values);
 		corners.emplace_back(var, move(values));
 	}
-	mod_crit.note("bounded domain: %d, #corners: %zu\n", bounded_domain, n_corners);
+	note(mod_crit,"bounded domain: %d, #corners: %zu\n", bounded_domain, n_corners);
 	if (!bounded_domain)
 		return unknown { "unbounded domain" };
 
@@ -383,7 +383,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		}
 	} check { dom, };
 	check(orig);
-	mod_crit.note("derivatives exist: %d, only ordered comparisons: %d, "
+	note(mod_crit,"derivatives exist: %d, only ordered comparisons: %d, "
 	              "known_continuous: %d\n", check.deriv_exists,
 	              check.only_order_props, check.known_continuous);
 	if (!check.deriv_exists)
@@ -428,14 +428,14 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 	};
 
 	vec<hmap<str,sptr<term2>>> crit_pts = all_solutions(sdom, f);
-	mod_crit.info("solving on %zu critical points and %zu domain corners...\n",
+	info(mod_crit,"solving on %zu critical points and %zu domain corners...\n",
 	              size(crit_pts), n_corners);
 
 	timing t0;
 	size_t n = 0;
 	for (hmap<str,sptr<term2>> crit : crit_pts) {
 		crit.insert(begin(remaining_vars), end(remaining_vars));
-		if (mod_crit.note("critical point:")) {
+		if (note(mod_crit,"critical point:")) {
 			for (const auto &[v,c] : crit)
 				fprintf(stderr, " %s=%s", v.c_str(),
 					to_string(c->get<cnst2>()->value).c_str());
@@ -445,12 +445,12 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		n++;
 	}
 	timing t1;
-	mod_crit.note("eval on %zu critical points: %d in %.3fs\n",
+	note(mod_crit,"eval on %zu critical points: %d in %.3fs\n",
 	              n, sat_model ? true : false, (double)(t1 - t0));
 	hmap<str,sptr<term2>> empty;
 	forall_products(corners, empty, eval);
 	timing t2;
-	mod_crit.note("monotonicity result: %d in %.3fs\n",
+	note(mod_crit,"monotonicity result: %d in %.3fs\n",
 	              sat_model ? true : false, (double)(t2 - t1));
 	if (sat_model)
 		return sat { move(*sat_model) };
@@ -497,14 +497,14 @@ result ival_solver::check()
 		}
 		);
 
-	mod_ival.info("solving...\n");
+	info(mod_ival,"solving...\n");
 
 	/* For any combination of assignments to discrete vars interval-evaluate
 	 * the formula. It is SAT if there is (at least) one combination that
 	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
 	 * one combination that makes it MAYBE and all others evaluate to NO. */
 	r = eval_products(d, c, sat_model, maybes, nos, conj);
-	mod_ival.note("lvl -1 it +%zun%zu\n", size(maybes), size(nos));
+	note(mod_ival,"lvl -1 it +%zun%zu\n", size(maybes), size(nos));
 
 	for (size_t i=0, j; r == MAYBE && i < max_subdivs; i++) {
 		vec<hmap<str,dbl::ival>> maybes2;
@@ -524,7 +524,7 @@ result ival_solver::check()
 				n *= size(sp.back().second);
 			}
 			N += n;
-			bool logs = mod_ival.note(
+			bool logs = note(mod_ival,
 				"lvl %zu it %zu/%zu+%zun%zu: checking %s subdivisions...",
 				i, j++, size(maybes), size(maybes2), size(nos),
 				n.get_str().c_str());
@@ -546,7 +546,7 @@ result ival_solver::check()
 			r |= s;
 		}
 		timing t1;
-		mod_ival.note("checked %s subdivisions in %.3gs\n",
+		note(mod_ival,"checked %s subdivisions in %.3gs\n",
 			N.get_str().c_str(), (double)(t1 - t0));
 		maybes = move(maybes2);
 	}

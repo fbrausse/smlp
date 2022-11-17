@@ -33,7 +33,7 @@
 
 #define ARRAY_SIZE(...)	(sizeof(__VA_ARGS__)/sizeof(*(__VA_ARGS__)))
 #define DIE(code,...) do { fprintf(stderr, __VA_ARGS__); exit(code); } while (0)
-#define MDIE(mod,code,...) do { (mod).err(__VA_ARGS__); exit(code); } while (0)
+#define MDIE(mod,code,...) do { err(mod, __VA_ARGS__); exit(code); } while (0)
 
 namespace smlp {
 
@@ -224,18 +224,18 @@ struct module {
 	std::ostream & slog(loglvl) const;
 
 #define BODY(level) { \
-		va_list ap;                    \
-		va_start(ap,fmt);              \
-		bool r = vlog(level, fmt, ap); \
-		va_end(ap);                    \
-		return r;                      \
+		va_list ap;                      \
+		va_start(ap,fmt);                \
+		bool r = m.vlog(level, fmt, ap); \
+		va_end(ap);                      \
+		return r;                        \
 	}
-	[[gnu::format(printf,3,4)]] bool log(loglvl level, const char *fmt, ...) const BODY(level)
-	[[gnu::format(printf,2,3)]] bool err(const char *fmt, ...) const BODY(ERROR)
-	[[gnu::format(printf,2,3)]] bool warn(const char *fmt, ...) const BODY(WARN)
-	[[gnu::format(printf,2,3)]] bool info(const char *fmt, ...) const BODY(INFO)
-	[[gnu::format(printf,2,3)]] bool note(const char *fmt, ...) const BODY(NOTE)
-	[[gnu::format(printf,2,3)]] bool dbg(const char *fmt, ...) const BODY(DEBUG)
+	[[gnu::format(printf,3,4)]] friend bool log(const module &m, loglvl level, const char *fmt, ...) BODY(level)
+	[[gnu::format(printf,2,3)]] friend bool err(const module &m, const char *fmt, ...) BODY(ERROR)
+	[[gnu::format(printf,2,3)]] friend bool warn(const module &m, const char *fmt, ...) BODY(WARN)
+	[[gnu::format(printf,2,3)]] friend bool info(const module &m, const char *fmt, ...) BODY(INFO)
+	[[gnu::format(printf,2,3)]] friend bool note(const module &m, const char *fmt, ...) BODY(NOTE)
+	[[gnu::format(printf,2,3)]] friend bool dbg(const module &m, const char *fmt, ...) BODY(DEBUG)
 #undef BODY
 };
 

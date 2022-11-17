@@ -140,25 +140,6 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	fprintf(f, "(get-model)\n");
 }
 
-static char *ext_solver_cmd;
-static char *inc_solver_cmd;
-static long  intervals = -1;
-
-namespace smlp {
-uptr<solver> mk_solver0(bool incremental, const char *logic)
-{
-	const char *ext = ext_solver_cmd;
-	const char *inc = inc_solver_cmd;
-	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
-	if (cmd)
-		return std::make_unique<ext_solver>(cmd, logic);
-#ifdef SMLP_ENABLE_Z3_API
-	return std::make_unique<z3_solver>(logic);
-#endif
-	MDIE(mod_smlp,1,"no solver specified and none are built-in, require "
-	                "external solver via -S or -I\n");
-}
-
 template <typename T>
 static str smt2_logic_str(const domain &dom, const sptr<T> &e)
 {
@@ -180,6 +161,33 @@ static str smt2_logic_str(const domain &dom, const sptr<T> &e)
 	} else
 		logic += "UF";
 	return logic;
+}
+
+static char *ext_solver_cmd;
+static char *inc_solver_cmd;
+static long  intervals = -1;
+
+namespace smlp {
+uptr<solver> mk_solver0(bool incremental, const char *logic)
+{
+	const char *ext = ext_solver_cmd;
+	const char *inc = inc_solver_cmd;
+	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
+	if (cmd)
+		return std::make_unique<ext_solver>(cmd, logic);
+#ifdef SMLP_ENABLE_Z3_API
+	return std::make_unique<z3_solver>(logic);
+#endif
+	MDIE(mod_smlp,1,"no solver specified and none are built-in, require "
+	                "external solver via -S or -I\n");
+}
+
+vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f)
+{
+	uptr<solver> s = mk_solver0(true, smt2_logic_str(dom, f).c_str());
+	s->declare(dom);
+	s->add(f);
+	return all_solutions(*s);
 }
 }
 
@@ -276,7 +284,10 @@ struct bounded_search_ival : search_ival {
 	, any(false)
 	{ assert(this->prec > 0); }
 
-	bool has_next() const override { return !any || length(v) > prec; }
+	bool has_next() const override
+	{
+		return contained != res::NO && (!any || length(v) > prec);
+	}
 
 	void reply(int order) override
 	{
@@ -314,8 +325,17 @@ struct search_list : search_base {
 		m = l + (r - l) / 2;
 	}
 
-	const kay::Q * lo() const override { return empty(values) ? nullptr : &values[std::clamp<ssize_t>(l, 0, size(values)-1)]; }
-	const kay::Q * hi() const override { return empty(values) ? nullptr : &values[std::clamp<ssize_t>(l <= r ? r : l, 0, size(values)-1)]; }
+	const kay::Q * lo() const override
+	{
+		return empty(values) ? nullptr
+		     : &values[std::clamp<ssize_t>(l, 0, size(values)-1)];
+	}
+
+	const kay::Q * hi() const override
+	{
+		return empty(values) ? nullptr
+		     : &values[std::clamp<ssize_t>(l <= r ? r : l, 0, size(values)-1)];
+	}
 };
 
 }
@@ -714,16 +734,16 @@ static ival get_obj_range(const char *obj_range_s,
 			MDIE(mod_smlp,1,"cannot parse argument '%s' to '-R' as "
 			                "a pair of rational numbers\n",
 			     obj_range_s);
-		mod_prob.note("got objective range from -R: [%s,%s]\n",
+		note(mod_prob,"got objective range from -R: [%s,%s]\n",
 		        obj_range.lo.get_str().c_str(),
 		        obj_range.hi.get_str().c_str());
 		if (obj_range.lo > obj_range.hi)
-			mod_prob.warn("warning: empty objective range\n");
+			warn(mod_prob,"empty objective range\n");
 	} else {
 		auto lh = dbl_interval_eval(dom, obj);
 		if (!lh)
 			MDIE(mod_prob,1,"domain is empty\n");
-		mod_prob.info("approximated objective range: [%g,%g], "
+		info(mod_prob,"approximated objective range: [%g,%g], "
 		              "use -R to specify it manually\n",
 		        lh->first, lh->second);
 		if (!isfinite(lh->first) || !isfinite(lh->second))
@@ -861,10 +881,10 @@ static void set_loglvl(char *arg)
 		if (!lvl)
 			swap(mod, lvl);
 		if (mod && lvl)
-			mod_prob.dbg("setting log-level of '%s' to '%s'\n",
+			dbg(mod_prob,"setting log-level of '%s' to '%s'\n",
 			             mod, lvl);
 		else
-			mod_prob.dbg("setting log-level to '%s'\n", lvl);
+			dbg(mod_prob,"setting log-level to '%s'\n", lvl);
 		auto jt = values.find(lvl);
 		if (jt == end(values))
 			MDIE(mod_smlp,1,"unknown log level '%s' given in LOGLVL\n",
@@ -896,7 +916,9 @@ int main(int argc, char **argv)
 		for (int i=0; i<=argc; i++)
 			args.push_back(argv[i]);
 		execvp(shell, args.data());
-		fprintf(stderr, "could not interpret envvar SMLP_OPTS (%s), ignoring...\n", strerror(errno));
+		err(mod_smlp,"could not interpret envvar SMLP_OPTS (%s), "
+		             "ignoring...\n", strerror(errno));
+		setenv("SMLP_OPTS", opts.c_str(), 0);
 	}
 
 	/* these determine the mode of operation of this program */
@@ -1026,28 +1048,28 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 	alpha_conj.emplace_back(move(alpha));
 	alpha = conj(move(alpha_conj));
-	if (mod_prob.note("alpha: "))
+	if (note(mod_prob,"alpha: "))
 		dump_smt2_line(stderr, "", alpha);
 	alpha = subst(alpha, funs);
 
 	sptr<form2> beta = conj(move(beta_conj));
-	if (mod_prob.note("beta : "))
+	if (note(mod_prob,"beta : "))
 		dump_smt2_line(stderr, "", beta);
 	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
 	eta = conj(move(eta_conj));
-	if (mod_prob.note("eta  : "))
+	if (note(mod_prob,"eta  : "))
 		dump_smt2_line(stderr, "", eta);
 	eta = subst(eta, funs);
 
 	lhs = subst(lhs, funs);
 
-	if (mod_prob.note("domain:\n"))
+	if (note(mod_prob,"domain:\n"))
 		smlp::dump_smt2(stderr, dom);
 
 	for (const strview &q : queries) {
-		mod_smlp.info("query '%.*s':\n", (int)q.size(),q.data());
+		info(mod_smlp,"query '%.*s':\n", (int)q.size(),q.data());
 		if (q == "vars") {
 			hset<str> h = free_vars(lhs);
 			vec<str> v(begin(h), end(h));
@@ -1062,14 +1084,14 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
 
-	if (mod_prob.note("checking for out-of-domain application of partial "
+	if (note(mod_prob,"checking for out-of-domain application of partial "
 	                  "functions: (and alpha (not ")) {
 		smlp::dump_smt2(stderr, *pc);
 		fprintf(stderr, "))...\n");
 	}
 	result ood = solve_exists(dom, conj({ alpha, neg(pc) }));
 	if (const sat *s = ood.get<sat>()) {
-		mod_prob.err("ALPHA and DOMAIN constraints do not imply that "
+		err(mod_prob,"ALPHA and DOMAIN constraints do not imply that "
 		             "all function parameters are inside the "
 		             "respective function's domain, e.g.:\n");
 		print_model(stderr, s->model, 2);
@@ -1077,28 +1099,28 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	} else if (const unknown *u = ood.get<unknown>())
 		MDIE(mod_prob,2,"deciding out-of-domain condition: %s\n",
 		     u->reason.c_str());
-	mod_prob.note("out-of-domain condition is false\n");
+	note(mod_prob,"out-of-domain condition is false\n");
 
 	/* find out about the OP comparison operation */
 	cmp_t c = parse_op(argv[optind++]);
 
 	/* hint for the solver: (non-)linear real arithmetic, potentially also
 	 * with integers */
-	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in funs */
+	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in alpha, beta, eta */
 
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
 			MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
 
 		if (obj_range_s)
-			mod_prob.warn("note: objective range specification "
+			warn(mod_prob,"objective range specification "
 			              "-R is unused when CNST is given\n");
 
 		/* interpret the CNST on the right hand side */
 		kay::Q cnst;
 		if (!from_string(argv[optind], cnst))
 			MDIE(mod_smlp,1,"CNST must be a numeric constant\n");
-		mod_prob.dbg("cnst: %s\n", cnst.get_str().c_str());
+		dbg(mod_prob,"cnst: %s\n", cnst.get_str().c_str());
 		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
 
 		/* the problem consists of domain and the eta, alpha and
@@ -1124,7 +1146,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			solve_exists(p.dom, p.p, logic.c_str()).match(
 			[&,lhs=lhs](const sat &s) {
 				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
-				mod_prob.info("sat, lhs value: %s ~ %g, model:\n",
+				info(mod_prob,"sat, lhs value: %s ~ %g, model:\n",
 				        q.get_str().c_str(), q.get_d());
 				print_model(stderr, s.model, 2);
 				for (const auto &[n,c] : s.model) {
@@ -1132,9 +1154,9 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 					assert(p.dom[n]->contains(q));
 				}
 			},
-			[](const unsat &) { mod_prob.info("unsat\n"); },
+			[](const unsat &) { info(mod_prob,"unsat\n"); },
 			[](const unknown &u) {
-				mod_prob.info("unknown: %s\n", u.reason.c_str());
+				info(mod_prob,"unknown: %s\n", u.reason.c_str());
 			}
 			);
 	} else if (solve) {
@@ -1155,7 +1177,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
 		                                 *obj_range, theta, logic.c_str());
 		if (empty(r)) {
-			mod_prob.info(
+			info(mod_prob,
 				"no solution for objective in theta in "
 				"[%s, %s] ~ [%f, %f]\n",
 				obj_range->lo()->get_str().c_str(),
@@ -1163,7 +1185,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 				obj_range->lo()->get_d(),
 				obj_range->hi()->get_d());
 		} else {
-			if (mod_prob.info(
+			if (info(mod_prob,
 				"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
 				is_less((cmp_t)c) ? "min max" : "max min",
 				obj_range->lo()->get_str().c_str(),
@@ -1173,7 +1195,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 				print_model(stderr, r.back().point, 2);
 			for (const auto &s : r) {
 				kay::Q c = s.center_value(lhs);
-				mod_prob.note(
+				note(mod_prob,
 					"T: %s ~ %f -> center: %s ~ %f\n",
 					s.threshold.get_str().c_str(),
 					s.threshold.get_d(),

@@ -106,7 +106,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		const iv::nn::common::affine_matrix<float> &am = std::get<0>(f.t);
 		const auto &kernel = am.a; /* matrix<float> */
 		const vec<float> &bias = am.b;
-		mod_nn.note("layer %zu: w: %zu, h: %zu, bias: %zu\n",
+		note(mod_nn,"layer %zu: w: %zu, h: %zu, bias: %zu\n",
 		        layer, width(kernel), height(kernel), size(bias));
 		/* matrix-vector product */
 		assert(width(kernel) == size(out));
@@ -159,8 +159,8 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	if (single_obj) {
 		/* apply mf2.objective: select right output(s) */
 		str obj_name = gen["objective"].get<std::string>();
-		mod_nn.note("obj '%s' response idx: %zd\n",
-		        obj_name.c_str(), mf2.objective.idx[0]);
+		note(mod_nn,"obj '%s' response idx: %zd\n",
+		     obj_name.c_str(), mf2.objective.idx[0]);
 		assert(mf2.objective.type == smlp_response::SMLP_RESPONSE_ID);
 		ssize_t idx = mf2.objective.idx[0];
 		assert(idx >= 0);

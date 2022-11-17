@@ -38,18 +38,8 @@ struct solver {
 	}
 };
 
-uptr<solver> mk_solver0(bool incremental, const char *logic = nullptr);
-
-template <typename T>
-str smt2_logic_str(const domain &dom, const sptr<T> &e);
-
-inline vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f)
-{
-	uptr<solver> s = mk_solver0(true, smt2_logic_str(dom, f).c_str());
-	s->declare(dom);
-	s->add(f);
-	return all_solutions(*s);
-}
+uptr<solver> mk_solver0(bool incremental, const char *logic);
+vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f);
 
 struct solver_seq : solver {
 
