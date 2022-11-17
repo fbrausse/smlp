@@ -974,8 +974,8 @@ int main(int argc, char **argv)
 		args.emplace_back(argv[i]);
 
 	/* parse options from the command-line */
-	for (int opt; (opt = getopt(argc, argv,
-	                            ":a:b:c:C:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:v::V")) != -1;)
+	const char *opts = ":a:b:c:C:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:v::V";
+	for (int opt; (opt = getopt(argc, argv, opts)) != -1;)
 		switch (opt) {
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'b': beta_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -984,7 +984,9 @@ int main(int argc, char **argv)
 				log_color = true;
 			else if (optarg == "off"sv)
 				log_color = false;
-			else if (optarg != "auto"sv)
+			else if (optarg == "auto"sv)
+				log_color = isatty(STDERR_FILENO);
+			else
 				MDIE(mod_smlp,1,"option '-c' only supports 'on', "
 				                "'off', 'auto'\n");
 			break;
