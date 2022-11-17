@@ -583,8 +583,9 @@ Options [defaults]:\n\
                'sh' if that variable is not set []\n\
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]\n\
   -T THRESHS   instead of on an interval perform binary search among the\n\
-               thresholds in the comma-separated list THRESHS; overrides -R and\n\
-               -P\n\
+               thresholds in the list given in THRESHS; overrides -R and -P;\n\
+               THRESHS is either a triple LO:INC:HI of rationals with INC > 0 or\n\
+               a comma-separated list of rationals\n\
   -v[LOGLVL]   increases the verbosity of all modules or sets it as specified in\n\
                LOGLVL: comma-separated list of entries of the form [MODULE=]LVL\n\
                where LVL is one of none, error, warn, info, note, debug [note];\n\
@@ -832,18 +833,43 @@ parse_search_range(char *threshs_s, const char *max_prec_s,
 {
 	if (threshs_s) {
 		vec<kay::Q> vs;
-		for (char *s = NULL, *t = strtok_r(threshs_s, ",", &s);
-		     t; t = strtok_r(NULL, ",", &s)) {
-			kay::Q v;
-			if (!from_string(t, v))
-				MDIE(mod_smlp,1,"cannot parse '%s' in THRESHS "
-				                "as a rational constant\n", t);
-			vs.emplace_back(move(v));
+		if (strchr(threshs_s, ':')) {
+			kay::Q v[3];
+			const char *beg = threshs_s;
+			const char *end = beg + strlen(beg);
+			for (size_t i=0; i<3; i++) {
+				using kay::from_chars;
+				auto r = from_chars(beg, end, v[i]);
+				if (r.ec != std::errc {})
+					MDIE(mod_smlp,1,"cannot parse '%s' in "
+					     "THRESHS as a rational constant\n",
+					     threshs_s);
+				if (*r.ptr != (i < 2 ? ':' : '\0'))
+					MDIE(mod_smlp,1,"expected three "
+					     "':'-delimited rational numbers in "
+					     "THRESHS, here: '%s'\n", r.ptr);
+				beg = r.ptr + 1;
+			}
+			if (v[1] <= 0)
+				MDIE(mod_smlp,1,"INC must be positive\n");
+			for (kay::Q q = v[0]; q <= v[2]; q += v[1]) {
+				dbg(mod_smlp,"got '%s' for -T\n",q.get_str().c_str());
+				vs.push_back(q);
+			}
+		} else {
+			for (char *s = NULL, *t = strtok_r(threshs_s, ",", &s);
+			     t; t = strtok_r(NULL, ",", &s)) {
+				kay::Q v;
+				if (!from_string(t, v))
+					MDIE(mod_smlp,1,"cannot parse '%s' in THRESHS "
+					                "as a rational constant\n", t);
+				vs.emplace_back(move(v));
+			}
+			std::sort(begin(vs), end(vs));
+			vs.erase(std::unique(begin(vs), end(vs)), end(vs));
 		}
 		if (empty(vs))
 			MDIE(mod_prob,1,"list THRESHS cannot be empty\n");
-		std::sort(begin(vs), end(vs));
-		vs.erase(std::unique(begin(vs), end(vs)), end(vs));
 		return std::make_unique<search_list>(move(vs));
 	} else {
 		kay::Q max_prec;

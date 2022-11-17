@@ -52,8 +52,9 @@ Options [defaults]:
                'sh' if that variable is not set []
   -t TIMEOUT   set the solver timeout in seconds, 0 to disable [0]
   -T THRESHS   instead of on an interval perform binary search among the
-               thresholds in the comma-separated list THRESHS; overrides -R and
-               -P
+               thresholds in the list given in THRESHS; overrides -R and -P;
+               THRESHS is either a triple LO:INC:HI of rationals with INC > 0 or
+               a comma-separated list of rationals
   -v[LOGLVL]   increases the verbosity of all modules or sets it as specified in
                LOGLVL: comma-separated list of entries of the form [MODULE=]LVL
                where LVL is one of none, error, warn, info, note, debug [note];
