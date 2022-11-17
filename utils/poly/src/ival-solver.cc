@@ -427,9 +427,13 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 			sat_model = dom;
 	};
 
+	vec<hmap<str,sptr<term2>>> crit_pts = all_solutions(sdom, f);
+	mod_crit.info("solving on %zu critical points and %zu domain corners...\n",
+	              size(crit_pts), n_corners);
+
 	timing t0;
 	size_t n = 0;
-	for (hmap<str,sptr<term2>> crit : all_solutions(sdom, f)) {
+	for (hmap<str,sptr<term2>> crit : crit_pts) {
 		crit.insert(begin(remaining_vars), end(remaining_vars));
 		if (mod_crit.note("critical point:")) {
 			for (const auto &[v,c] : crit)
@@ -492,6 +496,8 @@ result ival_solver::check()
 			}
 		}
 		);
+
+	mod_ival.info("solving...\n");
 
 	/* For any combination of assignments to discrete vars interval-evaluate
 	 * the formula. It is SAT if there is (at least) one combination that
