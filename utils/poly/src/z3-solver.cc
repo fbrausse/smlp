@@ -8,6 +8,8 @@
 
 #include <sstream>
 
+#include <sys/time.h>
+
 using namespace smlp;
 
 z3_solver::z3_solver(const char *logic)
@@ -109,12 +111,42 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 	);
 }
 
+static struct sigaction old_alrm_handler;
+
+static void replace_sigint_handler(int)
+{
+	signal(SIGINT, SIG_DFL);
+	sigaction(SIGVTALRM, &old_alrm_handler, NULL);
+}
+
 result z3_solver::check()
 {
-	interruptible::is_active = this;
 	info(mod_z3,"solving...\n");
+
+	/* Z3 overrides the SIGINT handler with something that does not work
+	 * reliably; we create a timer to signal us and then replace the SIGINT
+	 * handler back to the default. */
+
+	/* Set up the alarm handler for the timer */
+	struct sigaction signew;
+	memset(&signew, 0, sizeof(signew));
+	signew.sa_handler = replace_sigint_handler;
+	sigaction(SIGVTALRM, &signew, &old_alrm_handler);
+
+	/* Set up the timer */
+	struct itimerval timnew, timold;
+	getitimer(ITIMER_VIRTUAL, &timnew);
+	timnew.it_value.tv_usec += 50000; /* 50ms */
+	setitimer(ITIMER_VIRTUAL, &timnew, &timold);
+
+	interruptible::is_active = this;
 	z3::check_result r = slv.check();
 	interruptible::is_active = nullptr;
+
+	/* Restore previous timer and alarm handler */
+	setitimer(ITIMER_VIRTUAL, &timold, NULL);
+	sigaction(SIGVTALRM, &old_alrm_handler, NULL);
+
 	switch (r) {
 	case z3::sat: {
 		z3::model m = slv.get_model();
