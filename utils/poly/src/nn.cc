@@ -140,8 +140,8 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	if (mf2.objective.type != smlp_response::SMLP_RESPONSE_ID) {
 		std::stringstream ss;
 		ss << mf2.objective;
-		DIE(1,"unsupported objective function type, only identity is: "
-		      "%s\n", ss.str().c_str());
+		MDIE(mod_nn,1,"unsupported objective function type, only "
+		              "identity is: %s\n", ss.str().c_str());
 	}
 
 	vec<str> out_names;
@@ -203,8 +203,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			} else if (sp["type"] == "input")
 				continue;
 			else
-				DIE(1,"error: .spec contains neither 'rad-abs' "
-				      "nor 'rad-rel' for '%s'\n", n.c_str());
+				MDIE(mod_nn,1,".spec contains neither 'rad-abs' "
+				              "nor 'rad-rel' for '%s'\n",
+				     n.c_str());
 			conj.emplace_back(make2f(prop2 { LE,
 				abs(make2t(bop2 { bop::SUB, nm, e })),
 				move(r)

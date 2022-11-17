@@ -33,6 +33,7 @@
 
 #define ARRAY_SIZE(...)	(sizeof(__VA_ARGS__)/sizeof(*(__VA_ARGS__)))
 #define DIE(code,...) do { fprintf(stderr, __VA_ARGS__); exit(code); } while (0)
+#define MDIE(mod,code,...) do { (mod).err(__VA_ARGS__); exit(code); } while (0)
 
 namespace smlp {
 
@@ -215,7 +216,7 @@ struct module {
 	const char *color;
 	loglvl lvl;
 
-	module(const char *name, const char *color, loglvl lvl = NOTE);
+	explicit module(const char *name, const char *color = "", loglvl lvl = NOTE);
 
 	bool logs(loglvl l) const { return l <= lvl; }
 
@@ -238,6 +239,7 @@ struct module {
 #undef BODY
 };
 
-extern module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn;
+extern module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn, mod_poly, mod_prob;
+extern module mod_smlp;
 
 } // end namespace smlp

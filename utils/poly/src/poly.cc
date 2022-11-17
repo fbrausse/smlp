@@ -55,14 +55,16 @@ static domain parse_domain_file(const char *path)
 {
 	if (file f { path, "r" })
 		return parse_simple_domain(f);
-	DIE(1,"error opening domain file path: %s: %s\n",path,strerror(errno));
+	MDIE(mod_poly,1,"opening domain file path: %s: %s\n",
+	     path,strerror(errno));
 }
 
 static expr parse_expression_file(const char *path, bool infix, bool python_compat)
 {
 	if (file f { path, "r" })
 		return infix ? parse_infix(f, python_compat) : parse_pe(f);
-	DIE(1,"error opening expression file path: %s: %s\n",path,strerror(errno));
+	MDIE(mod_poly,1,"opening expression file path: %s: %s\n",
+	     path,strerror(errno));
 }
 
 pre_problem smlp::parse_poly_problem(const char *simple_domain_path,

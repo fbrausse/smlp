@@ -84,16 +84,17 @@ bool module::vlog(loglvl l, const char *fmt, va_list ap) const
 }
 
 /*
-static module mod_poly { "poly",          CSI COL_FG   COL_BLUE    "m" };
-static module mod_ex   { "cand",          CSI COL_FG   COL_GREEN   "m" };
-static module mod_cex  { "coex",          CSI COL_FG   COL_RED     "m" };
+static module mod_ex  { "cand",          CSI COL_FG   COL_GREEN   "m" };
+static module mod_cex { "coex",          CSI COL_FG   COL_RED     "m" };
 */
-static module mod_prob { "prob", SGR_BOLD CSI COL_FG_B COL_BLACK   "m" };
-module smlp::mod_ival  { "ival",          CSI COL_FG   COL_YELLOW  "m" };
-module smlp::mod_crit  { "crit",          CSI COL_FG   COL_MAGENTA "m" };
-module smlp::mod_z3    { "z3"  ,          CSI COL_FG_B COL_BLUE    "m" };
-module smlp::mod_ext   { "ext" ,          CSI COL_FG   COL_CYAN    "m" };
-module smlp::mod_nn    { "nn"  ,          CSI COL_FG   COL_BLUE    "m" };
+module smlp::mod_smlp { "smlp",                                       };
+module smlp::mod_prob { "prob", SGR_BOLD CSI COL_FG_B COL_BLACK   "m" };
+module smlp::mod_ival { "ival",          CSI COL_FG   COL_YELLOW  "m" };
+module smlp::mod_crit { "crit",          CSI COL_FG   COL_MAGENTA "m" };
+module smlp::mod_z3   { "z3"  ,          CSI COL_FG_B COL_BLUE    "m" };
+module smlp::mod_ext  { "ext" ,          CSI COL_FG   COL_CYAN    "m" };
+module smlp::mod_nn   { "nn"  ,          CSI COL_FG   COL_BLUE    "m" };
+module smlp::mod_poly { "poly",          CSI COL_FG   COL_BLUE    "m" };
 
 namespace {
 
@@ -154,8 +155,8 @@ uptr<solver> mk_solver0(bool incremental, const char *logic)
 #ifdef SMLP_ENABLE_Z3_API
 	return std::make_unique<z3_solver>(logic);
 #endif
-	DIE(1,"error: no solver specified and none are built-in, require "
-	      "external solver via -S or -I\n");
+	MDIE(mod_smlp,1,"no solver specified and none are built-in, require "
+	                "external solver via -S or -I\n");
 }
 
 template <typename T>
@@ -407,7 +408,8 @@ optimize_EA(cmp_t direction,
 			result e = exists->check();
 			trace_result(stdout, "a", e, T, timing() - e0);
 			if (unknown *u = e.get<unknown>())
-				DIE(2,"exists is unknown: %s\n", u->reason.c_str());
+				MDIE(mod_smlp,2,"exists is unknown: %s\n",
+				     u->reason.c_str());
 			if (e.get<unsat>()) {
 				obj_range.reply(is_less(direction) ? +1 : -1);
 				break;
@@ -443,7 +445,8 @@ optimize_EA(cmp_t direction,
 			result a = forall->check();
 			trace_result(stdout, "b", a, T, timing() - a0);
 			if (unknown *u = a.get<unknown>())
-				DIE(2,"forall is unknown: %s\n", u->reason.c_str());
+				MDIE(mod_smlp,2,"forall is unknown: %s\n",
+				     u->reason.c_str());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
 				results.emplace_back(T, move(exists), candidate);
@@ -587,10 +590,12 @@ as those in the EXPR file (if any).\n\
 For log detail setting -v, MODULE can be one of:\n\
 ");
 	vec<strview> mods(size(modules));
-	transform(begin(modules), end(modules), begin(mods), [](const auto &p) { return p.first; });
+	transform(begin(modules), end(modules), begin(mods),
+	          [](const auto &p) { return p.first; });
 	std::sort(begin(mods), end(mods));
 	for (size_t i=0; i<size(mods); i++)
-		fprintf(f, "%s%.*s", i ? ", " : "  ", (int)mods[i].length(), mods[i].data());
+		fprintf(f, "%s%.*s", i ? ", " : "  ",
+		        (int)mods[i].length(), mods[i].data());
 	fprintf(f,"\n\
 \n\
 Options are first read from the environment variable SMLP_OPTS, if set.\n\
@@ -706,9 +711,9 @@ static ival get_obj_range(const char *obj_range_s,
 			ok &= r.ec == std::errc {} && !*r.ptr;
 		}
 		if (!ok)
-			DIE(1,"error: cannot parse argument '%s' "
-			      "to '-R' as a pair of rational numbers\n",
-			      obj_range_s);
+			MDIE(mod_smlp,1,"cannot parse argument '%s' to '-R' as "
+			                "a pair of rational numbers\n",
+			     obj_range_s);
 		mod_prob.note("got objective range from -R: [%s,%s]\n",
 		        obj_range.lo.get_str().c_str(),
 		        obj_range.hi.get_str().c_str());
@@ -717,13 +722,13 @@ static ival get_obj_range(const char *obj_range_s,
 	} else {
 		auto lh = dbl_interval_eval(dom, obj);
 		if (!lh)
-			DIE(1,"error: domain is empty\n");
+			MDIE(mod_prob,1,"domain is empty\n");
 		mod_prob.info("approximated objective range: [%g,%g], "
 		              "use -R to specify it manually\n",
 		        lh->first, lh->second);
 		if (!isfinite(lh->first) || !isfinite(lh->second))
-			DIE(1,"error: optimization over an unbounded "
-			      "range is not supported\n");
+			MDIE(mod_prob,1,"optimization over an unbounded range "
+			                "is not supported\n");
 		obj_range.lo = kay::Q(lh->first);
 		obj_range.hi = kay::Q(lh->second);
 	}
@@ -735,7 +740,7 @@ static cmp_t parse_op(const std::string_view &s)
 	for (size_t c=0; c<ARRAY_SIZE(cmp_s); c++)
 		if (cmp_s[c] == s)
 			return (cmp_t)c;
-	DIE(1,"error: OP '%.*s' unknown\n",(int)s.length(), s.data());
+	MDIE(mod_smlp,1,"OP '%.*s' unknown\n",(int)s.length(), s.data());
 }
 
 interruptible *interruptible::is_active;
@@ -811,21 +816,20 @@ parse_search_range(char *threshs_s, const char *max_prec_s,
 		     t; t = strtok_r(NULL, ",", &s)) {
 			kay::Q v;
 			if (!from_string(t, v))
-				DIE(1,"error: cannot parse '%s' in "
-				      "THRESHS as a rational constant\n",
-				      t);
+				MDIE(mod_smlp,1,"cannot parse '%s' in THRESHS "
+				                "as a rational constant\n", t);
 			vs.emplace_back(move(v));
 		}
 		if (empty(vs))
-			DIE(1,"error: list THRESHS cannot be empty\n");
+			MDIE(mod_prob,1,"list THRESHS cannot be empty\n");
 		std::sort(begin(vs), end(vs));
 		vs.erase(std::unique(begin(vs), end(vs)), end(vs));
 		return std::make_unique<search_list>(move(vs));
 	} else {
 		kay::Q max_prec;
 		if (!from_string(max_prec_s, max_prec) || max_prec < 0)
-			DIE(1,"error: cannot parse MAX_PREC as a non-negative "
-			      "rational constant: '%s'\n", max_prec_s);
+			MDIE(mod_smlp,1,"cannot parse MAX_PREC as a non-negative "
+			                "rational constant: '%s'\n", max_prec_s);
 
 		ival range = get_obj_range(obj_range_s, dom, lhs);
 		return max_prec
@@ -857,16 +861,19 @@ static void set_loglvl(char *arg)
 		if (!lvl)
 			swap(mod, lvl);
 		if (mod && lvl)
-			mod_prob.dbg("setting log-level of '%s' to '%s'\n", mod, lvl);
+			mod_prob.dbg("setting log-level of '%s' to '%s'\n",
+			             mod, lvl);
 		else
 			mod_prob.dbg("setting log-level to '%s'\n", lvl);
 		auto jt = values.find(lvl);
 		if (jt == end(values))
-			DIE(1,"error: unknown log level '%s' given in LOGLVL\n", lvl);
+			MDIE(mod_smlp,1,"unknown log level '%s' given in LOGLVL\n",
+			     lvl);
 		if (mod) {
 			auto it = modules.find(mod);
 			if (it == end(modules))
-				DIE(1,"error: unknown module '%s' given in LOGLVL\n",mod);
+				MDIE(mod_smlp,1,"unknown module '%s' given in "
+				                "LOGLVL\n",mod);
 			it->second->lvl = jt->second;
 		} else
 			for (const auto &[n,m] : modules)
@@ -930,8 +937,8 @@ int main(int argc, char **argv)
 			else if (optarg == "off"sv)
 				log_color = false;
 			else if (optarg != "auto"sv)
-				DIE(1,"error: option '-c' only supports 'on', "
-				      "'off', 'auto'\n");
+				MDIE(mod_smlp,1,"option '-c' only supports 'on', "
+				                "'off', 'auto'\n");
 			break;
 		case 'C':
 			if (optarg == "python"sv)
@@ -943,8 +950,8 @@ int main(int argc, char **argv)
 			else if (optarg == "gen-obj"sv)
 				single_obj = true;
 			else
-				DIE(1,"error: option '-C' only supports "
-				      "'python', 'bnds-dom', 'clamp', 'gen-obj'\n");
+				MDIE(mod_smlp,1,"option '-C' only supports "
+				     "'python', 'bnds-dom', 'clamp', 'gen-obj'\n");
 			break;
 		case 'd': delta_s = optarg; break;
 		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -954,14 +961,14 @@ int main(int argc, char **argv)
 			else if (optarg == "prefix"sv)
 				infix = false;
 			else
-				DIE(1,"error: option '-F' only supports "
-				      "'infix' and 'prefix'\n");
+				MDIE(mod_smlp,1,"option '-F' only supports "
+				                "'infix' and 'prefix'\n");
 			break;
 		case 'h': usage(argv[0], 0);
 		case 'i': {
 			if (from_string(optarg, intervals))
 				break;
-			DIE(1,"error: SUBDIVS argument to '-i' must be numeric\n");
+			MDIE(mod_smlp,1,"SUBDIVS argument to '-i' must be numeric\n");
 		}
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
@@ -977,9 +984,9 @@ int main(int argc, char **argv)
 		case 'T': threshs_s = optarg; break;
 		case 'v': set_loglvl(optarg); break;
 		case 'V': version_info(); exit(0);
-		case ':': DIE(1,"error: option '-%c' requires an argument\n",
-		              optopt);
-		case '?': DIE(1,"error: unknown option '-%c'\n",optopt);
+		case ':': MDIE(mod_smlp,1,"option '-%c' requires an argument\n",
+		               optopt);
+		case '?': MDIE(mod_smlp,1,"unknown option '-%c'\n",optopt);
 		}
 
 	pre_problem pp;
@@ -1010,7 +1017,7 @@ int main(int argc, char **argv)
 		usage(argv[0], 1);
 
 	if (inject_reals && !(io_bnds_dom || empty(pp.input_bounds)))
-		DIE(1,"\
+		MDIE(mod_smlp,1,"\
 error: -r requires -C bnds-dom: re-casting integers as reals based on IO-BOUNDS\n\
 implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	sptr<form2> alpha = pp.interpret_input_bounds(io_bnds_dom, inject_reals);
@@ -1040,7 +1047,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		smlp::dump_smt2(stderr, dom);
 
 	for (const strview &q : queries) {
-		fprintf(stderr, "query '%.*s':\n", (int)q.size(),q.data());
+		mod_smlp.info("query '%.*s':\n", (int)q.size(),q.data());
 		if (q == "vars") {
 			hset<str> h = free_vars(lhs);
 			vec<str> v(begin(h), end(h));
@@ -1049,7 +1056,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 				fprintf(stderr, "  '%s': %s\n", id.c_str(),
 				        dom[id] ? "bound" : "free");
 		} else
-			DIE(1,"error: unknown query '%.*s'\n",(int)q.size(),q.data());
+			MDIE(mod_smlp,1,"unknown query '%.*s'\n",(int)q.size(),q.data());
 	}
 
 	/* Check that the constraints from partial function evaluation are met
@@ -1062,15 +1069,14 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	}
 	result ood = solve_exists(dom, conj({ alpha, neg(pc) }));
 	if (const sat *s = ood.get<sat>()) {
-		fprintf(stderr,
-		        "error: ALPHA and DOMAIN constraints do not imply that "
-		        "all function parameters are inside the respective "
-		        "function's domain, e.g.:\n");
+		mod_prob.err("ALPHA and DOMAIN constraints do not imply that "
+		             "all function parameters are inside the "
+		             "respective function's domain, e.g.:\n");
 		print_model(stderr, s->model, 2);
-		DIE(4,"");
+		exit(4);
 	} else if (const unknown *u = ood.get<unknown>())
-		DIE(2,"error deciding out-of-domain condition: %s\n",
-		      u->reason.c_str());
+		MDIE(mod_prob,2,"deciding out-of-domain condition: %s\n",
+		     u->reason.c_str());
 	mod_prob.note("out-of-domain condition is false\n");
 
 	/* find out about the OP comparison operation */
@@ -1082,7 +1088,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 	if (argc - optind >= 1) {
 		if (*beta != *true2)
-			DIE(1,"-b BETA is not supported when CNST is given\n");
+			MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
 
 		if (obj_range_s)
 			mod_prob.warn("note: objective range specification "
@@ -1091,7 +1097,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		/* interpret the CNST on the right hand side */
 		kay::Q cnst;
 		if (!from_string(argv[optind], cnst))
-			DIE(1,"CNST must be a numeric constant\n");
+			MDIE(mod_smlp,1,"CNST must be a numeric constant\n");
 		mod_prob.dbg("cnst: %s\n", cnst.get_str().c_str());
 		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
 
@@ -1137,8 +1143,8 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 		kay::Q delta;
 		if (!from_string(delta_s, delta) || delta < 0)
-			DIE(1,"error: cannot parse DELTA as a positive "
-			      "rational constant: '%s'\n", delta_s);
+			MDIE(mod_smlp,1,"error: cannot parse DELTA as a positive "
+			                "rational constant: '%s'\n", delta_s);
 
 		printf("d,%s\n", std::filesystem::current_path().c_str());
 		printf("c,%zu,", size(args));

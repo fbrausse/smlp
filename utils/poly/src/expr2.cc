@@ -159,8 +159,8 @@ expr2s smlp::unroll(const expr &e,
 		const str &s = c.func->get<name>()->id;
 		auto f = funs.find(s);
 		if (f == funs.end())
-			DIE(1,"error: function '%s' called but not defined\n",
-			    s.c_str());
+			MDIE(mod_prob,1,"function '%s' called in expression "
+			                "but not defined\n", s.c_str());
 		return f->second(move(args));
 	}
 	);

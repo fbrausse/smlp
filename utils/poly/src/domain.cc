@@ -60,8 +60,8 @@ struct simple_domain_parser {
 			switch (delim[0]) {
 			case '[': delim[0] = ']'; break;
 			case '{': delim[0] = '}'; break;
-			default: DIE(1,"unexpected range start symbol '%s'\n",
-			             delim);
+			default: MDIE(mod_prob,1,"unexpected range start symbol "
+			                         "'%s' in domain\n", delim);
 			}
 			s++;
 			t = s + strcspn(s, delim);

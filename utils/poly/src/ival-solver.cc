@@ -480,9 +480,9 @@ result ival_solver::check()
 		[&,var=var](const ival &i) {
 			switch (k.type) {
 			case component::INT:
-				DIE(1,"error: support for integer intervals is "
-				      "not implemented in interval-solver, yet. "
-				      "Use -r to convert them to reals.\n");
+				MDIE(mod_ival,1,"support for integer intervals "
+				     "is not implemented in interval-solver, "
+				     "yet. Use -r to convert them to reals.\n");
 			case component::REAL:
 				c.emplace(var, dbl::endpts {
 					lo(to_ival(i.lo)),

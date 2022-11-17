@@ -63,7 +63,8 @@ struct pe_parser {
 			if (ec == std::errc {})
 				return cop { cmp, gets(), gets() };
 		}
-		DIE(1,"unhandled operator '%s' in expression\n",tok.c_str());
+		MDIE(mod_poly,1,"unhandled operator '%s' in expression\n",
+		     tok.c_str());
 	}
 };
 

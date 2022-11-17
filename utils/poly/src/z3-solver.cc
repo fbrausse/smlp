@@ -75,8 +75,8 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 	[&](const name &n){
 		auto it = symbols.find(n.id);
 		if (it == symbols.end())
-			DIE(1,"error: reference to symbol '%s' not in domain\n",
-			    n.id.c_str());
+			MDIE(mod_z3,1,"reference to symbol '%s' not in domain\n",
+			     n.id.c_str());
 		return it->second;
 	},
 	[&](const cnst2 &c){
@@ -129,9 +129,8 @@ result z3_solver::check()
 			if (!e.is_numeral(num)) {
 				std::stringstream ss;
 				ss << e;
-				DIE(3,"error: expected numeral assignment "
-				      "for %s, got %s\n",
-				    id.c_str(), ss.str().c_str());
+				MDIE(mod_z3,3,"expected numeral assignment for "
+				     "%s, got %s\n", id.c_str(), ss.str().c_str());
 			}
 			//std::cerr << "z3: parsing cnst " << num << " -> ";
 			cnst2 c;
