@@ -111,12 +111,16 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 	);
 }
 
+static struct itimerval old_timer;
 static struct sigaction old_alrm_handler;
+static bool replace_sigint_handler_has_run;
 
 static void replace_sigint_handler(int)
 {
 	signal(SIGINT, SIG_DFL);
 	sigaction(SIGVTALRM, &old_alrm_handler, NULL);
+	setitimer(ITIMER_VIRTUAL, &old_timer, NULL);
+	replace_sigint_handler_has_run = true;
 }
 
 result z3_solver::check()
@@ -126,6 +130,7 @@ result z3_solver::check()
 	/* Z3 overrides the SIGINT handler with something that does not work
 	 * reliably; we create a timer to signal us and then replace the SIGINT
 	 * handler back to the default. */
+	replace_sigint_handler_has_run = false;
 
 	/* Set up the alarm handler for the timer */
 	struct sigaction signew;
@@ -134,18 +139,25 @@ result z3_solver::check()
 	sigaction(SIGVTALRM, &signew, &old_alrm_handler);
 
 	/* Set up the timer */
-	struct itimerval timnew, timold;
+	struct itimerval timnew;
 	getitimer(ITIMER_VIRTUAL, &timnew);
-	timnew.it_value.tv_usec += 50000; /* 50ms */
-	setitimer(ITIMER_VIRTUAL, &timnew, &timold);
+	timnew.it_value.tv_usec += 100000; /* 100ms "ought to be enough for every CPU" */
+	setitimer(ITIMER_VIRTUAL, &timnew, &old_timer);
 
 	interruptible::is_active = this;
 	z3::check_result r = slv.check();
 	interruptible::is_active = nullptr;
 
 	/* Restore previous timer and alarm handler */
-	setitimer(ITIMER_VIRTUAL, &timold, NULL);
-	sigaction(SIGVTALRM, &old_alrm_handler, NULL);
+	sigset_t newset;
+	sigemptyset(&newset);
+	sigaddset(&newset, SIGVTALRM);
+	sigprocmask(SIG_BLOCK, &newset, NULL);
+	if (!replace_sigint_handler_has_run) {
+		sigaction(SIGVTALRM, &old_alrm_handler, NULL);
+		setitimer(ITIMER_VIRTUAL, &old_timer, NULL);
+	}
+	sigprocmask(SIG_UNBLOCK, &newset, NULL);
 
 	switch (r) {
 	case z3::sat: {
