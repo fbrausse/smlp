@@ -50,10 +50,20 @@ struct lneg2 {
 
 inline const char *lbop_s[] = { "and", "or" };
 
+namespace detail {
+str to_string(const sptr<form2> &, bool let);
+str to_string(const sptr<term2> &, bool let);
+}
+
 struct form2 : sumtype<prop2,lbop2,lneg2>
              , std::enable_shared_from_this<form2> {
 
 	using sumtype<prop2,lbop2,lneg2>::sumtype;
+
+	friend str to_string(const sptr<form2> &f, bool let = true)
+	{
+		return detail::to_string(f, let);
+	}
 };
 
 /* An 'term2' expression is either:
@@ -112,6 +122,11 @@ struct term2 : sumtype<name,bop2,uop2,cnst2,ite2>
              , std::enable_shared_from_this<term2> {
 
 	using sumtype<name,bop2,uop2,cnst2,ite2>::sumtype;
+
+	friend str to_string(const sptr<term2> &t, bool let = true)
+	{
+		return detail::to_string(t, let);
+	}
 };
 
 template <typename... Ts>

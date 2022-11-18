@@ -216,3 +216,54 @@ void smlp::dump_smt2(FILE *f, const domain &d)
 		fprintf(f, ")\n");
 	}
 }
+
+#ifdef _GNU_SOURCE
+static const cookie_io_functions_t str_cookie = {
+	/* .read = */
+	[](void *, char *, size_t) -> ssize_t { return -1; },
+	/* .write = */
+	[](void *c, const char *buf, size_t sz) -> ssize_t {
+		str *s = static_cast<str *>(c);
+		s->append(buf, sz);
+		return sz;
+	},
+	/* .seek = */
+	[](void *, off64_t *, int) { return -1; },
+	/* .close = */
+	[](void *) { return 0; },
+};
+template <typename T>
+static str to_string_help(const sptr<T> &g, bool let)
+{
+	str s;
+	FILE *f = fopencookie(&s, "w", str_cookie);
+	::dump_smt2(f, *g, let);
+	fclose(f);
+	return s;
+}
+#elif _POSIX_C_SOURCE >= 200809L
+template <typename T>
+static str to_string_help(const sptr<T> &g, bool let)
+{
+	char *buf = NULL;
+	size_t sz = 0;
+	FILE *f = open_memstream(&buf, &sz);
+	::dump_smt2(f, *g, let);
+	fclose(f);
+	str r(buf, sz);
+	free(buf);
+	return r;
+}
+#else
+# error "no implementation for to_string(sptr<T>, bool) available"
+#endif
+
+str detail::to_string(const sptr<term2> &g, bool let)
+{
+	return to_string_help(g, let);
+}
+
+str detail::to_string(const sptr<form2> &g, bool let)
+{
+	return to_string_help(g, let);
+}

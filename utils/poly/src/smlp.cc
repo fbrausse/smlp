@@ -711,11 +711,12 @@ static sptr<form2> parse_infix_form2(const char *s)
 	return *unroll(parse_infix(s, false), logic).get<sptr<form2>>();
 }
 
-static void dump_smt2_line(FILE *f, const char *pre, const sptr<form2> &g)
+static void note_smt2_line(const char *pre, const sptr<form2> &g, const char *post = "")
 {
-	fprintf(f, "%s", pre);
-	smlp::dump_smt2(f, *g);
-	fprintf(f, "\n");
+	if (note(mod_prob, "%s", pre)) {
+		smlp::dump_smt2(stderr, *g);
+		fprintf(stderr, "%s\n", post);
+	}
 }
 
 static ival get_obj_range(const char *obj_range_s,
@@ -1076,19 +1077,16 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 	alpha_conj.emplace_back(move(alpha));
 	alpha = conj(move(alpha_conj));
-	if (note(mod_prob,"alpha: "))
-		dump_smt2_line(stderr, "", alpha);
+	note_smt2_line("alpha: ", alpha);
 	alpha = subst(alpha, funs);
 
 	sptr<form2> beta = conj(move(beta_conj));
-	if (note(mod_prob,"beta : "))
-		dump_smt2_line(stderr, "", beta);
+	note_smt2_line("beta : ", beta);
 	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
 	eta = conj(move(eta_conj));
-	if (note(mod_prob,"eta  : "))
-		dump_smt2_line(stderr, "", eta);
+	note_smt2_line("eta  : ", eta);
 	eta = subst(eta, funs);
 
 	lhs = subst(lhs, funs);
@@ -1112,11 +1110,8 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
 
-	if (note(mod_prob,"checking for out-of-domain application of partial "
-	                  "functions: (and alpha (not ")) {
-		smlp::dump_smt2(stderr, *pc);
-		fprintf(stderr, "))...\n");
-	}
+	note_smt2_line("checking for out-of-domain application of partial "
+	               "functions: (and alpha (not ", pc, "))...");
 	result ood = solve_exists(dom, conj({ alpha, neg(pc) }));
 	if (const sat *s = ood.get<sat>()) {
 		err(mod_prob,"ALPHA and DOMAIN constraints do not imply that "
@@ -1147,7 +1142,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		/* interpret the CNST on the right hand side */
 		kay::Q cnst;
 		if (!from_string(argv[optind], cnst))
-			MDIE(mod_smlp,1,"CNST must be a numeric constant\n");
+			MDIE(mod_smlp,1,"CNST must be a rational constant\n");
 		dbg(mod_prob,"cnst: %s\n", cnst.get_str().c_str());
 		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
 

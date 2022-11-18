@@ -221,7 +221,6 @@ struct module {
 	bool logs(loglvl l) const { return l <= lvl; }
 
 	bool vlog(loglvl, const char *fmt, va_list) const;
-	std::ostream & slog(loglvl) const;
 
 #define BODY(level) { \
 		va_list ap;                      \
