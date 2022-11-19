@@ -67,6 +67,9 @@ z3::expr z3_solver::interp(const form2 &f, hmap<void *, z3::expr> &m)
 	},
 	[&](const lneg2 &n) {
 		return !interp(n.arg, m);
+	},
+	[&](const quant2 &) -> z3::expr {
+		MDIE(mod_z3,1,"quantifiers are not yet supported\n"); /* TODO */
 	}
 	);
 }

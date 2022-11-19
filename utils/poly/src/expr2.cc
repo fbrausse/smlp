@@ -70,6 +70,29 @@ std::strong_ordering lneg2::operator<=>(const lneg2 &b) const
 	return *arg <=> *b.arg;
 }
 
+bool quant2::operator==(const quant2 &b) const
+{
+	using std::tie;
+	if (tie(qtype, vars) != tie(b.qtype, b.vars))
+		return false;
+	return f == b.f || *f == *b.f;
+}
+
+std::strong_ordering quant2::operator<=>(const quant2 &b) const
+{
+	using std::tie;
+	std::strong_ordering c = std::strong_ordering::equal;
+	if (*this == b)
+		return c;
+	if ((c = qtype <=> b.qtype) != 0)
+		return c;
+	vec<pair<strview,type>> v1(begin(vars), end(vars));
+	vec<pair<strview,type>> v2(begin(b.vars), end(b.vars));
+	std::sort(begin(v1), end(v1));
+	std::sort(begin(v2), end(v2));
+	return tie(qtype, v1, *f) <=> tie(b.qtype, v2, *b.f);
+}
+
 bool name::operator==(const name &b) const
 {
 	return id == b.id;
@@ -184,6 +207,12 @@ sptr<form2> smlp::subst(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 	[&](const lneg2 &n){
 		sptr<form2> m = subst(n.arg, repl);
 		return m == n.arg ? f : make2f(lneg2 { move(m) });
+	},
+	[&](const quant2 &q){
+		hmap<str,sptr<term2>> r = repl;
+		erase_if(r, [&q](const auto &p) { return q.vars.contains(p.first); });
+		sptr<form2> g = subst(q.f, r);
+		return g == q.f ? f : make2f(quant2 { q.qtype, q.vars, move(g) });
 	}
 	);
 }
@@ -226,7 +255,8 @@ bool smlp::is_ground(const sptr<form2> &f)
 				return false;
 		return true;
 	},
-	[](const lneg2 &n) { return is_ground(n.arg); }
+	[](const lneg2 &n) { return is_ground(n.arg); },
+	[](const quant2 &q) { return empty(q.vars) && is_ground(q.f); }
 	);
 }
 
@@ -282,6 +312,12 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &r
 		if (*o == *false2)
 			return true2;
 		return o == n.arg ? f : make2f(lneg2 { move(o) });
+	},
+	[&](const quant2 &q) {
+		hmap<str,sptr<term2>> r = repl;
+		erase_if(r, [&q](const auto &p){ return q.vars.contains(p.first); });
+		sptr<form2> g = cnst_fold(q.f, r);
+		return g == q.f ? f : make2f(quant2 { q.qtype, q.vars, move(g) });
 	}
 	);
 }
@@ -351,7 +387,8 @@ bool smlp::is_nonlinear(const sptr<form2> &f)
 				return true;
 		return false;
 	},
-	[](const lneg2 &n) { return is_nonlinear(n.arg); }
+	[](const lneg2 &n) { return is_nonlinear(n.arg); },
+	[](const quant2 &q) { return is_nonlinear(q.f); }
 	);
 }
 
@@ -394,7 +431,13 @@ static void collect_free_vars(const sptr<form2> &f, hset<str> &s)
 		for (const sptr<form2> &a : b.args)
 			collect_free_vars(a, s);
 	},
-	[&](const lneg2 &n) { collect_free_vars(n.arg, s); }
+	[&](const lneg2 &n) { collect_free_vars(n.arg, s); },
+	[&](const quant2 &q) {
+		hset<str> v;
+		collect_free_vars(q.f, v);
+		erase_if(v, [&q](const auto &p){ return q.vars.contains(p); });
+		s.merge(v);
+	}
 	);
 }
 
@@ -592,6 +635,18 @@ static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
 			if (o == n.arg)
 				return t;
 			return make2f(lneg2 { move(o) });
+		},
+		[&](const quant2 &q) -> expr2s {
+			sptr<form2> o = simplify(q.f, m);
+			if (*o == *true2)
+				return true2;
+			if (*o == *false2)
+				return false2;
+			if (empty(q.vars))
+				return o;
+			if (o == q.f)
+				return t;
+			return make2f(quant2 { q.qtype, q.vars, move(o) });
 		}
 		)).first;
 	return *it->second.template get<sptr<T>>();
@@ -632,6 +687,13 @@ static sptr<form2> to_nnf(const sptr<form2> &f, bool phase,
 		},
 		[&](const lneg2 &l) {
 			return to_nnf(l.arg, !phase, p, n);
+		},
+		[&](const quant2 &q) {
+			hmap<void *,sptr<form2>> p2, n2;
+			sptr<form2> a = to_nnf(q.f, phase, p2, n2);
+			if (phase && a == q.f)
+				return f;
+			return make2f(quant2 { phase ? q.qtype : !q.qtype, q.vars, move(a) });
 		}
 		)).first;
 	return it->second;

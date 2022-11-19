@@ -23,6 +23,7 @@ struct smt2_output {
 
 	FILE *f;
 	hmap<const void *,size_t> m;
+	bool is_lets = false;
 
 	explicit smt2_output(FILE *f) : f(f) {}
 
@@ -98,7 +99,29 @@ struct smt2_output {
 			}
 			unreachable();
 		},
-		[&](const lneg2 &n) { dump_smt2_un("not", n.arg); }
+		[&](const lneg2 &n) { dump_smt2_un("not", n.arg); },
+		[&](const quant2 &q) {
+			const char *qtype = nullptr;
+			switch (q.qtype) {
+			case quant2::EXISTS: qtype = "exists"; break;
+			case quant2::FORALL: qtype = "forall"; break;
+			}
+			fprintf(f, "(%s (", qtype);
+			bool first = true;
+			for (const auto &[v,t] : q.vars) {
+				const char *s = nullptr;
+				switch (t) {
+				case type::INT: s = "Int"; break;
+				case type::REAL: s = "Real"; break;
+				}
+				fprintf(f, "(%s %s)%s", v.c_str(), s, first ? "" : " ");
+				first = false;
+			}
+			fprintf(f, ") ");
+			smt2_output o { f };
+			is_lets ? o.lets(*q.f) : o.dump_smt2(q.f);
+			fprintf(f, ")");
+		}
 		);
 	}
 
@@ -149,7 +172,8 @@ struct smt2_output {
 		[&](const ite2 &i) { ref(i.cond); ref(i.yes); ref(i.no); },
 		[&](const prop2 &p) { ref(p.left); ref(p.right); },
 		[&](const lbop2 &b) { for (const sptr<form2> &a : b.args) ref(a); },
-		[&](const lneg2 &n) { ref(n.arg); }
+		[&](const lneg2 &n) { ref(n.arg); },
+		[&](const quant2 &) {}
 		);
 	}
 

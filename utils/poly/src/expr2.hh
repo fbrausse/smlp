@@ -57,10 +57,20 @@ str to_string(const sptr<term2> &, bool let);
 
 enum class type : int { INT, REAL };
 
-struct form2 : sumtype<prop2,lbop2,lneg2>
+struct quant2 {
+	enum quantifier { EXISTS, FORALL } qtype;
+	hmap<str,type> vars;
+	sptr<form2> f;
+
+	bool operator==(const quant2 &) const;
+	std::strong_ordering operator<=>(const quant2 &) const;
+	friend quantifier operator!(quantifier t) { return (quantifier)(1-(int)t); }
+};
+
+struct form2 : sumtype<prop2,lbop2,lneg2,quant2>
              , std::enable_shared_from_this<form2> {
 
-	using sumtype<prop2,lbop2,lneg2>::sumtype;
+	using sumtype<prop2,lbop2,lneg2,quant2>::sumtype;
 
 	friend str to_string(const sptr<form2> &f, bool let = true)
 	{

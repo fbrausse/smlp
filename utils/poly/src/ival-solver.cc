@@ -154,7 +154,8 @@ static res eval(const hmap<str,dbl::ival> &dom, const form2 &f, hmap<void *,dbl:
 			}
 		return r;
 	},
-	[&](const lneg2 &n) { return !eval(dom, *n.arg, m); }
+	[&](const lneg2 &n) { return !eval(dom, *n.arg, m); },
+	[&](const quant2 &) -> res { MDIE(mod_ival,1,"quantifiers are not yet supported\n"); /* TODO */ }
 	);
 }
 
@@ -343,10 +344,11 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		bool deriv_exists = true;
 		bool only_order_props = true;
 		bool known_continuous = true;
+		bool is_quantified = false;
 
 		void operator()(const sptr<form2> &f)
 		{
-			if (!deriv_exists || !only_order_props)
+			if (!deriv_exists || !only_order_props || is_quantified)
 				return;
 			f->match(
 			[&](const prop2 &p) {
@@ -378,18 +380,24 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 			},
 			[this](const lneg2 &n) {
 				(*this)(n.arg);
+			},
+			[this](const quant2 &) {
+				is_quantified = true; /* TODO: check empty(q.vars) */
 			}
 			);
 		}
 	} check { dom, };
 	check(orig);
 	note(mod_crit,"derivatives exist: %d, only ordered comparisons: %d, "
-	              "known_continuous: %d\n", check.deriv_exists,
-	              check.only_order_props, check.known_continuous);
+	              "known_continuous: %d, is quantified: %d\n",
+	              check.deriv_exists, check.only_order_props,
+	              check.known_continuous, check.is_quantified);
 	if (!check.deriv_exists)
 		return unknown { "derivative may not be defined everywhere" };
 	if (!check.only_order_props)
 		return unknown { "critical points cannot solve (dis-)equality constraints" };
+	if (check.is_quantified)
+		return unknown { "quantifiers are not yet supported" }; /* TODO */
 
 	/* find all critical points of all functions in the problem */
 	sptr<form2> f = conj(move(check.grad_eq_0));
