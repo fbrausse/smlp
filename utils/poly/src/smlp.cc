@@ -846,6 +846,9 @@ parse_search_range(char *threshs_s, const char *max_prec_s,
                    const sptr<term2> &lhs)
 {
 	if (threshs_s) {
+		if (obj_range_s)
+			warn(mod_prob,"option -R %s is unused, -T overrides it\n",
+			     obj_range_s);
 		vec<kay::Q> vs;
 		if (strchr(threshs_s, ':')) {
 			kay::Q v[3];
@@ -1108,14 +1111,14 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		smlp::dump_smt2(stderr, dom);
 
 	for (const strview &q : queries) {
-		info(mod_smlp,"query '%.*s':\n", (int)q.size(),q.data());
+		bool o = info(mod_smlp,"query '%.*s':\n", (int)q.size(),q.data());
 		if (q == "vars") {
 			hset<str> h = free_vars(lhs);
 			vec<str> v(begin(h), end(h));
 			sort(begin(v), end(v));
 			for (const str &id : v)
-				fprintf(stderr, "  '%s': %s\n", id.c_str(),
-				        dom[id] ? "bound" : "free");
+				o && fprintf(stderr, "  '%s': %s\n", id.c_str(),
+				             dom[id] ? "bound" : "free");
 		} else
 			MDIE(mod_smlp,1,"unknown query '%.*s'\n",(int)q.size(),q.data());
 	}
