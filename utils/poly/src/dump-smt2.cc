@@ -206,8 +206,8 @@ void smlp::dump_smt2(FILE *f, const domain &d)
 	for (const auto &[var,rng] : d) {
 		const char *t = nullptr;
 		switch (rng.type) {
-		case component::INT: t = "Int"; break;
-		case component::REAL: t = "Real"; break;
+		case type::INT: t = "Int"; break;
+		case type::REAL: t = "Real"; break;
 		}
 		assert(t);
 		fprintf(f, "(declare-const %s %s)\n", var.c_str(), t);

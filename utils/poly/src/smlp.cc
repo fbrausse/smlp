@@ -147,8 +147,8 @@ static str smt2_logic_str(const domain &dom, const sptr<T> &e)
 	bool ints = false;
 	for (const auto &[_,rng] : dom)
 		switch (rng.type) {
-		case component::INT: ints = true; break;
-		case component::REAL: reals = true; break;
+		case type::INT: ints = true; break;
+		case type::REAL: reals = true; break;
 		}
 	str logic = "QF_";
 	if (ints || reals) {
@@ -788,7 +788,7 @@ sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals
 		for (const auto &[n,i] : input_bounds) {
 			component *c = dom[n];
 			assert(c);
-			if (c->type != component::INT)
+			if (c->type != type::INT)
 				continue;
 			if (!c->range.get<entire>())
 				continue;
@@ -801,7 +801,7 @@ sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals
 		/* Next, convert all lists to real */
 		for (auto &[v,c] : dom)
 			if (c.range.get<list>())
-				c.type = component::REAL;
+				c.type = type::REAL;
 	}
 
 	if (bnds_dom)

@@ -25,8 +25,8 @@ void z3_solver::declare(const domain &d)
 		const char *s = var.c_str();
 		z3::expr e(ctx);
 		switch (rng.type) {
-		case component::INT: e = ctx.int_const(s); break;
-		case component::REAL: e = ctx.real_const(s); break;
+		case type::INT: e = ctx.int_const(s); break;
+		case type::REAL: e = ctx.real_const(s); break;
 		}
 		symbols.emplace(var, move(e));
 		add(domain_constraint(var, rng));

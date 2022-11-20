@@ -57,7 +57,7 @@ struct entire {};
 struct component {
 
 	sumtype<entire,ival,list> range;
-	enum { INT, REAL } type;
+	enum type type;
 
 	bool contains(const kay::Q &v) const
 	{

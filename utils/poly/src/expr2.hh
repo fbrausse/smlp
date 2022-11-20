@@ -55,6 +55,8 @@ str to_string(const sptr<form2> &, bool let);
 str to_string(const sptr<term2> &, bool let);
 }
 
+enum class type : int { INT, REAL };
+
 struct form2 : sumtype<prop2,lbop2,lneg2>
              , std::enable_shared_from_this<form2> {
 

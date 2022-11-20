@@ -63,10 +63,10 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		kay::Q hi = bnds["max"].get<kay::Q>();
 		component c;
 		if (s["range"] == "int")
-			c.type = component::INT;
+			c.type = type::INT;
 		else {
 			assert(s["range"] == "float");
-			c.type = component::REAL;
+			c.type = type::REAL;
 		}
 		dom.emplace_back(id, move(c));
 		in_vars.emplace_back(make2t(name { id }));
