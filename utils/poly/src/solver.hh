@@ -73,7 +73,7 @@ struct solver_seq : solver {
 
 	result check() override
 	{
-		result r;
+		result r = unknown { "solver sequence is empty" };
 		for (const uptr<solver> &s : solvers)
 			if (!(r = s->check()).get<unknown>())
 				return r;
