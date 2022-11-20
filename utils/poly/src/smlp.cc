@@ -83,10 +83,8 @@ bool module::vlog(loglvl l, const char *fmt, va_list ap) const
 	return true;
 }
 
-/*
-static module mod_ex  { "cand",          CSI COL_FG   COL_GREEN   "m" };
-static module mod_cex { "coex",          CSI COL_FG   COL_RED     "m" };
-*/
+static module mod_cand { "cand",          CSI COL_FG   COL_GREEN   "m" };
+static module mod_coex { "coex",          CSI COL_FG   COL_RED     "m" };
 module smlp::mod_smlp { "smlp",                                       };
 module smlp::mod_prob { "prob", SGR_BOLD CSI COL_FG_B COL_BLACK   "m" };
 module smlp::mod_ival { "ival",          CSI COL_FG   COL_YELLOW  "m" };
@@ -437,6 +435,8 @@ optimize_EA(cmp_t direction,
 		exists->add(target);
 
 		for (vec<smlp_result> counter_examples; true;) {
+			note(mod_cand,"searching candidate %s T ~ %g...\n",
+			     cmp_s[direction],T.get_d());
 			timing e0;
 			result e = exists->check();
 			trace_result(stdout, "a", e, T, timing() - e0);
@@ -474,6 +474,8 @@ optimize_EA(cmp_t direction,
 			fprintf(test, ")\n");
 			*/
 
+			note(mod_coex,"searching counterexample %s T ~ %g...\n",
+			     cmp_s[!direction], T.get_d());
 			timing a0;
 			result a = forall->check();
 			trace_result(stdout, "b", a, T, timing() - a0);
