@@ -210,23 +210,6 @@ static result solve_exists(const domain &dom,
 }
 
 namespace {
-struct smlp_result {
-	kay::Q threshold;
-	uptr<solver> slv;
-	hmap<str,sptr<term2>> point;
-
-	smlp_result(kay::Q threshold, uptr<solver> slv, hmap<str,sptr<term2>> pt)
-	: threshold(move(threshold))
-	, slv(move(slv))
-	, point(move(pt))
-	{}
-
-	kay::Q center_value(const sptr<term2> &obj) const
-	{
-		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
-	}
-};
-
 enum class res { MAYBE = -1, NO, YES };
 
 struct search_base {
@@ -237,9 +220,11 @@ struct search_base {
 	virtual ~search_base() = default;
 	virtual bool has_next() const = 0;
 	virtual kay::Q query() const = 0;
-	virtual void reply(int order) = 0;
+	virtual void reply(cmp_t c) = 0;
 	virtual const kay::Q * lo() const = 0;
 	virtual const kay::Q * hi() const = 0;
+
+	virtual uptr<search_base> clone() const = 0;
 };
 
 struct search_ival : search_base {
@@ -259,8 +244,9 @@ struct search_ival : search_base {
 
 	kay::Q query() const override { return mid(v); }
 
-	void reply(int order) override
+	void reply(cmp_t c) override
 	{
+		int order = is_less(c) ? -1 : +1;
 		if (order >= 0)
 			v.lo = mid(v);
 		if (order <= 0)
@@ -271,6 +257,8 @@ struct search_ival : search_base {
 
 	const kay::Q * lo() const override { return &v.lo; }
 	const kay::Q * hi() const override { return &v.hi; }
+
+	uptr<search_base> clone() const override { return std::make_unique<search_ival>(*this); }
 };
 
 struct bounded_search_ival : search_ival {
@@ -289,11 +277,13 @@ struct bounded_search_ival : search_ival {
 		return contained != res::NO && (!any || length(v) > prec);
 	}
 
-	void reply(int order) override
+	void reply(cmp_t c) override
 	{
 		any = true;
-		search_ival::reply(order);
+		search_ival::reply(c);
 	}
+
+	uptr<search_base> clone() const override { return std::make_unique<bounded_search_ival>(*this); }
 };
 
 struct search_list : search_base {
@@ -314,8 +304,9 @@ struct search_list : search_base {
 	bool has_next() const override { return l <= r; }
 	kay::Q query() const override { return values[m]; }
 
-	void reply(int order) override
+	void reply(cmp_t c) override
 	{
+		int order = is_less(c) ? -1 : +1;
 		if (order >= 0)
 			l = m + (order > 0 ? 1 : 0);
 		if (order <= 0)
@@ -335,6 +326,28 @@ struct search_list : search_base {
 	{
 		return empty(values) ? nullptr
 		     : &values[std::clamp<ssize_t>(l <= r ? r : l, 0, size(values)-1)];
+	}
+
+	uptr<search_base> clone() const override { return std::make_unique<search_list>(*this); }
+};
+
+struct smlp_result {
+	kay::Q threshold;
+	uptr<solver> slv;
+	hmap<str,sptr<term2>> point;
+	uptr<search_base> obj_range;
+
+	smlp_result(kay::Q threshold, uptr<solver> slv, hmap<str,sptr<term2>> pt,
+	            uptr<search_base> obj_range)
+	: threshold(move(threshold))
+	, slv(move(slv))
+	, point(move(pt))
+	, obj_range(move(obj_range))
+	{}
+
+	kay::Q center_value(const sptr<term2> &obj) const
+	{
+		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
 	}
 };
 
@@ -431,7 +444,7 @@ optimize_EA(cmp_t direction,
 				MDIE(mod_smlp,2,"exists is unknown: %s\n",
 				     u->reason.c_str());
 			if (e.get<unsat>()) {
-				obj_range.reply(is_less(direction) ? +1 : -1);
+				obj_range.reply(!direction);
 				break;
 			}
 			auto &candidate = e.get<sat>()->model;
@@ -469,13 +482,13 @@ optimize_EA(cmp_t direction,
 				     u->reason.c_str());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
-				results.emplace_back(T, move(exists), candidate);
-				obj_range.reply(is_less(direction) ? -1 : +1);
+				results.emplace_back(T, move(exists), candidate, obj_range.clone());
+				obj_range.reply(direction);
 				break;
 			}
 			auto &counter_example = a.get<sat>()->model;
 			/* let's not keep the forall solver around */
-			counter_examples.emplace_back(T, nullptr, counter_example);
+			counter_examples.emplace_back(T, nullptr, counter_example, nullptr);
 			exists->add(neg(theta({ delta }, counter_example)));
 		}
 	}
@@ -1219,10 +1232,12 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			for (const auto &s : r) {
 				kay::Q c = s.center_value(lhs);
 				note(mod_prob,
-					"T: %s ~ %f -> center: %s ~ %f\n",
+					"T: %s ~ %f -> center: %s ~ %f, search range: [%s,%s]\n",
 					s.threshold.get_str().c_str(),
 					s.threshold.get_d(),
-					c.get_str().c_str(), c.get_d());
+					c.get_str().c_str(), c.get_d(),
+					s.obj_range->lo() ? s.obj_range->lo()->get_str().c_str() : nullptr,
+					s.obj_range->hi() ? s.obj_range->hi()->get_str().c_str() : nullptr);
 			}
 		}
 	}
