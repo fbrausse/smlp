@@ -503,7 +503,7 @@ result ival_solver::check()
 	 * the formula. It is SAT if there is (at least) one combination that
 	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
 	 * one combination that makes it MAYBE and all others evaluate to NO. */
-	r = eval_products(d, c, sat_model, maybes, nos, conj);
+	r = eval_products(d, c, sat_model, maybes, nos, asserts);
 	note(mod_ival,"lvl -1 it +%zun%zu\n", size(maybes), size(nos));
 
 	for (size_t i=0, j; r == MAYBE && i < max_subdivs; i++) {
@@ -532,7 +532,7 @@ result ival_solver::check()
 			hmap<str,dbl::ival> ndom;
 			size_t old_m = size(maybes2);
 			size_t old_n = size(nos);
-			res s = eval_products(sp, ndom, sat_model, maybes2, nos, conj);
+			res s = eval_products(sp, ndom, sat_model, maybes2, nos, asserts);
 			if (s == NO) {
 				nos.erase(begin(nos) + old_n, end(nos));
 				nos.push_back(dom);
@@ -565,7 +565,7 @@ result ival_solver::check()
 		return unsat {};
 	}
 
-	sptr<form2> orig = to_nnf(simplify(make2f(conj)));
+	sptr<form2> orig = to_nnf(simplify(make2f(asserts)));
 	if (result r = check_critical_points(dom, orig); !r.get<unknown>())
 		return r;
 

@@ -38,6 +38,16 @@ struct solver {
 	}
 };
 
+struct acc_solver : solver {
+
+	void declare(const domain &d) override { assert(empty(dom)); dom = d; }
+	void add(const sptr<form2> &f) override { asserts.args.push_back(f); }
+
+protected:
+	domain dom;
+	lbop2 asserts = { lbop2::AND, {} };
+};
+
 uptr<solver> mk_solver0(bool incremental, const char *logic);
 vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f);
 
