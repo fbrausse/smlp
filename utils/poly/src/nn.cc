@@ -40,7 +40,7 @@ apply_scaler(const pt_scaler &sc,
 
 pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
                            const char *spec_path, const char *io_bounds,
-                           const char *out_bounds, bool clamp_inputs,
+                           const char *obj_bounds, bool clamp_inputs,
                            bool single_obj)
 {
 	kjson::json gen = iv::nn::common::json_parse(gen_path);
@@ -169,14 +169,23 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		assert(obj_name == out_names[idx]);
 		obj = make2t(name { move(obj_name) });
 
-		if (out_bounds)
-			obj = apply_scaler(mf2.objective_scaler(out_bounds),
+		if (obj_bounds)
+			obj = apply_scaler(mf2.objective_scaler(obj_bounds),
 			                   obj, false);
 	} else {
 		/* Pareto */
-		assert(size(out) == 1); /* not implemented, yet */
-		obj = out[0];
-		assert(!out_bounds); /* not implemented, yet */
+		vec<sptr<term2>> objs = { out[0] };
+		if (obj_bounds)
+			objs = apply_scaler([&]{
+				using namespace iv::nn::common;
+				try {
+					return mf2.spec.out_scaler<true>(model_fun2::Table_proxy(file(obj_bounds, "r"), true));
+				} catch (const iv::table_exception &ex) {
+					return mf2.spec.out_scaler<true>(json_parse(obj_bounds));
+				}
+			}(), out, false);
+		assert(size(objs) == 1); /* not implemented, yet */
+		obj = objs[0];
 	}
 
 	/* construct theta */

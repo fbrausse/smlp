@@ -64,7 +64,7 @@ module::module(const char *name, const char *color, loglvl lvl)
 
 bool module::vlog(loglvl l, const char *fmt, va_list ap) const
 {
-	if (l > lvl)
+	if (!logs(l))
 		return false;
 	const char *lvl = nullptr;
 	const char *col = "";
@@ -581,8 +581,8 @@ Options [defaults]:\n\
                to the critical points solver before solving symbolically [no]\n\
   -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
-  -O OUT-BNDS  scale output according to min-max output bounds (.csv, only\n\
-               meaningful for NNs) [none]\n\
+  -O OBJ-BNDS  scale objective(s) according to min-max output bounds (only\n\
+               meaningful for NNs, either .csv or .json) [none]\n\
   -p           dump the expression in Polish notation to stdout [no]\n\
   -P PREC      maximum precision to obtain the optimization result for [" DEF_MAX_PREC "]\n\
   -Q QUERY     answer a query about the problem; supported QUERY:\n\
@@ -977,7 +977,7 @@ int main(int argc, char **argv)
 	bool             io_bnds_dom   = false;
 	int              timeout       = 0;
 	bool             clamp_inputs  = false;
-	const char      *out_bounds    = nullptr;
+	const char      *obj_bounds    = nullptr;
 	const char      *max_prec_s    = DEF_MAX_PREC;
 	vec<sptr<form2>> alpha_conj    = {};
 	vec<sptr<form2>> beta_conj     = {};
@@ -1046,7 +1046,7 @@ int main(int argc, char **argv)
 		case 'Q': queries.push_back(optarg); break;
 		case 'r': inject_reals = true; break;
 		case 'R': obj_range_s = optarg; break;
-		case 'O': out_bounds = optarg; break;
+		case 'O': obj_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 'S': ext_solver_cmd = optarg; break;
 		case 't': timeout = atoi(optarg); break;
@@ -1068,14 +1068,14 @@ int main(int argc, char **argv)
 		const char *gen_path = argv[optind+2];
 		const char *io_bounds = argv[optind+3];
 		pp = parse_nn(gen_path, hdf5_path, spec_path, io_bounds,
-		              out_bounds, clamp_inputs, single_obj);
+		              obj_bounds, clamp_inputs, single_obj);
 		optind += 4;
 	} else
 #else
 	/* these are unused w/o NN support */
 	(void)single_obj;
 	(void)clamp_inputs;
-	(void)out_bounds;
+	(void)obj_bounds;
 #endif
 	if (argc - optind >= 3) {
 		/* Solve polynomial problem */

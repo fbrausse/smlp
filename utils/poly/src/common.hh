@@ -121,6 +121,18 @@ struct sumtype : std::variant<Ts...> {
 		return std::visit<R>(overloaded { std::forward<As>(o)... }, *this);
 	}
 
+	template <typename... As>
+	auto match(As &&... o)
+	{
+		return std::visit(overloaded { std::forward<As>(o)... }, *this);
+	}
+
+	template <typename R, typename... As>
+	R match(As &&... o)
+	{
+		return std::visit<R>(overloaded { std::forward<As>(o)... }, *this);
+	}
+
 	template <typename T>
 	const T * get() const
 	{

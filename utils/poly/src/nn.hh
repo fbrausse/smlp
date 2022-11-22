@@ -22,7 +22,7 @@ struct pre_problem {
 
 pre_problem parse_nn(const char *gen_path, const char *hdf5_path,
                      const char *spec_path, const char *io_bounds,
-                     const char *out_bounds, bool clamp_inputs,
+                     const char *obj_bounds, bool clamp_inputs,
                      bool single_obj);
 
 }
