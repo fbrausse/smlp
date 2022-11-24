@@ -23,18 +23,92 @@ struct solver {
 	virtual void add(const sptr<form2> &f) = 0;
 	virtual result check() = 0;
 
-	friend vec<hmap<str,sptr<term2>>> all_solutions(solver &s)
-	{
-		vec<hmap<str,sptr<term2>>> v;
-		sat *c;
-		for (result r; (c = (r = s.check()).get<sat>());) {
-			vec<sptr<form2>> ne;
-			v.emplace_back(move(c->model));
-			for (const auto &[var,t] : v.back())
-				ne.push_back(make2f(prop2 { NE, make2t(name { var }), t }));
-			s.add(disj(move(ne)));
+	class all_solutions_iter {
+
+		friend all_solutions_iter all_solutions(solver &s);
+		friend class iterator;
+
+		solver *slv;
+		result r;
+
+		void next()
+		{
+			r = slv->check();
+			if (const sat *s = r.get<sat>()) {
+				vec<sptr<form2>> ne;
+				for (const auto &[var,t] : s->model)
+					ne.emplace_back(make2f(prop2 { NE, make2t(name { var }), t }));
+				slv->add(disj(move(ne)));
+			}
 		}
-		return v;
+
+	protected:
+		explicit all_solutions_iter(solver &slv) : slv(&slv) { next(); }
+
+		friend void swap(all_solutions_iter &a, all_solutions_iter &b)
+		{
+			swap(a.slv, b.slv);
+			swap(a.r, b.r);
+		}
+
+		all_solutions_iter & operator=(all_solutions_iter o)
+		{
+			swap(*this, o);
+			return *this;
+		}
+
+		all_solutions_iter(all_solutions_iter &&o)
+		: slv(o.slv)
+		, r(move(o.r))
+		{ o.slv = nullptr; }
+
+	public:
+		struct sentinel {};
+		class iterator {
+			friend class all_solutions_iter;
+
+			all_solutions_iter *as;
+			explicit iterator(all_solutions_iter *as) : as(as) {}
+
+		public:
+			using difference_type = int; /* doesn't make sense, but ok... */
+			using value_type = hmap<str,sptr<term2>>;
+
+			iterator(iterator &&o) : as(o.as) { o.as = nullptr; }
+			friend void swap(iterator &a, iterator &b) { swap(a.as, b.as); }
+			iterator & operator=(iterator o) { swap(*this, o); return *this; }
+
+			value_type & operator*() const { return as->r.get<sat>()->model; }
+			iterator & operator++() { as->next(); return *this; }
+			void operator++(int) { ++*this; }
+			bool operator==(const sentinel &) const { return as->empty(); }
+		};
+
+		iterator begin() { return iterator { this }; }
+		sentinel end() { return {}; }
+
+		friend iterator begin(all_solutions_iter &s) { return s.begin(); }
+		friend sentinel end(all_solutions_iter &s) { return s.end(); }
+
+		bool empty() const { return !r.get<sat>(); }
+	};
+
+	struct all_solutions_iter_owned : all_solutions_iter
+	                                , std::ranges::view_interface<all_solutions_iter_owned> {
+		uptr<solver> s;
+
+		explicit all_solutions_iter_owned(uptr<solver> s)
+		: all_solutions_iter(*s)
+		, s(move(s))
+		{}
+	};
+
+	static_assert(std::ranges::input_range<solver::all_solutions_iter>);
+	static_assert(std::ranges::view<solver::all_solutions_iter_owned>);
+
+	friend solver::all_solutions_iter all_solutions(solver &s)
+	{
+		return solver::all_solutions_iter(s);
 	}
 };
 
@@ -51,7 +125,7 @@ protected:
 };
 
 uptr<solver> mk_solver0(bool incremental, const char *logic);
-vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f);
+solver::all_solutions_iter_owned all_solutions(const domain &dom, const sptr<form2> &f);
 
 struct solver_seq : solver {
 

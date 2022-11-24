@@ -180,12 +180,12 @@ uptr<solver> mk_solver0(bool incremental, const char *logic)
 	                "external solver via -S or -I\n");
 }
 
-vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f)
+solver::all_solutions_iter_owned all_solutions(const domain &dom, const sptr<form2> &f)
 {
 	uptr<solver> s = mk_solver0(true, smt2_logic_str(dom, f).c_str());
 	s->declare(dom);
 	s->add(f);
-	return all_solutions(*s);
+	return solver::all_solutions_iter_owned { move(s) };
 }
 }
 
