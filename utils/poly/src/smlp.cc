@@ -72,7 +72,7 @@ bool module::vlog(loglvl l, const char *fmt, va_list ap) const
 	case QUIET: break;
 	case ERROR: lvl = "error"; col = CSI COL_FG_B COL_RED "m"; break;
 	case WARN : lvl = "warn" ; col = CSI COL_FG_B COL_YELLOW "m"; break;
-	case INFO : lvl = "info" ; break;
+	case INFO : lvl = "info" ; col = CSI COL_FG_B COL_WHITE "m"; break;
 	case NOTE : lvl = "note" ; break;
 	case DEBUG: lvl = "debug"; col = CSI COL_FG   COL_GREEN "m"; break;
 	}
@@ -138,8 +138,13 @@ static void dump_smt2(FILE *f, const char *logic, const problem &p)
 	fprintf(f, "(get-model)\n");
 }
 
-template <typename T>
-static str smt2_logic_str(const domain &dom, const sptr<T> &e)
+static char *ext_solver_cmd;
+static char *inc_solver_cmd;
+static long  intervals = -1;
+
+namespace smlp {
+// template <typename T>
+str smt2_logic_str(const domain &dom, const sptr<form2> &e)
 {
 	bool reals = false;
 	bool ints = false;
@@ -161,11 +166,6 @@ static str smt2_logic_str(const domain &dom, const sptr<T> &e)
 	return logic;
 }
 
-static char *ext_solver_cmd;
-static char *inc_solver_cmd;
-static long  intervals = -1;
-
-namespace smlp {
 uptr<solver> mk_solver0(bool incremental, const char *logic)
 {
 	const char *ext = ext_solver_cmd;
@@ -192,10 +192,11 @@ solver::all_solutions_iter_owned all_solutions(const domain &dom, const sptr<for
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
 	if (intervals >= 0) {
-		vec<uptr<solver>> slvs;
-		slvs.emplace_back(std::make_unique<ival_solver>(intervals, logic));
-		slvs.emplace_back(std::make_unique<crit_solver>());
-		slvs.emplace_back(smlp::mk_solver0(incremental, logic));
+		vec<pair<const module *,uptr<solver>>> slvs;
+		slvs.emplace_back(&mod_ival, std::make_unique<ival_solver>(intervals, logic));
+		slvs.emplace_back(&mod_crit, std::make_unique<crit_solver>());
+		slvs.emplace_back(ext_solver_cmd || inc_solver_cmd ? &mod_ext : &mod_z3,
+		                  smlp::mk_solver0(incremental, logic));
 		return std::make_unique<solver_seq>(move(slvs));
 	}
 	return smlp::mk_solver0(incremental, logic);
@@ -1152,7 +1153,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 	/* hint for the solver: (non-)linear real arithmetic, potentially also
 	 * with integers */
-	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in alpha, beta, eta */
+	str logic = smt2_logic_str(dom, conj({ alpha, beta, eta, make2f(prop2 { LT, lhs, zero }) }));
 
 	if (argc - optind > 1) {
 		if (err(mod_smlp,"unrecognized trailing options:")) {

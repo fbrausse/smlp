@@ -342,6 +342,7 @@ result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 		bool deriv_exists = true;
 		bool only_order_props = true;
 		bool known_continuous = true;
+		bool nonlinear = false;
 
 		void operator()(const sptr<form2> &f)
 		{
@@ -352,11 +353,11 @@ result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 				only_order_props &= is_order(p.cmp);
 				if (0 && !only_order_props)
 					return;
-				sptr<term2> diff = make2t(bop2 {
+				sptr<term2> diff = simplify(make2t(bop2 {
 					bop::SUB,
 					p.left,
 					p.right,
-				});
+				}));
 				dbg(mod_prob,"partial derivatives of: ") && (
 					dump_smt2(stderr, *diff),
 					fprintf(stderr, "\n"));
@@ -366,6 +367,13 @@ result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 					if (!d) {
 						deriv_exists = false;
 						return;
+					}
+					d = simplify(d);
+					if (is_nonlinear(d)) {
+						nonlinear = true;
+						dbg(mod_prob,"partial derivate is non-linear: ") && (
+							dump_smt2(stderr, *d),
+							fprintf(stderr, "\n"));
 					}
 					grad_eq_0.push_back(make2f(prop2 {
 						EQ,
@@ -386,12 +394,14 @@ result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 	} check { dom, };
 	check(orig);
 	note(mod_crit,"derivatives exist: %d, only ordered comparisons: %d, "
-	              "known_continuous: %d\n", check.deriv_exists,
-	              check.only_order_props, check.known_continuous);
+	              "known_continuous: %d, nonlinear: %d\n", check.deriv_exists,
+	              check.only_order_props, check.known_continuous, check.nonlinear);
 	if (!check.deriv_exists)
 		return unknown { "derivative may not be defined everywhere" };
 	if (!check.only_order_props)
 		return unknown { "critical points cannot solve (dis-)equality constraints" };
+	if (check.nonlinear)
+		return unknown { "cannot reason about critical points of functions with non-linear partial derivatives" };
 
 	/* find all critical points of all functions in the problem */
 	sptr<form2> f = conj(move(check.grad_eq_0));
@@ -431,6 +441,20 @@ result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 
 	info(mod_crit,"solving on critical points and %zu domain corners...\n",
 	     n_corners);
+
+#if 0
+	sptr<form2> tgt = disj({ neg(f), orig });
+	uptr<solver> slv = mk_solver0(false, smt2_logic_str(dom, tgt).c_str());
+	slv->declare(dom);
+	slv->add(tgt);
+	result r = slv->check();
+	if (r.get<sat>()) {
+		info(mod_crit,"critical -> target is SAT\n");
+		return r;
+	} else {
+		info(mod_crit,"critical -> target is not SAT\n");
+	}
+#endif
 
 	timing t0;
 	size_t n = 0;

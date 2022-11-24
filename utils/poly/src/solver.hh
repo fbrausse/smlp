@@ -8,6 +8,8 @@
 
 #include "domain.hh"
 
+#include <ranges>
+
 namespace smlp {
 
 struct sat { hmap<str,sptr<term2>> model; };
@@ -42,7 +44,7 @@ struct solver {
 			}
 		}
 
-	protected:
+	public:
 		explicit all_solutions_iter(solver &slv) : slv(&slv) { next(); }
 
 		friend void swap(all_solutions_iter &a, all_solutions_iter &b)
@@ -62,7 +64,6 @@ struct solver {
 		, r(move(o.r))
 		{ o.slv = nullptr; }
 
-	public:
 		struct sentinel {};
 		class iterator {
 			friend class all_solutions_iter;
@@ -93,24 +94,23 @@ struct solver {
 		bool empty() const { return !r.get<sat>(); }
 	};
 
-	struct all_solutions_iter_owned : all_solutions_iter
-	                                , std::ranges::view_interface<all_solutions_iter_owned> {
+	struct all_solutions_iter_owned : std::ranges::owning_view<all_solutions_iter> {
 		uptr<solver> s;
 
 		explicit all_solutions_iter_owned(uptr<solver> s)
-		: all_solutions_iter(*s)
+		: owning_view(all_solutions_iter(*s))
 		, s(move(s))
 		{}
 	};
-
-	static_assert(std::ranges::input_range<solver::all_solutions_iter>);
-	static_assert(std::ranges::view<solver::all_solutions_iter_owned>);
 
 	friend solver::all_solutions_iter all_solutions(solver &s)
 	{
 		return solver::all_solutions_iter(s);
 	}
 };
+
+static_assert(std::ranges::input_range<solver::all_solutions_iter>);
+static_assert(std::ranges::view<solver::all_solutions_iter_owned>);
 
 struct acc_solver : solver {
 
@@ -124,35 +124,40 @@ protected:
 	lbop2 asserts = { lbop2::AND, {} };
 };
 
+str smt2_logic_str(const domain &dom, const sptr<form2> &e);
 uptr<solver> mk_solver0(bool incremental, const char *logic);
 solver::all_solutions_iter_owned all_solutions(const domain &dom, const sptr<form2> &f);
 
 struct solver_seq : solver {
 
-	const vec<uptr<solver>> solvers;
+	const vec<pair<const module *,uptr<solver>>> solvers;
 
-	explicit solver_seq(vec<uptr<solver>> solvers)
+	explicit solver_seq(vec<pair<const module *,uptr<solver>>> solvers)
 	: solvers(move(solvers))
 	{ assert(!empty(this->solvers)); }
 
 	void declare(const domain &d) override
 	{
-		for (const uptr<solver> &s : solvers)
+		for (const auto &[m,s] : solvers)
 			s->declare(d);
 	}
 
 	void add(const sptr<form2> &f) override
 	{
-		for (const uptr<solver> &s : solvers)
+		for (const auto &[m,s] : solvers)
 			s->add(f);
 	}
 
 	result check() override
 	{
 		result r = unknown { "solver sequence is empty" };
-		for (const uptr<solver> &s : solvers)
-			if (!(r = s->check()).get<unknown>())
+		for (const auto &[m,s] : solvers) {
+			r = s->check();
+			const unknown *u = r.get<unknown>();
+			if (!u)
 				return r;
+			info(*m,"unknown: %s\n",u->reason.c_str());
+		}
 		return r;
 	}
 };
