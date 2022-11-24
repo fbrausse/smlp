@@ -205,6 +205,7 @@ result ext_solver::check()
 	using es::sexpr;
 
 	info(mod_ext,"solving...\n");
+	timing t;
 
 	fprintf(in, "(check-sat)\n");
 	out_s.skip_space();
@@ -219,6 +220,7 @@ result ext_solver::check()
 
 	opt<slit> res = out_s.atom();
 	assert(res);
+	note(mod_ext,"solved '%s' in %5.3fs\n", res->c_str(), (double)(timing {} - t));
 	if (*res == "unsat")
 		return unsat {};
 	if (*res == "unknown")
