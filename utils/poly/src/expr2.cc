@@ -579,12 +579,23 @@ static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
 				}
 				a.emplace_back(move(g));
 			}
+			if (empty(a)) {
+				switch (b.op) {
+				case lbop2::AND: return true2;
+				case lbop2::OR: return false2;
+				}
+				unreachable();
+			}
+			if (size(a) == 1)
+				return a.front();
 			if (a == b.args)
 				return t;
 			return make2f(lbop2 { b.op, move(a) });
 		},
 		[&](const lneg2 &n) -> expr2s {
 			sptr<form2> o = simplify(n.arg, m);
+			if (const lneg2 *m = o->get<lneg2>())
+				return simplify(m->arg);
 			if (*o == *true2)
 				return false2;
 			if (*o == *false2)
