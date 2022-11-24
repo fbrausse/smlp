@@ -232,6 +232,7 @@ struct module {
 	explicit module(const char *name, const char *color = "", loglvl lvl = NOTE);
 
 	bool logs(loglvl l) const { return l <= lvl; }
+	friend bool logs(const module &m, loglvl l) { return m.logs(l); }
 
 	bool vlog(loglvl, const char *fmt, va_list) const;
 

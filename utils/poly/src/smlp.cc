@@ -1098,6 +1098,10 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	sptr<form2> alpha = pp.interpret_input_bounds(io_bnds_dom, inject_reals);
 
 	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
+	for (const auto &[n,t] : funs)
+		(dbg(mod_prob,"defined output '%s': ", n.c_str()) &&
+		 (smlp::dump_smt2(stderr, *t), fprintf(stderr, "\n"))) ||
+		note(mod_prob,"defined output '%s'\n", n.c_str());
 
 	alpha_conj.emplace_back(move(alpha));
 	alpha = simplify(conj(move(alpha_conj)));
