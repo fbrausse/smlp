@@ -274,9 +274,8 @@ static vec<dbl::ival> split_ival(const dbl::ival &v)
 	double m = mid(v);
 	dbl::ival a = dbl::endpts { lo(v), m };
 	vec<dbl::ival> r = { a };
-	double bl = nextafter(m, INFINITY);
-	if (bl <= hi(v))
-		r.emplace_back(dbl::endpts { bl, hi(v) });
+	if (m < hi(v))
+		r.emplace_back(dbl::endpts { m, hi(v) });
 	return r;
 }
 
