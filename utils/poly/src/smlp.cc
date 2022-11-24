@@ -191,8 +191,13 @@ vec<hmap<str,sptr<term2>>> all_solutions(const domain &dom, const sptr<form2> &f
 
 static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
 {
-	if (intervals >= 0)
-		return std::make_unique<ival_solver>(intervals, logic);
+	if (intervals >= 0) {
+		vec<uptr<solver>> slvs;
+		slvs.emplace_back(std::make_unique<ival_solver>(intervals, logic));
+		slvs.emplace_back(std::make_unique<crit_solver>());
+		slvs.emplace_back(smlp::mk_solver0(incremental, logic));
+		return std::make_unique<solver_seq>(move(slvs));
+	}
 	return smlp::mk_solver0(incremental, logic);
 }
 

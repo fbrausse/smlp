@@ -29,6 +29,13 @@ namespace smlp {
 opt<pair<double,double>>
 dbl_interval_eval(const domain &dom, const sptr<term2> &t);
 
+struct crit_solver : acc_solver {
+
+	result check() const override { return check(dom, make2f(asserts)); }
+
+	static result check(const domain &dom, const sptr<form2> &orig);
+};
+
 struct ival_solver : acc_solver {
 
 	ival_solver(size_t max_subdivs = 0, const char *logic = nullptr)
@@ -36,7 +43,7 @@ struct ival_solver : acc_solver {
 	, logic(logic ? opt<str>(str(logic)) : opt<str> {})
 	{}
 
-	result check() override;
+	result check() const override;
 
 private:
 	size_t max_subdivs;

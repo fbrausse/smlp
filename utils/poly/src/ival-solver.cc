@@ -306,7 +306,7 @@ static bool contains_ite(const sptr<term2> &t)
 	);
 }
 
-static result check_critical_points(const domain &dom, const sptr<form2> &orig)
+result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 {
 	/* Check whether domain is bounded and if so, generate the list of its
 	 * corner points */
@@ -346,18 +346,21 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 
 		void operator()(const sptr<form2> &f)
 		{
-			if (!deriv_exists || !only_order_props)
+			if (0 && (!deriv_exists || !only_order_props))
 				return;
 			f->match(
 			[&](const prop2 &p) {
 				only_order_props &= is_order(p.cmp);
-				if (!only_order_props)
+				if (0 && !only_order_props)
 					return;
 				sptr<term2> diff = make2t(bop2 {
 					bop::SUB,
 					p.left,
 					p.right,
 				});
+				dbg(mod_prob,"partial derivatives of: ") && (
+					dump_smt2(stderr, *diff),
+					fprintf(stderr, "\n"));
 				known_continuous &= !contains_ite(diff);
 				for (const auto &[var,_] : dom) {
 					sptr<term2> d = derivative(diff, var);
@@ -427,13 +430,12 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 			sat_model = dom;
 	};
 
-	vec<hmap<str,sptr<term2>>> crit_pts = all_solutions(sdom, f);
-	info(mod_crit,"solving on %zu critical points and %zu domain corners...\n",
-	              size(crit_pts), n_corners);
+	info(mod_crit,"solving on critical points and %zu domain corners...\n",
+	     n_corners);
 
 	timing t0;
 	size_t n = 0;
-	for (hmap<str,sptr<term2>> crit : crit_pts) {
+	for (hmap<str,sptr<term2>> crit : all_solutions(sdom, f)) {
 		crit.insert(begin(remaining_vars), end(remaining_vars));
 		if (note(mod_crit,"critical point:")) {
 			for (const auto &[v,c] : crit)
@@ -457,7 +459,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 	return unsat {};
 }
 
-result ival_solver::check()
+result ival_solver::check() const
 {
 	opt<hmap<str,dbl::ival>> sat_model;
 	vec<hmap<str,dbl::ival>> maybes, nos;
@@ -483,10 +485,13 @@ result ival_solver::check()
 		},
 		[&,var=var](const ival &i) {
 			switch (k.type) {
-			case type::INT:
-				MDIE(mod_ival,1,"support for integer intervals "
-				     "is not implemented in interval-solver, "
-				     "yet. Use -r to convert them to reals.\n");
+			case type::INT: {
+				vec<dbl::ival> ivs;
+				for (kay::Z z = ceil(i.lo), u = floor(i.hi); z <= u; z++)
+					ivs.emplace_back(z);
+				d.emplace_back(var, move(ivs));
+				break;
+			}
 			case type::REAL:
 				c.emplace(var, dbl::endpts {
 					lo(to_ival(i.lo)),
@@ -566,9 +571,10 @@ result ival_solver::check()
 	}
 
 	sptr<form2> orig = to_nnf(simplify(make2f(asserts)));
+#if 0
 	if (result r = check_critical_points(dom, orig); !r.get<unknown>())
 		return r;
-
+#endif
 	const char *the_logic = logic ? logic->c_str() : nullptr;
 #if 0
 	for (const auto &reg : maybes) {
@@ -581,7 +587,7 @@ result ival_solver::check()
 			return r;
 	}
 	return unsat {};
-#else
+#elif 0
 	uptr<solver> s = mk_solver0(false, the_logic);
 	s->declare(dom);
 	s->add(orig);

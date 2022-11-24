@@ -42,6 +42,8 @@ struct acc_solver : solver {
 
 	void declare(const domain &d) override { assert(empty(dom)); dom = d; }
 	void add(const sptr<form2> &f) override { asserts.args.push_back(f); }
+	result check() override { return static_cast<const acc_solver *>(this)->check(); }
+	virtual result check() const = 0;
 
 protected:
 	domain dom;
