@@ -580,7 +580,7 @@ Options [defaults]:\n\
   -e ETA       additional ETA constraints restricting only candidates, can be\n\
                given multiple times, the conjunction of all is used [true]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
-               'prefix' [infix]\n\
+               'prefix' (only EXPR) [infix]\n\
   -h           displays this help message\n\
   -i SUBDIVS   use interval evaluation with SUBDIVS subdivisions and fall back\n\
                to the critical points solver before solving symbolically [no]\n\
@@ -588,7 +588,7 @@ Options [defaults]:\n\
   -n           dry run, do not solve the problem [no]\n\
   -O OBJ-BNDS  scale objective(s) according to min-max output bounds (only\n\
                meaningful for NNs, either .csv or .json) [none]\n\
-  -p           dump the expression in Polish notation to stdout [no]\n\
+  -p           dump the expression in Polish notation to stdout (only EXPR) [no]\n\
   -P PREC      maximum precision to obtain the optimization result for [" DEF_MAX_PREC "]\n\
   -Q QUERY     answer a query about the problem; supported QUERY:\n\
                - vars: list all variables\n\
@@ -1099,16 +1099,16 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
 
 	alpha_conj.emplace_back(move(alpha));
-	alpha = conj(move(alpha_conj));
+	alpha = simplify(conj(move(alpha_conj)));
 	note_smt2_line("alpha: ", alpha);
 	alpha = subst(alpha, funs);
 
-	sptr<form2> beta = conj(move(beta_conj));
+	sptr<form2> beta = simplify(conj(move(beta_conj)));
 	note_smt2_line("beta : ", beta);
 	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
-	eta = conj(move(eta_conj));
+	eta = simplify(conj(move(eta_conj)));
 	note_smt2_line("eta  : ", eta);
 	eta = subst(eta, funs);
 
@@ -1154,7 +1154,15 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	 * with integers */
 	str logic = smt2_logic_str(dom, lhs); /* TODO: check all expressions in alpha, beta, eta */
 
-	if (argc - optind >= 1) {
+	if (argc - optind > 1) {
+		if (err(mod_smlp,"unrecognized trailing options:")) {
+			for (int i=optind+1; i<argc; i++)
+				fprintf(stderr, " '%s'", argv[i]);
+			fprintf(stderr, "\n");
+		}
+		DIE(1,"");
+	}
+	if (argc - optind == 1) {
 		if (*beta != *true2)
 			MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
 

@@ -79,7 +79,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 					in_vars.back(),
 					make2t(cnst2 { v.get<kay::Q>() }),
 				}));
-			eta.emplace_back(make2f(lbop2 { lbop2::OR, move(safe) }));
+			eta.emplace_back(disj(move(safe)));
 		}
 	}
 	// dump_smt2(stdout, dom);
@@ -111,7 +111,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		/* matrix-vector product */
 		assert(width(kernel) == size(out));
 		assert(height(kernel) == size(bias));
-		std::vector<sptr<term2>> next;
+		vec<sptr<term2>> next;
 		for (float b : bias)
 			next.push_back(make2t(cnst2 { kay::Q(b) }));
 		for (size_t y=0; y<height(kernel); y++)
@@ -174,16 +174,17 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			                   obj, false);
 	} else {
 		/* Pareto */
-		vec<sptr<term2>> objs = { out[0] };
+		vec<sptr<term2>> objs = out;
 		if (obj_bounds)
 			objs = apply_scaler([&]{
 				using namespace iv::nn::common;
 				try {
-					return mf2.spec.out_scaler<true>(model_fun2::Table_proxy(file(obj_bounds, "r"), true));
+					return mf2.spec.out_scaler<true>(
+						model_fun2::Table_proxy(file(obj_bounds, "r"), true));
 				} catch (const iv::table_exception &ex) {
 					return mf2.spec.out_scaler<true>(json_parse(obj_bounds));
 				}
-			}(), out, false);
+			}(), objs, false);
 		assert(size(objs) == 1); /* not implemented, yet */
 		obj = objs[0];
 	}
@@ -228,7 +229,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		move(obj),
 		move(outs),
 		move(in_bnds),
-		make2f(lbop2 { lbop2::AND, move(eta) }),
+		conj(move(eta)),
 		true2,
 		move(theta),
 	};
