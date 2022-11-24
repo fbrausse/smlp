@@ -94,7 +94,7 @@ License: Apache 2.0; part of SMLP.
 ```
 
 Assuming files `domain` and `expression` are in the current directory, this would
-be a sample to execute poly:
+be a sample to execute smlp:
 
 	$ build/src/smlp domain expression '>=' 0.42
 
