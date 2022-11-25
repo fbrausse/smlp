@@ -29,18 +29,22 @@ Options [defaults]:
   -e ETA       additional ETA constraints restricting only candidates, can be
                given multiple times, the conjunction of all is used [true]
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',
-               'prefix' [infix]
+               'prefix' (only EXPR) [infix]
   -h           displays this help message
   -i SUBDIVS   use interval evaluation with SUBDIVS subdivisions and fall back
                to the critical points solver before solving symbolically [no]
   -I EXT-INC   optional external incremental SMT solver [value for -S]
   -n           dry run, do not solve the problem [no]
-  -O OUT-BNDS  scale output according to min-max output bounds (.csv, only
-               meaningful for NNs) [none]
-  -p           dump the expression in Polish notation to stdout [no]
+  -o OBJ-SPEC  specify objective explicitely (only meaningful for NNs), an
+               expression using the labels from SPEC or 'Pareto(E1,E2,...)'
+               where E1,E2,... are such expressions
+  -O OBJ-BNDS  scale objective(s) according to min-max output bounds (only
+               meaningful for NNs, either .csv or .json) [none]
+  -p           dump the expression in Polish notation to stdout (only EXPR) [no]
   -P PREC      maximum precision to obtain the optimization result for [0.05]
   -Q QUERY     answer a query about the problem; supported QUERY:
                - vars: list all variables
+               - out : list all defined outputs
   -r           re-cast bounded integer variables as reals with equality
                constraints (requires -C bnds-dom); cvc5 >= 1.0.1 requires this
                option when integer variables are present
@@ -78,7 +82,7 @@ to avoid unwanted redirections. CNST is a rational constant in the same format
 as those in the EXPR file (if any).
 
 For log detail setting -v, MODULE can be one of:
-  crit, ext, ival, nn, poly, prob, smlp, z3
+  cand, coex, crit, ext, ival, nn, poly, prob, smlp, z3
 
 Options are first read from the environment variable SMLP_OPTS, if set.
 

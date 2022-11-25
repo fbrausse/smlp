@@ -1079,6 +1079,51 @@ static void opt_single(const domain &dom, const sptr<term2> &lhs,
 		;
 }
 
+static void parse_obj_spec(const char *obj_spec, const domain &dom,
+                           const hmap<str,sptr<term2>> &funs, sptr<term2> &lhs,
+                           std::set<term2> &pareto)
+{
+	auto proc = [&](const expr &f) {
+		sptr<term2> t = *unroll(f, {}).get<sptr<term2>>();
+		for (const str &s : free_vars(t))
+			if (!dom[s] && !funs.contains(s))
+				MDIE(mod_prob,1,"free variable '%s' in "
+				     "OBJ-SPEC is neither in domain nor "
+				     "a defined output\n",s.c_str());
+		return simplify(t);
+	};
+	expr e = parse_infix(obj_spec, false);
+	if (const call *c = e.get<call>()) {
+		if (c->func->get<name>()->id != "Pareto")
+			MDIE(mod_smlp,1,"cannot interpret OBJ-SPEC '%s'\n",
+			     obj_spec);
+		for (const expr &f : c->args) {
+			sptr<term2> t = proc(f);
+			auto [it,ins] = pareto.emplace(*t);
+			if (!ins) {
+				err(mod_smlp,"duplicate Pareto "
+				    "objective expression: ") &&
+				(smlp::dump_smt2(stderr, *t),
+				 fprintf(stderr, "\n"));
+				DIE(1,"");
+			}
+		}
+		if (size(pareto) < 1)
+			MDIE(mod_smlp,1,
+			     "%s objective for Pareto optimization\n",
+			     empty(pareto) ? "no" : "only single");
+		if (note(mod_prob,"Pareto objectives:\n"))
+			for (const term2 &t : pareto) {
+				fprintf(stderr, "  ");
+				smlp::dump_smt2(stderr, t);
+				fprintf(stderr, "\n");
+			}
+	} else {
+		lhs = proc(e);
+		note_smt2_line("objective: ", lhs);
+	}
+}
+
 int main(int argc, char **argv)
 {
 	if (const char *opts_c = getenv("SMLP_OPTS")) {
@@ -1245,46 +1290,8 @@ cannot use both, -o OBJ-SPEC and an anonymous objective function given via EXPR\
 or -C gen-obj\n");
 
 	std::set<term2> pareto;
-	if (obj_spec) {
-		auto proc = [&](const expr &f) {
-			sptr<term2> t = *unroll(f, {}).get<sptr<term2>>();
-			for (const str &s : free_vars(t))
-				if (!dom[s] && !funs.contains(s))
-					MDIE(mod_prob,1,"free variable '%s' in "
-					     "OBJ-SPEC is neither in domain nor "
-					     "a defined output\n",s.c_str());
-			return simplify(t);
-		};
-		expr e = parse_infix(obj_spec, false);
-		if (const call *c = e.get<call>()) {
-			if (c->func->get<name>()->id != "Pareto")
-				MDIE(mod_smlp,1,"cannot interpret OBJ-SPEC '%s'\n",
-				     obj_spec);
-			for (const expr &f : c->args) {
-				sptr<term2> t = proc(f);
-				auto [it,ins] = pareto.emplace(*t);
-				if (!ins) {
-					err(mod_smlp,"duplicate Pareto "
-					    "objective expression: ") &&
-					(smlp::dump_smt2(stderr, *t), fprintf(stderr, "\n"));
-					DIE(1,"");
-				}
-			}
-			if (size(pareto) < 1)
-				MDIE(mod_smlp,1,
-				     "%s objective for Pareto optimization\n",
-				     empty(pareto) ? "no" : "only single");
-			if (note(mod_prob,"Pareto objectives:\n"))
-				for (const term2 &t : pareto) {
-					fprintf(stderr, "  ");
-					smlp::dump_smt2(stderr, t);
-					fprintf(stderr, "\n");
-				}
-		} else {
-			lhs = proc(e);
-			note_smt2_line("objective: ", lhs);
-		}
-	}
+	if (obj_spec)
+		parse_obj_spec(obj_spec, dom, funs, lhs, pareto);
 
 	if (!empty(f_bnds))
 		MDIE(mod_smlp,1,"scaled objectives are not supported, yet\n");
@@ -1367,6 +1374,8 @@ or -C gen-obj\n");
 		opt_single(dom, lhs, alpha, beta, eta, c, obj_range_s,
 		           dump_smt2, timeout, solve, threshs_s, max_prec_s,
 		           delta_s, args, N, theta);
-	else
+	else {
+		assert(!empty(pareto));
 		MDIE(mod_smlp,1,"Pareto is not implemented, yet\n");
+	}
 }
