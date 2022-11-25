@@ -534,11 +534,15 @@ static void sigint_handler(int sig)
 static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 {
 	size_t k = 0;
-	for (const auto &[n,_] : model)
-		k = max(k, n.length());
-	for (const auto &[n,c] : model)
-		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, n.c_str(),
-		        to_string(c->get<cnst2>()->value).c_str());
+	vec<const pair<const str,sptr<term2>> *> v;
+	for (const auto &p : model) {
+		k = max(k, p.first.length());
+		v.emplace_back(&p);
+	}
+	sort(begin(v), end(v), [](const auto *a, const auto *b) { return a->first < b->first; });
+	for (const auto *p : v)
+		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, p->first.c_str(),
+		        to_string(p->second->get<cnst2>()->value).c_str());
 }
 
 #ifdef SMLP_ENABLE_KERAS_NN
@@ -961,17 +965,10 @@ static void set_loglvl(char *arg)
 static void slv_single(const domain &dom, const sptr<term2> &lhs,
                        const sptr<form2> &alpha, const sptr<form2> &beta,
                        const sptr<form2> &eta, cmp_t c, const char *cnst_s,
-                       const char *obj_range_s, bool dump_smt2, int timeout,
-                       bool solve, char *threshs_s, const char *max_prec_s,
-                       const char *delta_s, const vec<str> &args, int N,
-                       const fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> &theta)
+                       bool dump_smt2, int timeout, bool solve, int N)
 {
 	if (*beta != *true2)
 		MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
-
-	if (obj_range_s)
-		warn(mod_prob,"objective range specification "
-		              "-R is unused when CNST is given\n");
 
 	/* interpret the CNST on the right hand side */
 	kay::Q cnst;
@@ -1019,8 +1016,8 @@ static void slv_single(const domain &dom, const sptr<term2> &lhs,
 static void opt_single(const domain &dom, const sptr<term2> &lhs,
                        const sptr<form2> &alpha, const sptr<form2> &beta,
                        const sptr<form2> &eta, cmp_t c,
-                       const char *obj_range_s, bool dump_smt2, int timeout,
-                       bool solve, char *threshs_s, const char *max_prec_s,
+                       uptr<search_base> obj_range, bool dump_smt2, int timeout,
+                       bool solve,
                        const char *delta_s, const vec<str> &args, int N,
                        const fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> &theta)
 {
@@ -1030,9 +1027,6 @@ static void opt_single(const domain &dom, const sptr<term2> &lhs,
 	/* hint for the solver: (non-)linear real arithmetic, potentially also
 	 * with integers */
 	str logic = smt2_logic_str(dom, conj({ alpha, beta, eta, make2f(prop2 { LT, lhs, zero }) }));
-
-	uptr<search_base> obj_range = parse_search_range(
-		threshs_s, max_prec_s, obj_range_s, dom, lhs);
 
 	kay::Q delta;
 	if (!from_string(delta_s, delta) || delta < 0)
@@ -1101,16 +1095,16 @@ static void parse_obj_spec(const char *obj_spec, const domain &dom,
 		for (const expr &f : c->args) {
 			sptr<term2> t = proc(f);
 			auto [it,ins] = objs.emplace(*t);
-			if (!ins) {
-				err(mod_smlp,"duplicate Pareto "
-				    "objective expression: ") &&
+			if (!ins || is_ground(t)) {
+				err(mod_smlp,"%s Pareto objective expression: ",
+				    !ins ? "duplicate" : "ground") &&
 				(smlp::dump_smt2(stderr, *t),
 				 fprintf(stderr, "\n"));
 				DIE(1,"");
 			}
 			pareto.emplace_back(move(t));
 		}
-		if (size(pareto) < 1)
+		if (size(pareto) < 2)
 			MDIE(mod_smlp,1,
 			     "%s objective for Pareto optimization\n",
 			     empty(pareto) ? "no" : "only single");
@@ -1402,16 +1396,34 @@ or -C gen-obj\n");
 		DIE(1,"");
 	}
 
-	if (lhs && cnst_s)
-		slv_single(dom, lhs, alpha, beta, eta, c, cnst_s, obj_range_s,
-		           dump_smt2, timeout, solve, threshs_s, max_prec_s,
-		           delta_s, args, N, theta);
-	else if (lhs)
-		opt_single(dom, lhs, alpha, beta, eta, c, obj_range_s,
-		           dump_smt2, timeout, solve, threshs_s, max_prec_s,
-		           delta_s, args, N, theta);
-	else {
-		assert(!empty(pareto));
-		MDIE(mod_smlp,1,"Pareto is not implemented, yet\n");
+	if (lhs && cnst_s) {
+		if (obj_range_s)
+			warn(mod_prob,"objective range specification "
+			              "-R is unused when CNST is given\n");
+		if (threshs_s)
+			warn(mod_prob,"objective thresholds -T are unused when "
+			              "CNST is given\n");
+		if (max_prec_s)
+			warn(mod_prob,"precision PREC is unused when CNST is "
+			              "given\n");
+		if (delta_s)
+			warn(mod_prob,"DELTA is unused when CNST is given\n");
+
+		slv_single(dom, lhs, alpha, beta, eta, c, cnst_s,
+		           dump_smt2, timeout, solve, N);
+		return EXIT_SUCCESS;
 	}
+
+	if (lhs) {
+		uptr<search_base> obj_range = parse_search_range(threshs_s,
+		                                                 max_prec_s,
+		                                                 obj_range_s,
+		                                                 dom, lhs);
+		opt_single(dom, lhs, alpha, beta, eta, c, move(obj_range),
+		           dump_smt2, timeout, solve, delta_s, args, N, theta);
+		return EXIT_SUCCESS;
+	}
+
+	assert(!empty(pareto));
+	MDIE(mod_smlp,1,"Pareto is not implemented, yet\n");
 }
