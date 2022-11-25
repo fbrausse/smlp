@@ -1081,7 +1081,7 @@ static void opt_single(const domain &dom, const sptr<term2> &lhs,
 
 static void parse_obj_spec(const char *obj_spec, const domain &dom,
                            const hmap<str,sptr<term2>> &funs, sptr<term2> &lhs,
-                           std::set<term2> &pareto)
+                           vec<sptr<term2>> &pareto)
 {
 	auto proc = [&](const expr &f) {
 		sptr<term2> t = *unroll(f, {}).get<sptr<term2>>();
@@ -1097,9 +1097,10 @@ static void parse_obj_spec(const char *obj_spec, const domain &dom,
 		if (c->func->get<name>()->id != "Pareto")
 			MDIE(mod_smlp,1,"cannot interpret OBJ-SPEC '%s'\n",
 			     obj_spec);
+		std::set<term2> objs;
 		for (const expr &f : c->args) {
 			sptr<term2> t = proc(f);
-			auto [it,ins] = pareto.emplace(*t);
+			auto [it,ins] = objs.emplace(*t);
 			if (!ins) {
 				err(mod_smlp,"duplicate Pareto "
 				    "objective expression: ") &&
@@ -1107,6 +1108,7 @@ static void parse_obj_spec(const char *obj_spec, const domain &dom,
 				 fprintf(stderr, "\n"));
 				DIE(1,"");
 			}
+			pareto.emplace_back(move(t));
 		}
 		if (size(pareto) < 1)
 			MDIE(mod_smlp,1,
@@ -1242,6 +1244,10 @@ int main(int argc, char **argv)
 
 	pre_problem pp;
 
+	/* ------------------------------------------------------------------
+	 * Obtain the pre_problem
+	 * ------------------------------------------------------------------ */
+
 #ifdef SMLP_ENABLE_KERAS_NN
 	if (argc - optind >= 5) {
 		/* Solve NN problem */
@@ -1272,6 +1278,10 @@ int main(int argc, char **argv)
 		usage(argv[0], 1);
 	cmp_t c = parse_op(argv[optind++]);
 
+	/* ------------------------------------------------------------------
+	 * Preprocess pre_problem
+	 * ------------------------------------------------------------------ */
+
 	if (inject_reals && !(io_bnds_dom || empty(pp.input_bounds)))
 		MDIE(mod_smlp,1,"\
 error: -r requires -C bnds-dom: re-casting integers as reals based on IO-BOUNDS\n\
@@ -1284,17 +1294,25 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		 (smlp::dump_smt2(stderr, *t), fprintf(stderr, "\n"))) ||
 		note(mod_prob,"defined output '%s'\n", n.c_str());
 
+	if (!empty(f_bnds))
+		MDIE(mod_smlp,1,"scaled objectives are not supported, yet\n");
+
+	/* ------------------------------------------------------------------
+	 * Parse the -o OBJ-SPEC option, if it was there
+	 * ------------------------------------------------------------------ */
+
 	if (obj_spec && lhs)
 		MDIE(mod_smlp,1,"\
 cannot use both, -o OBJ-SPEC and an anonymous objective function given via EXPR\n\
 or -C gen-obj\n");
 
-	std::set<term2> pareto;
+	vec<sptr<term2>> pareto;
 	if (obj_spec)
 		parse_obj_spec(obj_spec, dom, funs, lhs, pareto);
 
-	if (!empty(f_bnds))
-		MDIE(mod_smlp,1,"scaled objectives are not supported, yet\n");
+	/* ------------------------------------------------------------------
+	 * Complete the definitions of alpha, beta, eta
+	 * ------------------------------------------------------------------ */
 
 	alpha_conj.emplace_back(move(alpha));
 	alpha = simplify(conj(move(alpha_conj)));
@@ -1309,6 +1327,10 @@ or -C gen-obj\n");
 
 	if (note(mod_prob,"domain:\n"))
 		smlp::dump_smt2(stderr, dom);
+
+	/* ------------------------------------------------------------------
+	 * Answer any -Q QUERY
+	 * ------------------------------------------------------------------ */
 
 	for (const strview &q : queries) {
 		bool o = info(mod_smlp,"query '%.*s':\n", (int)q.size(),q.data());
@@ -1331,14 +1353,23 @@ or -C gen-obj\n");
 			MDIE(mod_smlp,1,"unknown query '%.*s'\n",(int)q.size(),q.data());
 	}
 
+	/* ------------------------------------------------------------------
+	 * Substitute defined terms in alpha, beta, eta and lhs/pareto
+	 * ------------------------------------------------------------------ */
+
 	alpha = subst(alpha, funs);
 	beta = subst(beta, funs);
 	eta = subst(eta, funs);
 	if (lhs)
 		lhs = subst(lhs, funs);
+	else
+		for (sptr<term2> &o : pareto)
+			o = subst(o, funs);
 
-	/* Check that the constraints from partial function evaluation are met
-	 * on the domain. */
+	/* ------------------------------------------------------------------
+	 * Check that the constraints from partial function evaluation are met
+	 * on the domain.
+	 * ------------------------------------------------------------------ */
 
 	note_smt2_line("checking for out-of-domain application of partial "
 	               "functions: (and alpha (not ", pc, "))...");
@@ -1354,17 +1385,22 @@ or -C gen-obj\n");
 		     u->reason.c_str());
 	note(mod_prob,"out-of-domain condition is false\n");
 
-	if (argc - optind > 1) {
+	/* ------------------------------------------------------------------
+	 * Finally, determine right problem to solve and solve it
+	 * ------------------------------------------------------------------ */
+
+	const char *cnst_s = nullptr;
+	if (argc - optind == 1)
+		cnst_s = argv[optind++];
+
+	if (argc - optind > 0) {
 		if (err(mod_smlp,"unrecognized trailing options:")) {
-			for (int i=optind+1; i<argc; i++)
+			for (int i=optind; i<argc; i++)
 				fprintf(stderr, " '%s'", argv[i]);
 			fprintf(stderr, "\n");
 		}
 		DIE(1,"");
 	}
-	const char *cnst_s = nullptr;
-	if (argc - optind == 1)
-		cnst_s = argv[optind++];
 
 	if (lhs && cnst_s)
 		slv_single(dom, lhs, alpha, beta, eta, c, cnst_s, obj_range_s,
