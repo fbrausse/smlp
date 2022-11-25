@@ -155,6 +155,31 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	for (size_t i=0; i<size(out); i++)
 		outs[out_names[i]] = out[i];
 
+
+	hmap<str,ival> func_bounds;
+	if (obj_bounds) {
+		/* basically rebuild mf2.objective_scaler() for all outputs and
+		 * with kay::Q instead of double */
+		auto sc = [&](auto bnds) {
+			for (size_t i : mf2.spec.resp2spec) {
+				str lbl = mf2.spec.spec[i]["label"].get<str>();
+				const auto &b = bnds[lbl];
+				ival v = {
+					b["min"].template get<kay::Q>(),
+					b["max"].template get<kay::Q>(),
+				};
+				auto [it,ins] = func_bounds.emplace(move(lbl), move(v));
+				assert(ins);
+			}
+		};
+		using namespace iv::nn::common;
+		try {
+			sc(model_fun2::Table_proxy(file(obj_bounds, "r"), true));
+		} catch (const iv::table_exception &ex) {
+			sc(json_parse(obj_bounds));
+		}
+	}
+
 	sptr<term2> obj;
 	if (single_obj) {
 		/* apply mf2.objective: select right output(s) */
@@ -168,25 +193,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		// obj = out[idx];
 		assert(obj_name == out_names[idx]);
 		obj = make2t(name { move(obj_name) });
-
-		if (obj_bounds)
-			obj = apply_scaler(mf2.objective_scaler(obj_bounds),
-			                   obj, false);
 	} else {
-		/* Pareto */
-		vec<sptr<term2>> objs = out;
-		if (obj_bounds)
-			objs = apply_scaler([&]{
-				using namespace iv::nn::common;
-				try {
-					return mf2.spec.out_scaler<true>(
-						model_fun2::Table_proxy(file(obj_bounds, "r"), true));
-				} catch (const iv::table_exception &ex) {
-					return mf2.spec.out_scaler<true>(json_parse(obj_bounds));
-				}
-			}(), objs, false);
-		assert(size(objs) == 1); /* not implemented, yet */
-		obj = objs[0];
+		/* unknown objective(s) and we are not instructed to take the
+		 * information from GEN. */
 	}
 
 	/* construct theta */
@@ -228,6 +237,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		move(dom),
 		move(obj),
 		move(outs),
+		move(func_bounds),
 		move(in_bnds),
 		conj(move(eta)),
 		true2,

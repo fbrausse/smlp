@@ -27,6 +27,7 @@
 
 #include <cmath>	/* isfinite() */
 #include <filesystem>	/* ...::current_path() */
+#include <set>
 
 #include <signal.h>
 
@@ -587,12 +588,16 @@ Options [defaults]:\n\
                to the critical points solver before solving symbolically [no]\n\
   -I EXT-INC   optional external incremental SMT solver [value for -S]\n\
   -n           dry run, do not solve the problem [no]\n\
+  -o OBJ-SPEC  specify objective explicitely (only meaningful for NNs), an\n\
+               expression using the labels from SPEC or 'Pareto(E1,E2,...)'\n\
+               where E1,E2,... are such expressions\n\
   -O OBJ-BNDS  scale objective(s) according to min-max output bounds (only\n\
                meaningful for NNs, either .csv or .json) [none]\n\
   -p           dump the expression in Polish notation to stdout (only EXPR) [no]\n\
   -P PREC      maximum precision to obtain the optimization result for [" DEF_MAX_PREC "]\n\
   -Q QUERY     answer a query about the problem; supported QUERY:\n\
                - vars: list all variables\n\
+               - out : list all defined outputs\n\
   -r           re-cast bounded integer variables as reals with equality\n\
                constraints (requires -C bnds-dom); cvc5 >= 1.0.1 requires this\n\
                option when integer variables are present\n\
@@ -732,7 +737,8 @@ static sptr<form2> parse_infix_form2(const char *s)
 	return *unroll(parse_infix(s, false), logic).get<sptr<form2>>();
 }
 
-static void note_smt2_line(const char *pre, const sptr<form2> &g, const char *post = "")
+template <typename T>
+static void note_smt2_line(const char *pre, const sptr<T> &g, const char *post = "")
 {
 	if (note(mod_prob, "%s", pre)) {
 		smlp::dump_smt2(stderr, *g);
@@ -952,6 +958,127 @@ static void set_loglvl(char *arg)
 	}
 }
 
+static void slv_single(const domain &dom, const sptr<term2> &lhs,
+                       const sptr<form2> &alpha, const sptr<form2> &beta,
+                       const sptr<form2> &eta, cmp_t c, const char *cnst_s,
+                       const char *obj_range_s, bool dump_smt2, int timeout,
+                       bool solve, char *threshs_s, const char *max_prec_s,
+                       const char *delta_s, const vec<str> &args, int N,
+                       const fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> &theta)
+{
+	if (*beta != *true2)
+		MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
+
+	if (obj_range_s)
+		warn(mod_prob,"objective range specification "
+		              "-R is unused when CNST is given\n");
+
+	/* interpret the CNST on the right hand side */
+	kay::Q cnst;
+	if (!from_string(cnst_s, cnst))
+		MDIE(mod_smlp,1,"CNST must be a rational constant\n");
+	dbg(mod_prob,"cnst: %s\n", cnst.get_str().c_str());
+	sptr<term2> rhs = make2t(cnst2 { move(cnst) });
+
+	/* the problem consists of domain and the eta, alpha and
+	 * (EXPR OP CNST) constraints */
+	problem p = {
+		move(dom),
+		conj({ eta, alpha, make2f(prop2 { c, lhs, rhs, }) }),
+	};
+
+	/* optionally dump the smt2 representation of the problem */
+	if (dump_smt2)
+		::dump_smt2(stdout, smt2_logic_str(dom, p.p).c_str(), p);
+
+	if (timeout > 0) {
+		signal(SIGALRM, alarm_handler);
+		alarm(timeout);
+	}
+
+	/* optionally solve the problem */
+	if (solve)
+		solve_exists(p.dom, p.p).match(
+		[&,lhs=lhs](const sat &s) {
+			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
+			info(mod_prob,"sat, lhs value: %s ~ %g, model:\n",
+			        q.get_str().c_str(), q.get_d());
+			print_model(stderr, s.model, 2);
+			for (const auto &[n,c] : s.model) {
+				kay::Q q = to_Q(c->get<cnst2>()->value);
+				assert(p.dom[n]->contains(q));
+			}
+		},
+		[](const unsat &) { info(mod_prob,"unsat\n"); },
+		[](const unknown &u) {
+			info(mod_prob,"unknown: %s\n", u.reason.c_str());
+		}
+		);
+}
+
+static void opt_single(const domain &dom, const sptr<term2> &lhs,
+                       const sptr<form2> &alpha, const sptr<form2> &beta,
+                       const sptr<form2> &eta, cmp_t c,
+                       const char *obj_range_s, bool dump_smt2, int timeout,
+                       bool solve, char *threshs_s, const char *max_prec_s,
+                       const char *delta_s, const vec<str> &args, int N,
+                       const fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> &theta)
+{
+	if (!solve)
+		return;
+
+	/* hint for the solver: (non-)linear real arithmetic, potentially also
+	 * with integers */
+	str logic = smt2_logic_str(dom, conj({ alpha, beta, eta, make2f(prop2 { LT, lhs, zero }) }));
+
+	uptr<search_base> obj_range = parse_search_range(
+		threshs_s, max_prec_s, obj_range_s, dom, lhs);
+
+	kay::Q delta;
+	if (!from_string(delta_s, delta) || delta < 0)
+		MDIE(mod_smlp,1,"error: cannot parse DELTA as a positive "
+		                "rational constant: '%s'\n", delta_s);
+
+	printf("d,%s\n", std::filesystem::current_path().c_str());
+	printf("c,%zu,", size(args));
+	for (const str &s : args)
+		fwrite(s.c_str(), 1, s.length() + 1, stdout);
+	printf("\n");
+
+	vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
+	                                 *obj_range, theta, logic.c_str());
+	if (empty(r)) {
+		info(mod_prob,
+			"no solution for objective in theta in "
+			"[%s, %s] ~ [%f, %f]\n",
+			obj_range->lo()->get_str().c_str(),
+			obj_range->hi()->get_str().c_str(),
+			obj_range->lo()->get_d(),
+			obj_range->hi()->get_d());
+	} else {
+		if (info(mod_prob,
+			"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
+			is_less((cmp_t)c) ? "min max" : "max min",
+			obj_range->lo()->get_str().c_str(),
+			obj_range->hi()->get_str().c_str(),
+			obj_range->lo()->get_d(),
+			obj_range->hi()->get_d()))
+			print_model(stderr, r.back().point, 2);
+		for (const auto &s : r) {
+			kay::Q c = s.center_value(lhs);
+			note(mod_prob,
+				"T: %s ~ %f -> center: %s ~ %f, search range: [%s,%s]\n",
+				s.threshold.get_str().c_str(),
+				s.threshold.get_d(),
+				c.get_str().c_str(), c.get_d(),
+				s.obj_range->lo() ? s.obj_range->lo()->get_str().c_str() : nullptr,
+				s.obj_range->hi() ? s.obj_range->hi()->get_str().c_str() : nullptr);
+		}
+	}
+	for (int n=1; n<N; n++)
+		;
+}
+
 int main(int argc, char **argv)
 {
 	if (const char *opts_c = getenv("SMLP_OPTS")) {
@@ -983,6 +1110,7 @@ int main(int argc, char **argv)
 	bool             io_bnds_dom   = false;
 	int              timeout       = 0;
 	bool             clamp_inputs  = false;
+	const char      *obj_spec      = nullptr;
 	const char      *obj_bounds    = nullptr;
 	const char      *max_prec_s    = DEF_MAX_PREC;
 	vec<sptr<form2>> alpha_conj    = {};
@@ -992,6 +1120,7 @@ int main(int argc, char **argv)
 	const char      *obj_range_s   = nullptr;
 	char            *threshs_s     = nullptr;
 	vec<strview>     queries;
+	int              N             = 1;
 
 	/* record args (before potential reordering) to log to trace later */
 	vec<str> args;
@@ -999,7 +1128,7 @@ int main(int argc, char **argv)
 		args.emplace_back(argv[i]);
 
 	/* parse options from the command-line */
-	const char *opts = ":a:b:c:C:d:e:F:hi:I:nO:pP:Q:rR:sS:t:T:v::V";
+	const char *opts = ":a:b:c:C:d:e:F:hi:I:nN:o:O:pP:Q:rR:sS:t:T:v::V";
 	for (int opt; (opt = getopt(argc, argv, opts)) != -1;)
 		switch (opt) {
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -1047,11 +1176,13 @@ int main(int argc, char **argv)
 		}
 		case 'I': inc_solver_cmd = optarg; break;
 		case 'n': solve = false; break;
+		case 'N': N = atoi(optarg); break;
 		case 'p': dump_pe = true; break;
 		case 'P': max_prec_s = optarg; break;
 		case 'Q': queries.push_back(optarg); break;
 		case 'r': inject_reals = true; break;
 		case 'R': obj_range_s = optarg; break;
+		case 'o': obj_spec = optarg; break;
 		case 'O': obj_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 'S': ext_solver_cmd = optarg; break;
@@ -1091,49 +1222,113 @@ int main(int argc, char **argv)
 	} else
 		usage(argv[0], 1);
 
+	/* find out about the OP comparison operation */
+	if (argc - optind < 1)
+		usage(argv[0], 1);
+	cmp_t c = parse_op(argv[optind++]);
+
 	if (inject_reals && !(io_bnds_dom || empty(pp.input_bounds)))
 		MDIE(mod_smlp,1,"\
 error: -r requires -C bnds-dom: re-casting integers as reals based on IO-BOUNDS\n\
 implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	sptr<form2> alpha = pp.interpret_input_bounds(io_bnds_dom, inject_reals);
 
-	auto &[dom,lhs,funs,in_bnds,eta,pc,theta] = pp;
+	auto &[dom,lhs,funs,f_bnds,in_bnds,eta,pc,theta] = pp;
 	for (const auto &[n,t] : funs)
 		(dbg(mod_prob,"defined output '%s': ", n.c_str()) &&
 		 (smlp::dump_smt2(stderr, *t), fprintf(stderr, "\n"))) ||
 		note(mod_prob,"defined output '%s'\n", n.c_str());
 
+	if (obj_spec && lhs)
+		MDIE(mod_smlp,1,"\
+cannot use both, -o OBJ-SPEC and an anonymous objective function given via EXPR\n\
+or -C gen-obj\n");
+
+	std::set<term2> pareto;
+	if (obj_spec) {
+		auto proc = [&](const expr &f) {
+			sptr<term2> t = *unroll(f, {}).get<sptr<term2>>();
+			for (const str &s : free_vars(t))
+				if (!dom[s] && !funs.contains(s))
+					MDIE(mod_prob,1,"free variable '%s' in "
+					     "OBJ-SPEC is neither in domain nor "
+					     "a defined output\n",s.c_str());
+			return simplify(t);
+		};
+		expr e = parse_infix(obj_spec, false);
+		if (const call *c = e.get<call>()) {
+			if (c->func->get<name>()->id != "Pareto")
+				MDIE(mod_smlp,1,"cannot interpret OBJ-SPEC '%s'\n",
+				     obj_spec);
+			for (const expr &f : c->args) {
+				sptr<term2> t = proc(f);
+				auto [it,ins] = pareto.emplace(*t);
+				if (!ins) {
+					err(mod_smlp,"duplicate Pareto "
+					    "objective expression: ") &&
+					(smlp::dump_smt2(stderr, *t), fprintf(stderr, "\n"));
+					DIE(1,"");
+				}
+			}
+			if (size(pareto) < 1)
+				MDIE(mod_smlp,1,
+				     "%s objective for Pareto optimization\n",
+				     empty(pareto) ? "no" : "only single");
+			if (note(mod_prob,"Pareto objectives:\n"))
+				for (const term2 &t : pareto) {
+					fprintf(stderr, "  ");
+					smlp::dump_smt2(stderr, t);
+					fprintf(stderr, "\n");
+				}
+		} else {
+			lhs = proc(e);
+			note_smt2_line("objective: ", lhs);
+		}
+	}
+
+	if (!empty(f_bnds))
+		MDIE(mod_smlp,1,"scaled objectives are not supported, yet\n");
+
 	alpha_conj.emplace_back(move(alpha));
 	alpha = simplify(conj(move(alpha_conj)));
 	note_smt2_line("alpha: ", alpha);
-	alpha = subst(alpha, funs);
 
 	sptr<form2> beta = simplify(conj(move(beta_conj)));
 	note_smt2_line("beta : ", beta);
-	beta = subst(beta, funs);
 
 	eta_conj.emplace_back(move(eta));
 	eta = simplify(conj(move(eta_conj)));
 	note_smt2_line("eta  : ", eta);
-	eta = subst(eta, funs);
-
-	lhs = subst(lhs, funs);
 
 	if (note(mod_prob,"domain:\n"))
 		smlp::dump_smt2(stderr, dom);
 
 	for (const strview &q : queries) {
 		bool o = info(mod_smlp,"query '%.*s':\n", (int)q.size(),q.data());
+		auto print_vars = [o,&dom](vec<strview> v, const char *unbound) {
+			sort(begin(v), end(v));
+			for (const strview &id : v)
+				o && fprintf(stderr, "  '%.*s': %s\n",
+				             (int)id.length(), id.data(),
+				             dom[id] ? "bound" : unbound);
+		};
 		if (q == "vars") {
 			hset<str> h = free_vars(lhs);
-			vec<str> v(begin(h), end(h));
-			sort(begin(v), end(v));
-			for (const str &id : v)
-				o && fprintf(stderr, "  '%s': %s\n", id.c_str(),
-				             dom[id] ? "bound" : "free");
+			print_vars({ begin(h), end(h) }, "free");
+		} else if (q == "out") {
+			vec<strview> v;
+			for (const auto &[s,t] : funs)
+				v.emplace_back(s);
+			print_vars(move(v), "defined");
 		} else
 			MDIE(mod_smlp,1,"unknown query '%.*s'\n",(int)q.size(),q.data());
 	}
+
+	alpha = subst(alpha, funs);
+	beta = subst(beta, funs);
+	eta = subst(eta, funs);
+	if (lhs)
+		lhs = subst(lhs, funs);
 
 	/* Check that the constraints from partial function evaluation are met
 	 * on the domain. */
@@ -1152,13 +1347,6 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		     u->reason.c_str());
 	note(mod_prob,"out-of-domain condition is false\n");
 
-	/* find out about the OP comparison operation */
-	cmp_t c = parse_op(argv[optind++]);
-
-	/* hint for the solver: (non-)linear real arithmetic, potentially also
-	 * with integers */
-	str logic = smt2_logic_str(dom, conj({ alpha, beta, eta, make2f(prop2 { LT, lhs, zero }) }));
-
 	if (argc - optind > 1) {
 		if (err(mod_smlp,"unrecognized trailing options:")) {
 			for (int i=optind+1; i<argc; i++)
@@ -1167,101 +1355,18 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		}
 		DIE(1,"");
 	}
-	if (argc - optind == 1) {
-		if (*beta != *true2)
-			MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
+	const char *cnst_s = nullptr;
+	if (argc - optind == 1)
+		cnst_s = argv[optind++];
 
-		if (obj_range_s)
-			warn(mod_prob,"objective range specification "
-			              "-R is unused when CNST is given\n");
-
-		/* interpret the CNST on the right hand side */
-		kay::Q cnst;
-		if (!from_string(argv[optind], cnst))
-			MDIE(mod_smlp,1,"CNST must be a rational constant\n");
-		dbg(mod_prob,"cnst: %s\n", cnst.get_str().c_str());
-		sptr<term2> rhs = make2t(cnst2 { move(cnst) });
-
-		/* the problem consists of domain and the eta, alpha and
-		 * (EXPR OP CNST) constraints */
-		problem p = {
-			move(dom),
-			conj({ eta, alpha, make2f(prop2 { c, lhs, rhs, }) }),
-		};
-
-		/* optionally dump the smt2 representation of the problem */
-		if (dump_smt2)
-			::dump_smt2(stdout, logic.c_str(), p);
-
-		if (timeout > 0) {
-			signal(SIGALRM, alarm_handler);
-			alarm(timeout);
-		}
-
-		// signal(SIGINT, sigint_handler);
-
-		/* optionally solve the problem */
-		if (solve)
-			solve_exists(p.dom, p.p, logic.c_str()).match(
-			[&,lhs=lhs](const sat &s) {
-				kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
-				info(mod_prob,"sat, lhs value: %s ~ %g, model:\n",
-				        q.get_str().c_str(), q.get_d());
-				print_model(stderr, s.model, 2);
-				for (const auto &[n,c] : s.model) {
-					kay::Q q = to_Q(c->get<cnst2>()->value);
-					assert(p.dom[n]->contains(q));
-				}
-			},
-			[](const unsat &) { info(mod_prob,"unsat\n"); },
-			[](const unknown &u) {
-				info(mod_prob,"unknown: %s\n", u.reason.c_str());
-			}
-			);
-	} else if (solve) {
-		uptr<search_base> obj_range = parse_search_range(
-			threshs_s, max_prec_s, obj_range_s, dom, lhs);
-
-		kay::Q delta;
-		if (!from_string(delta_s, delta) || delta < 0)
-			MDIE(mod_smlp,1,"error: cannot parse DELTA as a positive "
-			                "rational constant: '%s'\n", delta_s);
-
-		printf("d,%s\n", std::filesystem::current_path().c_str());
-		printf("c,%zu,", size(args));
-		for (const str &s : args)
-			fwrite(s.c_str(), 1, s.length() + 1, stdout);
-		printf("\n");
-
-		vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
-		                                 *obj_range, theta, logic.c_str());
-		if (empty(r)) {
-			info(mod_prob,
-				"no solution for objective in theta in "
-				"[%s, %s] ~ [%f, %f]\n",
-				obj_range->lo()->get_str().c_str(),
-				obj_range->hi()->get_str().c_str(),
-				obj_range->lo()->get_d(),
-				obj_range->hi()->get_d());
-		} else {
-			if (info(mod_prob,
-				"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
-				is_less((cmp_t)c) ? "min max" : "max min",
-				obj_range->lo()->get_str().c_str(),
-				obj_range->hi()->get_str().c_str(),
-				obj_range->lo()->get_d(),
-				obj_range->hi()->get_d()))
-				print_model(stderr, r.back().point, 2);
-			for (const auto &s : r) {
-				kay::Q c = s.center_value(lhs);
-				note(mod_prob,
-					"T: %s ~ %f -> center: %s ~ %f, search range: [%s,%s]\n",
-					s.threshold.get_str().c_str(),
-					s.threshold.get_d(),
-					c.get_str().c_str(), c.get_d(),
-					s.obj_range->lo() ? s.obj_range->lo()->get_str().c_str() : nullptr,
-					s.obj_range->hi() ? s.obj_range->hi()->get_str().c_str() : nullptr);
-			}
-		}
-	}
+	if (lhs && cnst_s)
+		slv_single(dom, lhs, alpha, beta, eta, c, cnst_s, obj_range_s,
+		           dump_smt2, timeout, solve, threshs_s, max_prec_s,
+		           delta_s, args, N, theta);
+	else if (lhs)
+		opt_single(dom, lhs, alpha, beta, eta, c, obj_range_s,
+		           dump_smt2, timeout, solve, threshs_s, max_prec_s,
+		           delta_s, args, N, theta);
+	else
+		MDIE(mod_smlp,1,"Pareto is not implemented, yet\n");
 }
