@@ -37,7 +37,7 @@ Options [defaults]:
   -n           dry run, do not solve the problem [no]
   -o OBJ-SPEC  specify objective explicitely (only meaningful for NNs), an
                expression using the labels from SPEC or 'Pareto(E1,E2,...)'
-               where E1,E2,... are such expressions
+               where E1,E2,... are such expressions [EXPR]
   -O OBJ-BNDS  scale objective(s) according to min-max output bounds (only
                meaningful for NNs, either .csv or .json) [none]
   -p           dump the expression in Polish notation to stdout (only EXPR) [no]

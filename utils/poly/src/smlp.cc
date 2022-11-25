@@ -590,7 +590,7 @@ Options [defaults]:\n\
   -n           dry run, do not solve the problem [no]\n\
   -o OBJ-SPEC  specify objective explicitely (only meaningful for NNs), an\n\
                expression using the labels from SPEC or 'Pareto(E1,E2,...)'\n\
-               where E1,E2,... are such expressions\n\
+               where E1,E2,... are such expressions [EXPR]\n\
   -O OBJ-BNDS  scale objective(s) according to min-max output bounds (only\n\
                meaningful for NNs, either .csv or .json) [none]\n\
   -p           dump the expression in Polish notation to stdout (only EXPR) [no]\n\
@@ -1115,9 +1115,9 @@ static void parse_obj_spec(const char *obj_spec, const domain &dom,
 			     "%s objective for Pareto optimization\n",
 			     empty(pareto) ? "no" : "only single");
 		if (note(mod_prob,"Pareto objectives:\n"))
-			for (const term2 &t : pareto) {
+			for (const sptr<term2> &t : pareto) {
 				fprintf(stderr, "  ");
-				smlp::dump_smt2(stderr, t);
+				smlp::dump_smt2(stderr, *t);
 				fprintf(stderr, "\n");
 			}
 	} else {
