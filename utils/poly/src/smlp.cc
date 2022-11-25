@@ -128,17 +128,6 @@ struct pareto {
 
 }
 
-static void dump_smt2(FILE *f, const char *logic, const problem &p)
-{
-	fprintf(f, "(set-logic %s)\n", logic);
-	dump_smt2(f, p.dom);
-	fprintf(f, "(assert ");
-	dump_smt2(f, *p.p);
-	fprintf(f, ")\n");
-	fprintf(f, "(check-sat)\n");
-	fprintf(f, "(get-model)\n");
-}
-
 static char *ext_solver_cmd;
 static char *inc_solver_cmd;
 static long  intervals = -1;
@@ -516,21 +505,6 @@ optimize_EA(cmp_t direction,
 	return results;
 }
 
-static void alarm_handler(int sig)
-{
-	if (interruptible *p = interruptible::is_active)
-		p->interrupt();
-	signal(sig, alarm_handler);
-}
-
-static void sigint_handler(int sig)
-{
-	if (interruptible *p = interruptible::is_active)
-		p->interrupt();
-	signal(sig, sigint_handler);
-	// raise(sig);
-}
-
 static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 {
 	size_t k = 0;
@@ -543,6 +517,146 @@ static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 	for (const auto *p : v)
 		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, p->first.c_str(),
 		        to_string(p->second->get<cnst2>()->value).c_str());
+}
+
+template <typename T>
+static bool from_string(const char *s, T &v)
+{
+	using std::from_chars;
+	using kay::from_chars;
+	auto [end,ec] = from_chars(s, s + strlen(s), v);
+	return !*end && ec == std::errc {};
+}
+
+static void opt_single(const domain &dom, const sptr<term2> &lhs,
+                       const sptr<form2> &alpha, const sptr<form2> &beta,
+                       const sptr<form2> &eta, cmp_t c,
+                       uptr<search_base> obj_range, bool dump_smt2, int timeout,
+                       bool solve,
+                       const char *delta_s, const vec<str> &args, int N,
+                       const fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> &theta)
+{
+	if (!solve)
+		return;
+
+	/* hint for the solver: (non-)linear real arithmetic, potentially also
+	 * with integers */
+	str logic = smt2_logic_str(dom, conj({ alpha, beta, eta, make2f(prop2 { LT, lhs, zero }) }));
+
+	kay::Q delta;
+	if (!from_string(delta_s, delta) || delta < 0)
+		MDIE(mod_smlp,1,"error: cannot parse DELTA as a positive "
+		                "rational constant: '%s'\n", delta_s);
+
+	printf("d,%s\n", std::filesystem::current_path().c_str());
+	printf("c,%zu,", size(args));
+	for (const str &s : args)
+		fwrite(s.c_str(), 1, s.length() + 1, stdout);
+	printf("\n");
+
+	vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
+	                                 *obj_range, theta, logic.c_str());
+	if (empty(r)) {
+		info(mod_prob,
+			"no solution for objective in theta in "
+			"[%s, %s] ~ [%f, %f]\n",
+			obj_range->lo()->get_str().c_str(),
+			obj_range->hi()->get_str().c_str(),
+			obj_range->lo()->get_d(),
+			obj_range->hi()->get_d());
+	} else {
+		if (info(mod_prob,
+			"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
+			is_less((cmp_t)c) ? "min max" : "max min",
+			obj_range->lo()->get_str().c_str(),
+			obj_range->hi()->get_str().c_str(),
+			obj_range->lo()->get_d(),
+			obj_range->hi()->get_d()))
+			print_model(stderr, r.back().point, 2);
+		for (const auto &s : r) {
+			kay::Q c = s.center_value(lhs);
+			note(mod_prob,
+				"T: %s ~ %f -> center: %s ~ %f, search range: [%s,%s]\n",
+				s.threshold.get_str().c_str(),
+				s.threshold.get_d(),
+				c.get_str().c_str(), c.get_d(),
+				s.obj_range->lo() ? s.obj_range->lo()->get_str().c_str() : nullptr,
+				s.obj_range->hi() ? s.obj_range->hi()->get_str().c_str() : nullptr);
+		}
+	}
+	for (int n=1; n<N; n++)
+		;
+}
+
+interruptible *interruptible::is_active;
+
+static void alarm_handler(int sig)
+{
+	if (interruptible *p = interruptible::is_active)
+		p->interrupt();
+	signal(sig, alarm_handler);
+}
+
+static void dump_smt2(FILE *f, const char *logic, const problem &p)
+{
+	fprintf(f, "(set-logic %s)\n", logic);
+	dump_smt2(f, p.dom);
+	fprintf(f, "(assert ");
+	dump_smt2(f, *p.p);
+	fprintf(f, ")\n");
+	fprintf(f, "(check-sat)\n");
+	fprintf(f, "(get-model)\n");
+}
+
+static void slv_single(const domain &dom, const sptr<term2> &lhs,
+                       const sptr<form2> &alpha, const sptr<form2> &beta,
+                       const sptr<form2> &eta, cmp_t c, const char *cnst_s,
+                       bool dump_smt2, int timeout, bool solve, int N)
+{
+	if (*beta != *true2)
+		MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
+
+	/* interpret the CNST on the right hand side */
+	kay::Q cnst;
+	if (!from_string(cnst_s, cnst))
+		MDIE(mod_smlp,1,"CNST must be a rational constant\n");
+	dbg(mod_prob,"cnst: %s\n", cnst.get_str().c_str());
+	sptr<term2> rhs = make2t(cnst2 { move(cnst) });
+
+	/* the problem consists of domain and the eta, alpha and
+	 * (EXPR OP CNST) constraints */
+	problem p = {
+		move(dom),
+		conj({ eta, alpha, make2f(prop2 { c, lhs, rhs, }) }),
+	};
+
+	/* optionally dump the smt2 representation of the problem */
+	if (dump_smt2)
+		::dump_smt2(stdout, smt2_logic_str(dom, p.p).c_str(), p);
+
+	if (timeout > 0) {
+		signal(SIGALRM, alarm_handler);
+		alarm(timeout);
+	}
+
+	/* optionally solve the problem */
+	if (solve)
+		solve_exists(p.dom, p.p).match(
+		[&,lhs=lhs](const sat &s) {
+			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
+			info(mod_prob,"sat, lhs value: %s ~ %g, model:\n",
+			        q.get_str().c_str(), q.get_d());
+			print_model(stderr, s.model, 2);
+			for (const auto &[n,c] : s.model) {
+				kay::Q q = to_Q(c->get<cnst2>()->value);
+				assert(p.dom[n]->contains(q));
+			}
+		},
+		[](const unsat &) { info(mod_prob,"unsat\n"); },
+		[](const unknown &u) {
+			info(mod_prob,"unknown: %s\n", u.reason.c_str());
+		}
+		);
 }
 
 #ifdef SMLP_ENABLE_KERAS_NN
@@ -796,17 +910,6 @@ static cmp_t parse_op(const std::string_view &s)
 	MDIE(mod_smlp,1,"OP '%.*s' unknown\n",(int)s.length(), s.data());
 }
 
-interruptible *interruptible::is_active;
-
-template <typename T>
-static bool from_string(const char *s, T &v)
-{
-	using std::from_chars;
-	using kay::from_chars;
-	auto [end,ec] = from_chars(s, s + strlen(s), v);
-	return !*end && ec == std::errc {};
-}
-
 sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals)
 {
 	if (inject_reals) {
@@ -960,117 +1063,6 @@ static void set_loglvl(char *arg)
 			for (const auto &[n,m] : modules)
 				m->lvl = jt->second;
 	}
-}
-
-static void slv_single(const domain &dom, const sptr<term2> &lhs,
-                       const sptr<form2> &alpha, const sptr<form2> &beta,
-                       const sptr<form2> &eta, cmp_t c, const char *cnst_s,
-                       bool dump_smt2, int timeout, bool solve, int N)
-{
-	if (*beta != *true2)
-		MDIE(mod_smlp,1,"-b BETA is not supported when CNST is given\n");
-
-	/* interpret the CNST on the right hand side */
-	kay::Q cnst;
-	if (!from_string(cnst_s, cnst))
-		MDIE(mod_smlp,1,"CNST must be a rational constant\n");
-	dbg(mod_prob,"cnst: %s\n", cnst.get_str().c_str());
-	sptr<term2> rhs = make2t(cnst2 { move(cnst) });
-
-	/* the problem consists of domain and the eta, alpha and
-	 * (EXPR OP CNST) constraints */
-	problem p = {
-		move(dom),
-		conj({ eta, alpha, make2f(prop2 { c, lhs, rhs, }) }),
-	};
-
-	/* optionally dump the smt2 representation of the problem */
-	if (dump_smt2)
-		::dump_smt2(stdout, smt2_logic_str(dom, p.p).c_str(), p);
-
-	if (timeout > 0) {
-		signal(SIGALRM, alarm_handler);
-		alarm(timeout);
-	}
-
-	/* optionally solve the problem */
-	if (solve)
-		solve_exists(p.dom, p.p).match(
-		[&,lhs=lhs](const sat &s) {
-			kay::Q q = to_Q(cnst_fold(lhs, s.model)->get<cnst2>()->value);
-			info(mod_prob,"sat, lhs value: %s ~ %g, model:\n",
-			        q.get_str().c_str(), q.get_d());
-			print_model(stderr, s.model, 2);
-			for (const auto &[n,c] : s.model) {
-				kay::Q q = to_Q(c->get<cnst2>()->value);
-				assert(p.dom[n]->contains(q));
-			}
-		},
-		[](const unsat &) { info(mod_prob,"unsat\n"); },
-		[](const unknown &u) {
-			info(mod_prob,"unknown: %s\n", u.reason.c_str());
-		}
-		);
-}
-
-static void opt_single(const domain &dom, const sptr<term2> &lhs,
-                       const sptr<form2> &alpha, const sptr<form2> &beta,
-                       const sptr<form2> &eta, cmp_t c,
-                       uptr<search_base> obj_range, bool dump_smt2, int timeout,
-                       bool solve,
-                       const char *delta_s, const vec<str> &args, int N,
-                       const fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> &theta)
-{
-	if (!solve)
-		return;
-
-	/* hint for the solver: (non-)linear real arithmetic, potentially also
-	 * with integers */
-	str logic = smt2_logic_str(dom, conj({ alpha, beta, eta, make2f(prop2 { LT, lhs, zero }) }));
-
-	kay::Q delta;
-	if (!from_string(delta_s, delta) || delta < 0)
-		MDIE(mod_smlp,1,"error: cannot parse DELTA as a positive "
-		                "rational constant: '%s'\n", delta_s);
-
-	printf("d,%s\n", std::filesystem::current_path().c_str());
-	printf("c,%zu,", size(args));
-	for (const str &s : args)
-		fwrite(s.c_str(), 1, s.length() + 1, stdout);
-	printf("\n");
-
-	vec<smlp_result> r = optimize_EA(c, dom, lhs, alpha, beta, eta, delta,
-	                                 *obj_range, theta, logic.c_str());
-	if (empty(r)) {
-		info(mod_prob,
-			"no solution for objective in theta in "
-			"[%s, %s] ~ [%f, %f]\n",
-			obj_range->lo()->get_str().c_str(),
-			obj_range->hi()->get_str().c_str(),
-			obj_range->lo()->get_d(),
-			obj_range->hi()->get_d());
-	} else {
-		if (info(mod_prob,
-			"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
-			is_less((cmp_t)c) ? "min max" : "max min",
-			obj_range->lo()->get_str().c_str(),
-			obj_range->hi()->get_str().c_str(),
-			obj_range->lo()->get_d(),
-			obj_range->hi()->get_d()))
-			print_model(stderr, r.back().point, 2);
-		for (const auto &s : r) {
-			kay::Q c = s.center_value(lhs);
-			note(mod_prob,
-				"T: %s ~ %f -> center: %s ~ %f, search range: [%s,%s]\n",
-				s.threshold.get_str().c_str(),
-				s.threshold.get_d(),
-				c.get_str().c_str(), c.get_d(),
-				s.obj_range->lo() ? s.obj_range->lo()->get_str().c_str() : nullptr,
-				s.obj_range->hi() ? s.obj_range->hi()->get_str().c_str() : nullptr);
-		}
-	}
-	for (int n=1; n<N; n++)
-		;
 }
 
 static void parse_obj_spec(const char *obj_spec, const domain &dom,
