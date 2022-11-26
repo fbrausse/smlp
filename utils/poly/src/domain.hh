@@ -81,6 +81,20 @@ sptr<form2> domain_constraint(const str &var, const component &c);
 /* The domain is an (ordered) list of pairs (name, component) */
 struct domain : vec<pair<str,component>> {
 
+	friend str fresh(const domain &dom, str base)
+	{
+		if (!dom[base])
+			return base;
+		base += "_";
+		if (!dom[base])
+			return base;
+		for (kay::Z i=0;; i++) {
+			str n = base + i.get_str();
+			if (!dom[n])
+				return n;
+		}
+	}
+
 	const component * operator[](const std::string_view &s) const
 	{
 		for (const auto &[n,c] : *this)

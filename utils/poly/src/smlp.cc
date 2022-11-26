@@ -1065,6 +1065,39 @@ static void set_loglvl(char *arg)
 	}
 }
 
+static bool is_constant(domain dom, const sptr<term2> &t, const hset<str> &wrt)
+{
+	hmap<str,sptr<term2>> rename;
+	for (const str &n : wrt) {
+		str r = fresh(dom, n);
+		rename.emplace(n, make2t(name { r }));
+		component *c = dom[n];
+		assert(c);
+		dom.emplace_back(move(r), *c);
+	}
+	return solve_exists(dom, make2f(prop2 { NE, t, subst(t, rename) })).match(
+	[](const sat &) { return false; },
+	[](const unsat &) { return true; },
+	[](const unknown &u) -> bool { MDIE(mod_prob,2,"is_constant is unknown: %s\n",u.reason.c_str()); }
+	);
+}
+
+static bool is_constant(domain dom, const sptr<term2> &t)
+{
+	return is_constant(move(dom), t, free_vars(t));
+}
+
+static bool is_constant_on(domain dom, const sptr<term2> &t)
+{
+	hset<str> wrt = free_vars(t);
+	for (auto it = begin(wrt); it != end(wrt);)
+		if (!dom[*it])
+			it = wrt.erase(it);
+		else
+			++it;
+	return is_constant(move(dom), t, wrt);
+}
+
 static void parse_obj_spec(const char *obj_spec, const domain &dom,
                            const hmap<str,sptr<term2>> &funs, sptr<term2> &lhs,
                            vec<sptr<term2>> &pareto)
@@ -1343,14 +1376,26 @@ or -C gen-obj\n");
 	 * Substitute defined terms in alpha, beta, eta and lhs/pareto
 	 * ------------------------------------------------------------------ */
 
+	auto check_nonconst = [&dom](const sptr<term2> &t, const sptr<term2> &p = nullptr){
+		if (is_constant(dom, t)) {
+			err(mod_prob,"objective is constant: ") &&
+			(smlp::dump_smt2(stderr, p ? *p : *t), fprintf(stderr, "\n"));
+			DIE(1,"");
+		}
+		return t;
+	};
+
+	info(mod_prob,"checking whether objective%s constant...\n",
+	     lhs ? " is" : "s are");
+
 	alpha = subst(alpha, funs);
 	beta = subst(beta, funs);
 	eta = subst(eta, funs);
 	if (lhs)
-		lhs = subst(lhs, funs);
+		lhs = check_nonconst(subst(lhs, funs), lhs);
 	else
 		for (sptr<term2> &o : pareto)
-			o = subst(o, funs);
+			o = check_nonconst(subst(o, funs), o);
 
 	/* ------------------------------------------------------------------
 	 * Check that the constraints from partial function evaluation are met
