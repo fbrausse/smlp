@@ -1,3 +1,27 @@
+2022-11-26 poly-v0.8.0
+
+ * override Z3's buggy SIGINT handler (after 100ms)
+ * add -T LO:INC:HI option format
+ * rename -O OUT-BNDS to -O OBJ-BNDS for uniformity
+ * disentangle critical points and fallback solver from ival solver
+ * obtaining all solutions to a problem is now handled in a lazy manner
+ * splitting intervals no longer skips space between midpoint and next double
+ * critical points solver only handles linear derivatives
+ * add option -o OBJ-SPEC supporting arbitrary expressions or the expression
+   'Pareto(E1,E2,...)' containing such expressions (Pareto optimization is not
+   implemented, yet)
+ * minor improvements/fixes:
+   - simplifier deals with double-neg and unnecessary conj/disj
+   - logging
+   - fix handling option -c auto
+   - report and error on surplus unused arguments
+   - empty sequence of solvers
+   - ext-solver outputs time to solve
+   - print the named outputs (if any)
+   - sequence of variables in models is sorted now
+   - optimize_EA properly forwards strictness info to obj-range
+   - check that none of the objectives is constant on the domain
+
 2022-11-17 poly-v0.7.0
 
  * moved old options -1 and -c to -C gen-obj and -C clamp
