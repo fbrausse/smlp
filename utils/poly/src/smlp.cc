@@ -1172,11 +1172,11 @@ int main(int argc, char **argv)
 	bool             clamp_inputs  = false;
 	const char      *obj_spec      = nullptr;
 	const char      *obj_bounds    = nullptr;
-	const char      *max_prec_s    = DEF_MAX_PREC;
+	const char      *max_prec_s    = nullptr;
 	vec<sptr<form2>> alpha_conj    = {};
 	vec<sptr<form2>> beta_conj     = {};
 	vec<sptr<form2>> eta_conj      = {};
-	const char      *delta_s       = DEF_DELTA;
+	const char      *delta_s       = nullptr;
 	const char      *obj_range_s   = nullptr;
 	char            *threshs_s     = nullptr;
 	vec<strview>     queries;
@@ -1315,9 +1315,12 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	 * ------------------------------------------------------------------ */
 
 	if (obj_spec && lhs)
-		MDIE(mod_smlp,1,"\
-cannot use both, -o OBJ-SPEC and an anonymous objective function given via EXPR\n\
-or -C gen-obj\n");
+		MDIE(mod_smlp,1,"cannot use both, -o OBJ-SPEC and an anonymous "
+		                "objective function given via EXPR or -C gen-obj\n");
+
+	if (!obj_spec && !lhs)
+		MDIE(mod_smlp,1,"no objective specified; please use either "
+		                "-o OBJ-SPEC or -C gen-obj\n");
 
 	vec<sptr<term2>> pareto;
 	if (obj_spec)
@@ -1426,6 +1429,11 @@ or -C gen-obj\n");
 		}
 		DIE(1,"");
 	}
+
+	if (!cnst_s && !max_prec_s)
+		max_prec_s = DEF_MAX_PREC;
+	if (!cnst_s && !delta_s)
+		delta_s = DEF_DELTA;
 
 	if (lhs && cnst_s) {
 		if (obj_range_s)
