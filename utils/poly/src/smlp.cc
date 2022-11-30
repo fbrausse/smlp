@@ -208,13 +208,13 @@ enum class res { MAYBE = -1, NO, YES };
 
 struct search_base {
 
-	res contained;
+	bool done;
 
-	search_base(res contained) : contained(contained) {}
+	search_base(bool done) : done(done) {}
 	virtual ~search_base() = default;
 	virtual bool has_next() const = 0;
 	virtual kay::Q query() const = 0;
-	virtual void reply(cmp_t c) = 0;
+	virtual void reply(int order) = 0;
 	virtual const kay::Q * lo() const = 0;
 	virtual const kay::Q * hi() const = 0;
 
@@ -226,27 +226,24 @@ struct search_ival : search_base {
 	ival v;
 
 	explicit search_ival(ival v)
-	: search_base { v.lo > v.hi ? res::NO : res::MAYBE }
+	: search_base { v.lo > v.hi }
 	, v(move(v))
 	{}
 
 	bool has_next() const override
 	{
-		int c = cmp(v.lo, v.hi);
-		return c ? c < 0 : contained == res::MAYBE;
+		return !done && v.lo <= v.hi;
 	}
 
 	kay::Q query() const override { return mid(v); }
 
-	void reply(cmp_t c) override
+	void reply(int order) override
 	{
-		int order = is_less(c) ? -1 : +1;
+		done |= !order || v.lo == v.hi;
 		if (order >= 0)
 			v.lo = mid(v);
 		if (order <= 0)
 			v.hi = mid(v);
-		if (v.lo == v.hi)
-			contained = order ? res::NO : res::YES;
 	}
 
 	const kay::Q * lo() const override { return &v.lo; }
@@ -268,13 +265,14 @@ struct bounded_search_ival : search_ival {
 
 	bool has_next() const override
 	{
-		return contained != res::NO && (!any || length(v) > prec);
+		return !done && (!any || length(v) > prec);
 	}
 
-	void reply(cmp_t c) override
+	void reply(int order) override
 	{
 		any = true;
-		search_ival::reply(c);
+		search_ival::reply(order);
+		done |= length(v) <= prec;
 	}
 
 	uptr<search_base> clone() const override { return std::make_unique<bounded_search_ival>(*this); }
@@ -286,7 +284,7 @@ struct search_list : search_base {
 	ssize_t l, r, m;
 
 	explicit search_list(vec<kay::Q> values)
-	: search_base { empty(values) ? res::NO : res::MAYBE }
+	: search_base { empty(values) }
 	, values(move(values))
 	, l(0)
 	, r(size(this->values) - 1)
@@ -295,31 +293,30 @@ struct search_list : search_base {
 		assert(std::is_sorted(begin(this->values), end(this->values)));
 	}
 
-	bool has_next() const override { return l <= r; }
+	bool has_next() const override { return !done; }
 	kay::Q query() const override { return values[m]; }
 
-	void reply(cmp_t c) override
+	void reply(int order) override
 	{
-		int order = is_less(c) ? -1 : +1;
+		m += order;
 		if (order >= 0)
-			l = m + (order > 0 ? 1 : 0);
+			l = m;
 		if (order <= 0)
-			r = m - 1;
-		if (r < l)
-			contained = order ? res::NO : res::YES;
+			r = m;
+		done |= !order || r < l;
 		m = l + (r - l) / 2;
 	}
 
 	const kay::Q * lo() const override
 	{
 		return empty(values) ? nullptr
-		     : &values[std::clamp<ssize_t>(l, 0, size(values)-1)];
+		     : &values[std::clamp<ssize_t>(done ? r : l, 0, size(values)-1)];
 	}
 
 	const kay::Q * hi() const override
 	{
 		return empty(values) ? nullptr
-		     : &values[std::clamp<ssize_t>(l <= r ? r : l, 0, size(values)-1)];
+		     : &values[std::clamp<ssize_t>(r, 0, size(values)-1)];
 	}
 
 	uptr<search_base> clone() const override { return std::make_unique<search_list>(*this); }
@@ -430,7 +427,7 @@ optimize_EA(cmp_t direction,
 		exists->add(alpha);
 		exists->add(target);
 
-		for (vec<smlp_result> counter_examples; true;) {
+		for (vec<smlp_result> counter_examples;;) {
 			note(mod_cand,"searching candidate %s T ~ %g...\n",
 			     cmp_s[direction],T.get_d());
 			timing e0;
@@ -440,7 +437,7 @@ optimize_EA(cmp_t direction,
 				MDIE(mod_smlp,2,"exists is unknown: %s\n",
 				     u->reason.c_str());
 			if (e.get<unsat>()) {
-				obj_range.reply(!direction);
+				obj_range.reply(is_less(!direction) ? -1 : +1);
 				break;
 			}
 			auto &candidate = e.get<sat>()->model;
@@ -480,8 +477,11 @@ optimize_EA(cmp_t direction,
 				     u->reason.c_str());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
-				results.emplace_back(T, move(exists), candidate, obj_range.clone());
-				obj_range.reply(direction);
+				info(mod_prob,"found solution %s T ~ %g\n",
+				     cmp_s[direction], T.get_d());
+				results.emplace_back(T, move(exists), candidate,
+				                     obj_range.clone());
+				obj_range.reply(is_less(direction) ? -1 : +1);
 				break;
 			}
 			auto &counter_example = a.get<sat>()->model;
@@ -490,17 +490,10 @@ optimize_EA(cmp_t direction,
 			exists->add(neg(theta({ delta }, counter_example)));
 		}
 	}
-	const char *contained = nullptr;
-	switch (obj_range.contained) {
-	case res::YES: contained = "in"; break;
-	case res::NO: contained = "out"; break;
-	case res::MAYBE: contained = "maybe"; break;
-	}
-	assert(contained);
 	auto Q_str = [](const kay::Q *l) { return l ? l->get_str() : ""; };
-	printf("u,%s,%s,%s\n",
+	printf("u,%s,%s,%d\n",
 	       Q_str(obj_range.lo()).c_str(), Q_str(obj_range.hi()).c_str(),
-	       contained);
+	       obj_range.done);
 
 	return results;
 }
@@ -565,14 +558,15 @@ static void opt_single(const domain &dom, const sptr<term2> &lhs,
 			obj_range->lo()->get_d(),
 			obj_range->hi()->get_d());
 	} else {
+		const smlp_result &opt = r.back();
 		if (info(mod_prob,
 			"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
 			is_less((cmp_t)c) ? "min max" : "max min",
-			obj_range->lo()->get_str().c_str(),
+			opt.threshold.get_str().c_str(),
 			obj_range->hi()->get_str().c_str(),
-			obj_range->lo()->get_d(),
+			opt.threshold.get_d(),
 			obj_range->hi()->get_d()))
-			print_model(stderr, r.back().point, 2);
+			print_model(stderr, opt.point, 2);
 		for (const auto &s : r) {
 			kay::Q c = s.center_value(lhs);
 			note(mod_prob,
