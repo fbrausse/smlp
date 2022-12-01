@@ -845,6 +845,9 @@ static sptr<form2> parse_infix_form2(const char *s)
 		{"And", mk_lbop2<lbop2::AND>},
 		{"Or", mk_lbop2<lbop2::OR>},
 		{"Not", mk_lneg2},
+		{"+", unroll_add},
+		{"-", unroll_sub},
+		{"*", unroll_mul},
 	};
 	return *unroll(parse_infix(s, false), logic).get<sptr<form2>>();
 }
@@ -1097,7 +1100,11 @@ static void parse_obj_spec(const char *obj_spec, const domain &dom,
                            vec<sptr<term2>> &pareto)
 {
 	auto proc = [&](const expr &f) {
-		sptr<term2> t = *unroll(f, {}).get<sptr<term2>>();
+		sptr<term2> t = *unroll(f, {
+			{"+", unroll_add},
+			{"-", unroll_sub},
+			{"*", unroll_mul},
+		}).get<sptr<term2>>();
 		for (const str &s : free_vars(t))
 			if (!dom[s] && !funs.contains(s))
 				MDIE(mod_prob,1,"free variable '%s' in "

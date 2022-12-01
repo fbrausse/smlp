@@ -18,6 +18,9 @@ static bool is_terminal(const T &g)
 	);
 }
 
+static const char *const bop_s[] = { "+", "-", "*" };
+static const char *const uop_s[] = { "+", "-" };
+
 namespace {
 struct smt2_output {
 

@@ -84,7 +84,12 @@ pre_problem smlp::parse_poly_problem(const char *simple_domain_path,
 	/* interpret symbols of known non-recursive functions and numeric
 	 * constants */
 	Match match;
-	sptr<term2> e2 = *unroll(e, { {"Match", std::ref(match)} }).get<sptr<term2>>();
+	sptr<term2> e2 = *unroll(e, {
+		{ "+", unroll_add },
+		{ "-", unroll_sub },
+		{ "*", unroll_mul },
+		{ "Match", std::ref(match) },
+	}).get<sptr<term2>>();
 
 	return pre_problem {
 		move(d),

@@ -14,8 +14,8 @@ using pt_scaler = pointwise<scaler>;
 static sptr<term2>
 apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 {
-	sptr<term2> c = make2t(bop2 { bop::ADD,
-		make2t(bop2 { bop::MUL, make2t(cnst2 { kay::Q(sc.a) }), in }),
+	sptr<term2> c = make2t(bop2 { bop2::ADD,
+		make2t(bop2 { bop2::MUL, make2t(cnst2 { kay::Q(sc.a) }), in }),
 		make2t(cnst2 { kay::Q(sc.b) })
 	});
 	if (clamp_outputs) {
@@ -116,9 +116,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			next.push_back(make2t(cnst2 { kay::Q(b) }));
 		for (size_t y=0; y<height(kernel); y++)
 			for (size_t x=0; x<width(kernel); x++)
-				next[y] = make2t(bop2 { bop::ADD,
+				next[y] = make2t(bop2 { bop2::ADD,
 					next[y],
-					make2t(bop2 { bop::MUL,
+					make2t(bop2 { bop2::MUL,
 						make2t(cnst2 { kay::Q(kernel(x,y)) }),
 						out[x],
 					})
@@ -218,7 +218,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 				if (delta)
 					rad *= (1 + *delta);
 				r = make2t(cnst2 { move(rad) });
-				r = make2t(bop2 { bop::MUL, move(r), abs(!delta ? e : nm) });
+				r = make2t(bop2 { bop2::MUL, move(r), abs(!delta ? e : nm) });
 			} else if (sp["type"] == "input")
 				continue;
 			else
@@ -226,7 +226,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 				              "nor 'rad-rel' for '%s'\n",
 				     n.c_str());
 			conj.emplace_back(make2f(prop2 { LE,
-				abs(make2t(bop2 { bop::SUB, nm, e })),
+				abs(make2t(bop2 { bop2::SUB, nm, e })),
 				move(r)
 			}));
 		}

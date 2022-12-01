@@ -95,20 +95,20 @@ static dbl::ival eval(const hmap<str,dbl::ival> &dom, const term2 &t, hmap<void 
 	[&](const uop2 &u) {
 		dbl::ival i = eval(dom, u.operand, m);
 		switch (u.op) {
-		case uop::UADD: break;
-		case uop::USUB: neg(i); break;
+		case uop2::UADD: break;
+		case uop2::USUB: neg(i); break;
 		}
 		return i;
 	},
 	[&](const bop2 &b) {
 		dbl::ival l = eval(dom, b.left, m);
-		if (b.op == bop::MUL && *b.left == *b.right)
+		if (b.op == bop2::MUL && *b.left == *b.right)
 			return square(l);
 		dbl::ival r = eval(dom, b.right, m);
 		switch (b.op) {
-		case bop::ADD: l += r; break;
-		case bop::SUB: l -= r; break;
-		case bop::MUL: l *= r; break;
+		case bop2::ADD: l += r; break;
+		case bop2::SUB: l -= r; break;
+		case bop2::MUL: l *= r; break;
 		}
 		return l;
 	},
@@ -127,7 +127,7 @@ static res eval(const hmap<str,dbl::ival> &dom, const form2 &f, hmap<void *,dbl:
 {
 	return f.match(
 	[&](const prop2 &p) {
-		dbl::ival v = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);/*
+		dbl::ival v = eval(dom, bop2 { bop2::SUB, p.left, p.right }, m);/*
 		size_t hh = size(dom);
 		for (const auto &[n,v] : dom)
 			hh = (hh << 1) ^ std::hash<str>{}(n);
@@ -354,7 +354,7 @@ result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 				if (0 && !only_order_props)
 					return;
 				sptr<term2> diff = simplify(make2t(bop2 {
-					bop::SUB,
+					bop2::SUB,
 					p.left,
 					p.right,
 				}));

@@ -39,11 +39,12 @@ struct pe_parser {
 		assert(tok.size() == 1 || tok.size() == 2);
 		if (tok.size() == 1) {
 			switch (tok[0]) {
-			case '+': return bop { bop::ADD, gets(), gets() };
-			case '-': return bop { bop::SUB, gets(), gets() };
-			case '*': return bop { bop::MUL, gets(), gets() };
-			case 'x': return uop { uop::UADD, gets() };
-			case 'y': return uop { uop::USUB, gets() };
+			case '+':
+			case '-':
+			case '*':
+				return call { make1e(name { tok }), { get(), get() } };
+			case 'x': return call { make1e(name { "+" }), { get() } };
+			case 'y': return call { make1e(name { "-" }), { get() } };
 			case 'C': {
 				size_t n = strtol(next().c_str(), NULL, 0);
 				vec<expr> args;
@@ -76,21 +77,23 @@ void smlp::dump_pe(FILE *f, const expr &e)
 	[&](const name &n) { fprintf(f, "N %s\n", n.id.c_str()); },
 	[&](const cnst &c) { fprintf(f, "V %s\n", c.value.c_str()); },
 	[&](const call &c) {
-		fprintf(f, "C %zu\n", c.args.size());
-		dump_pe(f, *c.func);
+		const name *n = c.func->get<name>();
+		bool have = true;
+		if (n && n->id.length() == 1) {
+			have = true;
+			if (size(c.args) == 2 && strchr("+-*", n->id[0])) {
+				fprintf(f, "%c\n", n->id[0]);
+			} else if (size(c.args) == 1 && strchr("+-", n->id[0])) {
+				fprintf(f, "%c\n", "xy"[n->id[0] == '+' ? 0 : 1]);
+			} else
+				have = false;
+		}
+		if (!have) {
+			fprintf(f, "C %zu\n", c.args.size());
+			dump_pe(f, *c.func);
+		}
 		for (const expr &a : c.args)
 			dump_pe(f, a);
-	},
-	[&](const bop &o) {
-		static const char ops[] = { '+', '-', '*', };
-		fprintf(f, "%c\n", ops[o.op]);
-		dump_pe(f, *o.left);
-		dump_pe(f, *o.right);
-	},
-	[&](const uop &o) {
-		static const char ops[] = { 'x', 'y', };
-		fprintf(f, "%c\n", ops[o.op]);
-		dump_pe(f, *o.operand);
 	},
 	[&](const cop &c) {
 		fprintf(f, "%s\n", cmp_s[c.cmp]);

@@ -86,12 +86,12 @@ struct ite2 {
 	std::strong_ordering operator<=>(const ite2 &b) const;
 };
 struct bop2 {
-	decltype(bop::op) op; sptr<term2> left, right;
+	enum { ADD, SUB, MUL, } op; sptr<term2> left, right;
 	bool operator==(const bop2 &b) const;
 	std::strong_ordering operator<=>(const bop2 &b) const;
 };
 struct uop2 {
-	decltype(uop::op) op; sptr<term2> operand;
+	enum { UADD, USUB, } op; sptr<term2> operand;
 	bool operator==(const uop2 &b) const;
 	std::strong_ordering operator<=>(const uop2 &b) const;
 };
@@ -173,6 +173,11 @@ sptr<term2> abs(const sptr<term2> &t);
  * in the expr 'e'. Results in a term2 term. */
 typedef sumtype<sptr<term2>,sptr<form2>> expr2s;
 typedef hmap<str,fun<expr2s(vec<expr2s>)>> unroll_funs_t;
+expr2s unroll_add(vec<expr2s> a);
+expr2s unroll_sub(vec<expr2s> a);
+expr2s unroll_mul(vec<expr2s> a);
+expr2s unroll_expz(vec<expr2s> a);
+
 expr2s unroll(const expr &e, const unroll_funs_t &funs);
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */

@@ -97,18 +97,13 @@ struct name {
 	std::strong_ordering operator<=>(const name &b) const = default;
 };
 struct call { sptr<expr> func; vec<expr> args; };
-struct bop { enum { ADD, SUB, MUL, } op; sptr<expr> left, right; };
-struct uop { enum { UADD, USUB, } op; sptr<expr> operand; };
 struct cop { cmp_t cmp; sptr<expr> left, right; };
 struct cnst { str value; };
 
-inline const char *bop_s[] = { "+", "-", "*" };
-inline const char *uop_s[] = { "+", "-" };
-
-struct expr : sumtype<name,call,bop,uop,cop,cnst>
+struct expr : sumtype<name,call,cop,cnst>
             , std::enable_shared_from_this<expr> {
 
-	using sumtype<name,call,bop,uop,cop,cnst>::sumtype;
+	using sumtype<name,call,cop,cnst>::sumtype;
 };
 
 template <typename... Ts>

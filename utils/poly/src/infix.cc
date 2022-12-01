@@ -68,7 +68,7 @@ struct infix_parser {
 			}
 			return set(t, str(begin, s));
 		}
-		if (strchr("+-*", *begin))
+		if (strchr("+-*^", *begin))
 			return set(SPECIAL, str(begin, s));
 		if (*begin == ':')
 			*begin = '_';
@@ -109,9 +109,9 @@ struct infix_parser {
 		case NONE: unreachable();
 		case SPECIAL:
 			if (tok == "+" || tok == "-") {
-				decltype(uop::op) op = tok == "+" ? uop::UADD : uop::USUB;
+				str op = tok;
 				next();
-				return uop { op, make1e(low()) };
+				return call { make1e(name { move(op) }), { low() } };
 			}
 			if (tok == "(") {
 				next();
@@ -157,16 +157,28 @@ struct infix_parser {
 		unreachable();
 	}
 
+	expr exp()
+	{
+		expr r = low();
+		if (t == SPECIAL && (tok == "^")) {
+			next();
+			r = call {
+				make1e(name { "^" }),
+				{ move(r), exp() },
+			};
+		}
+		return r;
+	}
+
 	expr mul()
 	{
 		// fprintf(stderr, "mul: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
-		expr r = low();
+		expr r = exp();
 		while (t == SPECIAL && (tok == "*")) {
 			next();
-			r = bop {
-				bop::MUL,
-				make1e(move(r)),
-				make1e(low()),
+			r = call {
+				make1e(name { "*" }),
+				{ move(r), exp(), },
 			};
 		}
 		return r;
@@ -178,12 +190,11 @@ struct infix_parser {
 		expr r = mul();
 		// fprintf(stderr, "add2: tok: '%s', s: '%.*s'...\n", tok.c_str(), 20, s);
 		while (t == SPECIAL && (tok == "+" || tok == "-")) {
-			decltype(bop::op) op = tok == "+" ? bop::ADD : bop::SUB;
+			str op = tok;
 			next();
-			r = bop {
-				op,
-				make1e(move(r)),
-				make1e(mul())
+			r = call {
+				make1e(name { move(op) }),
+				{ move(r), mul(), },
 			};
 		}
 		return r;

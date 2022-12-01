@@ -94,17 +94,17 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 		z3::expr l = interp(b.left, m);
 		z3::expr r = interp(b.right, m);
 		switch (b.op) {
-		case bop::ADD: return l + r;
-		case bop::SUB: return l - r;
-		case bop::MUL: return l * r;
+		case bop2::ADD: return l + r;
+		case bop2::SUB: return l - r;
+		case bop2::MUL: return l * r;
 		}
 		unreachable();
 	},
 	[&](const uop2 &u){
 		z3::expr a = interp(u.operand, m);
 		switch (u.op) {
-		case uop::UADD: return a;
-		case uop::USUB: return -a;
+		case uop2::UADD: return a;
+		case uop2::USUB: return -a;
 		}
 		unreachable();
 	}
