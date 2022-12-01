@@ -711,3 +711,45 @@ expr2s smlp::unroll_expz(vec<expr2s> a)
 		r = make2t(bop2 { bop2::MUL, move(r), t });
 	return r;
 }
+
+template <decltype(lbop2::op) op>
+static expr2s mk_lbop2(vec<expr2s> args)
+{
+	vec<sptr<form2>> b;
+	b.reserve(args.size());
+	for (expr2s &t : args)
+		b.emplace_back(move(*t.get<sptr<form2>>()));
+	return make2f(lbop2 { op, move(b) });
+}
+
+expr2s smlp::unroll_and(vec<expr2s> a)
+{
+	return mk_lbop2<lbop2::AND>(move(a));
+}
+
+expr2s smlp::unroll_or(vec<expr2s> a)
+{
+	return mk_lbop2<lbop2::OR>(move(a));
+}
+
+expr2s smlp::unroll_not(vec<expr2s> args)
+{
+	assert(size(args) == 1);
+	return make2f(lneg2 { move(*args.front().get<sptr<form2>>()) });
+}
+
+expr2s smlp::unroll_div_cnst(vec<expr2s> args)
+{
+	assert(size(args) == 2);
+	const sptr<term2> *l = args[0].get<sptr<term2>>();
+	assert(l);
+	sptr<term2> ll = cnst_fold(*l, {});
+	const cnst2 *lc = ll->get<cnst2>();
+	assert(lc);
+	const sptr<term2> *r = args[1].get<sptr<term2>>();
+	assert(r);
+	sptr<term2> rr = cnst_fold(*r, {});
+	const cnst2 *rc = (*r)->get<cnst2>();
+	assert(rc);
+	return make2t(cnst2 { to_Q(lc->value) / to_Q(rc->value) });
+}

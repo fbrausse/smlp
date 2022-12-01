@@ -177,6 +177,10 @@ expr2s unroll_add(vec<expr2s> a);
 expr2s unroll_sub(vec<expr2s> a);
 expr2s unroll_mul(vec<expr2s> a);
 expr2s unroll_expz(vec<expr2s> a);
+expr2s unroll_and(vec<expr2s> a);
+expr2s unroll_or(vec<expr2s> a);
+expr2s unroll_not(vec<expr2s> a);
+expr2s unroll_div_cnst(vec<expr2s> a);
 
 expr2s unroll(const expr &e, const unroll_funs_t &funs);
 

@@ -823,28 +823,12 @@ static void version_info()
 	(void)rev;
 }
 
-template <decltype(lbop2::op) op>
-static expr2s mk_lbop2(vec<expr2s> args)
-{
-	vec<sptr<form2>> b;
-	b.reserve(args.size());
-	for (expr2s &t : args)
-		b.emplace_back(move(*t.get<sptr<form2>>()));
-	return make2f(lbop2 { op, move(b) });
-}
-
-static expr2s mk_lneg2(vec<expr2s> args)
-{
-	assert(size(args) == 1);
-	return make2f(lneg2 { move(*args.front().get<sptr<form2>>()) });
-}
-
 static sptr<form2> parse_infix_form2(const char *s)
 {
 	static const unroll_funs_t logic = {
-		{"And", mk_lbop2<lbop2::AND>},
-		{"Or", mk_lbop2<lbop2::OR>},
-		{"Not", mk_lneg2},
+		{"And", unroll_and},
+		{"Or", unroll_or},
+		{"Not", unroll_not},
 		{"+", unroll_add},
 		{"-", unroll_sub},
 		{"*", unroll_mul},
