@@ -354,24 +354,26 @@ struct search_list : search_base {
 	uptr<search_base> clone() const override { return std::make_unique<search_list>(*this); }
 };
 
-struct smlp_result {
+struct smlp_result_base {
 	kay::Q threshold;
-	uptr<solver> slv;
 	hmap<str,sptr<term2>> point;
-	uptr<search_base> obj_range;
-
-	smlp_result(kay::Q threshold, uptr<solver> slv, hmap<str,sptr<term2>> pt,
-	            uptr<search_base> obj_range)
-	: threshold(move(threshold))
-	, slv(move(slv))
-	, point(move(pt))
-	, obj_range(move(obj_range))
-	{}
 
 	kay::Q center_value(const sptr<term2> &obj) const
 	{
 		return to_Q(cnst_fold(obj, point)->get<cnst2>()->value);
 	}
+};
+
+struct smlp_result : smlp_result_base {
+	uptr<solver> slv;
+	uptr<search_base> obj_range;
+
+	smlp_result(kay::Q threshold, uptr<solver> slv, hmap<str,sptr<term2>> pt,
+	            uptr<search_base> obj_range)
+	: smlp_result_base { move(threshold), move(pt) }
+	, slv(move(slv))
+	, obj_range(move(obj_range))
+	{}
 };
 
 }
@@ -408,6 +410,8 @@ static void trace_result(FILE *f, const char *lbl, const result &r,
 	fprintf(f, "\n");
 }
 
+typedef fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> theta_t;
+
 static vec<smlp_result>
 optimize_EA(cmp_t direction,
             const domain &dom,
@@ -417,7 +421,7 @@ optimize_EA(cmp_t direction,
             const sptr<form2> &eta,
             const kay::Q &delta,
             search_base &obj_range,
-            const fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> &theta,
+            const theta_t &theta,
             const char *logic = nullptr)
 {
 	assert(is_order(direction));
@@ -529,6 +533,180 @@ optimize_EA(cmp_t direction,
 
 	return results;
 }
+
+struct infty { bool pos; };
+
+template <typename T>
+struct extended : sumtype<T,infty> {
+	using sumtype<T,infty>::sumtype;
+
+	friend bool is_infty(const extended &e, bool *pos = nullptr)
+	{
+		if (const infty *i = e.template get<infty>()) {
+			if (pos)
+				*pos = i->pos;
+			return true;
+		}
+		return false;
+	}
+};
+
+struct Pareto {
+
+	domain dom;
+	vec<sptr<term2>> objs; /* assume normalized: search range is [0,1] */
+	cmp_t direction;
+	sptr<form2> alpha, beta, eta;
+	theta_t theta;
+	kay::Q eps;
+	vec<opt<smlp_result_base>> s;
+	hset<size_t> K; /* bounds that can still be raised by at least eps */
+	hset<size_t> K_prev;
+
+	Pareto(domain dom, vec<sptr<term2>> objs, cmp_t direction,
+	       sptr<form2> alpha, sptr<form2> beta, sptr<form2> eta,
+	       theta_t theta, kay::Q eps)
+	: dom(move(dom))
+	, objs(move(objs))
+	, direction(move(direction))
+	, alpha(move(alpha))
+	, beta(move(beta))
+	, eta(move(eta))
+	, theta(move(theta))
+	, eps(move(eps))
+	, s(k())
+	, K{}
+	{
+		/* K = {1,...,k} \ dom s */
+		for (size_t i=0; i<k(); i++)
+			if (!s[i])
+				K.insert(i);
+	}
+
+	size_t k() const { return size(objs); }
+
+	/* Greatest lower bound on all objectives o_j without bounds
+	 * (j \notin\dom t) under those constraints F_t for the bounds t
+	 * defines.
+	 *
+	 * b_t := max { min_{j=1,...,k, j not in \dom t} o_j(x) : x \in F_T }
+	 * b_t \in \bar R = R \cup {\pm\infty}
+	 *
+	 * where
+	 *
+	 * F_t = { x \in D : \bigland_{j\in\dom t} o_j(x) >= t(j) }
+	 */
+	extended<smlp_result_base> b(const vec<opt<smlp_result_base>> &t, kay::Q delta = 0) const
+	{
+		vec<sptr<form2>> eta_F_t_conj = { eta };
+		sptr<term2> min_objs = nullptr;
+		for (size_t j=0; j<k(); j++) {
+			sptr<term2> obj = objs[j];
+			if (t[j]) {
+				eta_F_t_conj.push_back(make2f(prop2 {
+					direction, obj, make2t(cnst2 { t[j]->threshold })
+				}));
+			} else {
+				min_objs = min_objs ? make2t(ite2 {
+					make2f(prop2 { LT, obj, min_objs }),
+					obj,
+					min_objs,
+				}) : obj;
+			}
+		}
+		sptr<form2> eta_F_t = conj(move(eta_F_t_conj));
+		if (!min_objs)
+			return infty { is_less(direction) ? false : true };
+
+		bounded_search_ival range(ival { 0, 1 }, eps);
+		str logic = smt2_logic_str(dom, conj({
+			alpha, beta, eta_F_t,
+			make2f(prop2 { LT, min_objs, zero }),
+		}));
+		vec<smlp_result> r = optimize_EA(direction, dom,
+		                                 min_objs, alpha,
+		                                 beta, eta_F_t, delta,
+		                                 range, theta, logic.c_str());
+		if (empty(r))
+			return infty { is_less(direction) ? true : false };
+
+		const smlp_result &opt = r.back();
+		/*
+		if (info(mod_prob,
+		         "%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
+		         is_less((cmp_t)c) ? "min max" : "max min",
+		         opt.threshold.get_str().c_str(),
+		         obj_range->hi()->get_str().c_str(),
+		         opt.threshold.get_d(),
+		         obj_range->hi()->get_d()))
+			print_model(stderr, opt.point, 2);*/
+
+		return opt;
+	}
+
+	const smlp_result_base & last_point() const
+	{
+		assert(!empty(K_prev));
+		const opt<smlp_result_base> &v = s[*begin(K_prev)];
+		assert(v);
+		return *v;
+	}
+
+	bool done() const { return empty(K); }
+
+	void step()
+	{
+		assert(!is_less(direction)); /* not implemented, see + eps below */
+
+		/* s <- {(j,s(j)) : j=1,...,k, j not in K} */
+		vec<opt<smlp_result_base>> s2(k());
+		for (size_t j=0; j<k(); j++)
+			if (!K.contains(j)) {
+				assert(s[j]);
+				s2[j] = s[j];
+			}
+		s = move(s2);
+
+		/* s <- s \cup {(j,b_s) : j in K} */
+		extended<smlp_result_base> bs = b(s);
+		assert(!is_infty(bs));
+		for (size_t j : K)
+			s[j] = *bs.get<smlp_result_base>();
+
+		hset<size_t> KN = K;
+		for (size_t j : K) {
+			/* K' <- K \ {j} */
+			hset<size_t> K2 = KN;
+			K2.erase(j);
+
+			/* t <- s|_{K'} */
+			vec<opt<smlp_result_base>> t(k());
+			for (size_t i : K2)
+				t[i] = s[i];
+
+			extended<smlp_result_base> bt = b(t);
+			assert(!is_infty(bt));
+			if (!do_cmp(bt.get<smlp_result_base>()->threshold, direction, s[j]->threshold + eps)) {
+				/* cannot increase bound on o_j simultaneously
+				 * by epsilon */
+				warn(mod_prob,"fixing objective %zu on threshold %s ~ %g\n",
+				     j, s[j]->threshold.get_str().c_str(), s[j]->threshold.get_d());
+				KN.erase(j);
+			}
+		}
+		K_prev = std::exchange(K, move(KN));
+	}
+};
+/*
+static void
+optimize_pareto_C(const domain &dom,
+                  const vec<sptr<term2>> &objs,
+                  const kay::Q &eps,
+{
+	assert(eps > 0);
+	
+}
+*/
 
 static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 {
@@ -723,6 +901,7 @@ Options [defaults]:\n\
                the constant DELTA if the radius is zero [" DEF_DELTA "]\n\
   -e ETA       additional ETA constraints restricting only candidates, can be\n\
                given multiple times, the conjunction of all is used [true]\n\
+  -E EPSILON   constant for step-wise increase of Pareto thresholds [none]\n\
   -F IFORMAT   determines the format of the EXPR file; can be one of: 'infix',\n\
                'prefix' (only EXPR) [infix]\n\
   -h           displays this help message\n\
@@ -1148,6 +1327,7 @@ int main(int argc, char **argv)
 	vec<sptr<form2>> eta_conj      = {};
 	const char      *delta_s       = nullptr;
 	const char      *obj_range_s   = nullptr;
+	const char      *eps_s         = nullptr;
 	char            *threshs_s     = nullptr;
 	vec<strview>     queries;
 	int              N             = 1;
@@ -1158,7 +1338,7 @@ int main(int argc, char **argv)
 		args.emplace_back(argv[i]);
 
 	/* parse options from the command-line */
-	const char *opts = ":a:b:c:C:d:e:F:hi:I:nN:o:O:pP:Q:rR:sS:t:T:v::V";
+	const char *opts = ":a:b:c:C:d:e:E:F:hi:I:nN:o:O:pP:Q:rR:sS:t:T:v::V";
 	for (int opt; (opt = getopt(argc, argv, opts)) != -1;)
 		switch (opt) {
 		case 'a': alpha_conj.emplace_back(parse_infix_form2(optarg)); break;
@@ -1189,6 +1369,7 @@ int main(int argc, char **argv)
 			break;
 		case 'd': delta_s = optarg; break;
 		case 'e': eta_conj.emplace_back(parse_infix_form2(optarg)); break;
+		case 'E': eps_s = optarg; break;
 		case 'F':
 			if (optarg == "infix"sv)
 				infix = true;
@@ -1277,8 +1458,35 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		 (smlp::dump_smt2(stderr, *t), fprintf(stderr, "\n"))) ||
 		note(mod_prob,"defined output '%s'\n", n.c_str());
 
-	if (!empty(f_bnds))
-		MDIE(mod_smlp,1,"scaled objectives are not supported, yet\n");
+	/* ------------------------------------------------------------------
+	 * If bounds on named outputs are given, scale them.
+	 * ------------------------------------------------------------------ */
+
+	hmap<str,sptr<term2>> funs_org = funs;
+	for (const auto &[n,range] : f_bnds) {
+		auto it = funs.find(n);
+		if (it == end(funs))
+			MDIE(mod_smlp,1,"normalizing undefined output '%s'\n",
+			     n.c_str());
+		kay::Q len = length(range);
+		if (len <= 0)
+			MDIE(mod_smlp,1,"normalization range of '%s' does not "
+			                "have length > 0: [%s,%s]\n",
+			     n.c_str(),
+			     range.lo.get_str().c_str(),
+			     range.hi.get_str().c_str());
+		dbg(mod_prob,"scaling '%s' from range [%s,%s] ~ [%g,%g] to [0,1]\n",
+		     n.c_str(),
+		     range.lo.get_str().c_str(), range.hi.get_str().c_str(),
+		     range.lo.get_d(), range.hi.get_d()) ||
+		info(mod_prob,"scaling '%s' from range ~ [%g,%g] to [0,1]\n",
+		     n.c_str(), range.lo.get_d(), range.hi.get_d());
+		sptr<term2> &f = it->second;
+		f = make2t(bop2 { bop2::MUL,
+			make2t(bop2 { bop2::SUB, f, make2t(cnst2{ range.lo }) }),
+			make2t(cnst2 { inv(len) }),
+		});
+	}
 
 	/* ------------------------------------------------------------------
 	 * Parse the -o OBJ-SPEC option, if it was there
@@ -1292,9 +1500,11 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		MDIE(mod_smlp,1,"no objective specified; please use either "
 		                "-o OBJ-SPEC or -C gen-obj\n");
 
-	vec<sptr<term2>> pareto;
-	if (obj_spec)
+	vec<sptr<term2>> pareto, pareto_org;
+	if (obj_spec) {
 		parse_obj_spec(obj_spec, dom, funs, lhs, pareto);
+		pareto_org = pareto;
+	}
 
 	/* ------------------------------------------------------------------
 	 * Complete the definitions of alpha, beta, eta
@@ -1400,11 +1610,6 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		DIE(1,"");
 	}
 
-	if (!cnst_s && !max_prec_s)
-		max_prec_s = DEF_MAX_PREC;
-	if (!cnst_s && !delta_s)
-		delta_s = DEF_DELTA;
-
 	if (lhs && cnst_s) {
 		if (obj_range_s)
 			warn(mod_prob,"objective range specification "
@@ -1424,6 +1629,11 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	}
 
 	if (lhs) {
+		if (!max_prec_s)
+			max_prec_s = DEF_MAX_PREC;
+		if (!delta_s)
+			delta_s = DEF_DELTA;
+
 		uptr<search_base> obj_range = parse_search_range(threshs_s,
 		                                                 max_prec_s,
 		                                                 obj_range_s,
@@ -1434,5 +1644,45 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	}
 
 	assert(!empty(pareto));
-	MDIE(mod_smlp,1,"Pareto is not implemented, yet\n");
+	if (cnst_s)
+		MDIE(mod_smlp,1,"comparison of multiple objectives against a "
+		                "constant is not implemented\n");
+
+	if (threshs_s)
+		MDIE(mod_smlp,1,"-T THRESHS is not supported for Pareto optimization\n");
+	if (max_prec_s)
+		MDIE(mod_smlp,1,"-P PREC is not supported for Pareto optimization\n");
+	if (obj_range_s)
+		MDIE(mod_smlp,1,"-R LO,HI is not supported for Pareto optimization\n");
+
+	if (!eps_s)
+		MDIE(mod_smlp,1,"-E EPSILON is not set for Pareto optimization\n");
+	kay::Q eps;
+	if (!from_string(eps_s, eps))
+		MDIE(mod_smlp,1,"cannot interpret argument '%s' to -E as a "
+		                "rational number\n", eps_s);
+	Pareto pi(dom, pareto, c, alpha, beta, eta, theta, eps);
+	assert(!pi.done());
+	while (!pi.done())
+		pi.step();
+	if (info(mod_prob,"Pareto optimization done with thresholds:\n"))
+		for (size_t i=0; i<pi.k(); i++) {
+			assert(pi.s[i]);
+			fprintf(stderr, "  (%s ", cmp_smt2[c]);
+			smlp::dump_smt2(stderr, *pareto_org[i]);
+			fprintf(stderr, " %s)\n", kay::to_string(pi.s[i]->threshold).c_str());
+		}
+	if (info(mod_prob,"computed point %s-close to Pareto front:\n", eps.get_str().c_str()))
+		print_model(stderr, pi.last_point().point, 2);
+	if (info(mod_prob,"objectives' values at computed point:\n"))
+		for (size_t i=0; i<pi.k(); i++) {
+			fprintf(stderr, "  ");
+			smlp::dump_smt2(stderr, *pareto_org[i]);
+			kay::Q nq = to_Q(cnst_fold(pareto[i], pi.last_point().point)->get<cnst2>()->value);
+			kay::Q oq = to_Q(cnst_fold(subst(pareto_org[i], funs_org),
+			                                 pi.last_point().point)->get<cnst2>()->value);
+			assert(c);
+			fprintf(stderr, " normalized ~ %g, original ~ %g\n",
+			        nq.get_d(), oq.get_d());
+		}
 }
