@@ -154,7 +154,6 @@ hdrs = [
 	'algebraics.hh',
 ]
 srcs = [
-	'smlp.cc',
 	'prefix.cc',
 	'infix.cc',
 	'expr2.cc',
@@ -196,10 +195,38 @@ configure_file(
   output: 'config.h'
 )
 
-executable('smlp', srcs,
+libsmlp_static = static_library('smlp', srcs,
+  dependencies: poly_deps,
+           override_options: 'cpp_std=c++20',
+	include_directories: include_directories('../include'),
+           install: true,
+	link_args: link_args)
+
+executable('smlp', 'smlp.cc',
            dependencies: poly_deps,
            override_options: 'cpp_std=c++20',
 	include_directories: include_directories('../include'),
            install: true,
-	link_args: link_args
+	link_args: link_args,
+	link_with: libsmlp_static
           )
+
+libsmlp_deps = poly_deps
+
+py3 = import('python').find_installation('python3', modules: ['fractions'])
+py3_dep = py3.dependency(embed: true)
+libsmlp_deps += py3_dep
+boost_dep = dependency('boost', modules: ['python' + py3.language_version().replace('.','')], required: true)
+libsmlp_deps += boost_dep
+if py3_dep.found() and boost_dep.found()
+  py3.install_sources('..' / 'python' / '__init__.py',
+                      subdir: 'smlp')
+  py3.extension_module('libsmlp', 'libsmlp.cc',
+                 dependencies: libsmlp_deps,
+                 override_options: 'cpp_std=c++20',
+                 include_directories: include_directories('../include'),
+             install: true,
+  	link_args: link_args,
+  	link_with: libsmlp_static,
+  	subdir : 'smlp')
+endif
