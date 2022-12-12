@@ -48,6 +48,13 @@ struct smt2_output {
 		}
 	}
 
+	void dump_smt2(const A &a) const
+	{
+		fprintf(f, "(root-obj ");
+		dump_smt2(*to_term2(a.p, make2t(name { a.var })));
+		fprintf(f, " %zu)", a.root_idx);
+	}
+
 	template <typename T>
 	void dump_smt2(const sptr<T> &p) const
 	{

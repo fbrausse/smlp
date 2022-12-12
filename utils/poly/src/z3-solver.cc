@@ -5,10 +5,12 @@
  */
 
 #include "z3-solver.hh"
+#include "dump-smt2.hh"
 
 #include <sstream>
 
 #include <sys/time.h>
+#include <signal.h>
 
 using namespace smlp;
 
@@ -84,7 +86,8 @@ z3::expr z3_solver::interp(const term2 &e, hmap<void *, z3::expr> &m)
 	[&](const cnst2 &c){
 		return c.value.match(
 		[&](const kay::Z &v){ return ctx.int_val(v.get_str().c_str()); },
-		[&](const kay::Q &v){ return ctx.real_val(v.get_str().c_str()); }
+		[&](const kay::Q &v){ return ctx.real_val(v.get_str().c_str()); },
+		[&](const A &) -> z3::expr { MDIE(mod_z3,5,"algebraic real constants are unsupported\n"); }
 		);
 	},
 	[&](const ite2 &i){
@@ -121,6 +124,40 @@ static void replace_sigint_handler(int)
 	sigaction(SIGVTALRM, &old_alrm_handler, NULL);
 	setitimer(ITIMER_VIRTUAL, &old_timer, NULL);
 	replace_sigint_handler_has_run = true;
+}
+
+static cnst2 parse_z3_cnst(const str &id, const z3::expr &e)
+{
+	cnst2 c;
+	if (str num; e.is_numeral(num)) {
+		//std::cerr << "z3: parsing cnst " << num << " -> ";
+		if (strchr(num.c_str(), '/'))
+			c.value = kay::Q(num.c_str());
+		else
+			c.value = kay::Z(num.c_str());
+	} else if (e.is_algebraic()) {
+		z3::expr_vector coeffs = e.algebraic_poly();
+		unsigned i = e.algebraic_i();
+		z3::expr l = e.algebraic_lower(solver::alg_dec_prec_approx);
+		z3::expr u = e.algebraic_upper(solver::alg_dec_prec_approx);
+
+		cnst2 cl = parse_z3_cnst(id, l);
+		cnst2 cu = parse_z3_cnst(id, u);
+
+		hmap<size_t,kay::Q> cc;
+		for (size_t i=0; i<coeffs.size(); i++)
+			cc[i] = to_Q(parse_z3_cnst(id, coeffs[i]).value);
+
+		c.value = A({ to_Q(cl.value), to_Q(cu.value) }, "x",
+		            upoly(move(cc)), i);
+	} else {
+		std::stringstream ss;
+		ss << e;
+		MDIE(mod_z3,3,"expected numeral or algebraic "
+		     "assignment for %s, got %s\n", id.c_str(),
+		     ss.str().c_str());
+	}
+	return c;
 }
 
 result z3_solver::check()
@@ -169,20 +206,7 @@ result z3_solver::check()
 			z3::func_decl fd = m.get_const_decl(i);
 			z3::expr e = m.get_const_interp(fd);
 			str id = fd.name().str();
-			str num;
-			if (!e.is_numeral(num)) {
-				std::stringstream ss;
-				ss << e;
-				MDIE(mod_z3,3,"expected numeral assignment for "
-				     "%s, got %s\n", id.c_str(), ss.str().c_str());
-			}
-			//std::cerr << "z3: parsing cnst " << num << " -> ";
-			cnst2 c;
-			if (strchr(num.c_str(), '/'))
-				c.value = kay::Q(num.c_str());
-			else
-				c.value = kay::Z(num.c_str());
-			r[id] = make2t(move(c));
+			r[id] = make2t(parse_z3_cnst(id, e));
 			//std::cerr << to_string(r[id]->get<cnst2>()->value) << "\n";
 		}
 		//fprintf(stderr, "z3 model:\n");

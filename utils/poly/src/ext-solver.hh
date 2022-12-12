@@ -91,6 +91,11 @@ private:
 	size_t n_vars = 0;
 
 	str get_info(const char *what);
+
+	pair<hmap<size_t,kay::Q>,ival>
+	parse_algebraic_z3(const str &var, const es::arg &p, const es::slit &n);
+	cnst2 cnst2_from_smt2(const str &var, const es::arg &s);
+	pair<str,sptr<term2>> parse_smt2_asgn(const es::sexpr &a);
 };
 
 }

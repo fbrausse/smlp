@@ -94,26 +94,30 @@ struct uop2 {
 	bool operator==(const uop2 &b) const;
 	std::strong_ordering operator<=>(const uop2 &b) const;
 };
+
 struct cnst2 {
-	struct ZQ : sumtype<kay::Z,kay::Q> {
+	struct ZQA : sumtype<kay::Z,kay::Q,A> {
 
-		using sumtype<kay::Z,kay::Q>::sumtype;
+		using sumtype<kay::Z,kay::Q,A>::sumtype;
 
-		friend str to_string(const auto &v)
+		friend str to_string(const ZQA &v)
 		{
 			return v.match(
-			[](const auto &x) { return x.get_str(); }
+			[](const auto &x) { return kay::to_string(x); },
+			[](const A &x) { return to_string(x); }
 			);
 		}
 
-		friend kay::Q to_Q(const auto &v)
+		friend kay::Q to_Q(const ZQA &v)
 		{
 			return v.match(
-			[](const auto &x) { return kay::Q(x); }
+			[](const kay::Z &x) { return kay::Q(x); },
+			[](const kay::Q &x) { return x; },
+			[](const Ap &a) { return to_Q(a); }
 			);
 		}
 
-		std::strong_ordering operator<=>(const ZQ &b) const = default;
+		std::strong_ordering operator<=>(const ZQA &b) const = default;
 	} value;
 	bool operator==(const cnst2 &b) const;
 	std::strong_ordering operator<=>(const cnst2 &b) const = default;

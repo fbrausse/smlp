@@ -84,8 +84,14 @@ static dbl::ival eval(const hmap<str,dbl::ival> &dom, const term2 &t, hmap<void 
 	return t.match(
 	[](const cnst2 &c) {
 		return c.value.match(
-		[](const auto &v) { return dbl::ival(v); }
-		);
+		[](const kay::Z &v) { return dbl::ival(v); },
+		[](const kay::Q &v) { return dbl::ival(v); },
+		[](const Ap &v) {
+			return dbl::ival { dbl::endpts {
+				lo(dbl::ival(lo(v))),
+				hi(dbl::ival(hi(v))),
+			} };
+		});
 	},
 	[&](const name &n) {
 		auto it = dom.find(n.id);
@@ -506,10 +512,11 @@ result ival_solver::check() const
 				ivs.emplace_back(to_ival(v));
 			d.emplace_back(var, move(ivs));
 		},
-		[&,var=var](const ival &i) {
+		[&,var=var,k=k](const ival &i) {
 			switch (k.type) {
 			case type::INT: {
 				vec<dbl::ival> ivs;
+				using namespace kay;
 				for (kay::Z z = ceil(i.lo), u = floor(i.hi); z <= u; z++)
 					ivs.emplace_back(z);
 				d.emplace_back(var, move(ivs));

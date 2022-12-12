@@ -509,6 +509,7 @@ static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
 				return o;
 			if (const cnst2 *c = o->get<cnst2>())
 				return c->value.match(
+				[&](const A &) { return make2t(uop2 { u.op, move(o) }); },
 				[](const auto &v) { return make2t(cnst2 { kay::Q(-v) }); }
 				);
 			if (o == u.operand)
