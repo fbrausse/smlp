@@ -89,7 +89,7 @@ pre_problem smlp::parse_poly_problem(const char *simple_domain_path,
 		{ "-", unroll_sub },
 		{ "*", unroll_mul },
 		{ "Match", std::ref(match) },
-	}).get<sptr<term2>>();
+	}, unroll_cnst_None).get<sptr<term2>>();
 
 	return pre_problem {
 		move(d),

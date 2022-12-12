@@ -192,7 +192,12 @@ expr2s unroll_or(vec<expr2s> a);
 expr2s unroll_not(vec<expr2s> a);
 expr2s unroll_div_cnst(vec<expr2s> a);
 
-expr2s unroll(const expr &e, const unroll_funs_t &funs);
+sptr<term2> unroll_cnst_None(const cnst &c);
+sptr<term2> unroll_cnst_ZQ(const cnst &c);
+sptr<term2> unroll_cnst_Q(const cnst &c);
+
+expr2s unroll(const expr &e, const unroll_funs_t &funs,
+              fun<sptr<term2>(const cnst &)> ip_cnst = unroll_cnst_Q);
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */
 sptr<term2> subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl);

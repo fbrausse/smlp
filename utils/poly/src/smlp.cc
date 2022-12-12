@@ -833,7 +833,7 @@ static sptr<form2> parse_infix_form2(const char *s)
 		{"-", unroll_sub},
 		{"*", unroll_mul},
 	};
-	return *unroll(parse_infix(s, false), logic).get<sptr<form2>>();
+	return *unroll(parse_infix(s, false), logic, unroll_cnst_None).get<sptr<form2>>();
 }
 
 template <typename T>
@@ -1088,7 +1088,7 @@ static void parse_obj_spec(const char *obj_spec, const domain &dom,
 			{"+", unroll_add},
 			{"-", unroll_sub},
 			{"*", unroll_mul},
-		}).get<sptr<term2>>();
+		}, unroll_cnst_ZQ).get<sptr<term2>>();
 		for (const str &s : free_vars(t))
 			if (!dom[s] && !funs.contains(s))
 				MDIE(mod_prob,1,"free variable '%s' in "
