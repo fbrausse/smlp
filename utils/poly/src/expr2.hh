@@ -7,8 +7,7 @@
 #pragma once
 
 #include "expr.hh"
-
-#include <kay/numbers.hh>
+#include "algebraics.hh"
 
 namespace smlp {
 
@@ -143,31 +142,38 @@ static inline sptr<form2> make2f(Ts &&... ts)
 	return std::make_shared<form2>(std::forward<Ts>(ts)...);
 }
 
-/* Constants for true, false, 0 and 1 */
-inline const sptr<form2> true2  = make2f(lbop2 { lbop2::AND, {} });
-inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
-inline const sptr<term2> zero   = make2t(cnst2 { kay::Z(0) });
-inline const sptr<term2> one    = make2t(cnst2 { kay::Z(1) });
-
-/* Short forms for creating propositional formulas: conjunction, disjunction
- * and negation */
-static inline sptr<form2> conj(vec<sptr<form2>> l)
+/* Short forms for creating propositional formulas: conjunction,
+ * disjunction and negation */
+inline sptr<form2> conj(vec<sptr<form2>> l)
 {
 	return make2f(lbop2 { lbop2::AND, { move(l) } });
 }
 
-static inline sptr<form2> disj(vec<sptr<form2>> l)
+inline sptr<form2> disj(vec<sptr<form2>> l)
 {
 	return make2f(lbop2 { lbop2::OR, { move(l) } });
 }
 
-static inline sptr<form2> neg(sptr<form2> f)
+inline sptr<form2> neg(sptr<form2> f)
 {
 	return make2f(lneg2 { move(f) });
 }
 
+/* Constants for true, false, 0 and 1 */
+inline const sptr<form2> true2  = conj({});
+inline const sptr<form2> false2 = disj({});
+inline const sptr<term2> zero   = make2t(cnst2 { kay::Z(0) });
+inline const sptr<term2> one    = make2t(cnst2 { kay::Z(1) });
+
 /* Absolute value on term2, encoded by ite2 on comparing with zero */
-sptr<term2> abs(const sptr<term2> &t);
+inline sptr<term2> abs(const sptr<term2> &e)
+{
+	return make2t(ite2 {
+		make2f(prop2 { LT, e, zero }),
+		make2t(uop2 { uop2::USUB, e }),
+		e
+	});
+}
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a term2 term. */

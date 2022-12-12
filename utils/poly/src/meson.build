@@ -150,6 +150,8 @@ hdrs = [
 	'solver.hh',
 	'ext-solver.hh',
 	'ival-solver.hh',
+	'reals.hh',
+	'algebraics.hh',
 ]
 srcs = [
 	'smlp.cc',
@@ -162,6 +164,7 @@ srcs = [
 	'sexpr.cc',
 	'ext-solver.cc',
 	'ival-solver.cc',
+	'algebraics.cc',
 ]
 
 if z3.disabled()
