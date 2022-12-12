@@ -1397,7 +1397,10 @@ int main(int argc, char **argv)
 		case 'O': obj_bounds = optarg; break;
 		case 's': dump_smt2 = true; break;
 		case 'S': ext_solver_cmd = optarg; break;
-		case 't': timeout = atoi(optarg); break;
+		case 't':
+			if (from_string(optarg, timeout))
+				break;
+			MDIE(mod_smlp,1,"TIMEOUT argument to '-t' must be numeric\n");
 		case 'T': threshs_s = optarg; break;
 		case 'v': set_loglvl(optarg); break;
 		case 'V': version_info(); exit(0);

@@ -20,6 +20,8 @@ typedef sumtype<sat,unsat,unknown> result;
 
 struct solver {
 
+	static int alg_dec_prec_approx;
+
 	virtual ~solver() = default;
 	virtual void declare(const domain &d) = 0;
 	virtual void add(const sptr<form2> &f) = 0;
