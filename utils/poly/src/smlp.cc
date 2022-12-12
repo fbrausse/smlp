@@ -34,76 +34,172 @@
 using namespace smlp;
 using std::isfinite;
 
-#define CSI		"\x1b["
-#define SGR_DFL		CSI "m"
-#define SGR_BOLD	CSI "1m"
-#define COL_FG		"3"
-#define COL_BG		"4"
-#define COL_FG_B	"9"
-#define COL_BG_B	"10"
-#define COL_BLACK	"0"
-#define COL_RED		"1"
-#define COL_GREEN	"2"
-#define COL_YELLOW	"3"
-#define COL_BLUE	"4"
-#define COL_MAGENTA	"5"
-#define COL_CYAN	"6"
-#define COL_WHITE	"7"
-
-static hmap<strview,module *> modules;
-
-static bool log_color = isatty(STDERR_FILENO);
-
-module::module(const char *name, const char *color, loglvl lvl)
-: name(name)
-, color(color)
-, lvl(lvl)
-{
-	auto [it,ins] = modules.emplace(name, this);
-	assert(ins);
-}
-
-bool module::vlog(loglvl l, const char *fmt, va_list ap) const
-{
-	if (!logs(l))
-		return false;
-	const char *lvl = nullptr;
-	const char *col = "";
-	switch (l) {
-	case QUIET: break;
-	case ERROR: lvl = "error"; col = CSI COL_FG_B COL_RED "m"; break;
-	case WARN : lvl = "warn" ; col = CSI COL_FG_B COL_YELLOW "m"; break;
-	case INFO : lvl = "info" ; col = CSI COL_FG_B COL_WHITE "m"; break;
-	case NOTE : lvl = "note" ; break;
-	case DEBUG: lvl = "debug"; col = CSI COL_FG   COL_GREEN "m"; break;
-	}
-	fprintf(stderr, "%s[%-4s]%s %s%-5s%s: ",
-	        log_color ? color : "", name, log_color ? SGR_DFL : "",
-	        log_color ? col : "", lvl, log_color ? SGR_DFL : "");
-	vfprintf(stderr, fmt, ap);
-	return true;
-}
-
-static module mod_cand { "cand",          CSI COL_FG   COL_GREEN   "m" };
-static module mod_coex { "coex",          CSI COL_FG   COL_RED     "m" };
-module smlp::mod_smlp { "smlp",                                       };
-module smlp::mod_prob { "prob", SGR_BOLD CSI COL_FG_B COL_BLACK   "m" };
-module smlp::mod_ival { "ival",          CSI COL_FG   COL_YELLOW  "m" };
-module smlp::mod_crit { "crit",          CSI COL_FG   COL_MAGENTA "m" };
-module smlp::mod_z3   { "z3"  ,          CSI COL_FG_B COL_BLUE    "m" };
-module smlp::mod_ext  { "ext" ,          CSI COL_FG   COL_CYAN    "m" };
-module smlp::mod_nn   { "nn"  ,          CSI COL_FG   COL_BLUE    "m" };
-module smlp::mod_poly { "poly",          CSI COL_FG   COL_BLUE    "m" };
-
 namespace {
 
 // using domain_ref = typename domain::const_iterator;
+
+/* domain is bounded -> subdivison strategy applicable
+ * domain is union -> ival/crit require subdivision strategy
+ *
+ * domain is product -> ival/crit is applicable
+ *
+ * let F be set of terms lhs-rhs for all prop2 in p.
+ * F differentiable, F continuous, only ordered comparisons -> crit applicable
+ * F continuous -> ivt applicable for == constraints in p
+ * F continuous -> p delta-decidable for any delta > 0
+ *
+ * F contains (ite c y n) with free variables in c -> F not continuous and not differentiable
+ *
+ *
+ *
+ * I'm trying to generalize how smlp chooses which solver strategy to apply...
+ * For now, I have the following properties that affect applicability of
+ * at least one of the strategies "subdivision", "interval",
+ * "critical points", "ivt" (intermediate value theorem, maybe impl later),
+ * "smt", "bayesian optimization" (later):
+ *
+ * - domain is union (of products of subspaces of R)
+ * - domain is product of unions (of subspaces of R)
+ * - domain is product of intervals
+ * - domain is bounded
+ * - function is continuous
+ * - function is differentiable
+ * - function is rational
+ * - function is polynomial
+ * - predicate is order
+ * - predicate is equality
+ *
+ * - all ite-s in function are Relu -> continuous
+ */
+
+struct classification {
+
+	class {
+		unsigned any_empty   : 1 = false;
+		unsigned all_single  : 1 = true;
+		unsigned any_union   : 1 = false;
+		unsigned all_bounded : 1 = true;
+
+	public:
+		unsigned has_R       : 1 = false;
+		unsigned has_Z       : 1 = false;
+
+		void prod(const component &c)
+		{
+			switch (c.type) {
+			case type::INT: has_Z = 1; break;
+			case type::REAL: has_R = 1; break;
+			}
+			c.range.match(
+			[&](const entire &) {
+				all_single = false;
+				all_bounded = false;
+			},
+			[&](const list &l) {
+				any_empty |= size(l.values) == 0;
+				all_single &= size(l.values) == 1;
+				any_union |= size(l.values) > 1;
+			},
+			[&](const ival &i) {
+				using namespace kay;
+				switch (c.type) {
+				case type::INT:
+					any_empty |= ceil(i.lo) > floor(i.hi);
+					all_single &= ceil(i.lo) == floor(i.hi);
+					break;
+				case type::REAL:
+					all_single &= i.lo == i.hi;
+					break;
+				}
+			});
+		}
+
+		friend bool is_empty(const auto &dom)
+		{
+			return dom.any_empty;
+		}
+
+		/* product of intervals otherwise */
+		friend bool is_union(const auto &dom)
+		{
+			return dom.any_empty || dom.any_union;
+		}
+
+		friend bool is_point(const auto &dom)
+		{
+			return dom.all_single;
+		}
+
+		friend bool is_bounded(const auto &dom)
+		{
+			return dom.all_bounded;
+		}
+	} dom; /* properties of the unique topological space represented by
+	          domain, atm. this is a product space */
+
+	explicit classification(const domain &d)
+	{
+		for (const auto &[n,c] : d)
+			dom.prod(c);
+	}
+
+	static constexpr unsigned
+		FUN_IS_CONTINUOUS = 1 << 0,
+		FUN_IS_DIFFERENTIABLE = 1 << 1 | FUN_IS_CONTINUOUS,
+		FUN_IS_RATIONAL = 1 << 2,
+		FUN_IS_POLYNOMIAL = 1 << 3 | FUN_IS_DIFFERENTIABLE | FUN_IS_RATIONAL,
+		FUN_IS_PW_LINEAR = 1 << 4 | FUN_IS_RATIONAL,
+		FUN_IS_CONSTANT = 1 << 5 | FUN_IS_POLYNOMIAL,
+		FUN_IS_ABS_RELU = 1 << 6 | FUN_IS_PW_LINEAR | FUN_IS_CONTINUOUS;
+	static constexpr unsigned
+		PRED_IS_ORDER = 1 << 0,
+		PRED_IS_EQUALITY = 2 << 0;
+
+	void add(const sptr<form2> &f)
+	{
+		/* TODO */
+	}
+
+	unsigned all_fun : 7 = 0x7f; /* properties all functions share */
+	// unsigned any_fun : 7 = 0; /* properties any function has */
+	unsigned all_pred : 2 = 0x3; /* properties all predicates share */
+	// unsigned any_pred : 2 = 0; /* properties any predicate has */
+};
 
 struct problem {
 
 	domain dom;
 	sptr<form2> p;
 };
+
+static classification classify(const problem &p)
+{
+	classification cl(p.dom);
+	cl.add(p.p);
+	return cl;
+}
+
+static bool enable_ival_on_unbounded_dom = false;
+
+static uptr<solver> mk_solver1(const problem &p)
+{
+	classification cl = classify(p);
+	if (is_union(cl.dom)) {
+		/* apply algebraic subdivision strategy, not unbounded;
+		 * this is in contrast to the potentially unbounded numeric
+		 * subdivision on double-intervals the interval solver applies */
+	} else {
+		if (is_point(cl.dom)) {
+			/* apply "eval" strategy */
+		} else if (is_bounded(cl.dom) ||
+		           enable_ival_on_unbounded_dom) {
+			/* apply "ival" or "crit" strategy */
+		} else {
+			/* apply "smt" or "crit" */
+		}
+	}
+	unreachable();
+}
 
 /* max T, s.t.
  * E x. eta x /\
@@ -117,7 +213,7 @@ struct maxprob {
 	sptr<form2> alpha = true2;
 	sptr<form2> beta  = true2;
 };
-
+/*
 struct pareto {
 
 	domain dom;
@@ -125,71 +221,7 @@ struct pareto {
 	sptr<form2> alpha = true2;
 	sptr<form2> beta  = true2;
 };
-
-}
-
-static char *ext_solver_cmd;
-static char *inc_solver_cmd;
-static long  intervals = -1;
-
-namespace smlp {
-// template <typename T>
-str smt2_logic_str(const domain &dom, const sptr<form2> &e)
-{
-	bool reals = false;
-	bool ints = false;
-	for (const auto &[_,rng] : dom)
-		switch (rng.type) {
-		case type::INT: ints = true; break;
-		case type::REAL: reals = true; break;
-		}
-	str logic = "QF_";
-	if (ints || reals) {
-		logic += is_nonlinear(e) ? 'N' : 'L';
-		if (ints)
-			logic += 'I';
-		if (reals)
-			logic += 'R';
-		logic += 'A';
-	} else
-		logic += "UF";
-	return logic;
-}
-
-uptr<solver> mk_solver0(bool incremental, const char *logic)
-{
-	const char *ext = ext_solver_cmd;
-	const char *inc = inc_solver_cmd;
-	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
-	if (cmd)
-		return std::make_unique<ext_solver>(cmd, logic);
-#ifdef SMLP_ENABLE_Z3_API
-	return std::make_unique<z3_solver>(logic);
-#endif
-	MDIE(mod_smlp,1,"no solver specified and none are built-in, require "
-	                "external solver via -S or -I\n");
-}
-
-solver::all_solutions_iter_owned all_solutions(const domain &dom, const sptr<form2> &f)
-{
-	uptr<solver> s = mk_solver0(true, smt2_logic_str(dom, f).c_str());
-	s->declare(dom);
-	s->add(f);
-	return solver::all_solutions_iter_owned { move(s) };
-}
-}
-
-static uptr<solver> mk_solver(bool incremental, const char *logic = nullptr)
-{
-	if (intervals >= 0) {
-		vec<pair<const module *,uptr<solver>>> slvs;
-		slvs.emplace_back(&mod_ival, std::make_unique<ival_solver>(intervals, logic));
-		slvs.emplace_back(&mod_crit, std::make_unique<crit_solver>());
-		slvs.emplace_back(ext_solver_cmd || inc_solver_cmd ? &mod_ext : &mod_z3,
-		                  smlp::mk_solver0(incremental, logic));
-		return std::make_unique<solver_seq>(move(slvs));
-	}
-	return smlp::mk_solver0(incremental, logic);
+*/
 }
 
 static result solve_exists(const domain &dom,
@@ -506,7 +538,7 @@ static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 		k = max(k, p.first.length());
 		v.emplace_back(&p);
 	}
-	sort(begin(v), end(v), [](const auto *a, const auto *b) { return a->first < b->first; });
+	std::ranges::sort(v, {}, [](const auto *a) -> strview { return a->first; });
 	for (const auto *p : v)
 		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, p->first.c_str(),
 		        to_string(p->second->get<cnst2>()->value).c_str());
@@ -560,29 +592,27 @@ static void opt_single(const domain &dom, const sptr<term2> &lhs,
 	} else {
 		const smlp_result &opt = r.back();
 		if (info(mod_prob,
-			"%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
-			is_less((cmp_t)c) ? "min max" : "max min",
-			opt.threshold.get_str().c_str(),
-			obj_range->hi()->get_str().c_str(),
-			opt.threshold.get_d(),
-			obj_range->hi()->get_d()))
+		         "%s of objective in theta in [%s, %s] ~ [%f, %f] around:\n",
+		         is_less((cmp_t)c) ? "min max" : "max min",
+		         opt.threshold.get_str().c_str(),
+		         obj_range->hi()->get_str().c_str(),
+		         opt.threshold.get_d(),
+		         obj_range->hi()->get_d()))
 			print_model(stderr, opt.point, 2);
 		for (const auto &s : r) {
 			kay::Q c = s.center_value(lhs);
 			note(mod_prob,
-				"T: %s ~ %f -> center: %s ~ %f, search range: [%s,%s]\n",
-				s.threshold.get_str().c_str(),
-				s.threshold.get_d(),
-				c.get_str().c_str(), c.get_d(),
-				s.obj_range->lo() ? s.obj_range->lo()->get_str().c_str() : nullptr,
-				s.obj_range->hi() ? s.obj_range->hi()->get_str().c_str() : nullptr);
+			     "T: %s ~ %f -> center: %s ~ %f, search range: [%s,%s]\n",
+			     s.threshold.get_str().c_str(),
+			     s.threshold.get_d(),
+			     c.get_str().c_str(), c.get_d(),
+			     s.obj_range->lo() ? s.obj_range->lo()->get_str().c_str() : nullptr,
+			     s.obj_range->hi() ? s.obj_range->hi()->get_str().c_str() : nullptr);
 		}
 	}
 	for (int n=1; n<N; n++)
 		;
 }
-
-interruptible *interruptible::is_active;
 
 static void alarm_handler(int sig)
 {
@@ -748,10 +778,10 @@ as those in the EXPR file (if any).\n\
 \n\
 For log detail setting -v, MODULE can be one of:\n\
 ");
-	vec<strview> mods(size(modules));
-	transform(begin(modules), end(modules), begin(mods),
-	          [](const auto &p) { return p.first; });
-	std::sort(begin(mods), end(mods));
+	vec<strview> mods(size(Module::modules));
+	using namespace std::ranges;
+	transform(Module::modules, begin(mods), [](const auto &p) { return p.first; });
+	sort(mods);
 	for (size_t i=0; i<size(mods); i++)
 		fprintf(f, "%s%.*s", i ? ", " : "  ",
 		        (int)mods[i].length(), mods[i].data());
@@ -891,57 +921,6 @@ static cmp_t parse_op(const std::string_view &s)
 	MDIE(mod_smlp,1,"OP '%.*s' unknown\n",(int)s.length(), s.data());
 }
 
-sptr<form2> pre_problem::interpret_input_bounds(bool bnds_dom, bool inject_reals)
-{
-	if (inject_reals) {
-		assert(bnds_dom || empty(input_bounds));
-		/* First convert all int-components that are unbounded in the
-		 * domain to lists where we have bounds; do not remove the
-		 * in_bnds constraints as they are useful for some solvers
-		 * (like Z3, which falls back to a slow method with mixed reals
-		 * and integers). */
-		for (const auto &[n,i] : input_bounds) {
-			component *c = dom[n];
-			assert(c);
-			if (c->type != type::INT)
-				continue;
-			if (!c->range.get<entire>())
-				continue;
-			list l;
-			using namespace kay;
-			for (Z z = ceil(i.lo); z <= floor(i.hi); z++)
-				l.values.emplace_back(z);
-			c->range = move(l);
-		}
-		/* Next, convert all lists to real */
-		for (auto &[v,c] : dom)
-			if (c.range.get<list>())
-				c.type = type::REAL;
-	}
-
-	if (bnds_dom)
-		for (auto it = begin(input_bounds); it != end(input_bounds);) {
-			component *c = dom[it->first];
-			assert(c);
-			if (c->range.get<entire>()) {
-				c->range = it->second;
-				it = input_bounds.erase(it);
-			} else {
-				++it;
-			}
-		}
-
-	vec<sptr<form2>> c;
-	for (const auto &[n,i] : input_bounds) {
-		sptr<term2> v = make2t(name { n });
-		c.emplace_back(conj({
-			make2f(prop2 { GE, v, make2t(cnst2 { i.lo }) }),
-			make2f(prop2 { LE, v, make2t(cnst2 { i.hi }) }),
-		}));
-	}
-	return conj(move(c));
-}
-
 static uptr<search_base>
 parse_search_range(char *threshs_s, const char *max_prec_s,
                    const char *obj_range_s, const domain &dom,
@@ -1006,7 +985,7 @@ parse_search_range(char *threshs_s, const char *max_prec_s,
 static void set_loglvl(char *arg)
 {
 	if (!arg) {
-		for (const auto &[n,m] : modules)
+		for (const auto &[n,m] : Module::modules)
 			m->lvl = (loglvl)((int)m->lvl + 1);
 		return;
 	}
@@ -1035,13 +1014,13 @@ static void set_loglvl(char *arg)
 			MDIE(mod_smlp,1,"unknown log level '%s' given in LOGLVL\n",
 			     lvl);
 		if (mod) {
-			auto it = modules.find(mod);
-			if (it == end(modules))
+			auto it = Module::modules.find(mod);
+			if (it == end(Module::modules))
 				MDIE(mod_smlp,1,"unknown module '%s' given in "
 				                "LOGLVL\n",mod);
 			it->second->lvl = jt->second;
 		} else
-			for (const auto &[n,m] : modules)
+			for (const auto &[n,m] : Module::modules)
 				m->lvl = jt->second;
 	}
 }
@@ -1186,11 +1165,11 @@ int main(int argc, char **argv)
 		case 'b': beta_conj.emplace_back(parse_infix_form2(optarg)); break;
 		case 'c':
 			if (optarg == "on"sv)
-				log_color = true;
+				Module::log_color = true;
 			else if (optarg == "off"sv)
-				log_color = false;
+				Module::log_color = false;
 			else if (optarg == "auto"sv)
-				log_color = isatty(STDERR_FILENO);
+				Module::log_color = isatty(STDERR_FILENO);
 			else
 				MDIE(mod_smlp,1,"option '-c' only supports 'on', "
 				                "'off', 'auto'\n");
@@ -1341,12 +1320,12 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 
 	for (const strview &q : queries) {
 		bool o = info(mod_smlp,"query '%.*s':\n", (int)q.size(),q.data());
-		auto print_vars = [o,&dom](vec<strview> v, const char *unbound) {
+		auto print_vars = [o,dom=&dom](vec<strview> v, const char *unbound) {
 			sort(begin(v), end(v));
 			for (const strview &id : v)
 				o && fprintf(stderr, "  '%.*s': %s\n",
 				             (int)id.length(), id.data(),
-				             dom[id] ? "bound" : unbound);
+				             (*dom)[id] ? "bound" : unbound);
 		};
 		if (q == "vars") {
 			hset<str> h = free_vars(lhs);
@@ -1364,8 +1343,8 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	 * Substitute defined terms in alpha, beta, eta and lhs/pareto
 	 * ------------------------------------------------------------------ */
 
-	auto check_nonconst = [&dom](const sptr<term2> &t, const sptr<term2> &p = nullptr){
-		if (is_constant(dom, t)) {
+	auto check_nonconst = [dom=&dom](const sptr<term2> &t, const sptr<term2> &p = nullptr){
+		if (is_constant(*dom, t)) {
 			err(mod_prob,"objective is constant: ") &&
 			(smlp::dump_smt2(stderr, p ? *p : *t), fprintf(stderr, "\n"));
 			DIE(1,"");

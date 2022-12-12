@@ -127,12 +127,14 @@ protected:
 str smt2_logic_str(const domain &dom, const sptr<form2> &e);
 uptr<solver> mk_solver0(bool incremental, const char *logic);
 solver::all_solutions_iter_owned all_solutions(const domain &dom, const sptr<form2> &f);
+pair<const Module *,uptr<solver>> mk_solver0_(bool incremental, const char *logic);
+uptr<solver> mk_solver(bool incremental, const char *logic = nullptr);
 
 struct solver_seq : solver {
 
-	const vec<pair<const module *,uptr<solver>>> solvers;
+	const vec<pair<const Module *,uptr<solver>>> solvers;
 
-	explicit solver_seq(vec<pair<const module *,uptr<solver>>> solvers)
+	explicit solver_seq(vec<pair<const Module *,uptr<solver>>> solvers)
 	: solvers(move(solvers))
 	{ assert(!empty(this->solvers)); }
 

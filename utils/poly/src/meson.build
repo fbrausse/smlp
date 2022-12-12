@@ -165,6 +165,8 @@ srcs = [
 	'ext-solver.cc',
 	'ival-solver.cc',
 	'algebraics.cc',
+	'common.cc',
+	'solver.cc',
 ]
 
 if z3.disabled()

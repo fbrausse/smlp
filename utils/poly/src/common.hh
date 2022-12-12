@@ -223,16 +223,18 @@ enum loglvl : int {
 	DEBUG,
 };
 
-struct module {
+struct Module {
+
+	static hmap<strview,Module *> modules;
 
 	const char *name;
 	const char *color;
 	loglvl lvl;
 
-	explicit module(const char *name, const char *color = "", loglvl lvl = NOTE);
+	explicit Module(const char *name, const char *color = "", loglvl lvl = NOTE);
 
 	bool logs(loglvl l) const { return l <= lvl; }
-	friend bool logs(const module &m, loglvl l) { return m.logs(l); }
+	friend bool logs(const Module &m, loglvl l) { return m.logs(l); }
 
 	bool vlog(loglvl, const char *fmt, va_list) const;
 
@@ -243,16 +245,22 @@ struct module {
 		va_end(ap);                      \
 		return r;                        \
 	}
-	[[gnu::format(printf,3,4)]] friend bool log(const module &m, loglvl level, const char *fmt, ...) BODY(level)
-	[[gnu::format(printf,2,3)]] friend bool err(const module &m, const char *fmt, ...) BODY(ERROR)
-	[[gnu::format(printf,2,3)]] friend bool warn(const module &m, const char *fmt, ...) BODY(WARN)
-	[[gnu::format(printf,2,3)]] friend bool info(const module &m, const char *fmt, ...) BODY(INFO)
-	[[gnu::format(printf,2,3)]] friend bool note(const module &m, const char *fmt, ...) BODY(NOTE)
-	[[gnu::format(printf,2,3)]] friend bool dbg(const module &m, const char *fmt, ...) BODY(DEBUG)
+	[[gnu::format(printf,3,4)]] friend bool log(const Module &m, loglvl level, const char *fmt, ...) BODY(level)
+	[[gnu::format(printf,2,3)]] friend bool err(const Module &m, const char *fmt, ...) BODY(ERROR)
+	[[gnu::format(printf,2,3)]] friend bool warn(const Module &m, const char *fmt, ...) BODY(WARN)
+	[[gnu::format(printf,2,3)]] friend bool info(const Module &m, const char *fmt, ...) BODY(INFO)
+	[[gnu::format(printf,2,3)]] friend bool note(const Module &m, const char *fmt, ...) BODY(NOTE)
+	[[gnu::format(printf,2,3)]] friend bool dbg(const Module &m, const char *fmt, ...) BODY(DEBUG)
 #undef BODY
+
+	static bool log_color;
 };
 
-extern module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn, mod_poly, mod_prob;
-extern module mod_smlp;
+extern Module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn, mod_poly, mod_prob;
+extern Module mod_smlp, mod_cand, mod_coex;
+
+extern opt<str> ext_solver_cmd;
+extern opt<str> inc_solver_cmd;
+extern long intervals;
 
 } // end namespace smlp
