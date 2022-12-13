@@ -1,3 +1,21 @@
+2022-12-13 poly-v0.9.0
+
+ * fix computation of final bounds for optimum
+ * catch more cases worth logging
+ * move bop/uop to expr2; add infix support for "^"
+ * move more ad-hoc unrolled functions to API: and, or, not, div_cnst
+ * begin parsing cvc5/cvc4/z3 inexact or algebraic assignments in models
+ * add reals and algebraics
+ * introduce A values to cnst2
+ * parameterize how literals are unrolled
+ * prepare to librarify
+ * add initial version of Pareto
+ * cleanup
+ * first version Python API
+ * add some local things to .gitignore
+ * move __init__.py + separate -static* flags for exe & lib
+ * add __version__ + fix boost dep for static build
+
 2022-11-26 poly-v0.8.0
 
  * override Z3's buggy SIGINT handler (after 100ms)
