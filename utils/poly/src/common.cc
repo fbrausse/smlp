@@ -69,3 +69,11 @@ int solver::alg_dec_prec_approx = 10;
 opt<str> smlp::ext_solver_cmd;
 opt<str> smlp::inc_solver_cmd;
 long  smlp::intervals = -1;
+
+#define STR(x)	#x
+#define XSTR(x)	STR(x)
+extern "C" {
+const char SMLP_VERSION[] = XSTR(SMLP_VERSION_MAJOR) "."
+                            XSTR(SMLP_VERSION_MINOR) "."
+                            XSTR(SMLP_VERSION_PATCH);
+}

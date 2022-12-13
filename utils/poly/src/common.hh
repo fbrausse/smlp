@@ -264,3 +264,5 @@ extern opt<str> inc_solver_cmd;
 extern long intervals;
 
 } // end namespace smlp
+
+extern "C" const char SMLP_VERSION[];

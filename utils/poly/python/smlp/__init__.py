@@ -16,6 +16,8 @@ one.__doc__ = "The numeric constant 1."
 term2.__repr__ = lambda self: '<' + self.__module__ + '.term2 ' + str(self) + '>'
 form2.__repr__ = lambda self: '<' + self.__module__ + '.form2 ' + str(self) + '>'
 
+__version__ = libsmlp._version()
+
 def Cnst(c):
 	"""
 	Creates a constant term2 from the Python object c. Supported types of c:
@@ -112,3 +114,18 @@ def Q(c, *args):
 
 def domain(components : dict):
 	return libsmlp._mk_domain(components)
+
+def parse_poly(domain_path : str, expr_path : str, *,
+               python_compat : bool = False,
+               dump_pe : bool = False,
+               infix : bool = True):
+	return libsmlp._parse_poly(domain_path, expr_path, python_compat,
+	                           dump_pe, infix)
+
+def parse_nn(gen_path : str, hdf5_path : str, spec_path : str,
+             io_bounds_path : str, *,
+             obj_bounds_path : str = None,
+             clamp_inputs : bool = False,
+             single_obj : bool = False):
+	return libsmlp._parse_nn(gen_path, hdf5_path, spec_path, io_bounds_path,
+	                         clamp_inputs, single_obj)

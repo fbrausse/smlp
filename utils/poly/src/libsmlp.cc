@@ -289,9 +289,13 @@ static kay::Q _Q_abs(const kay::Q &a)
 	return abs(a);
 }
 
+static const char * smlp_version() { return SMLP_VERSION; }
+
 BOOST_PYTHON_MODULE(libsmlp)
 {
 	using namespace boost::python;
+
+	def("_version", smlp_version);
 
 	/* exported expr2.hh API */
 	class_<sptr<term2>>("term2", no_init)
@@ -436,13 +440,13 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 		.def("interpret_input_bounds", &pre_problem::interpret_input_bounds)
 		;
 #ifdef SMLP_ENABLE_KERAS_NN
-	def("parse_nn", parse_nn,
+	def("_parse_nn", parse_nn,
 	    args("gen_path", "hdf5_path", "spec_path", "io_bounds",
 	         "obj_bounds", "clamp_inputs", "single_obj"));
 #endif
 
 	/* exported poly.hh API */
-	def("parse_poly", parse_poly_problem,
+	def("_parse_poly", parse_poly_problem,
 	    args("simple_domain_path", "poly_expression_path", "python_compat",
 	         "dump_pe", "infix"));
 

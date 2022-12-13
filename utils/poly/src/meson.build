@@ -220,7 +220,7 @@ libsmlp_deps = poly_deps
 py3 = import('python').find_installation('python3', modules: ['fractions'])
 py3_dep = py3.dependency(embed: true)
 libsmlp_deps += py3_dep
-boost_dep = dependency('boost', modules: ['python' + py3.language_version().replace('.','')], required: true)
+boost_dep = dependency('boost', modules: ['python' + py3.language_version().replace('.','')], required: true, static: get_option('static'))
 libsmlp_deps += boost_dep
 if py3_dep.found() and boost_dep.found()
   py3.install_sources('..' / 'python' / 'smlp' / '__init__.py',
