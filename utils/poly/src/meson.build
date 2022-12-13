@@ -51,8 +51,12 @@ add_project_arguments([
   '-Wno-unqualified-std-cast-call'], language: 'cpp')
 
 link_args = []
+link_args_smlp = []
+link_args_libsmlp_so = []
 if get_option('static')
-  link_args += '-static'
+  link_args_smlp += '-static'
+  link_args_libsmlp_so += '-static-libgcc'
+  link_args_libsmlp_so += '-static-libstdc++'
 endif
 
 # manually found libraries
@@ -207,7 +211,7 @@ executable('smlp', 'smlp.cc',
            override_options: 'cpp_std=c++20',
 	include_directories: include_directories('../include'),
            install: true,
-	link_args: link_args,
+	link_args: link_args_smlp,
 	link_with: libsmlp_static
           )
 
@@ -219,14 +223,14 @@ libsmlp_deps += py3_dep
 boost_dep = dependency('boost', modules: ['python' + py3.language_version().replace('.','')], required: true)
 libsmlp_deps += boost_dep
 if py3_dep.found() and boost_dep.found()
-  py3.install_sources('..' / 'python' / '__init__.py',
+  py3.install_sources('..' / 'python' / 'smlp' / '__init__.py',
                       subdir: 'smlp')
   py3.extension_module('libsmlp', 'libsmlp.cc',
                  dependencies: libsmlp_deps,
                  override_options: 'cpp_std=c++20',
                  include_directories: include_directories('../include'),
              install: true,
-  	link_args: link_args,
+  	link_args: link_args_libsmlp_so,
   	link_with: libsmlp_static,
   	subdir : 'smlp')
 endif
