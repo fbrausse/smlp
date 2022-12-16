@@ -112,9 +112,6 @@ def Q(c, *args):
 		raise ValueError("cannot interpret " + repr(c) + " as a rational constant")
 	return r.value
 
-def domain(components : dict):
-	return libsmlp._mk_domain(components)
-
 def parse_poly(domain_path : str, expr_path : str, *,
                python_compat : bool = False,
                dump_pe : bool = False,

@@ -123,7 +123,7 @@ Run:
 
 The resulting binary will be located in `build/src/smlp`.
 
-A compiler supporting C++20 is required (GCC >= 11, Clang >= 11) as well as:
+A compiler supporting C++20 is required (GCC >= 12) as well as:
 
 - the kay library <https://github.com/fbrausse/kay>
 
@@ -157,6 +157,36 @@ requires more dependencies:
 - kjson <https://github.com/fbrausse/kjson>
 - hdf5 and its C++ bindings <https://www.hdfgroup.org/HDF5>
 - sources of libiv (*not published, yet*)
+
+### Python API
+
+SMLP offers a Python API that allows to easily compose problems and solve them,
+e.g., the same example as above could be written in Python as
+```
+import smlp
+pp = smlp.parse_poly('domain', 'expression')
+slv = smlp.solver(False)
+slv.declare(pp.dom)
+slv.add(pp.obj > smlp.Cnst(0.42))
+r = slv.check()
+if isinstance(r, smlp.sat):
+     print('sat: ' + str(r.model))
+elif isinstance(r, smlp.unsat):
+     print('unsat')
+else:
+     print('unknown: ' + r.reason)
+```
+
+The Python module `smlp` will be built by the above `meson compile` command if
+the following dependencies are satisfied:
+
+- CPython development libraries and headers
+- Boost.Python <https://www.boost.org/doc/libs/1_79_0/libs/python/doc/html/index.html>
+
+Using `meson install -C build`, the `smlp` Python module will be installed into
+the Python module directory under PREFIX, which can be specified at `meson setup`
+time with the option `-Dprefix=PATH` and defaults to the standard system
+prefix. On Unix this is usually `/usr/local`.
 
 ## SMLP Traces
 

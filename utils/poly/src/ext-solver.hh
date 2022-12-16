@@ -8,7 +8,7 @@
 
 #include "solver.hh"
 
-#include "../include/smtlib2-parser.hh"
+#include <es/smtlib2-parser.hh>
 
 namespace smlp {
 

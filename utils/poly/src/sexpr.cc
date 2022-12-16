@@ -1,5 +1,5 @@
 
-#include "sexpr.hh"
+#include <es/sexpr.hh>
 
 using namespace es;
 

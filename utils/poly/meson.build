@@ -4,6 +4,7 @@
 project('poly', 'cpp', license: 'Apache-2.0', version: '0.9.0',
         default_options: [
 	'cpp_std=c++20',
+	'b_staticpic=true',
 	'warning_level=2',
 	'debug=false',
 	'optimization=2',

@@ -107,6 +107,26 @@ static domain convert_domain_dict(boost::python::dict d)
 	return r;
 }
 
+namespace {
+struct domain_to_dict {
+	static PyObject * convert(const domain &d)
+	{
+		boost::python::dict r;
+		for (const auto &[n,c] : d)
+			r[n] = c;
+		PyObject *p = r.ptr();
+		Py_INCREF(p);
+		return p;
+	}
+};
+struct extract_domain {
+	static domain execute(boost::python::dict d)
+	{
+		return convert_domain_dict(d);
+	}
+};
+}
+
 template <typename T>
 static sptr<T> _cnst_fold(const sptr<T> &t, boost::python::dict d)
 {
@@ -182,6 +202,11 @@ static boost::python::dict options(boost::python::object o)
 static void solver_declare(const sptr<solver> &s, const domain &dom)
 {
 	return s->declare(dom);
+}
+
+static void solver_declare_dict(const sptr<solver> &s, const boost::python::dict &dom)
+{
+	return s->declare(convert_domain_dict(dom));
 }
 
 static void solver_add(const sptr<solver> &s, const sptr<form2> &f)
@@ -501,13 +526,16 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 
 	class_<sptr<solver>>("solver", no_init)
 		.def("declare", solver_declare)
+		// .def("declare", solver_declare_dict)
 		.def("add", solver_add)
 		.def("check", solver_check)
 		;
 	def("_mk_solver", _mk_solver);
 
 	class_<domain>("domain", no_init);
-	def("_mk_domain", convert_domain_dict);
+
+	def("domain", convert_domain_dict);
+	to_python_converter<domain,domain_to_dict,false>();
 
 	class_<sat>("sat", no_init)
 		.add_property("model", sat_get_model)

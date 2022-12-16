@@ -686,7 +686,7 @@ struct Pareto {
 
 			extended<smlp_result_base> bt = b(t);
 			assert(!is_infty(bt));
-			if (!do_cmp(bt.get<smlp_result_base>()->threshold, direction, s[j]->threshold + eps)) {
+			if (!do_cmp<kay::Q>(bt.get<smlp_result_base>()->threshold, direction, s[j]->threshold + eps)) {
 				/* cannot increase bound on o_j simultaneously
 				 * by epsilon */
 				warn(mod_prob,"fixing objective %zu on threshold %s ~ %g\n",
@@ -1485,6 +1485,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		info(mod_prob,"scaling '%s' from range ~ [%g,%g] to [0,1]\n",
 		     n.c_str(), range.lo.get_d(), range.hi.get_d());
 		sptr<term2> &f = it->second;
+		using namespace kay;
 		f = make2t(bop2 { bop2::MUL,
 			make2t(bop2 { bop2::SUB, f, make2t(cnst2{ range.lo }) }),
 			make2t(cnst2 { inv(len) }),
