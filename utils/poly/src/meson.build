@@ -32,7 +32,7 @@ flint_dep = cxx.find_library('flint',
 if flint_dep.found()
   config.set('KAY_USE_FLINT', 1)
   poly_deps += flint_dep
-  poly_deps += dependency('mpfr')
+  poly_deps += dependency('mpfr', static: get_option('static'))
   message('using Flint for Z and Q')
 else
   gmpxx_dep = dependency('gmpxx', static: get_option('static'))
