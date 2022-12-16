@@ -16,3 +16,17 @@ if not get_option('asserts')
 endif
 
 subdir('src')
+
+if have_smlp_py
+  configure_file(
+    input: 'setup.py.in',
+    configuration: configuration_data({
+      'KAY_INC': kay_incl,
+      'IV_LIB': iv_lib,
+      'BUILD_ROOT': meson.project_build_root(),
+      'VERSION': meson.project_version(),
+      'LICENSE': meson.project_license()[0],
+    }),
+    output: 'setup.py'
+  )
+endif

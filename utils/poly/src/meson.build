@@ -90,6 +90,8 @@ dep_libs = {
   }
 }
 dep_have = {}
+kay_incl = ''
+iv_lib = ''
 
 foreach name, desc : dep_libs
   dirs = []
@@ -121,6 +123,13 @@ foreach name, desc : dep_libs
       have_all = false
     endif
   endforeach
+  if have_all
+    if name == 'kay' and hdrs.length() > 0
+      kay_incl = '"' + hdrs[0] + '"'
+    elif name == 'iv' and dirs.length() > 0
+      iv_lib = '"' + dirs[0] + '"'
+    endif
+  endif
   dep_have += {name: have_all}
 endforeach
 
@@ -230,6 +239,7 @@ boost_dep = dependency('boost',
                        required: py3_dep.found(), static: get_option('static'))
 libsmlp_deps += boost_dep
 if py3_dep.found() and boost_dep.found()
+  have_smlp_py = true
   message('SMLP Python API enabled')
   py3.install_sources('..' / 'python' / 'smlp' / '__init__.py',
                       subdir: 'smlp')
@@ -242,5 +252,6 @@ if py3_dep.found() and boost_dep.found()
                        link_with: libsmlp_static,
                        subdir : 'smlp')
 else
+  have_smlp_py = false
   message('SMLP Python API disabled')
 endif
