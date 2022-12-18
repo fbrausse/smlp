@@ -7,8 +7,7 @@
 #pragma once
 
 #include "expr.hh"
-
-#include <kay/numbers.hh>
+#include "algebraics.hh"
 
 namespace smlp {
 
@@ -50,10 +49,22 @@ struct lneg2 {
 
 inline const char *lbop_s[] = { "and", "or" };
 
+namespace detail {
+str to_string(const sptr<form2> &, bool let);
+str to_string(const sptr<term2> &, bool let);
+}
+
+enum class type : int { INT, REAL };
+
 struct form2 : sumtype<prop2,lbop2,lneg2>
              , std::enable_shared_from_this<form2> {
 
 	using sumtype<prop2,lbop2,lneg2>::sumtype;
+
+	friend str to_string(const sptr<form2> &f, bool let = true)
+	{
+		return detail::to_string(f, let);
+	}
 };
 
 /* An 'term2' expression is either:
@@ -74,35 +85,39 @@ struct ite2 {
 	std::strong_ordering operator<=>(const ite2 &b) const;
 };
 struct bop2 {
-	decltype(bop::op) op; sptr<term2> left, right;
+	enum { ADD, SUB, MUL, } op; sptr<term2> left, right;
 	bool operator==(const bop2 &b) const;
 	std::strong_ordering operator<=>(const bop2 &b) const;
 };
 struct uop2 {
-	decltype(uop::op) op; sptr<term2> operand;
+	enum { UADD, USUB, } op; sptr<term2> operand;
 	bool operator==(const uop2 &b) const;
 	std::strong_ordering operator<=>(const uop2 &b) const;
 };
+
 struct cnst2 {
-	struct ZQ : sumtype<kay::Z,kay::Q> {
+	struct ZQA : sumtype<kay::Z,kay::Q,A> {
 
-		using sumtype<kay::Z,kay::Q>::sumtype;
+		using sumtype<kay::Z,kay::Q,A>::sumtype;
 
-		friend str to_string(const auto &v)
+		friend str to_string(const ZQA &v)
 		{
 			return v.match(
-			[](const auto &x) { return x.get_str(); }
+			[](const auto &x) { return kay::to_string(x); },
+			[](const A &x) { return to_string(x); }
 			);
 		}
 
-		friend kay::Q to_Q(const auto &v)
+		friend kay::Q to_Q(const ZQA &v)
 		{
 			return v.match(
-			[](const auto &x) { return kay::Q(x); }
+			[](const kay::Z &x) { return kay::Q(x); },
+			[](const kay::Q &x) { return x; },
+			[](const Ap &a) { return to_Q(a); }
 			);
 		}
 
-		std::strong_ordering operator<=>(const ZQ &b) const = default;
+		std::strong_ordering operator<=>(const ZQA &b) const = default;
 	} value;
 	bool operator==(const cnst2 &b) const;
 	std::strong_ordering operator<=>(const cnst2 &b) const = default;
@@ -112,6 +127,11 @@ struct term2 : sumtype<name,bop2,uop2,cnst2,ite2>
              , std::enable_shared_from_this<term2> {
 
 	using sumtype<name,bop2,uop2,cnst2,ite2>::sumtype;
+
+	friend str to_string(const sptr<term2> &t, bool let = true)
+	{
+		return detail::to_string(t, let);
+	}
 };
 
 template <typename... Ts>
@@ -126,37 +146,58 @@ static inline sptr<form2> make2f(Ts &&... ts)
 	return std::make_shared<form2>(std::forward<Ts>(ts)...);
 }
 
-/* Constants for true, false, 0 and 1 */
-inline const sptr<form2> true2  = make2f(lbop2 { lbop2::AND, {} });
-inline const sptr<form2> false2 = make2f(lbop2 { lbop2::OR , {} });
-inline const sptr<term2> zero   = make2t(cnst2 { kay::Z(0) });
-inline const sptr<term2> one    = make2t(cnst2 { kay::Z(1) });
-
-/* Short forms for creating propositional formulas: conjunction, disjunction
- * and negation */
-static inline sptr<form2> conj(vec<sptr<form2>> l)
+/* Short forms for creating propositional formulas: conjunction,
+ * disjunction and negation */
+inline sptr<form2> conj(vec<sptr<form2>> l)
 {
 	return make2f(lbop2 { lbop2::AND, { move(l) } });
 }
 
-static inline sptr<form2> disj(vec<sptr<form2>> l)
+inline sptr<form2> disj(vec<sptr<form2>> l)
 {
 	return make2f(lbop2 { lbop2::OR, { move(l) } });
 }
 
-static inline sptr<form2> neg(sptr<form2> f)
+inline sptr<form2> neg(sptr<form2> f)
 {
 	return make2f(lneg2 { move(f) });
 }
 
+/* Constants for true, false, 0 and 1 */
+inline const sptr<form2> true2  = conj({});
+inline const sptr<form2> false2 = disj({});
+inline const sptr<term2> zero   = make2t(cnst2 { kay::Z(0) });
+inline const sptr<term2> one    = make2t(cnst2 { kay::Z(1) });
+
 /* Absolute value on term2, encoded by ite2 on comparing with zero */
-sptr<term2> abs(const sptr<term2> &t);
+inline sptr<term2> abs(const sptr<term2> &e)
+{
+	return make2t(ite2 {
+		make2f(prop2 { LT, e, zero }),
+		make2t(uop2 { uop2::USUB, e }),
+		e
+	});
+}
 
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a term2 term. */
 typedef sumtype<sptr<term2>,sptr<form2>> expr2s;
 typedef hmap<str,fun<expr2s(vec<expr2s>)>> unroll_funs_t;
-expr2s unroll(const expr &e, const unroll_funs_t &funs);
+expr2s unroll_add(vec<expr2s> a);
+expr2s unroll_sub(vec<expr2s> a);
+expr2s unroll_mul(vec<expr2s> a);
+expr2s unroll_expz(vec<expr2s> a);
+expr2s unroll_and(vec<expr2s> a);
+expr2s unroll_or(vec<expr2s> a);
+expr2s unroll_not(vec<expr2s> a);
+expr2s unroll_div_cnst(vec<expr2s> a);
+
+sptr<term2> unroll_cnst_None(const cnst &c);
+sptr<term2> unroll_cnst_ZQ(const cnst &c);
+sptr<term2> unroll_cnst_Q(const cnst &c);
+
+expr2s unroll(const expr &e, const unroll_funs_t &funs,
+              fun<sptr<term2>(const cnst &)> ip_cnst = unroll_cnst_Q);
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */
 sptr<term2> subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl);

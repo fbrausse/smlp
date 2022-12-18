@@ -18,6 +18,9 @@ static bool is_terminal(const T &g)
 	);
 }
 
+static const char *const bop_s[] = { "+", "-", "*" };
+static const char *const uop_s[] = { "+", "-" };
+
 namespace {
 struct smt2_output {
 
@@ -43,6 +46,13 @@ struct smt2_output {
 			dump_smt2(q.get_num());
 			fprintf(f, " %s)", q.get_den().get_str().c_str());
 		}
+	}
+
+	void dump_smt2(const A &a) const
+	{
+		fprintf(f, "(root-obj ");
+		dump_smt2(*to_term2(a.p, make2t(name { a.var })));
+		fprintf(f, " %zu)", a.root_idx);
 	}
 
 	template <typename T>
@@ -206,8 +216,8 @@ void smlp::dump_smt2(FILE *f, const domain &d)
 	for (const auto &[var,rng] : d) {
 		const char *t = nullptr;
 		switch (rng.type) {
-		case component::INT: t = "Int"; break;
-		case component::REAL: t = "Real"; break;
+		case type::INT: t = "Int"; break;
+		case type::REAL: t = "Real"; break;
 		}
 		assert(t);
 		fprintf(f, "(declare-const %s %s)\n", var.c_str(), t);
@@ -215,4 +225,55 @@ void smlp::dump_smt2(FILE *f, const domain &d)
 		dump_smt2(f, *domain_constraint(var, rng));
 		fprintf(f, ")\n");
 	}
+}
+
+#ifdef _GNU_SOURCE
+static const cookie_io_functions_t str_cookie = {
+	/* .read = */
+	[](void *, char *, size_t) -> ssize_t { return -1; },
+	/* .write = */
+	[](void *c, const char *buf, size_t sz) -> ssize_t {
+		str *s = static_cast<str *>(c);
+		s->append(buf, sz);
+		return sz;
+	},
+	/* .seek = */
+	[](void *, off64_t *, int) { return -1; },
+	/* .close = */
+	[](void *) { return 0; },
+};
+template <typename T>
+static str to_string_help(const sptr<T> &g, bool let)
+{
+	str s;
+	FILE *f = fopencookie(&s, "w", str_cookie);
+	::dump_smt2(f, *g, let);
+	fclose(f);
+	return s;
+}
+#elif _POSIX_C_SOURCE >= 200809L
+template <typename T>
+static str to_string_help(const sptr<T> &g, bool let)
+{
+	char *buf = NULL;
+	size_t sz = 0;
+	FILE *f = open_memstream(&buf, &sz);
+	::dump_smt2(f, *g, let);
+	fclose(f);
+	str r(buf, sz);
+	free(buf);
+	return r;
+}
+#else
+# error "no implementation for to_string(sptr<T>, bool) available"
+#endif
+
+str detail::to_string(const sptr<term2> &g, bool let)
+{
+	return to_string_help(g, let);
+}
+
+str detail::to_string(const sptr<form2> &g, bool let)
+{
+	return to_string_help(g, let);
 }

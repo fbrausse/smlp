@@ -60,8 +60,8 @@ struct simple_domain_parser {
 			switch (delim[0]) {
 			case '[': delim[0] = ']'; break;
 			case '{': delim[0] = '}'; break;
-			default: DIE(1,"unexpected range start symbol '%s'\n",
-			             delim);
+			default: MDIE(mod_prob,1,"unexpected range start symbol "
+			                         "'%s' in domain\n", delim);
 			}
 			s++;
 			t = s + strcspn(s, delim);
@@ -82,15 +82,15 @@ struct simple_domain_parser {
 			switch (*delim) {
 			case ']':
 				assert(nums.size() == 2);
-				range.type = component::REAL;
+				range.type = type::REAL;
 				range.range = ival { move(nums[0]), move(nums[1]) };
 				break;
 			case '}':
 				assert(!nums.empty());
-				range.type = component::INT;
+				range.type = type::INT;
 				for (const kay::Q &q : nums)
 					if (q.get_den() != 1) {
-						range.type = component::REAL;
+						range.type = type::REAL;
 						break;
 					}
 				range.range = list { move(nums) };

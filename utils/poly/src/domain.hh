@@ -10,43 +10,6 @@
 
 namespace smlp {
 
-/* Closed interval with rational endpoints */
-struct ival {
-
-	kay::Q lo, hi;
-
-	ival(kay::Q v = 0)
-	: ival(v, v)
-	{}
-
-	ival(kay::Q lo, kay::Q hi)
-	: lo(move(lo))
-	, hi(move(hi))
-	{
-		assert(this->lo <= this->hi);
-	}
-
-	friend kay::Q length(const ival &i)
-	{
-		return i.hi - i.lo;
-	}
-
-	friend kay::Q mid(const ival &i)
-	{
-		return (i.lo + i.hi) / 2;
-	}
-
-	bool contains(const kay::Z &v) const
-	{
-		return lo <= v && v <= hi;
-	}
-
-	bool contains(const kay::Q &v) const
-	{
-		return lo <= v && v <= hi;
-	}
-};
-
 /* Explicit list of rational values */
 struct list { vec<kay::Q> values; };
 
@@ -57,7 +20,7 @@ struct entire {};
 struct component {
 
 	sumtype<entire,ival,list> range;
-	enum { INT, REAL } type;
+	enum type type;
 
 	bool contains(const kay::Q &v) const
 	{
@@ -80,6 +43,20 @@ sptr<form2> domain_constraint(const str &var, const component &c);
 
 /* The domain is an (ordered) list of pairs (name, component) */
 struct domain : vec<pair<str,component>> {
+
+	friend str fresh(const domain &dom, str base)
+	{
+		if (!dom[base])
+			return base;
+		base += "_";
+		if (!dom[base])
+			return base;
+		for (kay::Z i=0;; i++) {
+			str n = base + i.get_str();
+			if (!dom[n])
+				return n;
+		}
+	}
 
 	const component * operator[](const std::string_view &s) const
 	{

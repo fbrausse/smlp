@@ -1,3 +1,83 @@
+2022-12-13 poly-v0.9.0
+
+ * fix computation of final bounds for optimum
+ * catch more cases worth logging
+ * move bop/uop to expr2; add infix support for "^"
+ * move more ad-hoc unrolled functions to API: and, or, not, div_cnst
+ * begin parsing cvc5/cvc4/z3 inexact or algebraic assignments in models
+ * add reals and algebraics
+ * introduce A values to cnst2
+ * parameterize how literals are unrolled
+ * prepare to librarify
+ * add initial version of Pareto
+ * cleanup
+ * first version Python API
+ * add some local things to .gitignore
+ * move __init__.py + separate -static* flags for exe & lib
+ * add __version__ + fix boost dep for static build
+
+2022-11-26 poly-v0.8.0
+
+ * override Z3's buggy SIGINT handler (after 100ms)
+ * add -T LO:INC:HI option format
+ * rename -O OUT-BNDS to -O OBJ-BNDS for uniformity
+ * disentangle critical points and fallback solver from ival solver
+ * obtaining all solutions to a problem is now handled in a lazy manner
+ * splitting intervals no longer skips space between midpoint and next double
+ * critical points solver only handles linear derivatives
+ * add option -o OBJ-SPEC supporting arbitrary expressions or the expression
+   'Pareto(E1,E2,...)' containing such expressions (Pareto optimization is not
+   implemented, yet)
+ * minor improvements/fixes:
+   - simplifier deals with double-neg and unnecessary conj/disj
+   - logging
+   - fix handling option -c auto
+   - report and error on surplus unused arguments
+   - empty sequence of solvers
+   - ext-solver outputs time to solve
+   - print the named outputs (if any)
+   - sequence of variables in models is sorted now
+   - optimize_EA properly forwards strictness info to obj-range
+   - check that none of the objectives is constant on the domain
+
+2022-11-17 poly-v0.7.0
+
+ * moved old options -1 and -c to -C gen-obj and -C clamp
+ * introduced structured and colored log output for clarity:
+   - verbosity controlled by new option -v
+   - log levels are: none, error, warn, info, note, debug; default: note
+   - color controlled by repurposed option -c
+   - solvers are more verbose in what they are doing
+ * support reading options from envvar SMLP_OPTS (if set); parsing the envvar
+   string is done by the shell (envvar SHELL if set, 'sh' otherwise), as if
+   SMLP was invoked by
+     ${SHELL} -c 'exec "$0" ${SMLP_OPTS} "$@"' smlp arguments...
+
+2022-11-15 poly-v0.6.2
+
+ * fix cause for segfault when the search finds that the threshold is out of
+   the bounds of the -T list
+
+2022-11-15 poly-v0.6.1
+
+ * -C bnds-dom now affects integer variables as well
+ * protection for ival-solver and critical-point solver:
+ * - encode unbounded domains properly for fallback solver
+ * - critical points are not suitable for (dis-)equality constraints
+ * - protect against handling interval domains for integers
+
+2022-11-15 poly-v0.6.0
+
+ * code simplification and cleanup
+ * documentation of trace format and rationale behind it in readme
+ * move {id_theta => all_eq}() to public API
+ * add u, trace showing final range and contained info and c,/d, trace records
+ * generalize search range for GearOpt and add option -T THRESHS
+ * relax check on -Cbnds-dom for -r: input bounds empty -> fine
+ * ksmt-0.1.7 not supported (missing (get-model)), next version will be
+ * simplify and add check for Match() signature
+ * fix infix parser: x-y+z was parsed as x-(y+z)
+
 2022-11-08 poly-v0.5.0
 
  * fix for gmpxx build

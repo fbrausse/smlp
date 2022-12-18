@@ -32,7 +32,7 @@ flint_dep = cxx.find_library('flint',
 if flint_dep.found()
   config.set('KAY_USE_FLINT', 1)
   poly_deps += flint_dep
-  poly_deps += dependency('mpfr')
+  poly_deps += dependency('mpfr', static: get_option('static'))
   message('using Flint for Z and Q')
 else
   gmpxx_dep = dependency('gmpxx', static: get_option('static'))
@@ -51,8 +51,12 @@ add_project_arguments([
   '-Wno-unqualified-std-cast-call'], language: 'cpp')
 
 link_args = []
+link_args_smlp = []
+link_args_libsmlp_so = []
 if get_option('static')
-  link_args += '-static'
+  link_args_smlp += '-static'
+  link_args_libsmlp_so += '-static-libgcc'
+  link_args_libsmlp_so += '-static-libstdc++'
 endif
 
 # manually found libraries
@@ -86,6 +90,8 @@ dep_libs = {
   }
 }
 dep_have = {}
+kay_incl = ''
+iv_lib = ''
 
 foreach name, desc : dep_libs
   dirs = []
@@ -117,6 +123,13 @@ foreach name, desc : dep_libs
       have_all = false
     endif
   endforeach
+  if have_all
+    if name == 'kay' and hdrs.length() > 0
+      kay_incl = '"' + hdrs[0] + '"'
+    elif name == 'iv' and dirs.length() > 0
+      iv_lib = '"' + dirs[0] + '"'
+    endif
+  endif
   dep_have += {name: have_all}
 endforeach
 
@@ -145,14 +158,16 @@ hdrs = [
 	'domain.hh',
 	'dump-smt2.hh',
 	'poly.hh',
-	'sexpr.hh',
-	'sexpr-detail.hh',
+	'..'/'include'/'es'/'sexpr.hh',
+	'..'/'include'/'es'/'sexpr-detail.hh',
+	'..'/'include'/'es'/'smtlib2-parser.hh',
 	'solver.hh',
 	'ext-solver.hh',
 	'ival-solver.hh',
+	'reals.hh',
+	'algebraics.hh',
 ]
 srcs = [
-	'smlp.cc',
 	'prefix.cc',
 	'infix.cc',
 	'expr2.cc',
@@ -162,6 +177,9 @@ srcs = [
 	'sexpr.cc',
 	'ext-solver.cc',
 	'ival-solver.cc',
+	'algebraics.cc',
+	'common.cc',
+	'solver.cc',
 ]
 
 if z3.disabled()
@@ -183,18 +201,57 @@ else
 endif
 
 # not yet: need a library first
-# install_headers(hdrs, subdir: 'smlp' / 'poly')
+install_headers(hdrs, subdir: 'smlp', preserve_path: false)
 
 configure_file(
   input: '..'/'include'/'config.h.meson',
   configuration: config,
-  output: 'config.h'
+  output: 'config.h',
+  install: true,
+  install_dir: 'include'/'smlp'
 )
 
-executable('smlp', srcs,
-           dependencies: poly_deps,
-           override_options: 'cpp_std=c++20',
-	include_directories: include_directories('../include'),
-           install: true,
-	link_args: link_args
-          )
+libsmlp_static = static_library('smlp', srcs,
+  dependencies: poly_deps,
+  override_options: 'cpp_std=c++20',
+  include_directories: include_directories('../include'),
+  install: true,
+  link_args: link_args
+)
+
+executable('smlp', 'smlp.cc',
+  dependencies: poly_deps,
+  override_options: 'cpp_std=c++20',
+  include_directories: include_directories('../include'),
+  install: true,
+  link_args: link_args_smlp,
+  link_with: libsmlp_static
+)
+
+libsmlp_deps = poly_deps
+
+py3 = import('python').find_installation('python3', modules: ['fractions'],
+                                         disabler: true, required: false)
+py3_dep = py3.dependency(embed: true)
+libsmlp_deps += py3_dep
+boost_dep = dependency('boost',
+                       modules: ['python' + py3.language_version().replace('.','')],
+                       required: py3_dep.found(), static: get_option('static'))
+libsmlp_deps += boost_dep
+if py3_dep.found() and boost_dep.found()
+  have_smlp_py = true
+  message('SMLP Python API enabled')
+  py3.install_sources('..' / 'python' / 'smlp' / '__init__.py',
+                      subdir: 'smlp')
+  py3.extension_module('libsmlp', 'libsmlp.cc',
+                       dependencies: libsmlp_deps,
+                       override_options: 'cpp_std=c++20',
+                       include_directories: include_directories('../include'),
+                       install: true,
+                       link_args: link_args_libsmlp_so,
+                       link_with: libsmlp_static,
+                       subdir : 'smlp')
+else
+  have_smlp_py = false
+  message('SMLP Python API disabled')
+endif

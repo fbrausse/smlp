@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <cstdarg>
 
 #include <string>
 #include <vector>
@@ -21,6 +22,7 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <optional>
+#include <system_error>
 
 #include <time.h>
 
@@ -32,6 +34,7 @@
 
 #define ARRAY_SIZE(...)	(sizeof(__VA_ARGS__)/sizeof(*(__VA_ARGS__)))
 #define DIE(code,...) do { fprintf(stderr, __VA_ARGS__); exit(code); } while (0)
+#define MDIE(mod,code,...) do { err(mod, __VA_ARGS__); exit(code); } while (0)
 
 namespace smlp {
 
@@ -119,6 +122,18 @@ struct sumtype : std::variant<Ts...> {
 		return std::visit<R>(overloaded { std::forward<As>(o)... }, *this);
 	}
 
+	template <typename... As>
+	auto match(As &&... o)
+	{
+		return std::visit(overloaded { std::forward<As>(o)... }, *this);
+	}
+
+	template <typename R, typename... As>
+	R match(As &&... o)
+	{
+		return std::visit<R>(overloaded { std::forward<As>(o)... }, *this);
+	}
+
 	template <typename T>
 	const T * get() const
 	{
@@ -199,4 +214,55 @@ struct timing : timespec {
 	operator double() const { return tv_sec + tv_nsec / 1e9; }
 };
 
+enum loglvl : int {
+	QUIET,
+	ERROR,
+	WARN,
+	INFO,
+	NOTE,
+	DEBUG,
+};
+
+struct Module {
+
+	static hmap<strview,Module *> modules;
+
+	const char *name;
+	const char *color;
+	loglvl lvl;
+
+	explicit Module(const char *name, const char *color = "", loglvl lvl = NOTE);
+
+	bool logs(loglvl l) const { return l <= lvl; }
+	friend bool logs(const Module &m, loglvl l) { return m.logs(l); }
+
+	bool vlog(loglvl, const char *fmt, va_list) const;
+
+#define BODY(level) { \
+		va_list ap;                      \
+		va_start(ap,fmt);                \
+		bool r = m.vlog(level, fmt, ap); \
+		va_end(ap);                      \
+		return r;                        \
+	}
+	[[gnu::format(printf,3,4)]] friend bool log(const Module &m, loglvl level, const char *fmt, ...) BODY(level)
+	[[gnu::format(printf,2,3)]] friend bool err(const Module &m, const char *fmt, ...) BODY(ERROR)
+	[[gnu::format(printf,2,3)]] friend bool warn(const Module &m, const char *fmt, ...) BODY(WARN)
+	[[gnu::format(printf,2,3)]] friend bool info(const Module &m, const char *fmt, ...) BODY(INFO)
+	[[gnu::format(printf,2,3)]] friend bool note(const Module &m, const char *fmt, ...) BODY(NOTE)
+	[[gnu::format(printf,2,3)]] friend bool dbg(const Module &m, const char *fmt, ...) BODY(DEBUG)
+#undef BODY
+
+	static bool log_color;
+};
+
+extern Module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn, mod_poly, mod_prob;
+extern Module mod_smlp, mod_cand, mod_coex;
+
+extern opt<str> ext_solver_cmd;
+extern opt<str> inc_solver_cmd;
+extern long intervals;
+
 } // end namespace smlp
+
+extern "C" const char SMLP_VERSION[];

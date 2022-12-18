@@ -14,8 +14,8 @@ using pt_scaler = pointwise<scaler>;
 static sptr<term2>
 apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 {
-	sptr<term2> c = make2t(bop2 { bop::ADD,
-		make2t(bop2 { bop::MUL, make2t(cnst2 { kay::Q(sc.a) }), in }),
+	sptr<term2> c = make2t(bop2 { bop2::ADD,
+		make2t(bop2 { bop2::MUL, make2t(cnst2 { kay::Q(sc.a) }), in }),
 		make2t(cnst2 { kay::Q(sc.b) })
 	});
 	if (clamp_outputs) {
@@ -40,7 +40,7 @@ apply_scaler(const pt_scaler &sc,
 
 pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
                            const char *spec_path, const char *io_bounds,
-                           const char *out_bounds, bool clamp_inputs,
+                           const char *obj_bounds, bool clamp_inputs,
                            bool single_obj)
 {
 	kjson::json gen = iv::nn::common::json_parse(gen_path);
@@ -63,10 +63,10 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		kay::Q hi = bnds["max"].get<kay::Q>();
 		component c;
 		if (s["range"] == "int")
-			c.type = component::INT;
+			c.type = type::INT;
 		else {
 			assert(s["range"] == "float");
-			c.type = component::REAL;
+			c.type = type::REAL;
 		}
 		dom.emplace_back(id, move(c));
 		in_vars.emplace_back(make2t(name { id }));
@@ -79,7 +79,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 					in_vars.back(),
 					make2t(cnst2 { v.get<kay::Q>() }),
 				}));
-			eta.emplace_back(make2f(lbop2 { lbop2::OR, move(safe) }));
+			eta.emplace_back(disj(move(safe)));
 		}
 	}
 	// dump_smt2(stdout, dom);
@@ -106,19 +106,19 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		const iv::nn::common::affine_matrix<float> &am = std::get<0>(f.t);
 		const auto &kernel = am.a; /* matrix<float> */
 		const vec<float> &bias = am.b;
-		fprintf(stderr, "layer %zu: w: %zu, h: %zu, bias: %zu\n",
+		note(mod_nn,"layer %zu: w: %zu, h: %zu, bias: %zu\n",
 		        layer, width(kernel), height(kernel), size(bias));
 		/* matrix-vector product */
 		assert(width(kernel) == size(out));
 		assert(height(kernel) == size(bias));
-		std::vector<sptr<term2>> next;
+		vec<sptr<term2>> next;
 		for (float b : bias)
 			next.push_back(make2t(cnst2 { kay::Q(b) }));
 		for (size_t y=0; y<height(kernel); y++)
 			for (size_t x=0; x<width(kernel); x++)
-				next[y] = make2t(bop2 { bop::ADD,
+				next[y] = make2t(bop2 { bop2::ADD,
 					next[y],
-					make2t(bop2 { bop::MUL,
+					make2t(bop2 { bop2::MUL,
 						make2t(cnst2 { kay::Q(kernel(x,y)) }),
 						out[x],
 					})
@@ -140,8 +140,8 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	if (mf2.objective.type != smlp_response::SMLP_RESPONSE_ID) {
 		std::stringstream ss;
 		ss << mf2.objective;
-		DIE(1,"unsupported objective function type, only identity is: "
-		      "%s\n", ss.str().c_str());
+		MDIE(mod_nn,1,"unsupported objective function type, only "
+		              "identity is: %s\n", ss.str().c_str());
 	}
 
 	vec<str> out_names;
@@ -155,12 +155,37 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	for (size_t i=0; i<size(out); i++)
 		outs[out_names[i]] = out[i];
 
+
+	hmap<str,ival> func_bounds;
+	if (obj_bounds) {
+		/* basically rebuild mf2.objective_scaler() for all outputs and
+		 * with kay::Q instead of double */
+		auto sc = [&](auto bnds) {
+			for (size_t i : mf2.spec.resp2spec) {
+				str lbl = mf2.spec.spec[i]["label"].get<str>();
+				const auto &b = bnds[lbl];
+				ival v = {
+					b["min"].template get<kay::Q>(),
+					b["max"].template get<kay::Q>(),
+				};
+				auto [it,ins] = func_bounds.emplace(move(lbl), move(v));
+				assert(ins);
+			}
+		};
+		using namespace iv::nn::common;
+		try {
+			sc(model_fun2::Table_proxy(file(obj_bounds, "r"), true));
+		} catch (const iv::table_exception &ex) {
+			sc(json_parse(obj_bounds));
+		}
+	}
+
 	sptr<term2> obj;
 	if (single_obj) {
 		/* apply mf2.objective: select right output(s) */
 		str obj_name = gen["objective"].get<std::string>();
-		fprintf(stderr, "obj '%s' response idx: %zd\n",
-		        obj_name.c_str(), mf2.objective.idx[0]);
+		note(mod_nn,"obj '%s' response idx: %zd\n",
+		     obj_name.c_str(), mf2.objective.idx[0]);
 		assert(mf2.objective.type == smlp_response::SMLP_RESPONSE_ID);
 		ssize_t idx = mf2.objective.idx[0];
 		assert(idx >= 0);
@@ -168,15 +193,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		// obj = out[idx];
 		assert(obj_name == out_names[idx]);
 		obj = make2t(name { move(obj_name) });
-
-		if (out_bounds)
-			obj = apply_scaler(mf2.objective_scaler(out_bounds),
-			                   obj, false);
 	} else {
-		/* Pareto */
-		assert(size(out) == 1); /* not implemented, yet */
-		obj = out[0];
-		assert(!out_bounds); /* not implemented, yet */
+		/* unknown objective(s) and we are not instructed to take the
+		 * information from GEN. */
 	}
 
 	/* construct theta */
@@ -199,14 +218,15 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 				if (delta)
 					rad *= (1 + *delta);
 				r = make2t(cnst2 { move(rad) });
-				r = make2t(bop2 { bop::MUL, move(r), abs(!delta ? e : nm) });
+				r = make2t(bop2 { bop2::MUL, move(r), abs(!delta ? e : nm) });
 			} else if (sp["type"] == "input")
 				continue;
 			else
-				DIE(1,"error: .spec contains neither 'rad-abs' "
-				      "nor 'rad-rel' for '%s'\n", n.c_str());
+				MDIE(mod_nn,1,".spec contains neither 'rad-abs' "
+				              "nor 'rad-rel' for '%s'\n",
+				     n.c_str());
 			conj.emplace_back(make2f(prop2 { LE,
-				abs(make2t(bop2 { bop::SUB, nm, e })),
+				abs(make2t(bop2 { bop2::SUB, nm, e })),
 				move(r)
 			}));
 		}
@@ -217,8 +237,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		move(dom),
 		move(obj),
 		move(outs),
+		move(func_bounds),
 		move(in_bnds),
-		make2f(lbop2 { lbop2::AND, move(eta) }),
+		conj(move(eta)),
 		true2,
 		move(theta),
 	};

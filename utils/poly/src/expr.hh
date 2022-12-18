@@ -32,6 +32,7 @@ inline const char *cmp_smt2[] = { "<=", "<", ">=", ">", "=", "distinct" };
 /* Some properties of cmp_t */
 static inline bool is_less(cmp_t c) { return (unsigned)c <= LT; }
 static inline bool is_strict(cmp_t c) { return (unsigned)c & 0x1; }
+static inline cmp_t make_strict(cmp_t c) { return (cmp_t)((unsigned)c | 0x1); }
 static inline bool is_order(cmp_t c) { return !((unsigned)c >> 2); }
 
 /* Flip a cmp_t */
@@ -96,18 +97,13 @@ struct name {
 	std::strong_ordering operator<=>(const name &b) const = default;
 };
 struct call { sptr<expr> func; vec<expr> args; };
-struct bop { enum { ADD, SUB, MUL, } op; sptr<expr> left, right; };
-struct uop { enum { UADD, USUB, } op; sptr<expr> operand; };
 struct cop { cmp_t cmp; sptr<expr> left, right; };
 struct cnst { str value; };
 
-inline const char *bop_s[] = { "+", "-", "*" };
-inline const char *uop_s[] = { "+", "-" };
-
-struct expr : sumtype<name,call,bop,uop,cop,cnst>
+struct expr : sumtype<name,call,cop,cnst>
             , std::enable_shared_from_this<expr> {
 
-	using sumtype<name,call,bop,uop,cop,cnst>::sumtype;
+	using sumtype<name,call,cop,cnst>::sumtype;
 };
 
 template <typename... Ts>

@@ -29,29 +29,23 @@ namespace smlp {
 opt<pair<double,double>>
 dbl_interval_eval(const domain &dom, const sptr<term2> &t);
 
-struct ival_solver : solver {
+struct crit_solver : acc_solver {
+
+	result check() const override { return check(dom, make2f(asserts)); }
+
+	static result check(const domain &dom, const sptr<form2> &orig);
+};
+
+struct ival_solver : acc_solver {
 
 	ival_solver(size_t max_subdivs = 0, const char *logic = nullptr)
 	: max_subdivs(max_subdivs)
 	, logic(logic ? opt<str>(str(logic)) : opt<str> {})
 	{}
 
-	void declare(const domain &d) override
-	{
-		assert(empty(dom));
-		dom = d;
-	}
-
-	void add(const sptr<form2> &f) override
-	{
-		conj.args.push_back(f);
-	}
-
-	result check() override;
+	result check() const override;
 
 private:
-	domain dom;
-	lbop2 conj { lbop2::AND, {} };
 	size_t max_subdivs;
 	opt<str> logic;
 };

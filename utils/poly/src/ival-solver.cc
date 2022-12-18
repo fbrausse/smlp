@@ -84,8 +84,14 @@ static dbl::ival eval(const hmap<str,dbl::ival> &dom, const term2 &t, hmap<void 
 	return t.match(
 	[](const cnst2 &c) {
 		return c.value.match(
-		[](const auto &v) { return dbl::ival(v); }
-		);
+		[](const kay::Z &v) { return dbl::ival(v); },
+		[](const kay::Q &v) { return dbl::ival(v); },
+		[](const Ap &v) {
+			return dbl::ival { dbl::endpts {
+				lo(dbl::ival(lo(v))),
+				hi(dbl::ival(hi(v))),
+			} };
+		});
 	},
 	[&](const name &n) {
 		auto it = dom.find(n.id);
@@ -95,20 +101,20 @@ static dbl::ival eval(const hmap<str,dbl::ival> &dom, const term2 &t, hmap<void 
 	[&](const uop2 &u) {
 		dbl::ival i = eval(dom, u.operand, m);
 		switch (u.op) {
-		case uop::UADD: break;
-		case uop::USUB: neg(i); break;
+		case uop2::UADD: break;
+		case uop2::USUB: neg(i); break;
 		}
 		return i;
 	},
 	[&](const bop2 &b) {
 		dbl::ival l = eval(dom, b.left, m);
-		if (b.op == bop::MUL && *b.left == *b.right)
+		if (b.op == bop2::MUL && *b.left == *b.right)
 			return square(l);
 		dbl::ival r = eval(dom, b.right, m);
 		switch (b.op) {
-		case bop::ADD: l += r; break;
-		case bop::SUB: l -= r; break;
-		case bop::MUL: l *= r; break;
+		case bop2::ADD: l += r; break;
+		case bop2::SUB: l -= r; break;
+		case bop2::MUL: l *= r; break;
 		}
 		return l;
 	},
@@ -127,8 +133,11 @@ static res eval(const hmap<str,dbl::ival> &dom, const form2 &f, hmap<void *,dbl:
 {
 	return f.match(
 	[&](const prop2 &p) {
-		dbl::ival v = eval(dom, bop2 { bop::SUB, p.left, p.right }, m);
-		// std::cerr << "eval: " << v;
+		dbl::ival v = eval(dom, bop2 { bop2::SUB, p.left, p.right }, m);/*
+		size_t hh = size(dom);
+		for (const auto &[n,v] : dom)
+			hh = (hh << 1) ^ std::hash<str>{}(n);
+		std::cerr << "eval " << hh << cmp_s[p.cmp] << ": " << v;*/
 		res r;
 		switch (p.cmp) {
 		case LT: r = hi(v) < 0 ? YES : lo(v) >= 0 ? NO : MAYBE; break;
@@ -231,6 +240,14 @@ static res eval(const hmap<str,dbl::ival> &dom, const form2 &f)
 	return eval(dom, f, m);
 }
 
+static bool is_bounded(const hmap<str,dbl::ival> &dom)
+{
+	for (const auto &[n,v] : dom)
+		if (!isbounded(v))
+			return false;
+	return true;
+}
+
 static res eval_products(const vec<pair<str,vec<dbl::ival>>> &p,
                          hmap<str,dbl::ival> &q,
                          opt<hmap<str,dbl::ival>> &sat_model,
@@ -242,7 +259,9 @@ static res eval_products(const vec<pair<str,vec<dbl::ival>>> &p,
 	forall_products(p, q, [&](const hmap<str,dbl::ival> &dom) {
 		if (r == YES)
 			return;
-		res s = eval(dom, conj);
+		res s = eval(dom, conj);/*
+		std::cerr << "subdiv on " << (is_bounded(dom) ? "bounded" : "unbounded")
+		          << " domain -> " << s << "\n";*/
 		switch (s.v) {
 		case res::YES:
 			if (!sat_model)
@@ -261,9 +280,8 @@ static vec<dbl::ival> split_ival(const dbl::ival &v)
 	double m = mid(v);
 	dbl::ival a = dbl::endpts { lo(v), m };
 	vec<dbl::ival> r = { a };
-	double bl = nextafter(m, INFINITY);
-	if (bl <= hi(v))
-		r.emplace_back(dbl::endpts { bl, hi(v) });
+	if (m < hi(v))
+		r.emplace_back(dbl::endpts { m, hi(v) });
 	return r;
 }
 
@@ -272,13 +290,28 @@ static sptr<form2> in_domain(const hmap<str,dbl::ival> &dom)
 	vec<sptr<form2>> c;
 	for (const auto &[var,k] : dom) {
 		sptr<term2> v = make2t(name { var });
-		c.emplace_back(make2f(prop2 { GE, v, make2t(cnst2 { kay::Q(lo(k)) }) }));
-		c.emplace_back(make2f(prop2 { LE, v, make2t(cnst2 { kay::Q(hi(k)) }) }));
+		assert(!std::isnan(lo(k)));
+		assert(!std::isnan(hi(k)));
+		if (std::isfinite(lo(k)))
+			c.emplace_back(make2f(prop2 { GE, v, make2t(cnst2 { kay::Q(lo(k)) }) }));
+		if (std::isfinite(hi(k)))
+			c.emplace_back(make2f(prop2 { LE, v, make2t(cnst2 { kay::Q(hi(k)) }) }));
 	}
 	return conj(move(c));
 }
 
-static result check_critical_points(const domain &dom, const sptr<form2> &orig)
+static bool contains_ite(const sptr<term2> &t)
+{
+	return t->match(
+	[](const name &) { return false; },
+	[](const cnst2 &) { return false; },
+	[](const bop2 &b) { return contains_ite(b.left) || contains_ite(b.right); },
+	[](const uop2 &u) { return contains_ite(u.operand); },
+	[](const ite2 &) { return true; }
+	);
+}
+
+result crit_solver::check(const domain &dom, const sptr<form2> &orig)
 {
 	/* Check whether domain is bounded and if so, generate the list of its
 	 * corner points */
@@ -303,8 +336,7 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		n_corners *= size(values);
 		corners.emplace_back(var, move(values));
 	}
-	fprintf(stderr, "bounded domain: %d, #corners: %zu\n",
-	        bounded_domain, n_corners);
+	note(mod_crit,"bounded domain: %d, #corners: %zu\n", bounded_domain, n_corners);
 	if (!bounded_domain)
 		return unknown { "unbounded domain" };
 
@@ -312,27 +344,44 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 	 * so, produce a formula stating that all should be equal to zero */
 	struct {
 		const domain &dom;
-		lbop2 grad_eq_0 = { lbop2::AND, {} };
+		vec<sptr<form2>> grad_eq_0 = {};
 		bool deriv_exists = true;
+		bool only_order_props = true;
+		bool known_continuous = true;
+		bool nonlinear = false;
 
 		void operator()(const sptr<form2> &f)
 		{
-			if (!deriv_exists)
+			if (0 && (!deriv_exists || !only_order_props))
 				return;
 			f->match(
 			[&](const prop2 &p) {
-				sptr<term2> diff = make2t(bop2 {
-					bop::SUB,
+				only_order_props &= is_order(p.cmp);
+				if (0 && !only_order_props)
+					return;
+				sptr<term2> diff = simplify(make2t(bop2 {
+					bop2::SUB,
 					p.left,
 					p.right,
-				});
+				}));
+				dbg(mod_prob,"partial derivatives of: ") && (
+					dump_smt2(stderr, *diff),
+					fprintf(stderr, "\n"));
+				known_continuous &= !contains_ite(diff);
 				for (const auto &[var,_] : dom) {
 					sptr<term2> d = derivative(diff, var);
 					if (!d) {
 						deriv_exists = false;
 						return;
 					}
-					grad_eq_0.args.push_back(make2f(prop2 {
+					d = simplify(d);
+					if (is_nonlinear(d)) {
+						nonlinear = true;
+						dbg(mod_prob,"partial derivate is non-linear: ") && (
+							dump_smt2(stderr, *d),
+							fprintf(stderr, "\n"));
+					}
+					grad_eq_0.push_back(make2f(prop2 {
 						EQ,
 						d,
 						zero
@@ -350,12 +399,18 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 		}
 	} check { dom, };
 	check(orig);
-	fprintf(stderr, "derivatives exist: %d\n", check.deriv_exists);
+	note(mod_crit,"derivatives exist: %d, only ordered comparisons: %d, "
+	              "known_continuous: %d, nonlinear: %d\n", check.deriv_exists,
+	              check.only_order_props, check.known_continuous, check.nonlinear);
 	if (!check.deriv_exists)
-		return unknown { "derivative not defined everywhere" };
+		return unknown { "derivative may not be defined everywhere" };
+	if (!check.only_order_props)
+		return unknown { "critical points cannot solve (dis-)equality constraints" };
+	if (check.nonlinear)
+		return unknown { "cannot reason about critical points of functions with non-linear partial derivatives" };
 
 	/* find all critical points of all functions in the problem */
-	sptr<form2> f = make2f(move(check.grad_eq_0));
+	sptr<form2> f = conj(move(check.grad_eq_0));
 	/* restrict domain to only used variables, required for
 	 * all_solutions() to terminate */
 	domain sdom;
@@ -372,7 +427,11 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 			[](const ival &i) { return make2t(cnst2 { mid(i) }); }
 			));
 		}
-
+/*
+	fprintf(stderr, "partial derivatives equal zero: ");
+	dump_smt2(stderr, *conj({ domain_constraints(sdom), f }), false);
+	fprintf(stderr, "\n");
+*/
 	opt<hmap<str,sptr<term2>>> sat_model;
 	auto eval = [&](const hmap<str,sptr<term2>> &dom) {
 		if (sat_model)
@@ -386,32 +445,50 @@ static result check_critical_points(const domain &dom, const sptr<form2> &orig)
 			sat_model = dom;
 	};
 
+	info(mod_crit,"solving on critical points and %zu domain corners...\n",
+	     n_corners);
+
+#if 0
+	sptr<form2> tgt = disj({ neg(f), orig });
+	uptr<solver> slv = mk_solver0(false, smt2_logic_str(dom, tgt).c_str());
+	slv->declare(dom);
+	slv->add(tgt);
+	result r = slv->check();
+	if (r.get<sat>()) {
+		info(mod_crit,"critical -> target is SAT\n");
+		return r;
+	} else {
+		info(mod_crit,"critical -> target is not SAT\n");
+	}
+#endif
+
 	timing t0;
 	size_t n = 0;
 	for (hmap<str,sptr<term2>> crit : all_solutions(sdom, f)) {
 		crit.insert(begin(remaining_vars), end(remaining_vars));
-		fprintf(stderr, "critical point:");
-		for (const auto &[v,c] : crit)
-			fprintf(stderr, " %s=%s", v.c_str(),
-			        to_string(c->get<cnst2>()->value).c_str());
-		fprintf(stderr, "\n");
+		if (note(mod_crit,"critical point:")) {
+			for (const auto &[v,c] : crit)
+				fprintf(stderr, " %s=%s", v.c_str(),
+					to_string(c->get<cnst2>()->value).c_str());
+			fprintf(stderr, "\n");
+		}
 		eval(crit);
 		n++;
 	}
 	timing t1;
-	fprintf(stderr, "eval on %zu critical points: %d in %.3fs\n",
-	        n, sat_model ? true : false, (double)(t1 - t0));
+	note(mod_crit,"eval on %zu critical points: %d in %.3fs\n",
+	              n, sat_model ? true : false, (double)(t1 - t0));
 	hmap<str,sptr<term2>> empty;
 	forall_products(corners, empty, eval);
 	timing t2;
-	fprintf(stderr, "monotonicity result: %d in %.3fs\n",
-	        sat_model ? true : false, (double)(t2 - t1));
+	note(mod_crit,"monotonicity result: %d in %.3fs\n",
+	              sat_model ? true : false, (double)(t2 - t1));
 	if (sat_model)
 		return sat { move(*sat_model) };
 	return unsat {};
 }
 
-result ival_solver::check()
+result ival_solver::check() const
 {
 	opt<hmap<str,dbl::ival>> sat_model;
 	vec<hmap<str,dbl::ival>> maybes, nos;
@@ -435,21 +512,34 @@ result ival_solver::check()
 				ivs.emplace_back(to_ival(v));
 			d.emplace_back(var, move(ivs));
 		},
-		[&,var=var](const ival &i) {
-			c.emplace(var, dbl::endpts {
-				lo(to_ival(i.lo)),
-				hi(to_ival(i.hi)),
-			});
+		[&,var=var,k=k](const ival &i) {
+			switch (k.type) {
+			case type::INT: {
+				vec<dbl::ival> ivs;
+				using namespace kay;
+				for (kay::Z z = ceil(i.lo), u = floor(i.hi); z <= u; z++)
+					ivs.emplace_back(z);
+				d.emplace_back(var, move(ivs));
+				break;
+			}
+			case type::REAL:
+				c.emplace(var, dbl::endpts {
+					lo(to_ival(i.lo)),
+					hi(to_ival(i.hi)),
+				});
+				break;
+			}
 		}
 		);
+
+	info(mod_ival,"solving...\n");
 
 	/* For any combination of assignments to discrete vars interval-evaluate
 	 * the formula. It is SAT if there is (at least) one combination that
 	 * makes it evaluate to YES and otherwise UNKNOWN if there is (at least)
 	 * one combination that makes it MAYBE and all others evaluate to NO. */
-	r = eval_products(d, c, sat_model, maybes, nos, conj);
-	fprintf(stderr, "lvl -1 it +%zun%zu\n",
-	        size(maybes), size(nos));
+	r = eval_products(d, c, sat_model, maybes, nos, asserts);
+	note(mod_ival,"lvl -1 it +%zun%zu\n", size(maybes), size(nos));
 
 	for (size_t i=0, j; r == MAYBE && i < max_subdivs; i++) {
 		vec<hmap<str,dbl::ival>> maybes2;
@@ -469,27 +559,30 @@ result ival_solver::check()
 				n *= size(sp.back().second);
 			}
 			N += n;
-			fprintf(stderr, "lvl %zu it %zu/%zu+%zun%zu: checking %s subdivisions...",
-			        i, j++, size(maybes), size(maybes2), size(nos),
-			        n.get_str().c_str());
+			bool logs = note(mod_ival,
+				"lvl %zu it %zu/%zu+%zun%zu: checking %s subdivisions...",
+				i, j++, size(maybes), size(maybes2), size(nos),
+				n.get_str().c_str());
 			fflush(stderr);
 			hmap<str,dbl::ival> ndom;
 			size_t old_m = size(maybes2);
 			size_t old_n = size(nos);
-			res s = eval_products(sp, ndom, sat_model, maybes2, nos, conj);
+			res s = eval_products(sp, ndom, sat_model, maybes2, nos, asserts);
 			if (s == NO) {
 				nos.erase(begin(nos) + old_n, end(nos));
 				nos.push_back(dom);
 			}
-			std::cerr << " -> " << s;
-			if (s == MAYBE)
-				std::cerr << " * " << (size(maybes2) - old_m);
-			std::cerr << "\n";
+			if (logs) {
+				std::cerr << " -> " << s;
+				if (s == MAYBE)
+					std::cerr << " * " << (size(maybes2) - old_m);
+				std::cerr << "\n";
+			}
 			r |= s;
 		}
 		timing t1;
-		fprintf(stderr, "checked %s subdivisions in %.3gs\n",
-		        N.get_str().c_str(), (double)(t1 - t0));
+		note(mod_ival,"checked %s subdivisions in %.3gs\n",
+			N.get_str().c_str(), (double)(t1 - t0));
 		maybes = move(maybes2);
 	}
 	}
@@ -507,10 +600,11 @@ result ival_solver::check()
 		return unsat {};
 	}
 
-	sptr<form2> orig = to_nnf(simplify(make2f(conj)));
+	sptr<form2> orig = to_nnf(simplify(make2f(asserts)));
+#if 0
 	if (result r = check_critical_points(dom, orig); !r.get<unknown>())
 		return r;
-
+#endif
 	const char *the_logic = logic ? logic->c_str() : nullptr;
 #if 0
 	for (const auto &reg : maybes) {
@@ -523,7 +617,7 @@ result ival_solver::check()
 			return r;
 	}
 	return unsat {};
-#else
+#elif 0
 	uptr<solver> s = mk_solver0(false, the_logic);
 	s->declare(dom);
 	s->add(orig);
