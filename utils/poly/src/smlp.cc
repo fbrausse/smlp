@@ -1161,49 +1161,6 @@ parse_search_range(char *threshs_s, const char *max_prec_s,
 	}
 }
 
-static void set_loglvl(char *arg)
-{
-	if (!arg) {
-		for (const auto &[n,m] : Module::modules)
-			m->lvl = (loglvl)((int)m->lvl + 1);
-		return;
-	}
-	hmap<strview,loglvl> values = {
-		{ "none" , QUIET },
-		{ "error", ERROR },
-		{ "warn" , WARN },
-		{ "info" , INFO },
-		{ "note" , NOTE },
-		{ "debug", DEBUG },
-	};
-	for (char *s = NULL, *t = strtok_r(arg, ",", &s); t;
-	     t = strtok_r(NULL, ",", &s)) {
-		char *ss, *mod = strtok_r(t, "=", &ss);
-		assert(mod);
-		char *lvl = strtok_r(NULL, "=", &ss);
-		if (!lvl)
-			swap(mod, lvl);
-		if (mod && lvl)
-			dbg(mod_prob,"setting log-level of '%s' to '%s'\n",
-			             mod, lvl);
-		else
-			dbg(mod_prob,"setting log-level to '%s'\n", lvl);
-		auto jt = values.find(lvl);
-		if (jt == end(values))
-			MDIE(mod_smlp,1,"unknown log level '%s' given in LOGLVL\n",
-			     lvl);
-		if (mod) {
-			auto it = Module::modules.find(mod);
-			if (it == end(Module::modules))
-				MDIE(mod_smlp,1,"unknown module '%s' given in "
-				                "LOGLVL\n",mod);
-			it->second->lvl = jt->second;
-		} else
-			for (const auto &[n,m] : Module::modules)
-				m->lvl = jt->second;
-	}
-}
-
 static bool is_constant(domain dom, const sptr<term2> &t, const hset<str> &wrt)
 {
 	hmap<str,sptr<term2>> rename;

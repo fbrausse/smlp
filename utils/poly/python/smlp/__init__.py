@@ -20,14 +20,17 @@ __version__ = libsmlp._version()
 
 def Cnst(c):
 	"""
-	Creates a constant term2 from the Python object c. Supported types of c:
-	int, float, fractions.Fraction and fractions.Decimal.
+	Either creates a constant term2 from the Python object c, or destructs
+	a constant term2 into its value.
+
+	For the first case, supported types of c are:
+	int, float, fractions.Fraction, fractions.Decimal and libsmlp.Q.
 	Raises a TypeError in case the type of c does not match one of these.
 	Raises a ValueError in case the representation of c could not be parsed.
 	This latter case should never happen.
 	"""
 	# sys.set_int_max_str_digits()
-	return libsmlp._mk_cnst(Q(c))
+	return libsmlp._dt_cnst(c) if isinstance(c, term2) else libsmlp._mk_cnst(Q(c))
 
 def And(*args):
 	"""
@@ -108,9 +111,15 @@ def Q(c, *args):
 		return c
 	else:
 		raise TypeError("unsupported type of c in Q(c): " + repr(type(c)))
-	if not r:
+	if r is None:
 		raise ValueError("cannot interpret " + repr(c) + " as a rational constant")
-	return r.value
+	return r
+
+libsmlp.component.__repr__ = lambda self: (
+	'<' + self.__module__ + '.component(' + repr(self.type) +
+	'>'
+)
+libsmlp._domain_entry.__iter__ = lambda self: (self.name, self.comp).__iter__()
 
 def parse_poly(domain_path : str, expr_path : str, *,
                python_compat : bool = False,

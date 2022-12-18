@@ -199,6 +199,7 @@ result z3_solver::check()
 	switch (r) {
 	case z3::sat: {
 		z3::model m = slv.get_model();
+		dbg(mod_z3, "model #const: %zu, #symbs: %zu\n", m.num_consts(), size(symbols));
 		assert(m.num_consts() == size(symbols));
 		hmap<str,sptr<term2>> r;
 		for (size_t i=0; i<size(symbols); i++)

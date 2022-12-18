@@ -11,9 +11,12 @@
 namespace smlp {
 
 /* Explicit list of rational values */
-struct list { vec<kay::Q> values; };
+struct list {
+	vec<kay::Q> values;
+	bool operator==(const list &) const = default;
+};
 
-struct entire {};
+struct entire { bool operator==(const entire &) const = default; };
 
 /* A component (of the domain) is either an interval or a list of rational
  * values */
@@ -35,6 +38,8 @@ struct component {
 		}
 		);
 	}
+
+	bool operator==(const component &) const = default;
 };
 
 /* Translates a component 'rng' and the appropriate variable name 'var' into a
@@ -73,6 +78,9 @@ struct domain : vec<pair<str,component>> {
 				return &c;
 		return nullptr;
 	}
+
+	using vec<pair<str,component>>::vec;
+	using vec<pair<str,component>>::operator[];
 };
 
 sptr<form2> domain_constraints(const domain &d);

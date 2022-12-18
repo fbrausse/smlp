@@ -53,6 +53,8 @@ struct ival {
 	{
 		return !disjoint(*this, o);
 	}
+
+	bool operator==(const ival &) const = default;
 };
 
 /* A "butchered" algebraic real number in the sense that we can't refine its
