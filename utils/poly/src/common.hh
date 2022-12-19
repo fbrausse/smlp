@@ -257,7 +257,7 @@ struct Module {
 };
 
 extern Module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn, mod_poly, mod_prob;
-extern Module mod_smlp, mod_cand, mod_coex;
+extern Module mod_smlp, mod_cand, mod_coex, mod_par;
 
 extern opt<str> ext_solver_cmd;
 extern opt<str> inc_solver_cmd;

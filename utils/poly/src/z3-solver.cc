@@ -162,7 +162,7 @@ static cnst2 parse_z3_cnst(const str &id, const z3::expr &e)
 
 result z3_solver::check()
 {
-	info(mod_z3,"solving...\n");
+	note(mod_z3,"solving...\n");
 
 	/* Z3 overrides the SIGINT handler with something that does not work
 	 * reliably; we create a timer to signal us and then replace the SIGINT
@@ -199,7 +199,7 @@ result z3_solver::check()
 	switch (r) {
 	case z3::sat: {
 		z3::model m = slv.get_model();
-		dbg(mod_z3, "model #const: %zu, #symbs: %zu\n", m.num_consts(), size(symbols));
+		dbg(mod_z3, "model #const: %u, #symbs: %zu\n", m.num_consts(), size(symbols));
 		assert(m.num_consts() == size(symbols));
 		hmap<str,sptr<term2>> r;
 		for (size_t i=0; i<size(symbols); i++)

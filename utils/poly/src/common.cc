@@ -64,6 +64,7 @@ Module smlp::mod_z3   { "z3"  ,          CSI COL_FG_B COL_BLUE    "m" };
 Module smlp::mod_ext  { "ext" ,          CSI COL_FG   COL_CYAN    "m" };
 Module smlp::mod_nn   { "nn"  ,          CSI COL_FG   COL_BLUE    "m" };
 Module smlp::mod_poly { "poly",          CSI COL_FG   COL_BLUE    "m" };
+Module smlp::mod_par  { "par" ,          CSI COL_FG_B COL_MAGENTA "m" };
 
 int solver::alg_dec_prec_approx = 10;
 opt<str> smlp::ext_solver_cmd;

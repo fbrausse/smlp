@@ -462,6 +462,10 @@ optimize_EA(cmp_t direction,
 		exists->add(eta);
 		exists->add(alpha);
 		exists->add(target);
+		if (dbg(mod_cand, "target: ")) {
+			dump_smt2(stderr, *target);
+			fprintf(stderr, "\n");
+		}
 
 		for (vec<smlp_result> counter_examples;;) {
 			note(mod_cand,"searching candidate %s T ~ %g...\n",
@@ -513,7 +517,7 @@ optimize_EA(cmp_t direction,
 				     u->reason.c_str());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
-				info(mod_prob,"found solution %s T ~ %g\n",
+				note(mod_prob,"found solution %s T ~ %g\n",
 				     cmp_s[direction], T.get_d());
 				results.emplace_back(T, move(exists), candidate,
 				                     obj_range.clone());
@@ -551,6 +555,21 @@ struct extended : sumtype<T,infty> {
 	}
 };
 
+static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
+{
+	size_t k = 0;
+	vec<const pair<const str,sptr<term2>> *> v;
+	for (const auto &p : model) {
+		k = max(k, p.first.length());
+		v.emplace_back(&p);
+	}
+	std::ranges::sort(v, {}, [](const auto *a) -> strview { return a->first; });
+	for (const auto *p : v)
+		fprintf(f, "%*s%*s = %s ~ %g\n", indent, "", -(int)k, p->first.c_str(),
+		        to_string(p->second->get<cnst2>()->value).c_str(),
+		        to_Q(p->second->get<cnst2>()->value).get_d());
+}
+
 struct Pareto {
 
 	domain dom;
@@ -562,10 +581,11 @@ struct Pareto {
 	vec<opt<smlp_result_base>> s;
 	hset<size_t> K; /* bounds that can still be raised by at least eps */
 	hset<size_t> K_prev;
+	ival obj_range;
 
 	Pareto(domain dom, vec<sptr<term2>> objs, cmp_t direction,
 	       sptr<form2> alpha, sptr<form2> beta, sptr<form2> eta,
-	       theta_t theta, kay::Q eps)
+	       theta_t theta, kay::Q eps, ival obj_range)
 	: dom(move(dom))
 	, objs(move(objs))
 	, direction(move(direction))
@@ -576,6 +596,7 @@ struct Pareto {
 	, eps(move(eps))
 	, s(k())
 	, K{}
+	, obj_range(move(obj_range))
 	{
 		/* K = {1,...,k} \ dom s */
 		for (size_t i=0; i<k(); i++)
@@ -618,7 +639,7 @@ struct Pareto {
 		if (!min_objs)
 			return infty { is_less(direction) ? false : true };
 
-		bounded_search_ival range(ival { 0, 1 }, eps);
+		bounded_search_ival range(obj_range, eps);
 		str logic = smt2_logic_str(dom, conj({
 			alpha, beta, eta_F_t,
 			make2f(prop2 { LT, min_objs, zero }),
@@ -689,8 +710,10 @@ struct Pareto {
 			if (!do_cmp<kay::Q>(bt.get<smlp_result_base>()->threshold, direction, s[j]->threshold + eps)) {
 				/* cannot increase bound on o_j simultaneously
 				 * by epsilon */
-				warn(mod_prob,"fixing objective %zu on threshold %s ~ %g\n",
-				     j, s[j]->threshold.get_str().c_str(), s[j]->threshold.get_d());
+				if (note(mod_par,"fixing objective %zu on threshold %s ~ %g with model:\n",
+				         j, s[j]->threshold.get_str().c_str(), s[j]->threshold.get_d())) {
+					print_model(stderr, s[j]->point, 2);
+				}
 				KN.erase(j);
 			}
 		}
@@ -707,20 +730,6 @@ optimize_pareto_C(const domain &dom,
 	
 }
 */
-
-static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
-{
-	size_t k = 0;
-	vec<const pair<const str,sptr<term2>> *> v;
-	for (const auto &p : model) {
-		k = max(k, p.first.length());
-		v.emplace_back(&p);
-	}
-	std::ranges::sort(v, {}, [](const auto *a) -> strview { return a->first; });
-	for (const auto *p : v)
-		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, p->first.c_str(),
-		        to_string(p->second->get<cnst2>()->value).c_str());
-}
 
 template <typename T>
 static bool from_string(const char *s, T &v)
@@ -1613,8 +1622,10 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		MDIE(mod_smlp,1,"-T THRESHS is not supported for Pareto optimization\n");
 	if (max_prec_s)
 		MDIE(mod_smlp,1,"-P PREC is not supported for Pareto optimization\n");
-	if (obj_range_s)
-		MDIE(mod_smlp,1,"-R LO,HI is not supported for Pareto optimization\n");
+
+	if (!obj_range_s)
+		MDIE(mod_smlp,1,"-R LO,HI required for Pareto optimization\n");
+	ival obj_range = get_obj_range(obj_range_s, dom, nullptr);
 
 	if (!eps_s)
 		MDIE(mod_smlp,1,"-E EPSILON is not set for Pareto optimization\n");
@@ -1622,7 +1633,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	if (!from_string(eps_s, eps))
 		MDIE(mod_smlp,1,"cannot interpret argument '%s' to -E as a "
 		                "rational number\n", eps_s);
-	Pareto pi(dom, pareto, c, alpha, beta, eta, theta, eps);
+	Pareto pi(dom, pareto, c, alpha, beta, eta, theta, eps, obj_range);
 	assert(!pi.done());
 	while (!pi.done())
 		pi.step();
@@ -1631,7 +1642,9 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			assert(pi.s[i]);
 			fprintf(stderr, "  (%s ", cmp_smt2[c]);
 			smlp::dump_smt2(stderr, *pareto_org[i]);
-			fprintf(stderr, " %s)\n", kay::to_string(pi.s[i]->threshold).c_str());
+			fprintf(stderr, " %s ~ %g)\n",
+			        kay::to_string(pi.s[i]->threshold).c_str(),
+			        pi.s[i]->threshold.get_d());
 		}
 	if (info(mod_prob,"computed point %s-close to Pareto front:\n", eps.get_str().c_str()))
 		print_model(stderr, pi.last_point().point, 2);
