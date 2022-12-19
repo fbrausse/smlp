@@ -58,7 +58,7 @@ struct infix_parser {
 				s++;
 			}
 			type t = dot ? FLOAT : INT;
-			if (strchr("eE", *s)) {
+			if (*s && strchr("eE", *s)) {
 				t = FLOAT;
 				s++;
 				if (strchr("+-", *s))
