@@ -116,7 +116,7 @@ def Q(c, *args):
 	return r
 
 libsmlp.component.__repr__ = lambda self: (
-	'<' + self.__module__ + '.component(' + repr(self.type) +
+	'<' + self.__module__ + '.component of type ' + repr(self.type) +
 	'>'
 )
 libsmlp._domain_entry.__iter__ = lambda self: (self.name, self.comp).__iter__()
@@ -135,3 +135,9 @@ def parse_nn(gen_path : str, hdf5_path : str, spec_path : str,
              single_obj : bool = False):
 	return libsmlp._parse_nn(gen_path, hdf5_path, spec_path, io_bounds_path,
 	                         clamp_inputs, single_obj)
+
+del domain.append
+del domain.extend
+
+def domain(comps : dict):
+	return libsmlp._mk_domain(comps)

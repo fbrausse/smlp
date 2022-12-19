@@ -458,7 +458,7 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	/* missing: all_eq, is_linear */
 
 	/* exported nn.hh API */
-	class_<pre_problem>("pre_problem", no_init)
+	class_<pre_problem>("pre_problem")
 		.def_readwrite("dom", &pre_problem::dom)
 		.def_readwrite("obj", &pre_problem::obj)
 		.def_readwrite("funcs", &pre_problem::funcs)
@@ -539,11 +539,11 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	class_<domain>("domain", no_init)
 		.def(vector_indexing_suite<domain>())
 		;
-	class_<typename domain::value_type>("_domain_entry")
+	class_<typename domain::value_type>("_domain_entry", no_init)
 		.def_readwrite("name", &domain::value_type::first)
 		.def_readwrite("comp", &domain::value_type::second)
 		;
-	// def("_mk_domain", convert_domain_dict);
+	def("_mk_domain", convert_domain_dict);
 	// to_python_converter<domain,domain_to_dict,false>();
 
 	class_<sat>("sat", no_init)
