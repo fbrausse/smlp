@@ -96,7 +96,9 @@ struct solver {
 		bool empty() const { return !r.get<sat>(); }
 	};
 
-	struct all_solutions_iter_owned : std::ranges::owning_view<all_solutions_iter> {
+#if __GNUC__ >= 12
+	struct all_solutions_iter_owned : std::ranges::owning_view<all_solutions_iter>
+	{
 		uptr<solver> s;
 
 		explicit all_solutions_iter_owned(uptr<solver> s)
@@ -104,6 +106,17 @@ struct solver {
 		, s(move(s))
 		{}
 	};
+#else
+	struct all_solutions_iter_owned : all_solutions_iter
+	{
+		uptr<solver> s;
+
+		explicit all_solutions_iter_owned(uptr<solver> s)
+		: all_solutions_iter(*s)
+		, s(move(s))
+		{}
+	};
+#endif
 
 	friend solver::all_solutions_iter all_solutions(solver &s)
 	{
@@ -111,8 +124,10 @@ struct solver {
 	}
 };
 
+#if __GNUC__ >= 12
 static_assert(std::ranges::input_range<solver::all_solutions_iter>);
 static_assert(std::ranges::view<solver::all_solutions_iter_owned>);
+#endif
 
 struct acc_solver : solver {
 

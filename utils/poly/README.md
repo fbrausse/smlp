@@ -123,7 +123,7 @@ Run:
 
 The resulting binary will be located in `build/src/smlp`.
 
-A compiler supporting C++20 is required (GCC >= 12) as well as:
+A compiler supporting C++20 is required (GCC >= 11, clang >= 11) as well as:
 
 - the kay library <https://github.com/fbrausse/kay>
 

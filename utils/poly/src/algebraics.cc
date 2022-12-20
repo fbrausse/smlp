@@ -152,8 +152,10 @@ str upoly<T>::get_str(str var) const
 	return to_string(to_term2(make2t(name { move(var) })));
 }
 
-template class upoly<kay::Z>;
-template class upoly<kay::Q>;
+namespace smlp {
+template struct upoly<kay::Z>;
+template struct upoly<kay::Q>;
+}
 
 str A::get_str() const
 {
