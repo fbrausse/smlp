@@ -410,8 +410,6 @@ static void trace_result(FILE *f, const char *lbl, const result &r,
 	fprintf(f, "\n");
 }
 
-typedef fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> theta_t;
-
 static vec<smlp_result>
 optimize_EA(cmp_t direction,
             const domain &dom,

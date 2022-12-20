@@ -169,16 +169,6 @@ inline const sptr<form2> false2 = disj({});
 inline const sptr<term2> zero   = make2t(cnst2 { kay::Z(0) });
 inline const sptr<term2> one    = make2t(cnst2 { kay::Z(1) });
 
-/* Absolute value on term2, encoded by ite2 on comparing with zero */
-inline sptr<term2> abs(const sptr<term2> &e)
-{
-	return make2t(ite2 {
-		make2f(prop2 { LT, e, zero }),
-		make2t(uop2 { uop2::USUB, e }),
-		e
-	});
-}
-
 /* Evaluate known function symbols in 'funs' that occur as a 'call' application
  * in the expr 'e'. Results in a term2 term. */
 typedef sumtype<sptr<term2>,sptr<form2>> expr2s;
@@ -198,6 +188,89 @@ sptr<term2> unroll_cnst_Q(const cnst &c);
 
 expr2s unroll(const expr &e, const unroll_funs_t &funs,
               fun<sptr<term2>(const cnst &)> ip_cnst = unroll_cnst_Q);
+
+namespace expr2_ops {
+static inline sptr<term2> operator*(sptr<term2> a, sptr<term2> b)
+{
+	return make2t(bop2 { bop2::MUL, move(a), move(b) });
+}
+static inline sptr<term2> & operator*=(sptr<term2> &a, sptr<term2> b)
+{
+	a = move(a) * move(b);
+	return a;
+}
+static inline sptr<term2> operator+(sptr<term2> a, sptr<term2> b)
+{
+	return make2t(bop2 { bop2::ADD, move(a), move(b) });
+}
+static inline sptr<term2> & operator+=(sptr<term2> &a, sptr<term2> b)
+{
+	a = move(a) + move(b);
+	return a;
+}
+static inline void fma(sptr<term2> &a, sptr<term2> b, sptr<term2> c)
+{
+	a += move(b) * move(c);
+}
+static inline sptr<term2> operator-(sptr<term2> a, sptr<term2> b)
+{
+	return make2t(bop2 { bop2::SUB, move(a), move(b) });
+}
+static inline sptr<term2> operator-=(sptr<term2> &a, sptr<term2> b)
+{
+	a = move(a) - move(b);
+	return a;
+}
+static inline sptr<term2> operator+(sptr<term2> a)
+{
+	return make2t(uop2 { uop2::UADD, move(a) });
+}
+static inline sptr<term2> operator-(sptr<term2> a)
+{
+	return make2t(uop2 { uop2::USUB, move(a) });
+}
+static inline sptr<term2> var(str n)
+{
+	return make2t(name { move(n) });
+}
+static inline sptr<term2> cQ(kay::Q q)
+{
+	return make2t(cnst2 { move(q) });
+}
+template <char... cs>
+static inline sptr<term2> operator""_Q()
+{
+	char str[] = { cs..., '\0', };
+	return cQ(kay::Q_from_str(str));
+}
+static inline sptr<term2> pow(sptr<term2> a, ssize_t n)
+{
+	return *unroll_expz({ a, make2t(cnst2 { kay::Z(n) }) }).get<sptr<term2>>();
+}
+
+template <cmp_t c>
+static inline sptr<form2> cmp(sptr<term2> a, sptr<term2> b)
+{
+	return make2f(prop2 { c, move(a), move(b) });
+}
+
+static inline sptr<form2> cmp(sptr<term2> a, cmp_t c, sptr<term2> b)
+{
+	return make2f(prop2 { c, move(a), move(b) });
+}
+}
+
+static inline sptr<term2> ite(sptr<form2> c, sptr<term2> y, sptr<term2> n)
+{
+	return make2t(ite2 { move(c), move(y), move(n) });
+}
+
+/* Absolute value on term2, encoded by ite2 on comparing with zero */
+inline sptr<term2> abs(const sptr<term2> &e)
+{
+	using namespace expr2_ops;
+	return ite(cmp<LT>(e, zero), -e, e);
+}
 
 /* Substitute all 'name' expressions with id in 'repl' by another expression. */
 sptr<term2> subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl);

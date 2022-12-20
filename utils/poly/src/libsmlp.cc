@@ -484,7 +484,7 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	def("set_loglvl", set_loglvl);
 
 	/* exported domain.hh API */
-	class_<component>("component", init<smlp::entire,smlp::type>())
+	class_<component>("component", no_init)
 		.def_readonly("range", &component::range)
 		.def_readwrite("type", &component::type)
 		;
@@ -499,9 +499,11 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	def("_mk_component_ival", mk_component_ival);
 	def("_mk_component_list", mk_component_list);
 
+/*
 	class_<kay::Z>("Z", init<signed long>())
 		.def(init<const char *>())
 		.def("__str__", Z_str);
+*/
 	class_<kay::Q>("Q", init<signed long>())
 		.def(init<const char *>())
 		.def(init<double>())

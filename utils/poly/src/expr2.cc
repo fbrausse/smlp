@@ -163,12 +163,13 @@ expr2s smlp::unroll(const expr &e,
 
 sptr<form2> smlp::subst(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 {
+	using expr2_ops::cmp;
 	return f->match(
 	[&](const prop2 &p){
 		sptr<term2> l = subst(p.left, repl);
 		sptr<term2> r = subst(p.right, repl);
 		return l == p.left && r == p.right
-		     ? f : make2f(prop2 { p.cmp, move(l), move(r) });
+		     ? f : cmp(move(l), p.cmp, move(r));
 	},
 	[&](const lbop2 &b){
 		vec<sptr<form2>> a = b.args;
@@ -178,7 +179,7 @@ sptr<form2> smlp::subst(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 	},
 	[&](const lneg2 &n){
 		sptr<form2> m = subst(n.arg, repl);
-		return m == n.arg ? f : make2f(lneg2 { move(m) });
+		return m == n.arg ? f : neg(move(m));
 	}
 	);
 }
@@ -206,7 +207,7 @@ sptr<term2> smlp::subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl)
 		sptr<term2> y = subst(i.yes, repl);
 		sptr<term2> n = subst(i.no, repl);
 		return c == i.cond && y == i.yes && n == i.no
-		     ? e : make2t(ite2 { move(c), move(y), move(n) });
+		     ? e : ite(move(c), move(y), move(n));
 	}
 	);
 }
@@ -240,6 +241,7 @@ bool smlp::is_ground(const sptr<term2> &e)
 
 sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 {
+	using expr2_ops::cmp;
 	return f->match(
 	[&](const prop2 &p) {
 		sptr<term2> l = cnst_fold(p.left, repl);
@@ -248,7 +250,7 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &r
 		const cnst2 *rc = r->get<cnst2>();
 		if (!lc || !rc)
 			return l == p.left && r == p.right ? f
-			     : make2f(prop2 { p.cmp, move(l), move(r) });
+			     : cmp(move(l), p.cmp, move(r));
 		bool v = do_cmp(to_Q(lc->value), p.cmp, to_Q(rc->value));
 		return v ? true2 : false2;
 	},
@@ -276,7 +278,7 @@ sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &r
 			return false2;
 		if (*o == *false2)
 			return true2;
-		return o == n.arg ? f : make2f(lneg2 { move(o) });
+		return o == n.arg ? f : neg(move(o));
 	}
 	);
 }
@@ -427,6 +429,7 @@ hset<str> smlp::free_vars(const sptr<form2> &f)
 
 sptr<term2> smlp::derivative(const sptr<term2> &t, const str &var)
 {
+	using namespace expr2_ops;
 	return t->match(
 	[&](const name &n) { return n.id == var ? one : zero; },
 	[&](const cnst2 &) { return zero; },
@@ -440,10 +443,7 @@ sptr<term2> smlp::derivative(const sptr<term2> &t, const str &var)
 		case bop2::SUB:
 			return make2t(bop2 { b.op, l, r, });
 		case bop2::MUL:
-			return make2t(bop2 { bop2::ADD,
-				make2t(bop2 { bop2::MUL, l, b.right, }),
-				make2t(bop2 { bop2::MUL, b.left, r, }),
-			});
+			return l * b.right + b.left * r;
 		}
 		unreachable();
 	},
@@ -458,7 +458,7 @@ sptr<term2> smlp::derivative(const sptr<term2> &t, const str &var)
 		sptr<term2> n = derivative(i.no, var);
 		if (!y || !n)
 			return nullptr;
-		return make2t(ite2 { i.cond, y, n });
+		return ite(i.cond, y, n);
 	}
 	);
 }
@@ -669,46 +669,50 @@ sptr<form2> smlp::all_eq(opt<kay::Q> delta, const hmap<str,sptr<term2>> &m)
 
 expr2s smlp::unroll_add(vec<expr2s> a)
 {
+	using expr2_ops::operator+;
 	if (empty(a))
 		return zero;
 	sptr<term2> *o = a[0].get<sptr<term2>>();
 	assert(o);
 	sptr<term2> acc = move(*o);
 	if (size(a) == 1)
-		return make2t(uop2 { uop2::UADD, move(acc) });
+		return +move(acc);
 	for (size_t i=1; i<size(a); i++) {
 		sptr<term2> *p = a[i].get<sptr<term2>>();
 		assert(p);
-		acc = make2t(bop2 { bop2::ADD, move(acc), move(*p) });
+		acc = move(acc) + move(*p);
 	}
 	return acc;
 }
 
 expr2s smlp::unroll_sub(vec<expr2s> a)
 {
+	using expr2_ops::operator-;
 	if (size(a) == 1) {
 		sptr<term2> *o = a[0].get<sptr<term2>>();
 		assert(o);
-		return make2t(uop2 { uop2::USUB, move(*o) });
+		return -move(*o);
 	}
 	assert(size(a) == 2);
 	sptr<term2> *l = a[0].get<sptr<term2>>();
 	sptr<term2> *r = a[1].get<sptr<term2>>();
 	assert(l && r);
-	return make2t(bop2 { bop2::SUB, move(*l), move(*r) });
+	return move(*l) - move(*r);
 }
 
 expr2s smlp::unroll_mul(vec<expr2s> a)
 {
+	using expr2_ops::operator*;
 	assert(size(a) == 2);
 	sptr<term2> *l = a[0].get<sptr<term2>>();
 	sptr<term2> *r = a[1].get<sptr<term2>>();
 	assert(l && r);
-	return make2t(bop2 { bop2::MUL, move(*l), move(*r) });
+	return move(*l) * move(*r);
 }
 
 expr2s smlp::unroll_expz(vec<expr2s> a)
 {
+	using expr2_ops::operator*;
 	using kay::Z;
 	assert(size(a) == 2);
 	sptr<term2> t = *a[0].get<sptr<term2>>();
@@ -720,7 +724,7 @@ expr2s smlp::unroll_expz(vec<expr2s> a)
 	assert(*z >= 0);
 	sptr<term2> r = one;
 	for (Z i=0; i<*z; i++)
-		r = make2t(bop2 { bop2::MUL, move(r), t });
+		r = move(r) * t;
 	return r;
 }
 
