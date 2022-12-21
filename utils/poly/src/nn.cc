@@ -3,7 +3,7 @@
 
 #define SAFE_UNROLL_MAX 0
 #undef unreachable
-#include <nn-common.hh>
+#include "nn/nn-common.hh"
 
 using namespace smlp;
 using namespace iv::functions;

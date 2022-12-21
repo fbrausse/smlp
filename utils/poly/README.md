@@ -125,19 +125,21 @@ The resulting binary will be located in `build/src/smlp`.
 
 A compiler supporting C++20 is required (GCC >= 11, clang >= 11) as well as:
 
-- the kay library <https://github.com/fbrausse/kay>
+- The kay library <https://github.com/fbrausse/kay>.
 
   Use the parameter `-Dkay-prefix=PATH` for the `meson setup` command to
   specify the location of the kay library.
-- GMP <https://gmplib.org> and either
-  - its C++ bindings called `gmpxx`, or
-  - Flint <http://flintlib.org>
 
-    Use `-Dflint-prefix=PATH` for the `meson setup` command to specify a
-    non-standard location of the flint library.
+- GMP <https://gmplib.org> and its C++ bindings called `gmpxx`.
 
-  Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint over `gmpxx`
-  or vice-versa. The default is `auto`: Flint if found, otherwise `gmpxx`.
+- Optionally Flint <http://flintlib.org> to speed up integer and rational
+  arithmetic.
+
+  Use `-Dflint-prefix=PATH` for the `meson setup` command to specify a
+  non-standard location of the flint library.
+
+  Use one of `-Dflint=(enabled|disabled|auto)` to prefer Flint.
+  The default is `auto`: Use flint if found, otherwise fall back to `gmpxx`.
 
 ### Internal solver support
 
@@ -156,7 +158,6 @@ requires more dependencies:
 
 - kjson <https://github.com/fbrausse/kjson>
 - hdf5 and its C++ bindings <https://www.hdfgroup.org/HDF5>
-- sources of libiv (*not published, yet*)
 
 ### Python API
 

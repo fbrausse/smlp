@@ -5,6 +5,7 @@
 #mesondefine KAY_USE_FLINT
 #mesondefine SMLP_ENABLE_KERAS_NN
 #mesondefine SMLP_ENABLE_Z3_API
+#mesondefine SMLP_ENABLE_EXT_SOLVER
 
 #mesondefine SMLP_VERSION_MAJOR
 #mesondefine SMLP_VERSION_MINOR

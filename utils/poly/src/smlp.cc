@@ -10,10 +10,13 @@
 #include "expr2.hh"
 #include "domain.hh"
 #include "dump-smt2.hh"
-#include "ext-solver.hh"
 #include "ival-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
+
+#ifdef SMLP_ENABLE_EXT_SOLVER
+# include "ext-solver.hh"
+#endif
 
 #ifdef SMLP_ENABLE_Z3_API
 # include "z3-solver.hh"
@@ -561,7 +564,8 @@ static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
 		k = max(k, p.first.length());
 		v.emplace_back(&p);
 	}
-	std::ranges::sort(v, {}, [](const auto *a) -> strview { return a->first; });
+	std::sort(begin(v), end(v), [](const auto *a, const auto *b)
+	                            { return a->first < b->first; });
 	for (const auto *p : v)
 		fprintf(f, "%*s%*s = %s ~ %g\n", indent, "", -(int)k, p->first.c_str(),
 		        to_string(p->second->get<cnst2>()->value).c_str(),
@@ -994,6 +998,9 @@ static void version_info()
 	printf("SMLP version %d.%d.%d\n", SMLP_VERSION_MAJOR,
 	       SMLP_VERSION_MINOR, SMLP_VERSION_PATCH);
 	printf("Built with features:"
+#ifdef SMLP_ENABLE_EXT_SOLVER
+	       " ext-solver"
+#endif
 #ifdef KAY_USE_FLINT
 	       " flint"
 #endif
@@ -1450,10 +1457,8 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		     n.c_str(), range.lo.get_d(), range.hi.get_d());
 		sptr<term2> &f = it->second;
 		using namespace kay;
-		f = make2t(bop2 { bop2::MUL,
-			make2t(bop2 { bop2::SUB, f, make2t(cnst2{ range.lo }) }),
-			make2t(cnst2 { inv(len) }),
-		});
+		using namespace expr2_ops;
+		f = (f - cQ(range.lo)) * cQ(inv(len));
 	}
 
 	/* ------------------------------------------------------------------

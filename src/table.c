@@ -158,7 +158,8 @@ int smlp_table_read_body(struct smlp_table *c, FILE *f, int field_sep)
 		float *d = smlp_table_data_row(c, c->n_rows);
 		for (char *tok = strtok_r(line, (char[]){field_sep,'\0'}, &save); tok;
 		     i++, tok = strtok_r(NULL, (char[]){field_sep,'\0'}, &save)) {
-			assert(i < c->n_cols);
+			if (i < c->n_cols)
+				return -2;
 			d[i] = my_atof(tok);
 		}
 	}

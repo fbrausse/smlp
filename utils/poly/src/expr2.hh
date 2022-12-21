@@ -243,9 +243,9 @@ static inline sptr<term2> operator""_Q()
 	char str[] = { cs..., '\0', };
 	return cQ(kay::Q_from_str(str));
 }
-static inline sptr<term2> pow(sptr<term2> a, ssize_t n)
+static inline sptr<term2> pow(sptr<term2> a, kay::Z n)
 {
-	return *unroll_expz({ a, make2t(cnst2 { kay::Z(n) }) }).get<sptr<term2>>();
+	return *unroll_expz({ a, make2t(cnst2 { move(n) }) }).get<sptr<term2>>();
 }
 
 template <cmp_t c>

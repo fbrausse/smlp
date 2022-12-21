@@ -1,8 +1,11 @@
 
 #include "solver.hh"
-#include "ext-solver.hh"
 #include "ival-solver.hh"
 #include "nn.hh"
+
+#ifdef SMLP_ENABLE_EXT_SOLVER
+# include "ext-solver.hh"
+#endif
 
 #ifdef SMLP_ENABLE_Z3_API
 # include "z3-solver.hh"
@@ -37,11 +40,13 @@ str smlp::smt2_logic_str(const domain &dom, const sptr<form2> &e)
 
 pair<const Module *,uptr<solver>> smlp::mk_solver0_(bool incremental, const char *logic)
 {
+#ifdef SMLP_ENABLE_EXT_SOLVER
 	const char *ext = ext_solver_cmd ? ext_solver_cmd->c_str() : nullptr;
 	const char *inc = inc_solver_cmd ? inc_solver_cmd->c_str() : nullptr;
 	const char *cmd = (inc && ext ? incremental : !ext) ? inc : ext;
 	if (cmd)
 		return { &mod_ext, std::make_unique<ext_solver>(cmd, logic) };
+#endif
 #ifdef SMLP_ENABLE_Z3_API
 	return { &mod_z3, std::make_unique<z3_solver>(logic) };
 #endif

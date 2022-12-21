@@ -2,6 +2,10 @@
 #include "common.hh"
 #include "solver.hh"
 
+#if _POSIX_C_SOURCE < 200112L
+static inline bool isatty(int) { return false; }
+#endif
+
 #define CSI		"\x1b["
 #define SGR_DFL		CSI "m"
 #define SGR_BOLD	CSI "1m"
