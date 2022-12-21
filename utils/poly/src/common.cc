@@ -2,8 +2,8 @@
 #include "common.hh"
 #include "solver.hh"
 
-#if _POSIX_C_SOURCE < 200112L
-static inline bool isatty(int) { return false; }
+#ifdef _WIN32
+static inline int isatty(int) { return 0; }
 #endif
 
 #define CSI		"\x1b["
