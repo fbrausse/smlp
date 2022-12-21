@@ -690,6 +690,11 @@ struct Pareto {
 			}
 		s = move(s2);
 
+		if (note(mod_par, "optimizing all remaining objectives")) {
+			for (size_t j : K)
+				fprintf(stderr, " %zu", j);
+			fprintf(stderr, "...\n");
+		}
 		/* s <- s \cup {(j,b_s) : j in K} */
 		extended<smlp_result_base> bs = b(s);
 		assert(!is_infty(bs));
@@ -707,6 +712,9 @@ struct Pareto {
 			for (size_t i : K2)
 				t[i] = s[i];
 
+			note(mod_par, "checking whether to fix objective %zu on threshold %s ~ %g...\n",
+			     j, s[j]->threshold.get_str().c_str(),
+			     s[j]->threshold.get_d());
 			extended<smlp_result_base> bt = b(t);
 			assert(!is_infty(bt));
 			if (!do_cmp<kay::Q>(bt.get<smlp_result_base>()->threshold, direction, s[j]->threshold + eps)) {
@@ -1436,10 +1444,10 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	 * If bounds on named outputs are given, scale them.
 	 * ------------------------------------------------------------------ */
 
-	hmap<str,sptr<term2>> funs_org = funs;
+	hmap<str,sptr<term2>> funs_scaled = funs;
 	for (const auto &[n,range] : f_bnds) {
-		auto it = funs.find(n);
-		if (it == end(funs))
+		auto it = funs_scaled.find(n);
+		if (it == end(funs_scaled))
 			MDIE(mod_smlp,1,"normalizing undefined output '%s'\n",
 			     n.c_str());
 		kay::Q len = length(range);
@@ -1542,10 +1550,10 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	beta = subst(beta, funs);
 	eta = subst(eta, funs);
 	if (lhs)
-		lhs = check_nonconst(subst(lhs, funs), lhs);
+		lhs = check_nonconst(subst(lhs, funs_scaled), lhs);
 	else
 		for (sptr<term2> &o : pareto)
-			o = check_nonconst(subst(o, funs), o);
+			o = check_nonconst(subst(o, funs_scaled), o);
 
 	/* ------------------------------------------------------------------
 	 * Check that the constraints from partial function evaluation are met
@@ -1656,7 +1664,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			fprintf(stderr, "  ");
 			smlp::dump_smt2(stderr, *pareto_org[i]);
 			kay::Q nq = to_Q(cnst_fold(pareto[i], pi.last_point().point)->get<cnst2>()->value);
-			kay::Q oq = to_Q(cnst_fold(subst(pareto_org[i], funs_org),
+			kay::Q oq = to_Q(cnst_fold(subst(pareto_org[i], funs),
 			                                 pi.last_point().point)->get<cnst2>()->value);
 			assert(c);
 			fprintf(stderr, " normalized ~ %g, original ~ %g\n",
