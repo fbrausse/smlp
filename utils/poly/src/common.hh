@@ -269,6 +269,8 @@ extern long intervals;
 
 void set_loglvl(char *arg);
 
+void signal_backtrace_handler(int);
+
 } // end namespace smlp
 
 extern "C" const char SMLP_VERSION[];

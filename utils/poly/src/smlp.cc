@@ -1287,6 +1287,8 @@ int main(int argc, char **argv)
 		setenv("SMLP_OPTS", opts.c_str(), 0);
 	}
 
+	signal(SIGUSR1, signal_backtrace_handler);
+
 	/* these determine the mode of operation of this program */
 	bool             single_obj    = false;
 	bool             solve         = true;

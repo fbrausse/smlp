@@ -18,7 +18,7 @@
 # define STATIC(n) static n
 #endif
 
-#ifndef thread_local
+#if !defined(__cplusplus) && !defined(thread_local)
 # if __GNUC__ == 4
 #  if defined(__GNUC_MINOR__) && __GNUC_MINOR__ < 7 && !defined(__clang__)
 #   error unsupported compiler version, please upgrade

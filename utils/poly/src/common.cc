@@ -125,3 +125,29 @@ void smlp::set_loglvl(char *arg)
 				m->lvl = jt->second;
 	}
 }
+
+// #include <boost/stacktrace.hpp>
+#include <execinfo.h>
+#include <fcntl.h>
+
+#define BT_BUF_SIZE	256
+
+void smlp::signal_backtrace_handler(int sig)
+{
+	::signal(sig, SIG_DFL);
+	// boost::stacktrace::safe_dump_to("smlp-stacktrace");
+	void *buffer[BT_BUF_SIZE];
+	int n = backtrace(buffer, BT_BUF_SIZE);
+	// int nptrs = backtrace(buffer, BT_BUF_SIZE);
+	dprintf(STDERR_FILENO, "\nSignal %d, backtrace:\n", sig);
+	backtrace_symbols_fd(buffer, n, STDERR_FILENO);
+	int fd = open("/proc/self/maps", O_RDONLY);
+	if (fd != -1) {
+		dprintf(STDERR_FILENO, "\nMemory map:\n");
+		for (ssize_t rd; (rd = read(fd, buffer, sizeof(buffer))) > 0 ||
+		                 rd == -1 && errno == EINTR;)
+			rd = write(STDERR_FILENO, buffer, rd);
+		close(fd);
+	}
+	::raise(SIGABRT);
+}
