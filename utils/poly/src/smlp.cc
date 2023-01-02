@@ -413,6 +413,139 @@ static void trace_result(FILE *f, const char *lbl, const result &r,
 	fprintf(f, "\n");
 }
 
+struct gearopt {
+
+	cmp_t direction;
+	domain dom;
+	sptr<term2> objective;
+	sptr<form2> alpha;
+	sptr<form2> beta;
+	sptr<form2> eta;
+	kay::Q delta;
+	theta_t theta;
+	const char *logic;
+
+	vec<smlp_result> results;
+
+	gearopt(cmp_t direction, domain dom, sptr<term2> objective,
+	        sptr<form2> alpha, sptr<form2> beta, sptr<form2> eta,
+	        kay::Q delta, theta_t theta, const char *logic = nullptr)
+	: direction(direction)
+	, dom(move(dom))
+	, objective(move(objective))
+	, alpha(move(alpha))
+	, beta(move(beta))
+	, eta(move(eta))
+	, delta(move(delta))
+	, theta(move(theta))
+	, logic(logic)
+	{
+		assert(is_order(this->direction));
+	}
+
+	smlp_result & last_point()
+	{
+		assert(!empty(results));
+		return results.back();
+	}
+
+	cmp_t step(uptr<solver> &exists, const kay::Q &T)
+	{
+		sptr<term2> threshold = make2t(cnst2 { T });
+		/* eta x /\ alpha x /\ (beta x /\ obj x >= T) */
+		sptr<form2> target = conj({
+			beta,
+			make2f(prop2 { direction, objective, threshold })
+		});
+		exists->declare(dom);
+		exists->add(eta);
+		exists->add(alpha);
+		exists->add(target);
+		if (dbg(mod_cand, "target: ")) {
+			dump_smt2(stderr, *target);
+			fprintf(stderr, "\n");
+		}
+
+		for (vec<smlp_result> counter_examples;;) {
+			note(mod_cand,"searching candidate %s T ~ %g...\n",
+			     cmp_s[direction],T.get_d());
+			timing e0;
+			result e = exists->check();
+			trace_result(stdout, "a", e, T, timing() - e0);
+			if (unknown *u = e.get<unknown>())
+				MDIE(mod_smlp,2,"exists is unknown: %s\n",
+				     u->reason.c_str());
+			if (e.get<unsat>())
+				return !direction;
+			auto &candidate = e.get<sat>()->model;
+
+			uptr<solver> forall = mk_solver(false, logic);
+			forall->declare(dom);
+			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
+			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
+			 * theta x y /\ alpha y /\ ! ( beta y /\ obj y >= T) */
+			forall->add(theta({}, candidate));
+			forall->add(alpha);
+			forall->add(neg(target));
+			/*
+			file test("ce.smt2", "w");
+			smlp::dump_smt2(test, dom);
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, *theta(true, candidate));
+			fprintf(test, ")\n");
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, *alpha);
+			fprintf(test, ")\n");
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, lbop2 { lbop2::OR, {
+				make2f(lneg2 { beta }),
+				make2f(prop2 { ~direction, objective, threshold })
+			} });
+			fprintf(test, ")\n");
+			*/
+
+			note(mod_coex,"searching counterexample %s T ~ %g...\n",
+			     cmp_s[!direction], T.get_d());
+			timing a0;
+			result a = forall->check();
+			trace_result(stdout, "b", a, T, timing() - a0);
+			if (unknown *u = a.get<unknown>())
+				MDIE(mod_smlp,2,"forall is unknown: %s\n",
+				     u->reason.c_str());
+			if (a.get<unsat>()) {
+				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
+				note(mod_prob,"found solution %s T ~ %g\n",
+				     cmp_s[direction], T.get_d());
+				results.emplace_back(T, move(exists), candidate, nullptr);
+				return direction;
+			}
+			auto &counter_example = a.get<sat>()->model;
+			/* let's not keep the forall solver around */
+			counter_examples.emplace_back(T, nullptr, counter_example, nullptr);
+			exists->add(neg(theta({ delta }, counter_example)));
+		}
+	}
+};
+
+static void run_gearopt(gearopt &go, search_base &obj_range)
+{
+	while (obj_range.has_next()) {
+		kay::Q T = obj_range.query();
+		printf("r,%s,%s,%s\n",
+		       obj_range.lo()->get_str().c_str(),
+		       obj_range.hi()->get_str().c_str(),
+		       T.get_str().c_str());
+		uptr<solver> exists = mk_solver(true, go.logic);
+		cmp_t r = go.step(exists, T);
+		if (r == go.direction) {
+			smlp_result &r = go.last_point();
+			r.obj_range = obj_range.clone();
+			r.slv = move(exists);
+		}
+		obj_range.reply(is_less(r) ? -1 : +1);
+	}
+}
+
 static vec<smlp_result>
 optimize_EA(cmp_t direction,
             const domain &dom,
