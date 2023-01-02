@@ -210,7 +210,6 @@ else
   config.set('SMLP_ENABLE_KERAS_NN', 1)
   hdrs += 'nn.hh'
   srcs += 'nn.cc'
-  subdir('nn')
 endif
 
 if target_machine.system() == 'windows'
@@ -226,6 +225,7 @@ else
 endif
 
 subdir('iv')
+subdir('nn')
 
 libsmlp_static = static_library('smlp', srcs,
   dependencies: poly_deps,
@@ -234,6 +234,7 @@ libsmlp_static = static_library('smlp', srcs,
   install: false,
   link_args: link_args,
   link_with: libiv,
+  gnu_symbol_visibility: 'default',
 )
 
 if target_machine.system() == 'windows'
@@ -249,6 +250,7 @@ else
     install: true,
     link_args: link_args_smlp,
     link_with: libsmlp_static,
+    gnu_symbol_visibility: 'default',
   )
 endif
 

@@ -12,6 +12,7 @@ project('poly', ['c','cpp'], license: 'Apache-2.0', version: '0.9.0',
 )
 
 add_project_arguments([
+  '-rdynamic',
   '-ffp-contract=off',
   '-Wno-format-zero-length',
   '-Wno-unqualified-std-cast-call'], language: ['c','cpp'])
