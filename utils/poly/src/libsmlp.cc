@@ -320,6 +320,25 @@ static kay::Q _Q_abs(const kay::Q &a)
 
 static const char * smlp_version() { return SMLP_VERSION; }
 
+template <cmp_t c, typename T>
+static bool do_cmp(const T &l, const T &r)
+{
+	static_assert(c <= NE, "template parameter c is not a valid cmp_t");
+	if constexpr (c == EQ)
+		return l == r;
+	if constexpr (c == NE)
+		return l != r;
+	if constexpr (c == LT)
+		return l < r;
+	if constexpr (c == LE)
+		return l <= r;
+	if constexpr (c == GT)
+		return l > r;
+	if constexpr (c == GE)
+		return l >= r;
+	unreachable();
+}
+
 BOOST_PYTHON_MODULE(libsmlp)
 {
 	using namespace boost::python;
@@ -368,31 +387,31 @@ This function handles the binary Python 'a<b' expression."
 		)
 		.def("__le__", mk_prop<LE>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+less than or equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a<=b' expression."
 		)
 		.def("__gt__", mk_prop<GT>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+greater than that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a>b' expression."
 		)
 		.def("__ge__", mk_prop<GE>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+greater than or equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a>=b' expression."
 		)
 		.def("__eq__", mk_prop<EQ>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a==b' expression."
 		)
 		.def("__ne__", mk_prop<NE>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+not equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a!=b' expression."
 		)
@@ -487,6 +506,8 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	class_<component>("component", no_init)
 		.def_readonly("range", &component::range)
 		.def_readwrite("type", &component::type)
+		.def("__eq__", do_cmp<EQ, component>)
+		.def("__ne__", do_cmp<NE, component>)
 		;
 
 	enum_<smlp::type>("type")

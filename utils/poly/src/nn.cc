@@ -99,7 +99,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		const auto &kernel = am.a; /* matrix<float> */
 		const vec<float> &bias = am.b;
 		note(mod_nn,"layer %zu: w: %zu, h: %zu, bias: %zu\n",
-		        layer, width(kernel), height(kernel), size(bias));
+		     layer, width(kernel), height(kernel), size(bias));
 		/* matrix-vector product */
 		assert(width(kernel) == size(out));
 		assert(height(kernel) == size(bias));
