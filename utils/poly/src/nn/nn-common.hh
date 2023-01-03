@@ -594,13 +594,14 @@ struct model_fun2 {
 	std::optional<grid_t<ival>> grid;
 
 	model_fun2(const char *gen_path, const char *keras_hdf5_path,
-	           const char *spec_path, const char *io_bounds)
+	           const char *spec_path, const char *io_bounds,
+	           bool no_grid=false)
 	: model_fun2(json_parse(gen_path), keras_hdf5_path, spec_path,
-	             io_bounds)
+	             io_bounds, no_grid)
 	{}
 
 	model_fun2(json gen, const char *keras_hdf5_path, const char *spec_path,
-	           const char *io_bounds)
+	           const char *io_bounds, bool no_grid=false)
 	: spec(spec_path, [&gen](const auto &s){ return resp_idx(gen, s) >= 0; })
 	, model(model_from_keras_hdf5(keras_hdf5_path))
 	, objective { gen }
@@ -625,12 +626,14 @@ struct model_fun2 {
 				in_scaler = spec.in_scaler<true>(b);
 			if (io_scale & (1 << 1))
 				out_scaler = spec.out_scaler<false>(b);
-			grid = spec.grid(b);
-		} else try {
-			grid = spec.grid(Table_proxy {});
-		} catch (const std::invalid_argument &) {
-			/* ignore; no grid */
-		}
+			if (!no_grid)
+				grid = spec.grid(b);
+		} else if (!no_grid)
+			try {
+				grid = spec.grid(Table_proxy {});
+			} catch (const std::invalid_argument &) {
+				/* ignore; no grid */
+			}
 	}
 
 	affine1<double> objective_scaler(const char *out_bounds) const

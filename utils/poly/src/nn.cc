@@ -40,7 +40,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
                            bool single_obj)
 {
 	kjson::json gen = iv::nn::common::json_parse(gen_path);
-	iv::nn::common::model_fun2 mf2(gen, hdf5_path, spec_path, io_bounds);
+	bool no_grid = true;
+	iv::nn::common::model_fun2 mf2(gen, hdf5_path, spec_path, io_bounds,
+	                               no_grid);
 
 	kjson::json io_bnds = iv::nn::common::json_parse(io_bounds);
 	vec<sptr<term2>> in_vars;
