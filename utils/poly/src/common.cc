@@ -2,6 +2,10 @@
 #include "common.hh"
 #include "solver.hh"
 
+#ifdef _WIN32
+static inline int isatty(int) { return 0; }
+#endif
+
 #define CSI		"\x1b["
 #define SGR_DFL		CSI "m"
 #define SGR_BOLD	CSI "1m"
@@ -64,6 +68,7 @@ Module smlp::mod_z3   { "z3"  ,          CSI COL_FG_B COL_BLUE    "m" };
 Module smlp::mod_ext  { "ext" ,          CSI COL_FG   COL_CYAN    "m" };
 Module smlp::mod_nn   { "nn"  ,          CSI COL_FG   COL_BLUE    "m" };
 Module smlp::mod_poly { "poly",          CSI COL_FG   COL_BLUE    "m" };
+Module smlp::mod_par  { "par" ,          CSI COL_FG_B COL_MAGENTA "m" };
 
 int solver::alg_dec_prec_approx = 10;
 opt<str> smlp::ext_solver_cmd;
@@ -76,4 +81,73 @@ extern "C" {
 const char SMLP_VERSION[] = XSTR(SMLP_VERSION_MAJOR) "."
                             XSTR(SMLP_VERSION_MINOR) "."
                             XSTR(SMLP_VERSION_PATCH);
+}
+
+void smlp::set_loglvl(char *arg)
+{
+	if (!arg) {
+		for (const auto &[n,m] : Module::modules)
+			m->lvl = (loglvl)((int)m->lvl + 1);
+		return;
+	}
+	hmap<strview,loglvl> values = {
+		{ "none" , QUIET },
+		{ "error", ERROR },
+		{ "warn" , WARN },
+		{ "info" , INFO },
+		{ "note" , NOTE },
+		{ "debug", DEBUG },
+	};
+	for (char *s = NULL, *t = strtok_r(arg, ",", &s); t;
+	     t = strtok_r(NULL, ",", &s)) {
+		char *ss, *mod = strtok_r(t, "=", &ss);
+		assert(mod);
+		char *lvl = strtok_r(NULL, "=", &ss);
+		if (!lvl)
+			swap(mod, lvl);
+		if (mod && lvl)
+			dbg(mod_prob,"setting log-level of '%s' to '%s'\n",
+			             mod, lvl);
+		else
+			dbg(mod_prob,"setting log-level to '%s'\n", lvl);
+		auto jt = values.find(lvl);
+		if (jt == end(values))
+			MDIE(mod_smlp,1,"unknown log level '%s' given in LOGLVL\n",
+			     lvl);
+		if (mod) {
+			auto it = Module::modules.find(mod);
+			if (it == end(Module::modules))
+				MDIE(mod_smlp,1,"unknown module '%s' given in "
+				                "LOGLVL\n",mod);
+			it->second->lvl = jt->second;
+		} else
+			for (const auto &[n,m] : Module::modules)
+				m->lvl = jt->second;
+	}
+}
+
+// #include <boost/stacktrace.hpp>
+#include <execinfo.h>
+#include <fcntl.h>
+
+#define BT_BUF_SIZE	256
+
+void smlp::signal_backtrace_handler(int sig)
+{
+	::signal(sig, SIG_DFL);
+	// boost::stacktrace::safe_dump_to("smlp-stacktrace");
+	void *buffer[BT_BUF_SIZE];
+	int n = backtrace(buffer, BT_BUF_SIZE);
+	// int nptrs = backtrace(buffer, BT_BUF_SIZE);
+	dprintf(STDERR_FILENO, "\nSignal %d, backtrace:\n", sig);
+	backtrace_symbols_fd(buffer, n, STDERR_FILENO);
+	int fd = open("/proc/self/maps", O_RDONLY);
+	if (fd != -1) {
+		dprintf(STDERR_FILENO, "\nMemory map:\n");
+		for (ssize_t rd; (rd = read(fd, buffer, sizeof(buffer))) > 0 ||
+		                 rd == -1 && errno == EINTR;)
+			rd = write(STDERR_FILENO, buffer, rd);
+		close(fd);
+	}
+	::raise(SIGABRT);
 }

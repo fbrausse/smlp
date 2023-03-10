@@ -483,7 +483,7 @@ result ext_solver::check()
 	using es::arg;
 	using es::sexpr;
 
-	info(mod_ext,"solving...\n");
+	note(mod_ext,"solving...\n");
 	timing t;
 
 	fprintf(in, "(check-sat)\n");

@@ -3,10 +3,11 @@
 
 #define SAFE_UNROLL_MAX 0
 #undef unreachable
-#include <nn-common.hh>
+#include "nn/nn-common.hh"
 
 using namespace smlp;
 using namespace iv::functions;
+using namespace expr2_ops;
 
 using scaler = affine1<double,double>;
 using pt_scaler = pointwise<scaler>;
@@ -14,14 +15,9 @@ using pt_scaler = pointwise<scaler>;
 static sptr<term2>
 apply_scaler(const scaler &sc, const sptr<term2> &in, bool clamp_outputs)
 {
-	sptr<term2> c = make2t(bop2 { bop2::ADD,
-		make2t(bop2 { bop2::MUL, make2t(cnst2 { kay::Q(sc.a) }), in }),
-		make2t(cnst2 { kay::Q(sc.b) })
-	});
-	if (clamp_outputs) {
-		c = make2t(ite2 { make2f(prop2 { LT, c, zero }), zero, c });
-		c = make2t(ite2 { make2f(prop2 { GT, c, one }), one, c });
-	}
+	sptr<term2> c = cQ(sc.a) * in + cQ(sc.b);
+	if (clamp_outputs)
+		c = ite(cmp<LT>(c, zero), zero, ite(cmp<GT>(c, one), one, c));
 	return c;
 }
 
@@ -44,7 +40,9 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
                            bool single_obj)
 {
 	kjson::json gen = iv::nn::common::json_parse(gen_path);
-	iv::nn::common::model_fun2 mf2(gen, hdf5_path, spec_path, io_bounds);
+	bool no_grid = true;
+	iv::nn::common::model_fun2 mf2(gen, hdf5_path, spec_path, io_bounds,
+	                               no_grid);
 
 	kjson::json io_bnds = iv::nn::common::json_parse(io_bounds);
 	vec<sptr<term2>> in_vars;
@@ -69,16 +67,12 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 			c.type = type::REAL;
 		}
 		dom.emplace_back(id, move(c));
-		in_vars.emplace_back(make2t(name { id }));
+		in_vars.emplace_back(var(id));
 		in_bnds.emplace(move(id), ival { lo, hi });
 		if (s.contains("safe")) {
 			vec<sptr<form2>> safe;
 			for (const kjson::json &v : s["safe"])
-				safe.emplace_back(make2f(prop2 {
-					EQ,
-					in_vars.back(),
-					make2t(cnst2 { v.get<kay::Q>() }),
-				}));
+				safe.emplace_back(cmp<EQ>(in_vars.back(), cQ(v.get<kay::Q>())));
 			eta.emplace_back(disj(move(safe)));
 		}
 	}
@@ -107,26 +101,20 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		const auto &kernel = am.a; /* matrix<float> */
 		const vec<float> &bias = am.b;
 		note(mod_nn,"layer %zu: w: %zu, h: %zu, bias: %zu\n",
-		        layer, width(kernel), height(kernel), size(bias));
+		     layer, width(kernel), height(kernel), size(bias));
 		/* matrix-vector product */
 		assert(width(kernel) == size(out));
 		assert(height(kernel) == size(bias));
 		vec<sptr<term2>> next;
 		for (float b : bias)
-			next.push_back(make2t(cnst2 { kay::Q(b) }));
+			next.push_back(cQ(b));
 		for (size_t y=0; y<height(kernel); y++)
 			for (size_t x=0; x<width(kernel); x++)
-				next[y] = make2t(bop2 { bop2::ADD,
-					next[y],
-					make2t(bop2 { bop2::MUL,
-						make2t(cnst2 { kay::Q(kernel(x,y)) }),
-						out[x],
-					})
-				});
+				fma(next[y], cQ(kernel(x,y)), out[x]);
 		match(std::get<1>(f.t).f.f,
 		[&](const iv::nn::common::keras::relu &) {
 			for (sptr<term2> &e : next)
-				e = make2t(ite2 { make2f(prop2 { LE, e, zero }), zero, e });
+				e = ite(cmp<LT>(e, zero), zero, e);
 		},
 		[](const iv::nn::common::keras::linear &) {});
 		layer++;
@@ -192,7 +180,7 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 		assert((size_t)idx < size(out));
 		// obj = out[idx];
 		assert(obj_name == out_names[idx]);
-		obj = make2t(name { move(obj_name) });
+		obj = var(move(obj_name));
 	} else {
 		/* unknown objective(s) and we are not instructed to take the
 		 * information from GEN. */
@@ -201,36 +189,34 @@ pre_problem smlp::parse_nn(const char *gen_path, const char *hdf5_path,
 	/* construct theta */
 	auto theta = [spec=move(mf2.spec.spec), name2spec=move(name2spec)]
 	             (opt<kay::Q> delta, const hmap<str,sptr<term2>> &v) {
+		using expr2_ops::operator-;
 		vec<sptr<form2>> conj;
 		for (const auto &[n,e] : v) {
 			auto it = name2spec.find(n);
 			assert(it != name2spec.end());
 			kjson::json sp = spec[it->second];
-			sptr<term2> nm = make2t(name { n });
+			sptr<term2> nm = var(n);
 			sptr<term2> r;
 			if (sp.contains("rad-abs")) {
 				kay::Q rad = sp["rad-abs"].get<kay::Q>();
 				if (delta)
 					rad *= (1 + *delta);
-				r = make2t(cnst2 { move(rad) });
+				r = cQ(move(rad));
 			} else if (sp.contains("rad-rel")) {
 				kay::Q rad = sp["rad-rel"].get<kay::Q>();
 				if (delta)
 					rad *= (1 + *delta);
-				r = make2t(cnst2 { move(rad) });
-				r = make2t(bop2 { bop2::MUL, move(r), abs(!delta ? e : nm) });
+				r = cQ(move(rad));
+				r = move(r) * abs(!delta ? e : nm);
 			} else if (sp["type"] == "input")
 				continue;
 			else
 				MDIE(mod_nn,1,".spec contains neither 'rad-abs' "
 				              "nor 'rad-rel' for '%s'\n",
 				     n.c_str());
-			conj.emplace_back(make2f(prop2 { LE,
-				abs(make2t(bop2 { bop2::SUB, nm, e })),
-				move(r)
-			}));
+			conj.emplace_back(cmp<LE>(abs(nm - e), move(r)));
 		}
-		return make2f(lbop2 { lbop2::AND, move(conj) });
+		return smlp::conj(move(conj));
 	};
 
 	return pre_problem {

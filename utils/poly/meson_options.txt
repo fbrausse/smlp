@@ -29,6 +29,3 @@ option('hdf5-prefix', type: 'string', description:
 
 option('kjson-prefix', type: 'string', description:
 	'prefix of the install path containing the kjson library')
-
-option('iv-prefix', type: 'string', description:
-	'prefix of the install path containing the iv library')

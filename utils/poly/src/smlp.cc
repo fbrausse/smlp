@@ -10,10 +10,13 @@
 #include "expr2.hh"
 #include "domain.hh"
 #include "dump-smt2.hh"
-#include "ext-solver.hh"
 #include "ival-solver.hh"
 #include "nn.hh"
 #include "poly.hh"
+
+#ifdef SMLP_ENABLE_EXT_SOLVER
+# include "ext-solver.hh"
+#endif
 
 #ifdef SMLP_ENABLE_Z3_API
 # include "z3-solver.hh"
@@ -410,7 +413,138 @@ static void trace_result(FILE *f, const char *lbl, const result &r,
 	fprintf(f, "\n");
 }
 
-typedef fun<sptr<form2>(opt<kay::Q> delta, const hmap<str,sptr<term2>> &)> theta_t;
+struct gearopt {
+
+	cmp_t direction;
+	domain dom;
+	sptr<term2> objective;
+	sptr<form2> alpha;
+	sptr<form2> beta;
+	sptr<form2> eta;
+	kay::Q delta;
+	theta_t theta;
+	const char *logic;
+
+	vec<smlp_result> results;
+
+	gearopt(cmp_t direction, domain dom, sptr<term2> objective,
+	        sptr<form2> alpha, sptr<form2> beta, sptr<form2> eta,
+	        kay::Q delta, theta_t theta, const char *logic = nullptr)
+	: direction(direction)
+	, dom(move(dom))
+	, objective(move(objective))
+	, alpha(move(alpha))
+	, beta(move(beta))
+	, eta(move(eta))
+	, delta(move(delta))
+	, theta(move(theta))
+	, logic(logic)
+	{
+		assert(is_order(this->direction));
+	}
+
+	smlp_result & last_point()
+	{
+		assert(!empty(results));
+		return results.back();
+	}
+
+	cmp_t step(uptr<solver> &exists, const kay::Q &T)
+	{
+		sptr<term2> threshold = make2t(cnst2 { T });
+		/* eta x /\ alpha x /\ (beta x /\ obj x >= T) */
+		sptr<form2> target = conj({
+			beta,
+			make2f(prop2 { direction, objective, threshold })
+		});
+		exists->declare(dom);
+		exists->add(eta);
+		exists->add(alpha);
+		exists->add(target);
+		if (dbg(mod_cand, "target: ")) {
+			dump_smt2(stderr, *target);
+			fprintf(stderr, "\n");
+		}
+
+		for (vec<smlp_result> counter_examples;;) {
+			note(mod_cand,"searching candidate %s T ~ %g...\n",
+			     cmp_s[direction],T.get_d());
+			timing e0;
+			result e = exists->check();
+			trace_result(stdout, "a", e, T, timing() - e0);
+			if (unknown *u = e.get<unknown>())
+				MDIE(mod_smlp,2,"exists is unknown: %s\n",
+				     u->reason.c_str());
+			if (e.get<unsat>())
+				return !direction;
+			auto &candidate = e.get<sat>()->model;
+
+			uptr<solver> forall = mk_solver(false, logic);
+			forall->declare(dom);
+			/* ! ( theta x y -> alpha y -> beta y /\ obj y >= T ) =
+			 * ! ( ! theta x y \/ ! alpha y \/ beta y /\ obj y >= T ) =
+			 * theta x y /\ alpha y /\ ! ( beta y /\ obj y >= T) */
+			forall->add(theta({}, candidate));
+			forall->add(alpha);
+			forall->add(neg(target));
+			/*
+			file test("ce.smt2", "w");
+			smlp::dump_smt2(test, dom);
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, *theta(true, candidate));
+			fprintf(test, ")\n");
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, *alpha);
+			fprintf(test, ")\n");
+			fprintf(test, "(assert ");
+			smlp::dump_smt2(test, lbop2 { lbop2::OR, {
+				make2f(lneg2 { beta }),
+				make2f(prop2 { ~direction, objective, threshold })
+			} });
+			fprintf(test, ")\n");
+			*/
+
+			note(mod_coex,"searching counterexample %s T ~ %g...\n",
+			     cmp_s[!direction], T.get_d());
+			timing a0;
+			result a = forall->check();
+			trace_result(stdout, "b", a, T, timing() - a0);
+			if (unknown *u = a.get<unknown>())
+				MDIE(mod_smlp,2,"forall is unknown: %s\n",
+				     u->reason.c_str());
+			if (a.get<unsat>()) {
+				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
+				note(mod_prob,"found solution %s T ~ %g\n",
+				     cmp_s[direction], T.get_d());
+				results.emplace_back(T, move(exists), candidate, nullptr);
+				return direction;
+			}
+			auto &counter_example = a.get<sat>()->model;
+			/* let's not keep the forall solver around */
+			counter_examples.emplace_back(T, nullptr, counter_example, nullptr);
+			exists->add(neg(theta({ delta }, counter_example)));
+		}
+	}
+};
+
+static void run_gearopt(gearopt &go, search_base &obj_range)
+{
+	while (obj_range.has_next()) {
+		kay::Q T = obj_range.query();
+		printf("r,%s,%s,%s\n",
+		       obj_range.lo()->get_str().c_str(),
+		       obj_range.hi()->get_str().c_str(),
+		       T.get_str().c_str());
+		uptr<solver> exists = mk_solver(true, go.logic);
+		cmp_t r = go.step(exists, T);
+		if (r == go.direction) {
+			smlp_result &r = go.last_point();
+			r.obj_range = obj_range.clone();
+			r.slv = move(exists);
+		}
+		obj_range.reply(is_less(r) ? -1 : +1);
+	}
+}
 
 static vec<smlp_result>
 optimize_EA(cmp_t direction,
@@ -462,6 +596,10 @@ optimize_EA(cmp_t direction,
 		exists->add(eta);
 		exists->add(alpha);
 		exists->add(target);
+		if (dbg(mod_cand, "target: ")) {
+			dump_smt2(stderr, *target);
+			fprintf(stderr, "\n");
+		}
 
 		for (vec<smlp_result> counter_examples;;) {
 			note(mod_cand,"searching candidate %s T ~ %g...\n",
@@ -513,7 +651,7 @@ optimize_EA(cmp_t direction,
 				     u->reason.c_str());
 			if (a.get<unsat>()) {
 				// fprintf(file("ce-z3.smt2", "w"), "%s\n", forall.slv.to_smt2().c_str());
-				info(mod_prob,"found solution %s T ~ %g\n",
+				note(mod_prob,"found solution %s T ~ %g\n",
 				     cmp_s[direction], T.get_d());
 				results.emplace_back(T, move(exists), candidate,
 				                     obj_range.clone());
@@ -551,6 +689,22 @@ struct extended : sumtype<T,infty> {
 	}
 };
 
+static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
+{
+	size_t k = 0;
+	vec<const pair<const str,sptr<term2>> *> v;
+	for (const auto &p : model) {
+		k = max(k, p.first.length());
+		v.emplace_back(&p);
+	}
+	std::sort(begin(v), end(v), [](const auto *a, const auto *b)
+	                            { return a->first < b->first; });
+	for (const auto *p : v)
+		fprintf(f, "%*s%*s = %s ~ %g\n", indent, "", -(int)k, p->first.c_str(),
+		        to_string(p->second->get<cnst2>()->value).c_str(),
+		        to_Q(p->second->get<cnst2>()->value).get_d());
+}
+
 struct Pareto {
 
 	domain dom;
@@ -562,10 +716,11 @@ struct Pareto {
 	vec<opt<smlp_result_base>> s;
 	hset<size_t> K; /* bounds that can still be raised by at least eps */
 	hset<size_t> K_prev;
+	ival obj_range;
 
 	Pareto(domain dom, vec<sptr<term2>> objs, cmp_t direction,
 	       sptr<form2> alpha, sptr<form2> beta, sptr<form2> eta,
-	       theta_t theta, kay::Q eps)
+	       theta_t theta, kay::Q eps, ival obj_range)
 	: dom(move(dom))
 	, objs(move(objs))
 	, direction(move(direction))
@@ -576,6 +731,7 @@ struct Pareto {
 	, eps(move(eps))
 	, s(k())
 	, K{}
+	, obj_range(move(obj_range))
 	{
 		/* K = {1,...,k} \ dom s */
 		for (size_t i=0; i<k(); i++)
@@ -618,7 +774,7 @@ struct Pareto {
 		if (!min_objs)
 			return infty { is_less(direction) ? false : true };
 
-		bounded_search_ival range(ival { 0, 1 }, eps);
+		bounded_search_ival range(obj_range, eps);
 		str logic = smt2_logic_str(dom, conj({
 			alpha, beta, eta_F_t,
 			make2f(prop2 { LT, min_objs, zero }),
@@ -667,6 +823,11 @@ struct Pareto {
 			}
 		s = move(s2);
 
+		if (note(mod_par, "optimizing all remaining objectives")) {
+			for (size_t j : K)
+				fprintf(stderr, " %zu", j);
+			fprintf(stderr, "...\n");
+		}
 		/* s <- s \cup {(j,b_s) : j in K} */
 		extended<smlp_result_base> bs = b(s);
 		assert(!is_infty(bs));
@@ -684,13 +845,18 @@ struct Pareto {
 			for (size_t i : K2)
 				t[i] = s[i];
 
+			note(mod_par, "checking whether to fix objective %zu on threshold %s ~ %g...\n",
+			     j, s[j]->threshold.get_str().c_str(),
+			     s[j]->threshold.get_d());
 			extended<smlp_result_base> bt = b(t);
 			assert(!is_infty(bt));
 			if (!do_cmp<kay::Q>(bt.get<smlp_result_base>()->threshold, direction, s[j]->threshold + eps)) {
 				/* cannot increase bound on o_j simultaneously
 				 * by epsilon */
-				warn(mod_prob,"fixing objective %zu on threshold %s ~ %g\n",
-				     j, s[j]->threshold.get_str().c_str(), s[j]->threshold.get_d());
+				if (note(mod_par,"fixing objective %zu on threshold %s ~ %g with model:\n",
+				         j, s[j]->threshold.get_str().c_str(), s[j]->threshold.get_d())) {
+					print_model(stderr, s[j]->point, 2);
+				}
 				KN.erase(j);
 			}
 		}
@@ -707,20 +873,6 @@ optimize_pareto_C(const domain &dom,
 	
 }
 */
-
-static void print_model(FILE *f, const hmap<str,sptr<term2>> &model, int indent)
-{
-	size_t k = 0;
-	vec<const pair<const str,sptr<term2>> *> v;
-	for (const auto &p : model) {
-		k = max(k, p.first.length());
-		v.emplace_back(&p);
-	}
-	std::ranges::sort(v, {}, [](const auto *a) -> strview { return a->first; });
-	for (const auto *p : v)
-		fprintf(f, "%*s%*s = %s\n", indent, "", -(int)k, p->first.c_str(),
-		        to_string(p->second->get<cnst2>()->value).c_str());
-}
 
 template <typename T>
 static bool from_string(const char *s, T &v)
@@ -987,6 +1139,9 @@ static void version_info()
 	printf("SMLP version %d.%d.%d\n", SMLP_VERSION_MAJOR,
 	       SMLP_VERSION_MINOR, SMLP_VERSION_PATCH);
 	printf("Built with features:"
+#ifdef SMLP_ENABLE_EXT_SOLVER
+	       " ext-solver"
+#endif
 #ifdef KAY_USE_FLINT
 	       " flint"
 #endif
@@ -1161,49 +1316,6 @@ parse_search_range(char *threshs_s, const char *max_prec_s,
 	}
 }
 
-static void set_loglvl(char *arg)
-{
-	if (!arg) {
-		for (const auto &[n,m] : Module::modules)
-			m->lvl = (loglvl)((int)m->lvl + 1);
-		return;
-	}
-	hmap<strview,loglvl> values = {
-		{ "none" , QUIET },
-		{ "error", ERROR },
-		{ "warn" , WARN },
-		{ "info" , INFO },
-		{ "note" , NOTE },
-		{ "debug", DEBUG },
-	};
-	for (char *s = NULL, *t = strtok_r(arg, ",", &s); t;
-	     t = strtok_r(NULL, ",", &s)) {
-		char *ss, *mod = strtok_r(t, "=", &ss);
-		assert(mod);
-		char *lvl = strtok_r(NULL, "=", &ss);
-		if (!lvl)
-			swap(mod, lvl);
-		if (mod && lvl)
-			dbg(mod_prob,"setting log-level of '%s' to '%s'\n",
-			             mod, lvl);
-		else
-			dbg(mod_prob,"setting log-level to '%s'\n", lvl);
-		auto jt = values.find(lvl);
-		if (jt == end(values))
-			MDIE(mod_smlp,1,"unknown log level '%s' given in LOGLVL\n",
-			     lvl);
-		if (mod) {
-			auto it = Module::modules.find(mod);
-			if (it == end(Module::modules))
-				MDIE(mod_smlp,1,"unknown module '%s' given in "
-				                "LOGLVL\n",mod);
-			it->second->lvl = jt->second;
-		} else
-			for (const auto &[n,m] : Module::modules)
-				m->lvl = jt->second;
-	}
-}
-
 static bool is_constant(domain dom, const sptr<term2> &t, const hset<str> &wrt)
 {
 	hmap<str,sptr<term2>> rename;
@@ -1307,6 +1419,8 @@ int main(int argc, char **argv)
 		             "ignoring...\n", strerror(errno));
 		setenv("SMLP_OPTS", opts.c_str(), 0);
 	}
+
+	signal(SIGUSR1, signal_backtrace_handler);
 
 	/* these determine the mode of operation of this program */
 	bool             single_obj    = false;
@@ -1465,10 +1579,10 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	 * If bounds on named outputs are given, scale them.
 	 * ------------------------------------------------------------------ */
 
-	hmap<str,sptr<term2>> funs_org = funs;
+	hmap<str,sptr<term2>> funs_scaled = funs;
 	for (const auto &[n,range] : f_bnds) {
-		auto it = funs.find(n);
-		if (it == end(funs))
+		auto it = funs_scaled.find(n);
+		if (it == end(funs_scaled))
 			MDIE(mod_smlp,1,"normalizing undefined output '%s'\n",
 			     n.c_str());
 		kay::Q len = length(range);
@@ -1486,10 +1600,8 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		     n.c_str(), range.lo.get_d(), range.hi.get_d());
 		sptr<term2> &f = it->second;
 		using namespace kay;
-		f = make2t(bop2 { bop2::MUL,
-			make2t(bop2 { bop2::SUB, f, make2t(cnst2{ range.lo }) }),
-			make2t(cnst2 { inv(len) }),
-		});
+		using namespace expr2_ops;
+		f = (f - cQ(range.lo)) * cQ(inv(len));
 	}
 
 	/* ------------------------------------------------------------------
@@ -1573,10 +1685,10 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	beta = subst(beta, funs);
 	eta = subst(eta, funs);
 	if (lhs)
-		lhs = check_nonconst(subst(lhs, funs), lhs);
+		lhs = check_nonconst(subst(lhs, funs_scaled), lhs);
 	else
 		for (sptr<term2> &o : pareto)
-			o = check_nonconst(subst(o, funs), o);
+			o = check_nonconst(subst(o, funs_scaled), o);
 
 	/* ------------------------------------------------------------------
 	 * Check that the constraints from partial function evaluation are met
@@ -1656,8 +1768,10 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 		MDIE(mod_smlp,1,"-T THRESHS is not supported for Pareto optimization\n");
 	if (max_prec_s)
 		MDIE(mod_smlp,1,"-P PREC is not supported for Pareto optimization\n");
-	if (obj_range_s)
-		MDIE(mod_smlp,1,"-R LO,HI is not supported for Pareto optimization\n");
+
+	if (!obj_range_s)
+		MDIE(mod_smlp,1,"-R LO,HI required for Pareto optimization\n");
+	ival obj_range = get_obj_range(obj_range_s, dom, nullptr);
 
 	if (!eps_s)
 		MDIE(mod_smlp,1,"-E EPSILON is not set for Pareto optimization\n");
@@ -1665,7 +1779,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 	if (!from_string(eps_s, eps))
 		MDIE(mod_smlp,1,"cannot interpret argument '%s' to -E as a "
 		                "rational number\n", eps_s);
-	Pareto pi(dom, pareto, c, alpha, beta, eta, theta, eps);
+	Pareto pi(dom, pareto, c, alpha, beta, eta, theta, eps, obj_range);
 	assert(!pi.done());
 	while (!pi.done())
 		pi.step();
@@ -1674,7 +1788,9 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			assert(pi.s[i]);
 			fprintf(stderr, "  (%s ", cmp_smt2[c]);
 			smlp::dump_smt2(stderr, *pareto_org[i]);
-			fprintf(stderr, " %s)\n", kay::to_string(pi.s[i]->threshold).c_str());
+			fprintf(stderr, " %s ~ %g)\n",
+			        kay::to_string(pi.s[i]->threshold).c_str(),
+			        pi.s[i]->threshold.get_d());
 		}
 	if (info(mod_prob,"computed point %s-close to Pareto front:\n", eps.get_str().c_str()))
 		print_model(stderr, pi.last_point().point, 2);
@@ -1683,7 +1799,7 @@ implies that IO-BOUNDS are regarded as domain constraints instead of ALPHA.\n");
 			fprintf(stderr, "  ");
 			smlp::dump_smt2(stderr, *pareto_org[i]);
 			kay::Q nq = to_Q(cnst_fold(pareto[i], pi.last_point().point)->get<cnst2>()->value);
-			kay::Q oq = to_Q(cnst_fold(subst(pareto_org[i], funs_org),
+			kay::Q oq = to_Q(cnst_fold(subst(pareto_org[i], funs),
 			                                 pi.last_point().point)->get<cnst2>()->value);
 			assert(c);
 			fprintf(stderr, " normalized ~ %g, original ~ %g\n",

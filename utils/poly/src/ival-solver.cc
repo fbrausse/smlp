@@ -556,7 +556,9 @@ result ival_solver::check() const
 			sp.clear();
 			for (const auto &[var,v] : dom) {
 				sp.emplace_back(var, split_ival(v));
-				n *= size(sp.back().second);
+				size_t sz = size(sp.back().second);
+				assert(sz <= ULONG_MAX);
+				n *= (unsigned long)sz;
 			}
 			N += n;
 			bool logs = note(mod_ival,

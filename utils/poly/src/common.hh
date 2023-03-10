@@ -113,25 +113,29 @@ struct sumtype : std::variant<Ts...> {
 	template <typename... As>
 	auto match(As &&... o) const
 	{
-		return std::visit(overloaded { std::forward<As>(o)... }, *this);
+		return std::visit(overloaded { std::forward<As>(o)... },
+		                  static_cast<const std::variant<Ts...> &>(*this));
 	}
 
 	template <typename R, typename... As>
 	R match(As &&... o) const
 	{
-		return std::visit<R>(overloaded { std::forward<As>(o)... }, *this);
+		return std::visit<R>(overloaded { std::forward<As>(o)... },
+		                     static_cast<const std::variant<Ts...> &>(*this));
 	}
 
 	template <typename... As>
 	auto match(As &&... o)
 	{
-		return std::visit(overloaded { std::forward<As>(o)... }, *this);
+		return std::visit(overloaded { std::forward<As>(o)... },
+		                  static_cast<std::variant<Ts...> &>(*this));
 	}
 
 	template <typename R, typename... As>
 	R match(As &&... o)
 	{
-		return std::visit<R>(overloaded { std::forward<As>(o)... }, *this);
+		return std::visit<R>(overloaded { std::forward<As>(o)... },
+		                     static_cast<std::variant<Ts...> &>(*this));
 	}
 
 	template <typename T>
@@ -257,12 +261,28 @@ struct Module {
 };
 
 extern Module mod_ext, mod_z3, mod_ival, mod_crit, mod_nn, mod_poly, mod_prob;
-extern Module mod_smlp, mod_cand, mod_coex;
+extern Module mod_smlp, mod_cand, mod_coex, mod_par;
 
 extern opt<str> ext_solver_cmd;
 extern opt<str> inc_solver_cmd;
 extern long intervals;
 
+void set_loglvl(char *arg);
+
+void signal_backtrace_handler(int);
+
 } // end namespace smlp
 
 extern "C" const char SMLP_VERSION[];
+
+namespace std {
+
+template <typename... Ts>
+struct variant_size<smlp::sumtype<Ts...>>
+: variant_size<variant<Ts...>> {};
+
+template <size_t n, typename... Ts>
+struct variant_alternative<n,smlp::sumtype<Ts...>>
+: variant_alternative<n,variant<Ts...>> {};
+
+}

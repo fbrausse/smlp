@@ -1,3 +1,26 @@
+2023-01-24 poly-v0.10.1
+
+ * fix problem related to missing bounds
+
+2023-01-02 poly-v0.10.0
+
+ * document python module build
+ * generate setup.py by meson
+ * make mpfr dependency respect the "static" option
+ * py: support domain as container, domain-component as pair; add set_loglvl() and simplify opt<Q>
+ * fix infix parser for numeric constant at end of the input
+ * require -R for Pareto search
+ * py: allow instantiation of pre_problem and domain
+ * simplify creation of expr2
+ * restore support for gcc-11 and clang >= 11
+ * include libiv sources + update build instrs
+ * -O now does not affect alpha, beta or eta
+ * add missing include/smlp
+ * fix fallback def of isatty()
+ * print backtrace on USR1
+ * add (yet unused) gearopt iterable
+ * default symbol visibility and -rdynamic
+
 2022-12-13 poly-v0.9.0
 
  * fix computation of final bounds for optimum

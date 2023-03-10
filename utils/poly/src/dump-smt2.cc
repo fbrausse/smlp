@@ -265,7 +265,19 @@ static str to_string_help(const sptr<T> &g, bool let)
 	return r;
 }
 #else
-# error "no implementation for to_string(sptr<T>, bool) available"
+template <typename T>
+static str to_string_help(const sptr<T> &g, bool let)
+{
+	FILE *f = tmpfile();
+	::dump_smt2(f, *g, let);
+	size_t sz = ftell(f);
+	str s(sz, '\0');
+	rewind(f);
+	size_t n = fread(s.data(), 1, sz, f);
+	assert(n == sz);
+	fclose(f);
+	return s;
+}
 #endif
 
 str detail::to_string(const sptr<term2> &g, bool let)

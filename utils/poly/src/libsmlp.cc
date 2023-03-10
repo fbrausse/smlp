@@ -1,5 +1,6 @@
 
 #include <boost/python.hpp>
+#include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 
 #include "expr2.hh"
 #include "nn.hh"
@@ -62,20 +63,32 @@ static sptr<term2> mk_cnst(kay::Q v)
 	return make2t(cnst2 { move(v) });
 }
 
-static opt<kay::Q> _mk_Q_F(double d) { return { kay::Q(d) }; }
-static opt<kay::Q> _mk_Q_Z(str s)
+static boost::python::object dt_cnst(sptr<term2> t)
 {
-	kay::Z z;
-	if (parse_Z(s, z))
-		return { move(z) };
+	using boost::python::object;
+	if (const cnst2 *c = t->get<cnst2>())
+		return c->value.match(
+		[](const kay::Z &z) { return object(kay::Q(z)); },
+		[](const kay::Q &q) { return object(q); },
+		[](const A &a) { return object(a); }
+		);
 	return {};
 }
 
-static opt<kay::Q> _mk_Q_Q(str n, str d)
+static kay::Q _mk_Q_F(double d) { return kay::Q(d); }
+static boost::python::object _mk_Q_Z(str s)
+{
+	kay::Z z;
+	if (parse_Z(s, z))
+		return boost::python::object(kay::Q(move(z)));
+	return {};
+}
+
+static boost::python::object _mk_Q_Q(str n, str d)
 {
 	kay::Z u, v;
 	if (parse_Z(n, u) && parse_Z(d, v) && v)
-		return { kay::Q(move(u), move(v)) };
+		return boost::python::object(kay::Q(move(u), move(v)));
 	return {};
 }
 
@@ -217,11 +230,7 @@ static void solver_add(const sptr<solver> &s, const sptr<form2> &f)
 static auto solver_check(const sptr<solver> &s)
 {
 	using boost::python::object;
-	return s->check().match(
-	[](const sat &s) -> object { return object(s); },
-	[](const unsat &s) -> object { return object(s); },
-	[](const unknown &s) -> object { return object(s); }
-	);
+	return s->check().match([](const auto &s) { return object(s); });
 }
 
 static sptr<solver> _mk_solver(bool incremental, const char *logic)
@@ -255,11 +264,6 @@ static component mk_component_list(type ty, boost::python::object l)
 {
 	boost::python::stl_input_iterator<kay::Q> begin(l), end;
 	return component { smlp::list { vec<kay::Q>(begin, end) }, ty };
-}
-
-static kay::Q _opt_Q_value(const opt<kay::Q> &o)
-{
-	return *o;
 }
 
 static boost::python::dict sat_get_model(const sat &s)
@@ -316,6 +320,25 @@ static kay::Q _Q_abs(const kay::Q &a)
 
 static const char * smlp_version() { return SMLP_VERSION; }
 
+template <cmp_t c, typename T>
+static bool do_cmp(const T &l, const T &r)
+{
+	static_assert(c <= NE, "template parameter c is not a valid cmp_t");
+	if constexpr (c == EQ)
+		return l == r;
+	if constexpr (c == NE)
+		return l != r;
+	if constexpr (c == LT)
+		return l < r;
+	if constexpr (c == LE)
+		return l <= r;
+	if constexpr (c == GT)
+		return l > r;
+	if constexpr (c == GE)
+		return l >= r;
+	unreachable();
+}
+
 BOOST_PYTHON_MODULE(libsmlp)
 {
 	using namespace boost::python;
@@ -364,31 +387,31 @@ This function handles the binary Python 'a<b' expression."
 		)
 		.def("__le__", mk_prop<LE>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+less than or equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a<=b' expression."
 		)
 		.def("__gt__", mk_prop<GT>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+greater than that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a>b' expression."
 		)
 		.def("__ge__", mk_prop<GE>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+greater than or equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a>=b' expression."
 		)
 		.def("__eq__", mk_prop<EQ>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a==b' expression."
 		)
 		.def("__ne__", mk_prop<NE>, args("a","b"), "\
 Returns a new form2 instance that evaluates to true iff the value of a is\n\
-less than that of b.\n\
+not equal to that of b.\n\
 Both parameters must be term2 instances.\n\
 This function handles the binary Python 'a!=b' expression."
 		)
@@ -419,6 +442,7 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	def("_mk_and", mk_lbop2<lbop2::AND>, args("as : list[form2]"));
 	def("_mk_or", mk_lbop2<lbop2::OR>, args("as : list[form2]"));
 	def("_mk_cnst", mk_cnst);
+	def("_dt_cnst", dt_cnst);
 
 	def("Ite", mk_ite);
 	def("Var", mk_name);
@@ -453,7 +477,7 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	/* missing: all_eq, is_linear */
 
 	/* exported nn.hh API */
-	class_<pre_problem>("pre_problem", no_init)
+	class_<pre_problem>("pre_problem")
 		.def_readwrite("dom", &pre_problem::dom)
 		.def_readwrite("obj", &pre_problem::obj)
 		.def_readwrite("funcs", &pre_problem::funcs)
@@ -476,11 +500,14 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	         "dump_pe", "infix"));
 
 	def("_options", options);
+	def("set_loglvl", set_loglvl);
 
 	/* exported domain.hh API */
-	class_<component>("component", init<smlp::entire,smlp::type>())
-		.def_readwrite("range", &component::range)
+	class_<component>("component", no_init)
+		.def_readonly("range", &component::range)
 		.def_readwrite("type", &component::type)
+		.def("__eq__", do_cmp<EQ, component>)
+		.def("__ne__", do_cmp<NE, component>)
 		;
 
 	enum_<smlp::type>("type")
@@ -493,9 +520,11 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	def("_mk_component_ival", mk_component_ival);
 	def("_mk_component_list", mk_component_list);
 
+/*
 	class_<kay::Z>("Z", init<signed long>())
 		.def(init<const char *>())
 		.def("__str__", Z_str);
+*/
 	class_<kay::Q>("Q", init<signed long>())
 		.def(init<const char *>())
 		.def(init<double>())
@@ -516,26 +545,29 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 		.def("__neg__", _Q_un<uop2::USUB>)
 		.def("__abs__", _Q_abs)
 		;
+	class_<A>("A", no_init)
+		;
 	def("_mk_Q_Z", _mk_Q_Z);
 	def("_mk_Q_F", _mk_Q_F);
 	def("_mk_Q_Q", _mk_Q_Q);
-	class_<opt<kay::Q>>("_opt_Q", no_init)
-		.def("__bool__", &opt<kay::Q>::has_value)
-		.add_property("value", _opt_Q_value)
-		;
 
 	class_<sptr<solver>>("solver", no_init)
 		.def("declare", solver_declare)
-		// .def("declare", solver_declare_dict)
+		.def("declare", solver_declare_dict)
 		.def("add", solver_add)
 		.def("check", solver_check)
 		;
 	def("_mk_solver", _mk_solver);
 
-	class_<domain>("domain", no_init);
-
-	def("domain", convert_domain_dict);
-	to_python_converter<domain,domain_to_dict,false>();
+	class_<domain>("domain", no_init)
+		.def(vector_indexing_suite<domain>())
+		;
+	class_<typename domain::value_type>("_domain_entry", no_init)
+		.def_readwrite("name", &domain::value_type::first)
+		.def_readwrite("comp", &domain::value_type::second)
+		;
+	def("_mk_domain", convert_domain_dict);
+	// to_python_converter<domain,domain_to_dict,false>();
 
 	class_<sat>("sat", no_init)
 		.add_property("model", sat_get_model)

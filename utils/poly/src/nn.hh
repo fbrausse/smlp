@@ -5,6 +5,8 @@
 
 namespace smlp {
 
+typedef fun<sptr<form2>(opt<kay::Q>, const hmap<str,sptr<term2>> &)> theta_t;
+
 struct pre_problem {
 	domain dom;
 	sptr<term2> obj; /* objective */
@@ -13,7 +15,7 @@ struct pre_problem {
 	hmap<str,ival> input_bounds; /* alpha */
 	sptr<form2> eta = true2; /* corresponds to "safe" list in .spec */
 	sptr<form2> partial_domain = true2; /* constraints from evaluating partial functions */
-	fun<sptr<form2>(opt<kay::Q>,const hmap<str,sptr<term2>> &)> theta;
+	theta_t theta;
 
 	/* Potentially modifies dom and input_bounds based on params and returns
 	 * a formula corresponding to the constraints from the remaining

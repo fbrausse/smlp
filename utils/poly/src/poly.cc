@@ -21,6 +21,7 @@ struct Match {
 	/* Match(expr, cnst1, expr1, cnst2, expr2, [...], .) */
 	expr2s operator()(vec<expr2s> args)
 	{
+		using namespace expr2_ops;
 		assert(args.size() >= 2);
 		assert(args.size() % 2 == 0);
 		const sptr<term2> &var = *args.front().get<sptr<term2>>();
@@ -29,7 +30,7 @@ struct Match {
 		if (!r) {
 			vec<sptr<form2>> d;
 			for (int i=k; i >= 1; i-=2)
-				d.emplace_back(make2f(prop2 { EQ, var, *args[i].get<sptr<term2>>() }));
+				d.emplace_back(cmp<EQ>(var, *args[i].get<sptr<term2>>()));
 			constraints.emplace_back(disj(move(d)));
 			r = move(*args[k+1].get<sptr<term2>>());
 			k -= 2;
@@ -40,11 +41,7 @@ struct Match {
 			sptr<term2> *yes = args[i+1].get<sptr<term2>>();
 			assert(rhs);
 			assert(yes);
-			r = make2t(ite2 {
-				make2f(prop2 { EQ, var, move(*rhs) }),
-				move(*yes),
-				move(r),
-			});
+			r = ite(cmp<EQ>(var, move(*rhs)), move(*yes), move(r));
 		}
 		return r;
 	}
