@@ -39,6 +39,8 @@ elif list(map(int, tf.version.VERSION.split('.'))) < [3]:
 	HIST_MSE = 'mse'
 	HIST_VAL_MSE = 'val_mse'
 
+SEQUENTIAL_MODEL = False
+    
 if [0,9] <= list(map(int, sns.__version__.split('.'))) < [0,10]:
 	def distplot_dataframe(inst, y, resp_names):
 		plt.figure('Distribution of response features')
@@ -93,6 +95,41 @@ def nn_init_model(input_dim, optimizer, activation, layers_spec, n_out):
 	print(model)
 	return model
 
+def nn_init_model_functional(input_dim, optimizer, activation, layers_spec, resp_names):
+	layers_spec_list = [float(x) for x in layers_spec.split(',')]
+	print('layers_spec_list', layers_spec_list)
+	# layer 0 will be input layer, the rest internal layers. Outputs are defined separately below
+	nn_layer_names = ['nn_layer_' + str(i) for i in range(len(layers_spec_list))]
+	nn_layer_vars = [] # filled in as the input and internal layers are created
+	nn_output_vars = [] # filled in as the outputs are created, each one separately as different layers  
+	for i in range(len(layers_spec_list)):
+		fraction =  layers_spec_list[i]
+		print('fraction', fraction)
+		assert fraction > 0
+		if i == 0:
+			assert fraction == 1
+		n = ceil(input_dim * fraction)
+		print("dense layer of size", n)
+		print('assigning variable', nn_layer_names[i])
+		if i == 0:
+			globals()[nn_layer_names[i]] = keras.layers.Input(shape=(input_dim,))
+		else:        
+			globals()[nn_layer_names[i]] = keras.layers.Dense(n, activation=activation, input_dim=None)(globals()[nn_layer_names[i-1]])
+		nn_layer_vars.append(globals()[nn_layer_names[i]])
+	print('nn_layer_vars', nn_layer_vars)
+	print('nn_layer_names[-1]', nn_layer_names[-1])
+	losses = {}
+	for resp in resp_names:
+		globals()[f"{resp}"] = keras.layers.Dense(1, name=resp, activation=OUT_ACTIVATION)(globals()[nn_layer_names[-1]])
+		losses[resp] = DEF_LOSS
+		nn_output_vars.append(globals()[f"{resp}"])
+	print('nn_output_vars', nn_output_vars)    
+	model = keras.models.Model(nn_layer_vars[0], nn_output_vars)
+	#model.compile(optimizer=optimizer, loss=DEF_LOSS, metrics=DEF_METRICS)
+	model.compile(optimizer=optimizer, loss=losses, metrics=DEF_METRICS)    
+	print("nn_init_model:model")
+	print(model)
+	return model
 
 def nn_train(model, epochs, batch_size, model_checkpoint_path,
              X_train, X_test, y_train, y_test):
@@ -116,14 +153,34 @@ def nn_train(model, epochs, batch_size, model_checkpoint_path,
 				monitor=DEF_MONITOR,
 				# XXX: no argument 'lr' in docs; there is 'min_lr', however
 				lr=0.000001, factor=0.1, patience=100)
+	# compute sample weights to give preference to samples with high values in the outputs
 
-	history = model.fit(X_train, y_train,
-	                    epochs=epochs,
-	                    validation_data=(X_test, y_test),
-	#                   steps_per_epoch=10,
-	                    callbacks=[c for c in (checkpointer,earlyStopping,rlrop)
-	                               if c is not None],
-	                    batch_size=batch_size)
+	if SEQUENTIAL_MODEL:
+		history = model.fit(X_train, y_train,
+		                    epochs=epochs,
+		                    validation_data=(X_test, y_test),
+		#                   steps_per_epoch=10,
+		                    callbacks=[c for c in (checkpointer,earlyStopping,rlrop)
+		                               if c is not None],
+		                    batch_size=batch_size)
+	else:
+		sw_dict={} # sample weights, defined per output
+		for outp in y_train.columns.tolist(): 
+		    print('y_train', y_train[outp])
+		    sw = y_train[outp].values
+		    print('sw', sw)
+		    sw = np.power(sw, 2)
+		    sw_dict[outp] = sw
+		#sample_weight = np.ones(shape=(len(y_train),))
+		#sample_weight[y_train >= 0.8] = 2.0
+		history = model.fit(X_train, y_train,
+		                    epochs=epochs,
+		                    validation_data=(X_test, y_test),
+		#                   steps_per_epoch=10,
+		                    sample_weight=sw_dict,
+		                    callbacks=[c for c in (checkpointer,earlyStopping,rlrop)
+		                               if c is not None],
+		                    batch_size=batch_size)
 
 	return history
 
@@ -194,6 +251,7 @@ def evaluate_model(model, X_train, X_test, y_train, y_test, out_prefix=None,
 
 
 def report_training_regression(history, epochs, out_prefix=None):
+	print('history.history', history.history)
 	acc = history.history[HIST_MSE]
 	#print(acc)
 	val_acc = history.history[HIST_VAL_MSE]
@@ -220,10 +278,11 @@ def report_training_regression(history, epochs, out_prefix=None):
 
 def evaluate_nn(model, history, epochs, X_train, X_test, y_train, y_test,
                 out_prefix=None, log_scale=False, objective=None):
-	report_training_regression(history, epochs, out_prefix=out_prefix)
-	evaluate_model(model, X_train, X_test, y_train, y_test,
-	               out_prefix=out_prefix, log_scale=log_scale,
-	               objective=objective)
+	if SEQUENTIAL_MODEL:
+		report_training_regression(history, epochs, out_prefix=out_prefix)     
+		evaluate_model(model, X_train, X_test, y_train, y_test,
+		               out_prefix=out_prefix, log_scale=log_scale,
+		               objective=objective)
 
 
 # runs Keras NN algorithm, outputs lots of stats, saves model to disk
@@ -236,6 +295,7 @@ def nn_main(inst, resp_names : list, input_names, split_test=DEF_SPLIT_TEST, chk
             optimizer=DEF_OPTIMIZER, activation=HID_ACTIVATION,
             data=None):
 	print('START  nn_main')
+	print('formating check')
 
 	print('data_fname', inst.data_fname)
 	print('out_prefix', inst._out_prefix)
@@ -335,9 +395,10 @@ def nn_main(inst, resp_names : list, input_names, split_test=DEF_SPLIT_TEST, chk
 	#print(y_train)
 
 	input_dim = X_train.shape[1] #num_columns
-
-	model = nn_init_model(input_dim, optimizer, activation, layers_spec, len(resp_names))
-
+	if SEQUENTIAL_MODEL:
+		model = nn_init_model(input_dim, optimizer, activation, layers_spec, len(resp_names))
+	else:
+		model = nn_init_model_functional(input_dim, optimizer, activation, layers_spec, resp_names)
 	history = nn_train(model, epochs, batch_size, chkpt_pattern,
 	                   X_train, X_test, y_train, y_test)
 	model.save(inst.model_file)
