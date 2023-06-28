@@ -65,7 +65,7 @@ def get_rules(tree, feature_names, resp_names, class_names, rounding=-1):
                 for i, rn in enumerate(resp_names):
                     conjunction.append('(' + rn + " = "+str(responses_values[i]) + ')')
                 rule += ' and '.join(conjunction)
-            print('rule', rule); #assert False
+            #print('rule', rule); #assert False
         else:
             # TODO: this branch has not been tested; likely will not work with multiple reonses as classes
             # in th enext line is defined as hard coded for resp_names[0] -- meaning, the last index [0].
@@ -129,21 +129,22 @@ def trees_to_rules(tree_estimators, feature_names, response_names, class_names, 
 '''        
 
 # print and export to file a plonomial model formula        
-def poly_model_to_formula(inputs, output, coefs, powers, log, formula_filename):
-    #print('Polynomial model coef\n', coefs.shape, '\n', coefs)
-    #print('Polynomial model terms\n', powers.shape, '\n', powers)
-    #print('Polynomial model inps\n', len(inputs), inputs)
-    #print('Polynomial model outp\n', len(output), output)
+def poly_model_to_formula(inputs, outputs, coefs, powers, resp_id, log, formula_filename):
+    print('Polynomial model coef\n', coefs.shape, '\n', coefs)
+    print('Polynomial model terms\n', powers.shape, '\n', powers)
+    print('Polynomial model inps\n', len(inputs), inputs)
+    print('Polynomial model outp\n', len(outputs), outputs)
+    #assert False
     if len(inputs) != powers.shape[1]:
         raise Exception('Error in poly_model_to_formula')
     formula_str = ''
     for r in range(powers.shape[0]):
         #print('r', powers[r], 'coef', coefs[0][r])
-        if coefs[0][r] == 0:
+        if coefs[resp_id][r] == 0:
             continue
-        curr_term = str(coefs[0][r])
+        curr_term = str(coefs[resp_id][r])
         for i in range(len(inputs)):
-            #print('i', inputs[i], coefs[0][r], powers[r][i])
+            #print('i', inputs[i], coefs[resp_id][r], powers[r][i])
             if powers[r][i] == 0:
                 continue
             elif powers[r][i] == 1:
@@ -155,6 +156,9 @@ def poly_model_to_formula(inputs, output, coefs, powers, log, formula_filename):
             formula_str = curr_term
         else:
             formula_str = formula_str + ' + ' + curr_term
+    
+    # add the output name
+    formula_str = outputs[resp_id] + ' = ' + formula_str
     
     # print thr formula as text
     if log:

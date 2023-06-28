@@ -4,7 +4,6 @@
 # Copyright 2020 Franz Brauße <franz.brausse@manchester.ac.uk>
 # See the LICENSE file for terms of distribution.
 
-# TODO !!!: consider renaming this file -- maybe inst_common.py.
 # And move parts not related to inst creation to another module -- say utils_common.py.
 # inst actually contains info required for logging, so maybe all feilds and paths/filenames
 # definitions need to be moved into a logger module/class (which does not exist now).
@@ -25,47 +24,67 @@ class DataFileInstance:
     #            used as a prefix of the reports/files written during the run
     # _filename_prefix is a string including the output directory and is supposed 
     #                  to be used as a path + prefix of all reports produced by a run
+    # _out_dir defines directory where all reports / output files will be written.
+    #          When it is not provided, the directory from which data was loaded
+    #          will be used as the output directory
     # _new_data is path and filename of new data (unseen during training) w/o .csv suffix.
-    def __init__(self, data_file_prefix : str, run_prefix : str, new_data_file_prefix=None):
+    def __init__(self, data_file_prefix : str, run_prefix : str, output_directory : str=None, 
+            new_data_file_prefix=None):
         self._dir, self._pre = os.path.split(data_file_prefix)
         self._run_prefix = run_prefix
-        self._filename_prefix = os.path.join(self._dir, self._run_prefix + '_' + self._pre)
+        self._out_dir = output_directory
         self._new_data = new_data_file_prefix
+        _, new_data_fname = os.path.split(self._new_data)
+        if not self._out_dir is None:
+            self._filename_prefix = os.path.join(self._out_dir, self._run_prefix + '_' + self._pre)
+        else:
+            self._filename_prefix = os.path.join(self._dir, self._run_prefix + '_' + self._pre)
+        # if new_data is not None, its name is added to self._filename_prefix
+        #if not self._new_data is None:
+        #    self._filename_prefix = self._filename_prefix + '_' + new_data_fname
         
     # input/training data file name (including the directory path)
-    # TODO !!!: consider renaming data_frame to labeled_data_csv
     @property
     def data_fname(self):
         return os.path.join(self._dir, self._pre + ".csv")
     
     # new (unseen during training) data file name (including the directory path)
-    # TODO !!!: consider renaming new_data_fname to new_data_csv
     @property
     def new_data_fname(self):
         return self._new_data + ".csv"
     
+    # filename with full path for logging error message before aborting
     @property
-    def _out_prefix(self):
-        return self._pre
-
-    # TODO !!!: next few items need description. They seem to mainly
-    # relate to NN models only, need to clarify !!!!!!!!!!!!!!!!!!!
+    def error_file(self):
+        return self._filename_prefix + "_error.txt"
+    
+    # Saved neural network model in a specific tensorflow format (weights, metadata, etc.).
+    # Generated using Keras model.save utility
+    # The model can be also partially trained, and training can resume from that point.
     @property
     def model_file(self):
         return self._filename_prefix + "_model_complete.h5"
 
+    # file to save NN Keras/tensorflow training / error convergence info, known as checkpoints
     @property
     def model_checkpoint_pattern(self):
         return self._filename_prefix + "_model_checkpoint.h5"
 
+    # Currently unused -- genrated in train_keras.py but not consumed.
+    # Saved neural network model in json format -- alternative to info saved in model_file).
+    # Generated using Keras model.to_json() utility (alternative to Keras model.save utility)
+    # The model can be also partially trained, and training can resume from that point.
     @property
     def model_config_file(self):
         return self._filename_prefix + "_model_config.json"
 
+    # min/max info of all columns (features and reponses) in input data
+    # (labeled data used for training and testing ML models)
     @property
     def data_bounds_file(self):
         return self._filename_prefix + "_data_bounds.json"
 
+    # TODO !!!: add description
     @property
     def model_gen_file(self):
         return self._filename_prefix + "_model_gen.json"
@@ -79,7 +98,10 @@ class DataFileInstance:
     # might cover multiple models (algorithms like NN, DT, RF) as well as multiple responses
     def prediction_precisions_filename(self, data_version):
         return self._filename_prefix + '_' + data_version + "_prediction_precisions.csv"
-        
+    
+
+'''  # part of the commented out functions below have been moved to utils_common.py
+     # and some others (e.g., get_input_names, get_response_features) into the relevant modules 
 NP2PY = {
     np.int64: int,
     np.float64: float,
@@ -106,11 +128,7 @@ def timed(f, desc=None, log=lambda *args: print(*args, file=sys.stderr)):
         return r
     return r, t
 
-# TODO !!!:below in function and argument names consider renaming 
-#                input_names --> feature_names,
-#  at least is functions that are used fro ML modules of SMLP
-# We can use input_names and output_names when we refer to the system 
-# which our ML models will model !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 def get_input_names(spec):
     return [s['label'] for s in spec if s['type'] != 'response']
 
@@ -217,3 +235,4 @@ def response_scalers(gen, bnds):
 
 class SolverTimeoutError(Exception):
     pass
+'''

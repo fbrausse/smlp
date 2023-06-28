@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt; plt.rcdefaults()
 from matplotlib import cm
 import seaborn as sns
 from math import ceil
@@ -15,6 +15,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 # function allows functions of these module to not be dependent on inst.
 # Enforcing usage of the latter function: TODO !!!: remove the first version.
 if [0,9] <= list(map(int, sns.__version__.split('.'))) < [0,10]:
+    '''
     def distplot_dataframe(inst, y, resp_names, interactive):
         plt.figure('Distribution of response variables')
         cc = plt.cm.get_cmap('hsv')
@@ -22,7 +23,7 @@ if [0,9] <= list(map(int, sns.__version__.split('.'))) < [0,10]:
                      color=[cc(c/len(resp_names)) for c,n in enumerate(resp_names)])
         plt.legend(resp_names, loc='upper right')
         plot('resp-distr', interactive, inst._filename_prefix, block=False)
-        
+    '''    
     def response_distribution_plot(out_dir, y, resp_names, interactive):
         plt.figure('Distribution of response features')
         cc = plt.cm.get_cmap('hsv')
@@ -32,12 +33,13 @@ if [0,9] <= list(map(int, sns.__version__.split('.'))) < [0,10]:
         plot('resp-distr', interactive, out_dir, block=False)
         
 elif [0,10] <= list(map(int, sns.__version__.split('.'))) < [0,13]:
+    '''
     def distplot_dataframe(inst, y, resp_names, interactive):
         plt.figure('Distribution of response features')
         for c in y:
             sns.distplot(y[c], hist=True, kde=False, bins=ceil(max(10, 50/len(resp_names))))
         plot('resp-distr', interactive, inst._filename_prefix, block=False)
-        
+    '''    
     def response_distribution_plot(out_dir, y, resp_names, interactive):
         plt.figure('Distribution of response features')
         for c in y:
@@ -52,9 +54,10 @@ else:
 def plot(name, interactive, out_prefix=None, **show_kws):
     #print('saved figure filename: ', 'out_prefix', out_prefix, 'name', name)
     if out_prefix is not None:
-        print('Saving plot ' + out_prefix + '_' + name + '.png')
+        #print('Saving plot ' + out_prefix + '_' + name + '.png')
         plt.savefig(out_prefix + '_' + name + '.png')
     if interactive:
+        #print('HERE2', show_kws)
         plt.show(**show_kws)
     plt.clf()
 
@@ -67,13 +70,17 @@ def plot_data_columns(data):
         sns.distplot(data[c], hist=True, kde=False, bins=50)
         #print(c)
 
+# see this link to understand why impty plots are created sometimes 
+# https://stackoverflow.com/questions/28269157/plotting-in-a-non-blocking-way-with-matplotlib
+# for us it happens when {'block': False} is passed for show_kws; unclear where / how show_kws
+# gets this value {'block': False} as plot() is not called with any extra arguments
 def plot_true_pred_runtime1(y, y_pred, interactive, title, out_prefix=None, log_scale=False):
     print("{1} msqe: {0:.3f}".format(mean_squared_error(y, y_pred), title))
     print("{1} r2_score: {0:.3f}".format(r2_score(y, y_pred), title))
 
     #print("Train rmse: {0:.3f}".format(rmse(y_pred, y)))
     #print()
-
+    #print('y\n', y, 'y_pred\n', y_pred)
     if log_scale:
         y = np.log10(y)
         y_pred = np.log10(y_pred)
@@ -81,6 +88,7 @@ def plot_true_pred_runtime1(y, y_pred, interactive, title, out_prefix=None, log_
     l_plot = np.linspace(y.min(), y.max(), 100)
     y_pred = pd.DataFrame(y_pred, columns=y.columns)
     for c in y.columns:
+        #print('c=', c, 'x=', y[c].values, 'y=',y_pred[c].values, y_pred.columns)
         ax = sns.scatterplot(x=y[c].values, y=y_pred[c].values, marker='+', label=c)
         plot_title = title + '_resp_%s' % c
         ax.set_title(plot_title) # (title + ' col_%s' % c)

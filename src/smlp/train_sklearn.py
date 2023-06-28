@@ -124,7 +124,7 @@ def poly_train(input_names, resp_names, degree,
 
     ''' # writing spec file
     model_domain = training_data_to_domain_spec(X_train, input_names)
-    domain_file = open(os.path.join(inst._dir, inst._out_prefix + "_poly_domain.txt"), "w")
+    domain_file = open(inst._filename_prefix + "_poly_domain.txt"), "w")
     domain_file.write(model_domain)
     domain_file.close()
     '''
@@ -157,7 +157,7 @@ def sklearn_main(inst, input_names, resp_names, algo,
             X_train, X_test, y_train, y_test, seed, sw, save_model)
     elif algo == 'et':
         model = et_regr_train(input_names, resp_names, algo,
-            X_train, X_test, y_train, y_test, sw, seed, save_model)
+            X_train, X_test, y_train, y_test, seed, sw, save_model)
     elif algo == 'poly':
         model, poly_reg, X_train, X_test = poly_train(input_names, resp_names, degree,
             X_train, X_test, y_train, y_test, seed, sw)
@@ -178,9 +178,10 @@ def sklearn_main(inst, input_names, resp_names, algo,
     elif algo == 'poly':
         #print('Polynomial model coef\n', model.coef_.shape, '\n', model.coef_)
         #print('Polynomial model terms\n', poly_reg.powers_.shape, '\n', poly_reg.powers_)
-        formula_filename = inst._filename_prefix + '_' + str(algo) + '_' + resp_names[0] + "_poly_formula.txt"
-        model_formula = poly_model_to_formula(input_names, resp_names, model.coef_, poly_reg.powers_, 
-                                              True, formula_filename)
+        for resp_id in range(len(resp_names)):
+            formula_filename = inst._filename_prefix + '_' + str(algo) + '_' + resp_names[resp_id] + "_poly_formula.txt"
+            model_formula = poly_model_to_formula(input_names, resp_names, model.coef_, poly_reg.powers_, resp_id,
+                                                  True, formula_filename)
         
     # save model to enable re-running on new data sets
     if save_model:

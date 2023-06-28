@@ -13,10 +13,10 @@ import pandas as pd
 
 # imports from SMLP modules
 from logs_common import *
-from smlp.smlp_plot import distplot_dataframe
+from utils_common import np_JSONEncoder
 from smlp.train_common import (model_train, model_predict, keras_dict, sklearn_dict, caret_dict, 
-                              SMLP_KERAS_MODELS, SMLP_SKLEARN_MODELS, SMLP_CARET_MODELS)
-from smlp.data_common import prepare_data_for_training
+                              SMLP_KERAS_MODELS, SMLP_SKLEARN_MODELS, SMLP_CARET_MODELS, report_prediction_results)
+from smlp.data_common import prepare_data_for_modeling
 
 
 # for modular parsing -- parser from dict
@@ -76,28 +76,38 @@ def args_dict_parse(argv, args_dict):
         elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
             return True
         raise ValueError(f'{value} is not a valid boolean value')
-    parser.add_argument('data', metavar='DATA', type=str,
+    parser.add_argument('-data', '--labeled_data', metavar='DATA', type=str,
                         help='Path excluding the .csv suffix to input training data ' +
                         'file containing labels')
-    parser.add_argument('model', metavar='MODEL', type=str,
+    parser.add_argument('-model', '--model', metavar='MODEL', type=str,
                         help='Type of model to train (NN, Poly, ... ')
+    parser.add_argument('-mode', '--analytics_mode', type=str, default=None,
+                   help='What kind of analysis should be performed '+
+                        'the supported modes are train and prediction ' +
+                        '[default: train]')
+    parser.add_argument('-scale', '--scale_data', type=str_to_bool, default=True,
+                   help='Should features and reponses be scaled to [0,1] in input data?'+
+                        '[default: True]')
     parser.add_argument('-plots', '--interactive_plots', type=str_to_bool, default=True,
                    help='Should plots be displayed interactively (or only saved)?'+
                         '[default: True]')
-    # TODO !!!: maybe it is better to have a default seed, the runs to be reproducible even if user didn't supply a seed?
+    # TODO !!!: make sure seed is recorded in persisteny -- for debugging
     parser.add_argument('-seed', '--seed', type=int, default=None,
                    help='Initial random seed')
     parser.add_argument('-pref', '--run_prefix', type=str, default=None,
                    help='String to be used as prefix for the output files '+
                         '[default: empty string]')
+    parser.add_argument('-out_dir', '--output_directory', type=str, default=None,
+                   help='Output directory where all reports and output files will be written '+
+                        '[default: the same directory from which data is loaded]')
     for p, v in args_dict.items():
-        print(p, v)
+        #print(p, v)
         parser.add_argument('-'+v['abbr'], '--'+p, default=v['default'], 
                             type=v['type'], help=v['help'])
     args = parser.parse_args(argv[1:])
     return args
 
-# Split input data into training and test, subset / resumple from these
+# Split input data into training and test, subset / resample from these
 # training and test data that will actually be used for training and validation.
 # execute training and prediction on training test, the entire input data
 # and on new data (new_data) if that is also provided along with data for training.
@@ -106,7 +116,7 @@ def main(argv):
     args = args_dict_parse(argv, args_dict)
     print('params', vars(args))
     # data related args
-    inst = DataFileInstance(args.data, args.run_prefix, args.new_data) 
+    inst = DataFileInstance(args.labeled_data, args.run_prefix, args.output_directory, args.new_data) 
     
     if args.response is None:
         raise Exception('Response names should be provided')
@@ -116,12 +126,26 @@ def main(argv):
         
     split_test = DEF_SPLIT_TEST if args.split_test is None else args.split_test
 
-    X, y, X_train, y_train, X_test, y_test, mm = prepare_data_for_training(inst.data_fname, 
-        split_test, resp_names, feat_names, inst._filename_prefix, 
-        args.train_first_n, args.train_random_n, args.train_uniform_n, args.interactive_plots)
+    X, y, X_train, y_train, X_test, y_test, mm_scaler_feat, mm_scaler_resp, levels_dict = prepare_data_for_modeling(
+        inst.data_fname, True, split_test, feat_names, resp_names, inst._filename_prefix, 
+        args.train_first_n, args.train_random_n, args.train_uniform_n, args.interactive_plots, 
+        args.scale_data)
     
-    input_names = X_train.columns.tolist()
+    feat_names = X_train.columns.tolist()
     
+    X_train_proc = X_train #.copy()
+    X_test_proc = X_test #.copy()
+    # saving the column min/max info into json file to be able to scale model prediction
+    # results back to the original scale of the responses. The information in this file
+    # is essetially the same as that avilable within mm_scaler but is easier to consume.
+    with open(inst.data_bounds_file, 'w') as f:
+        json.dump({
+            col: { 'min': mm_scaler_feat.data_min_[i], 'max': mm_scaler_feat.data_max_[i] }
+            for i,col in enumerate(feat_names) } |
+            {col: { 'min': mm_scaler_resp.data_min_[i], 'max': mm_scaler_resp.data_max_[i] }
+            for i,col in enumerate(resp_names)
+        }, f, indent='\t', cls=np_JSONEncoder)
+        
     # run model training and prediction
     if args.model in SMLP_KERAS_MODELS:
         hparam_dict = dict((k, vars(args)[k]) for k in keras_dict.keys())
@@ -132,17 +156,21 @@ def main(argv):
     else:
         raise Exception('Unsupprted model training algp ' + str(args.model))
     #args.run_prefix
-    model = model_train(inst, input_names, resp_names, args.model, X_train, X_test, y_train, y_test,
+    model = model_train(inst, feat_names, resp_names, args.model, X_train, X_test, y_train, y_test,
         hparam_dict, args.interactive_plots, args.seed, args.sample_weights, True, data=None)
     if args.model == 'poly_sklearn':
         model, poly_reg, X_train, X_test = model
 
     print('\nPREDICT ON TRAINING DATA')
-    model_predict(inst, model, X_train, y_train, resp_names, args.model, 'train', args.interactive_plots)
-
+    y_train_pred = model_predict(inst, model, X_train, y_train, resp_names, args.model, 'train', args.interactive_plots)
+    report_prediction_results(inst, args.model, resp_names, y_train, y_train_pred, True, mm_scaler_resp, #X_train_proc
+        args.interactive_plots, 'train')
+    
     print('\nPREDICT ON TEST DATA')
-    model_predict(inst, model, X_test, y_test, resp_names, args.model, 'test', args.interactive_plots)
-
+    y_test_pred = model_predict(inst, model, X_test, y_test, resp_names, args.model, 'test', args.interactive_plots)
+    report_prediction_results(inst, args.model, resp_names, y_test, y_test_pred, True, mm_scaler_resp, #X_test_proc, 
+        args.interactive_plots, 'test')
+    
     print('\nPREDICT ON LABELED (TRAINING & TEST) DATA')
     # In case a polynomial model was run, polynomial features have been added to X_train and X_test,
     # therefore we need to reconstruct X before evaluating the model on all labeled features. 
@@ -151,23 +179,48 @@ def main(argv):
     # use original X vs using X_train and X_test that were generated using sampling X_tran and/or X_test
     run_on_orig_X = True         
     if run_on_orig_X and args.model == 'poly_sklearn':
+        X_proc = X
         X = poly_reg.transform(X)
     elif not run_on_orig_X:
+        X_proc = np.concatenate([X_train_proc, X_test_proc], axis=1)
         X = np.concatenate((X_train, X_test)); 
         y = pd.concat([y_train, y_test])
         #print(X_train.shape, X_test.shape, X.shape, y.shape);
-    model_predict(inst, model, X, y, resp_names, args.model, 'labeled', args.interactive_plots)
-        
+    else:
+        X_proc = X
+    y_pred = model_predict(inst, model, X, y, resp_names, args.model, 'labeled', args.interactive_plots)
+    report_prediction_results(inst, args.model, resp_names, y, y_pred, True, mm_scaler_resp, #X_proc, 
+        args.interactive_plots, 'labeled')
+    
     if not args.new_data is None:
         print('\nPREDICT ON NEW DATA')
-        new_data = pd.read_csv(inst.new_data_fname)
-        new_data = new_data[input_names + y_train.columns.tolist()]
-        new_data = pd.DataFrame(mm.transform(new_data), columns=new_data.columns)
-        X_new, y_new = get_response_features(new_data, input_names, resp_names)
+        X_new, y_new = prepare_data_for_modeling(
+            inst.new_data_fname, False, None, feat_names, resp_names, inst._filename_prefix, 
+            None, None, None, args.interactive_plots, args.scale_data, mm_scaler_feat, mm_scaler_resp, levels_dict)
+        X_new_proc = X_new
         if args.model == 'poly_sklearn':
             X_new = poly_reg.transform(X_new)
-        model_predict(inst, model, X_new, y_new, resp_names, args.model, 'new', args.interactive_plots)
-    
+        y_new_pred = model_predict(inst, model, X_new, y_new, resp_names, args.model, 'new', args.interactive_plots)
+        report_prediction_results(inst, args.model, resp_names, y_new, y_new_pred, True, mm_scaler_resp, #X_new_proc, 
+            args.interactive_plots, 'new')
+        return
+        try:
+            X_new, y_new = prepare_data_for_modeling(
+                inst.new_data_fname, False, None, feat_names, resp_names, inst._filename_prefix, 
+                None, None, None, args.interactive_plots, args.scale_data, mm_scaler_feat, mm_scaler_res, levels_dict)
+            X_new_proc = X_new
+            if args.model == 'poly_sklearn':
+                X_new = poly_reg.transform(X_new)
+            y_new_pred = model_predict(inst, model, X_new, y_new, resp_names, args.model, 'new', args.interactive_plots)
+            report_prediction_results(inst, args.model, resp_names, y_new, y_new_pred, True, mm_scaler_resp, #X_new_proc, 
+                args.interactive_plots, 'new')
+        except Exception as error:
+            print('Error occured during prediction on new data:\n' + str(error))
+            error_file = open(inst.error_file, "wt")
+            error_file.write('Error occured during prediction on new data:\n' + str(error))
+            error_file.close()
+            
+            
     
 if __name__ == "__main__":
     main(sys.argv)

@@ -27,7 +27,6 @@ def get_caret_hparam_deafult_dict():
     }
     return caret_hparam_deafult_dict
 
-# TODO: caret package supports single response variable for now
 # TODO: couldn't manage to disable cross-validation, looks like at least two folds is a must.
 # TODO: sample weights do not work with cross-validation. See https://github.com/pycaret/pycaret/issues/1350
 
@@ -147,6 +146,7 @@ def caret_train_single_response(inst, feature_names, resp_name, algo,
 # on each response (for now, sequentially);
 # the return value is a dictionary with the response names as keys and the repsctive 
 # models as values (this is true also if there is only one response in training data).
+# TODO !!!: couldn't figure out how to add a seed to ensure reproducibility
 def caret_main(inst, feature_names, response_names, algo,
         X_train, X_test, y_train, y_test, hparam_dict, interactive_plots,
         seed, sample_weights=0, models_compare=False, save_final_model=False):
