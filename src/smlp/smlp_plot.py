@@ -75,19 +75,20 @@ def plot_data_columns(data):
 # for us it happens when {'block': False} is passed for show_kws; unclear where / how show_kws
 # gets this value {'block': False} as plot() is not called with any extra arguments
 def plot_true_pred_runtime1(y, y_pred, interactive, title, out_prefix=None, log_scale=False):
-    print("{1} msqe: {0:.3f}".format(mean_squared_error(y, y_pred), title))
-    print("{1} r2_score: {0:.3f}".format(r2_score(y, y_pred), title))
+    #print("{1} msqe: {0:.3f}".format(mean_squared_error(y, y_pred), title))
+    #print("{1} r2_score: {0:.3f}".format(r2_score(y, y_pred), title))
 
     #print("Train rmse: {0:.3f}".format(rmse(y_pred, y)))
-    #print()
     #print('y\n', y, 'y_pred\n', y_pred)
     if log_scale:
         y = np.log10(y)
         y_pred = np.log10(y_pred)
 
-    l_plot = np.linspace(y.min(), y.max(), 100)
+    #l_plot = np.linspace(y.min(), y.max(), 100)
     y_pred = pd.DataFrame(y_pred, columns=y.columns)
     for c in y.columns:
+        # scale each plot individually based on min/max of y[c] (not that of y)
+        l_plot = np.linspace(y[c].min(), y[c].max(), 100)
         #print('c=', c, 'x=', y[c].values, 'y=',y_pred[c].values, y_pred.columns)
         ax = sns.scatterplot(x=y[c].values, y=y_pred[c].values, marker='+', label=c)
         plot_title = title + '_resp_%s' % c

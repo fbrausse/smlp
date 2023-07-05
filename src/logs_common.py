@@ -4,18 +4,12 @@
 # Copyright 2020 Franz Brauße <franz.brausse@manchester.ac.uk>
 # See the LICENSE file for terms of distribution.
 
-# And move parts not related to inst creation to another module -- say utils_common.py.
-# inst actually contains info required for logging, so maybe all feilds and paths/filenames
+# TODO !!!:  inst actually contains info required for logging, so maybe all feilds and paths/filenames
 # definitions need to be moved into a logger module/class (which does not exist now).
 
-import os, datetime, sys, json
-from fractions import Fraction
+import os, sys, json
+import logging
 
-from pandas import DataFrame
-
-from sklearn.preprocessing import MinMaxScaler
-
-import numpy as np
 
 class DataFileInstance:
     # data_file_prefix is the name of the data file including the full path to
@@ -34,15 +28,16 @@ class DataFileInstance:
         self._run_prefix = run_prefix
         self._out_dir = output_directory
         self._new_data = new_data_file_prefix
-        _, new_data_fname = os.path.split(self._new_data)
+        
         if not self._out_dir is None:
             self._filename_prefix = os.path.join(self._out_dir, self._run_prefix + '_' + self._pre)
         else:
             self._filename_prefix = os.path.join(self._dir, self._run_prefix + '_' + self._pre)
         # if new_data is not None, its name is added to self._filename_prefix
-        #if not self._new_data is None:
-        #    self._filename_prefix = self._filename_prefix + '_' + new_data_fname
-        
+        if not self._new_data is None:
+            _, new_data_fname = os.path.split(self._new_data)
+            self._filename_prefix = self._filename_prefix + '_' + new_data_fname
+
     # input/training data file name (including the directory path)
     @property
     def data_fname(self):
@@ -52,6 +47,11 @@ class DataFileInstance:
     @property
     def new_data_fname(self):
         return self._new_data + ".csv"
+    
+    # filename with full path for logging verbosity and events during execution
+    @property
+    def log_file(self):
+        return self._filename_prefix + ".txt"
     
     # filename with full path for logging error message before aborting
     @property
@@ -100,139 +100,80 @@ class DataFileInstance:
         return self._filename_prefix + '_' + data_version + "_prediction_precisions.csv"
     
 
-'''  # part of the commented out functions below have been moved to utils_common.py
-     # and some others (e.g., get_input_names, get_response_features) into the relevant modules 
-NP2PY = {
-    np.int64: int,
-    np.float64: float,
-}
-
-def np2py(o, lenient=False):
-    if lenient:
-        ty = NP2PY.get(type(o), type(o))
-    else:
-        ty = NP2PY[type(o)]
-    return ty(o)
-
-class np_JSONEncoder(json.JSONEncoder):
-    def default(self, o):
-        return NP2PY.get(type(o), super().default)(o)
-
-
-def timed(f, desc=None, log=lambda *args: print(*args, file=sys.stderr)):
-    now = datetime.datetime.now()
-    r = f()
-    t = (datetime.datetime.now() - now).total_seconds()
-    if desc is not None:
-        log(desc, 'took', t, 'sec')
-        return r
-    return r, t
-
-
-def get_input_names(spec):
-    return [s['label'] for s in spec if s['type'] != 'response']
-
-# response name of y
-def get_response_features(df, input_names, resp_names):
-    for resp_name in resp_names:
-        assert resp_name in df.columns
-    assert all(n in df.columns for n in input_names)
-    return df.drop([n for n in df if n not in input_names], axis=1), df[resp_names]
-
-
-def get_radii(spec, center):
-    abs_radii = []
-    for s,c in zip(spec, center):
-        if s['type'] == 'categorical':
-            abs_radii.append(0)
-            continue
-        if 'rad-rel' in s and c != 0:
-            w = s['rad-rel']
-            abs_radii.append(Fraction(w) * abs(c))
+    
+# LOGGER sources:
+# https://docs.python.org/3/howto/logging.html
+# https://stackoverflow.com/questions/29087297/is-there-a-way-to-change-the-filemode-for-a-logger-object-that-is-not-configured/29087645#29087645
+# TODO !!!: create SmlpLogger class? class SmlpLogger:
+# create python logger object with desired configuration  
+def create_logger(logger_name, log_file, log_level, log_mode, log_time):
+    # create logger for an application called logger_name
+    logger = logging.getLogger(logger_name)
+    
+    def log_level_to_level_object(level_str):
+        if level_str == 'critical':
+            return logging.CRITICAL
+        elif level_str == 'error':
+            return logging.ERROR
+        elif level_str == 'warning':
+            return logging.WARNING
+        elif level_str == 'info':
+            return logging.INFO
+        elif level_str == 'debug':
+            return logging.DEBUG
+        elif level_str == 'notset':
+            return logging.NOTSET
         else:
-            try:
-                w = s['rad-abs']
-            except KeyError:
-                w = s['rad-rel']
-            abs_radii.append(w)
-    return abs_radii
+            raise Exception('Unsupported logging level {}'.format(log_level))
+    
+    log_level_object = log_level_to_level_object(log_level)
+    # set the logging level 
+    logger.setLevel(log_level_object)
 
-def scaler_from_bounds(spec, bnds):
-    sc = MinMaxScaler()
-    mmin = []
-    mmax = []
-    for s in spec:
-        b = bnds[s['label']]
-        mmin.append(b['min'])
-        mmax.append(b['max'])
-    sc.fit((mmin, mmax))
-    return sc
+    # create file handler which logs even debug messages
+    fh = logging.FileHandler(log_file, mode=log_mode)
+    fh.setLevel(log_level_object)
+    
+    # create console handler with a higher log level
+    ch = logging.StreamHandler(stream=sys.stdout)
+    ch.setLevel(log_level_object)
+    
+    # create formatter and add it to the handlers
+    if log_time:
+        formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    else:
+        formatter = logging.Formatter('\n%(name)s - %(levelname)s - %(message)s')
+    #formatter = logging.Formatter('[%(asctime)s] %(levelname)8s --- %(message)s ' +
+    #                             '(%(filename)s:%(lineno)s)',datefmt='%Y-%m-%d %H:%M:%S')
+    fh.setFormatter(formatter)
+    ch.setFormatter(formatter)
+    
+    # add the handlers to the logger
+    logger.addHandler(ch)
+    logger.addHandler(fh)
 
-def io_scalers(spec, gen, bnds):
-    si = scaler_from_bounds([s for s in spec
-                             if s['type'] in ('categorical', 'knob', 'input')],
-                            bnds)
-    so = scaler_from_bounds([s for s in spec
-                             if s['type'] == 'response'
-                             and s['label'] in gen['response']],
-                            bnds)
-    return si, so
+    return logger
 
-def obj_range(gen, bnds):
-    r = gen['response']
-    for resp in r:
-        if gen['objective'] == resp:
-            so = scaler_from_bounds([{'label': resp}], bnds)
-            return so.data_min_[0], so.data_max_[0]
-    assert len(r) == 2
-    sOu = None
-    sOl = None
-    for i in range(2):
-        if gen['objective'] == ("%s-%s" % (r[i],r[1-i])):
-            u = bnds[r[i]]
-            l = bnds[r[1-i]]
-            sOl = u['min']-l['max']
-            sOu = u['max']-l['min']
-            break
-    assert sOl is not None
-    assert sOu is not None
-    return sOl, sOu
+DEF_LOGGER_LEVEL = 'warning'
+DEF_LOGGER_FMODE = 'w'
+DEF_LOGGER_TIME = 'true'
 
-class MinMax:
-    def __init__(self, min, max):
-        self.min = min
-        self.max = max
-    @property
-    def range(self):
-        return self.max - self.min
-    def norm(self, x):
-        return (x - self.min) / self.range
-    def denorm(self, y):
-        return y * self.range + self.min
+# function to be applied to args options that are intended to be Boolean
+# but are specified as strings
+def str_to_bool(value):
+    if value.lower() in {'false', 'f', '0', 'no', 'n'}:
+        return False
+    elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
+        return True
+    raise ValueError(f'{value} is not a valid boolean value')
+        
+logger_params_dict = {
+    'log_level': {'abbr':'log_level', 'default':'info', 'type':str,
+        'help':'The logger level or severity of the events they are used to track. The standard levels ' + 
+            'are (in increasing order of severity): notset, debug, info, warning, error, critical; ' +
+            'only events of this level and above will be tracked [default {}]'.format(DEF_LOGGER_LEVEL)}, 
+    'log_mode': {'abbr':'log_mode', 'default':'w', 'type':str,
+        'help':'The logger filemode for logging into log file [default {}]'.format(DEF_LOGGER_FMODE)},
+    'log_time': {'abbr':'log_time', 'default':DEF_LOGGER_TIME, 'type':str_to_bool,
+        'help':'Should time stamp be logged along with every message issued by logger [default {}]'.format(DEF_LOGGER_TIME)}}
 
-class Id:
-    def __init__(self):
-        pass
-    def norm(self, x):
-        return x
-    def denorm(self, y):
-        return y
-
-SCALER_TYPE = {
-    'min-max': lambda b: MinMax(b['min'], b['max']),
-    None     : lambda b: Id(),
-}
-
-def input_scaler(gen, b):
-    return SCALER_TYPE[gen['pp'].get('features')](b)
-
-def response_scaler(gen, b):
-    return SCALER_TYPE[gen['pp'].get('response')](b)
-
-def response_scalers(gen, bnds):
-    return [response_scaler(gen, bnds[r]) for r in gen['response']]
-
-
-class SolverTimeoutError(Exception):
-    pass
-'''

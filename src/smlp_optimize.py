@@ -165,7 +165,7 @@ def main(argv):
     args = parse_args(argv)
     print('params', vars(args))
     # data related args
-    inst = DataFileInstance(args.data); print(inst._dir, inst._out_prefix); 
+    inst = DataFileInstance(args.data)
     
     '''
     chkpt = args.chkpt
@@ -299,7 +299,6 @@ def main(argv):
                                                         test_size=split_test,
                                                         shuffle=True,
                                                         random_state=17)
-    print(os.path.join(inst._dir, inst._out_prefix))
     #y_test = None
     # make the training data small for purpose of quicker code development, improve distribution 
     # (make it close to uniform with random and uniform sampling with replacement), control training data size
