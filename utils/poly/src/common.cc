@@ -4,6 +4,8 @@
 
 #ifdef _WIN32
 static inline int isatty(int) { return 0; }
+#else
+#include <signal.h>
 #endif
 
 #define CSI		"\x1b["
@@ -145,7 +147,7 @@ void smlp::signal_backtrace_handler(int sig)
 	if (fd != -1) {
 		dprintf(STDERR_FILENO, "\nMemory map:\n");
 		for (ssize_t rd; (rd = read(fd, buffer, sizeof(buffer))) > 0 ||
-		                 rd == -1 && errno == EINTR;)
+		                 (rd == -1 && errno == EINTR);)
 			rd = write(STDERR_FILENO, buffer, rd);
 		close(fd);
 	}
