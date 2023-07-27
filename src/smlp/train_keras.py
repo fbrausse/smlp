@@ -1,7 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
-#from matplotlib import cm
 from math import ceil
 import json
 import numpy as np
@@ -11,90 +10,97 @@ from sklearn.metrics import mean_squared_error, r2_score
 # SMLP
 from logs_common import *
 from smlp.smlp_plot import plot  #, evaluate_model, evaluate_prediction, distplot_dataframe,
-from logs_common import create_logger
- 
-#from smlp.train_common import report_prediction_results
+#from logs_common import create_logger
 
-# defaults
-# TODO !!!: should these be part fo the class?
-#DEF_SPLIT_TEST = 0.2
-DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
-DEF_EPOCHS     = 2000
-HID_ACTIVATION = 'relu'
-OUT_ACTIVATION = 'linear'
-DEF_BATCH_SIZE = 200
-DEF_LOSS       = 'mse'
-DEF_METRICS    = ['mse']    # ['mae'], ['mae','accuracy']
-DEF_MONITOR    = 'loss'     # monitor for keras.callbacks
-                            # options: 'loss', 'val_loss', 'accuracy', 'mae'
-DEF_LAYERS_SPEC = '2,1'
 
-if list(map(int, tf.version.VERSION.split('.'))) < [1]:
-    assert False
-elif list(map(int, tf.version.VERSION.split('.'))) < [2]:
-    HIST_MSE = 'mean_squared_error'
-    HIST_VAL_MSE = 'val_mean_squared_error'
-elif list(map(int, tf.version.VERSION.split('.'))) < [3]:
-    HIST_MSE = 'mse'
-    HIST_VAL_MSE = 'val_mse'
-
-# hyper params dictionary for keras model training
-keras_hparam_dict = {
-    'nn_layers': {'abbr':'layers', 'default': DEF_LAYERS_SPEC, 'type':str,
-        'help':'specify number and sizes of the hidden layers of the '+
-                'NN as non-empty, comma-separated list of positive '+
-                'fractions in the number of input features in, e.g. '+
-                'second of half input size, third of quarter input size; '+
-                '[default: {}]'.format(DEF_LAYERS_SPEC)}, 
-    'nn_epochs': {'abbr':'epochs', 'default': DEF_EPOCHS, 'type':int,
-        'help':'epochs for NN [default: {}]'.format(DEF_EPOCHS)}, 
-    'nn_batch_size': {'abbr':'batch', 'default': DEF_BATCH_SIZE, 'type':int,
-        'help':'batch_size for NN [default: not exposed]'.format(DEF_BATCH_SIZE)}, 
-    'nn_optimizer': {'abbr':'optimizer', 'default': DEF_OPTIMIZER, 'type':str,
-        'help':'optimizer for NN [default: {}]'.format(DEF_OPTIMIZER)},
-    'nn_hid_activation': {'abbr':'hid_activation', 'default': HID_ACTIVATION, 'type':str,
-        'help':'hidden layer activation for NN [default: {}]'.format(HID_ACTIVATION)}, 
-    'nn_out_activation': {'abbr':'out_activation', 'default': OUT_ACTIVATION, 'type':str,
-        'help':'output layer activation for NN [default: {}]'.format(OUT_ACTIVATION)}}
-        
-# methods for training and predction with Tensorflow/KERAS package.
+# Methods for training and predction, results reporting with Tensorflow/KERAS package.
 # Currently NN only (with sequential and functional APIs)
 # When addig new models self._KERAS_MODELS = ['nn'] needs to be updated
 class ModelKeras:
-    def __init__(self, log_file : str, log_level : str, log_mode : str, log_time : str):    
+    def __init__(self): # , log_file : str, log_level : str, log_mode : str, log_time : str   
         #data_logger = logging.getLogger(__name__)
-        self._keras_logger = create_logger('keras_logger', log_file, log_level, log_mode, log_time)
+        self._keras_logger = None #create_logger('keras_logger', log_file, log_level, log_mode, log_time)
+        
         self._KERAS_MODELS = ['nn']
         self.SMLP_KERAS_MODELS = [self._algo_name_local2global(m) for m in self._KERAS_MODELS]
-
+        
+        # hyper parameter defaults
+        self._DEF_LAYERS_SPEC = '2,1'
+        self._DEF_EPOCHS     = 2000
+        self._DEF_BATCH_SIZE = 200
+        self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
+        self._HID_ACTIVATION = 'relu'
+        self._OUT_ACTIVATION = 'linear'
+        
+        # model accuracy parameters
+        self._DEF_LOSS       = 'mse'
+        self._DEF_METRICS    = ['mse']    # ['mae'], ['mae','accuracy']
+        self._DEF_MONITOR    = 'loss'     # monitor for keras.callbacks. options: 'loss', 'val_loss', 'accuracy', 'mae'
+        if list(map(int, tf.version.VERSION.split('.'))) < [1]:
+            assert False
+        elif list(map(int, tf.version.VERSION.split('.'))) < [2]:
+            self._HIST_MSE = 'mean_squared_error'
+            self._HIST_VAL_MSE = 'val_mean_squared_error'
+        elif list(map(int, tf.version.VERSION.split('.'))) < [3]:
+            self._HIST_MSE = 'mse'
+            self._HIST_VAL_MSE = 'val_mse'        
+        
+        # hyper params dictionary for keras model training
+        self._keras_hparam_default_dict = {
+            'layers': {'abbr':'layers', 'default': self._DEF_LAYERS_SPEC, 'type':str,
+                'help':'specify number and sizes of the hidden layers of the '+
+                        'NN as non-empty, comma-separated list of positive '+
+                        'fractions in the number of input features in, e.g. '+
+                        'second of half input size, third of quarter input size; '+
+                        '[default: {}]'.format(self._DEF_LAYERS_SPEC)}, 
+            'epochs': {'abbr':'epochs', 'default': self._DEF_EPOCHS, 'type':int,
+                'help':'epochs for NN [default: {}]'.format(self._DEF_EPOCHS)}, 
+            'batch_size': {'abbr':'batch', 'default': self._DEF_BATCH_SIZE, 'type':int,
+                'help':'batch_size for NN [default: not exposed]'.format(self._DEF_BATCH_SIZE)}, 
+            'optimizer': {'abbr':'optimizer', 'default': self._DEF_OPTIMIZER, 'type':str,
+                'help':'optimizer for NN [default: {}]'.format(self._DEF_OPTIMIZER)},
+            'hid_activation': {'abbr':'hid_activation', 'default': self._HID_ACTIVATION, 'type':str,
+                'help':'hidden layer activation for NN [default: {}]'.format(self._HID_ACTIVATION)}, 
+            'out_activation': {'abbr':'out_activation', 'default': self._OUT_ACTIVATION, 'type':str,
+                'help':'output layer activation for NN [default: {}]'.format(self._OUT_ACTIVATION)}}
+    
+    def set_logger(self, logger):
+        self._keras_logger = logger 
+    
     # local names for model is/are 'nn, ..., while global names are 'nn_ceras',...
     # to distinguish dt, rf, ... implementation in different packages
     def _algo_name_local2global(self, algo):
         return algo+'_keras'
     
+    # local name of hyper parameter (as in sklearn package) to global name;
+    # the global name is obtained from local name, say 'epochs', by prefixing it
+    # with the global name of the algorithm, which results in 'nn_keras_epochs'
+    def _hparam_name_local_to_global(self, hparam, algo):
+        #print('hparam global name', hparam, algo)
+        return self._algo_name_local2global(algo) + '_' + hparam
+        
+    # given training algo name like dt and the hyper parameter dictionary param_dict  
+    # for that algo in the python package used in this class), this function returns  
+    # a modified dictionary obtained from param_dictby by adds algo name like nn_keras
+    # (where keras is the name of the package used) to the parameter name and its
+    # correponding abbriviated name in param_dict.
+    def _param_dict_with_algo_name(self, param_dict, algo):
+        #print('param_dict', param_dict)
+        result_dict = {}
+        for k, v in param_dict.items():
+            v_updated = v.copy()
+            v_updated['abbr'] = self._hparam_name_local_to_global(v['abbr'], algo) # algo + '_' + v['abbr']
+            #print('updated abbrv', v_updated['abbr'])
+            #print('updated key', self._hparam_name_local_to_global(k, algo))
+            result_dict[self._hparam_name_local_to_global(k, algo)] = v_updated #algo + '_' + k
+        #raise Exception('tmp')
+        return result_dict
+    
     # local hyper params dictionary
     def get_keras_hparam_default_dict(self):
-        nn_hparam_deafult_dict = {
-            'nn_layers': {'abbr':'layers', 'default': DEF_LAYERS_SPEC, 'type':str,
-                'help':'specify number and sizes of the hidden layers of the '+
-                        'NN as non-empty, comma-separated list of positive '+
-                        'fractions in the number of input features in, e.g. '+
-                        'second of half input size, third of quarter input size; '+
-                        '[default: {}]'.format(DEF_LAYERS_SPEC)}, 
-            'nn_epochs': {'abbr':'epochs', 'default': DEF_EPOCHS, 'type':int,
-                'help':'epochs for NN [default: {}]'.format(DEF_EPOCHS)}, 
-            'nn_batch_size': {'abbr':'batch', 'default': DEF_BATCH_SIZE, 'type':int,
-                'help':'batch_size for NN [default: not exposed]'.format(DEF_BATCH_SIZE)}, 
-            'nn_optimizer': {'abbr':'optimizer', 'default': DEF_OPTIMIZER, 'type':str,
-                'help':'optimizer for NN [default: {}]'.format(DEF_OPTIMIZER)},
-            #'nn_activation': {'abbr':'activation', 'default': HID_ACTIVATION, 'type':str,
-            #    'help':'activation for NN [default: {}]'.format(HID_ACTIVATION)}
-            'nn_hid_activation': {'abbr':'hid_activation', 'default': HID_ACTIVATION, 'type':str,
-                'help':'hidden layer activation for NN [default: {}]'.format(HID_ACTIVATION)}, 
-            'nn_out_activation': {'abbr':'out_activation', 'default': OUT_ACTIVATION, 'type':str,
-                'help':'output layer activation for NN [default: {}]'.format(OUT_ACTIVATION)}}
-        return nn_hparam_deafult_dict
-
+        nn_keras_hyperparam_dict = self._param_dict_with_algo_name(self._keras_hparam_default_dict, 'nn')
+        return nn_keras_hyperparam_dict
+        
     # initialize Keras NN model using sequential API; it does not use sample weights.
     def _nn_init_model(self, input_dim, optimizer, hid_activation, out_activation, layers_spec, n_out):
         model = keras.models.Sequential()
@@ -107,7 +113,7 @@ class ModelKeras:
                                          input_dim=input_dim if first else None))
             first = False
         model.add(keras.layers.Dense(n_out, activation=out_activation)) # OUT_ACTIVATION
-        model.compile(optimizer=optimizer, loss=DEF_LOSS, metrics=DEF_METRICS)
+        model.compile(optimizer=optimizer, loss=self._DEF_LOSS, metrics=self._DEF_METRICS)
 
         #print("nn_init_model:model") ; print(model)
         return model
@@ -160,12 +166,12 @@ class ModelKeras:
         losses = {}
         for resp in resp_names:
             globals()[f"{resp}"] = keras.layers.Dense(1, name=resp, activation=out_activation)(globals()[nn_layer_names[-1]])
-            losses[resp] = DEF_LOSS
+            losses[resp] = self._DEF_LOSS
             nn_output_vars.append(globals()[f"{resp}"])
         #print('nn_output_vars', nn_output_vars)    
         model = keras.models.Model(nn_layer_vars[0], nn_output_vars)
-        #model.compile(optimizer=optimizer, loss=DEF_LOSS, metrics=DEF_METRICS)
-        model.compile(optimizer=optimizer, loss=losses, metrics=DEF_METRICS)    
+        #model.compile(optimizer=optimizer, loss=self._DEF_LOSS, metrics=self._DEF_METRICS)
+        model.compile(optimizer=optimizer, loss=losses, metrics=self._DEF_METRICS)    
         #print("nn_init_model:model"); print(model)
         return model
 
@@ -176,20 +182,20 @@ class ModelKeras:
         checkpointer = None
         if model_checkpoint_path:
             checkpointer = keras.callbacks.ModelCheckpoint(
-                    filepath=model_checkpoint_path, monitor=DEF_MONITOR,
+                    filepath=model_checkpoint_path, monitor=self._DEF_MONITOR,
                     verbose=0, save_best_only=True)
 
         earlyStopping = None
         if False:
             earlyStopping = keras.callbacks.EarlyStopping(
-                    monitor=DEF_MONITOR, patience=100, min_delta=0,
+                    monitor=self._DEF_MONITOR, patience=100, min_delta=0,
                     verbose=0, mode='auto',
                     restore_best_weights=True)
 
         rlrop = None
         if False:
             rlrop = keras.callbacks.ReduceLROnPlateau(
-                    monitor=DEF_MONITOR,
+                    monitor=self._DEF_MONITOR,
                     # XXX: no argument 'lr' in docs; there is 'min_lr', however
                     lr=0.000001, factor=0.1, patience=100)
 
@@ -246,11 +252,11 @@ class ModelKeras:
         # training iterations (this is just a guess...). To adress this, below we have a case split
         # based on history_for_all_responses which checks whether specific response related keys occur 
         # in training hstory history.history:
-        history_for_all_responses = HIST_MSE in history.history and HIST_VAL_MSE in history.history and \
+        history_for_all_responses = self._HIST_MSE in history.history and self._HIST_VAL_MSE in history.history and \
             'loss' in history.history and 'val_loss' in history.history
         if len(resp_names) == 1 or history_for_all_responses:
-            acc = history.history[HIST_MSE]; #print(acc)
-            val_acc = history.history[HIST_VAL_MSE]
+            acc = history.history[self._HIST_MSE]; #print(acc)
+            val_acc = history.history[self._HIST_VAL_MSE]
             loss = history.history['loss']
             val_loss = history.history['val_loss']
             if len(resp_names) == 1:
@@ -259,8 +265,8 @@ class ModelKeras:
                 plot_error_convergence(acc, 'all_responses')
         else:
             for rn in resp_names:
-                acc = history.history[rn + '_' + HIST_MSE]; #print(acc)
-                val_acc = history.history['val_' + rn + '_' + HIST_MSE]
+                acc = history.history[rn + '_' + self._HIST_MSE]; #print(acc)
+                val_acc = history.history['val_' + rn + '_' + self._HIST_MSE]
                 loss = history.history[rn + '_' + 'loss']
                 val_loss = history.history['val_' + rn + '_loss']
                 plot_error_convergence(acc, rn)
@@ -281,15 +287,14 @@ class ModelKeras:
     # epochs and batch_size are arguments of NN algorithm from keras library
     def keras_main(self, inst, input_names, resp_names : list, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
-            seed, weights_coef, save_model, data=None):
+            seed, weights_coef, save_model):
 
-        layers_spec = self._get_parm_val(hparam_dict, 'nn_layers') #DEF_LAYERS_SPEC
-        epochs = self._get_parm_val(hparam_dict, 'nn_epochs') #DEF_EPOCHS)
-        batch_size = self._get_parm_val(hparam_dict, 'nn_batch_size') #DEF_BATCH_SIZE
-        optimizer = self._get_parm_val(hparam_dict, 'nn_optimizer') #DEF_OPTIMIZER
-        #activation = self._get_parm_val(hparam_dict, 'nn_hid_activation') #HID_ACTIVATION
-        hid_activation = self._get_parm_val(hparam_dict, 'nn_hid_activation') #HID_ACTIVATION
-        out_activation = self._get_parm_val(hparam_dict, 'nn_out_activation') #HID_ACTIVATION
+        layers_spec = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('layers', algo)) #DEF_LAYERS_SPEC 'nn_layers'
+        epochs = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('epochs', algo)) #DEF_EPOCHS)
+        batch_size = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('batch_size', algo)) #DEF_BATCH_SIZE
+        optimizer = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('optimizer', algo)) #DEF_OPTIMIZER
+        hid_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('hid_activation', algo)) #HID_ACTIVATION
+        out_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('out_activation', algo)) #OUT_ACTIVATION
 
         self._keras_logger.info('keras_main: start')
         #print('layers_spec =', layers_spec, '; seed =', seed, '; weights =', weights_coef)
@@ -310,7 +315,6 @@ class ModelKeras:
                 'optimizer': optimizer,
                 'hid_activation': hid_activation,
                 'out_activation': out_activation,
-                #'split-test': split_test,
                 'seed': seed,
             },
         }
@@ -318,25 +322,6 @@ class ModelKeras:
         with open(inst.model_gen_file + '_hyperparameters', 'w') as f:
             json.dump(hyperparam_persist, f)
 
-        '''
-        if filter > 0:
-            if len(resp_names) > 1:
-                assert objective is not None
-            obj = data.eval(objective)
-            data = data[obj >= obj.quantile(filter)]
-            persist['filter'] = { 'quantile': filter }
-            del obj
-
-        # normalize data
-        data = pd.DataFrame(mm.transform(data), columns=data.columns)
-        persist['pp'] = {
-            'response': 'min-max',
-            'features': 'min-max',
-        }
-
-        with open(inst.model_gen_file, 'w') as f:
-            json.dump(persist, f)
-        '''
         SEQUENTIAL_MODEL = weights_coef == 0
         input_dim = X_train.shape[1] #num_columns
         if SEQUENTIAL_MODEL:

@@ -9,51 +9,123 @@ import pickle
 # SMLP
 from smlp.smlp_plot import *
 from smlp.formula_sklearn import SklearnFormula
-from logs_common import create_logger
-
-
-# default hyper params for local models
-# TODO !!!: should this be part of the class?
-DEF_CV_FOLDS = 0
-
-# hyper params dictionary for ceras model training
-caret_hparam_dict = {
-    'cv_folds': {'abbr':'cv_folds', 'default': DEF_CV_FOLDS, 'type':int,
-        'help': 'cross-validation folds [default: ' + str(DEF_CV_FOLDS) + ']'}}
+#from logs_common import create_logger
 
 
 # TODO: couldn't manage to disable cross-validation, looks like at least two folds is a must.
 # TODO: sample weights do not work with cross-validation. See https://github.com/pycaret/pycaret/issues/1350
 
-# methods for training and predction with CARET package 
+# Methods for training and predction, results reporting with CARET package 
 # Currently 'rf', 'dt', 'et', 'lightgbm', 'gbr', 'knn' are supported
 # When addig new models self._CARET_MODELS = ['nn'] needs to be updated
 class ModelCaret:
-    def __init__(self, log_file : str, log_level : str, log_mode : str, log_time : str):    
+    def __init__(self):   
         #data_logger = logging.getLogger(__name__)
-        self._caret_logger = create_logger('caret_logger', log_file, log_level, log_mode, log_time)
+        self._caret_logger = None # TODO !!! create a default logger?
         self._CARET_MODELS = ['rf', 'dt', 'et', 'lightgbm', 'gbr', 'knn']
         self.SMLP_CARET_MODELS = [self._algo_name_local2global(m) for m in self._CARET_MODELS]
         self._instFormula = SklearnFormula()
+        
+        # params for setup() function: session_id, verbose, fold, data_split_shuffle (set to False to acheive reproducibility?)
+        # setup() hyper parameter defaults
+        self._DEF_SESSION_ID = None
+        self._DEF_DATA_SPLIT_SHUFFLE = True
+        self._DEF_CV_FOLDS = 0
+        self._DEF_TREE_MAX_DEPTH = 5
+        self._DEF_CROSS_VALIDATION = True
+        self._DEF_VERBOSE = True
+        self._DEF_RETURN_TRAIN_SCORE = False
+
+        # tune_model() default values
+        self._DEF_SEARCH_ALGO = 'random'
+        self._DEF_TUNER_VERBOSE = True
+        
+        #  params dictionary for setup() function
+        self._setup_hparam_dict = {
+            'session_id': {'abbr':'session_id', 'default': self._DEF_SESSION_ID, 'type':int,
+                'help': 'Controls the randomness of experiment. It is equivalent to ‘random_state’ ' +
+                        'in scikit-learn. When None, a pseudo random number is generated. ' +
+                        'This can be used for later reproducibility of the entire experiment ' + 
+                        '[default: ' + str(self._DEF_SESSION_ID) + ']'},
+            'fold': {'abbr':'fold', 'default': self._DEF_CV_FOLDS, 'type':int,
+                'help': 'Controls cross-validation. If None, the CV generator in the ' +
+                        'fold_strategy parameter of the setup function is used. ' +
+                        'When an integer is passed, it is interpreted as the ‘n_splits’ ' +
+                        'parameter of the CV generator in the setup function. ' +
+                        '[default: ' + str(self._DEF_CV_FOLDS) + ']'},
+            'data_split_shuffle': {'abbr':'data_split_shuffle', 'default': self._DEF_DATA_SPLIT_SHUFFLE, 'type':bool,
+                'help': 'When set to False, prevents shuffling of rows during ‘train_test_split’. ' + 
+                        '[default: ' + str(self._DEF_DATA_SPLIT_SHUFFLE) + ']'},
+            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE, 'type':bool,
+                'help': 'When set to False, Information grid is not printed. ' +
+                        '[default: ' + str(self._DEF_VERBOSE) + ']'},
+            }
+
+        # params dictionary for create_model() function
+        self._model_hparam_dict = {
+            'cross_validation': {'abbr':'cross_validation', 'default': self._DEF_CROSS_VALIDATION, 'type':bool,
+                'help': 'When set to False, metrics are evaluated on holdout set. ' +
+                        'fold param is ignored when cross_validation is set to False. ' +
+                        '[default: ' + str(self._DEF_CROSS_VALIDATION) + ']'},
+            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE, 'type':bool,
+                'help': 'Score grid is not printed when verbose is set to False. ' +
+                        '[default: ' + str(self._DEF_VERBOSE) + ']'},
+            'return_train_score': {'abbr':'return_train_score', 'default': self._DEF_RETURN_TRAIN_SCORE, 'type':bool,
+                'help': 'If False, returns the CV Validation scores only. If True, returns ' +
+                        'the CV training scores along with the CV validation scores. ' +
+                        'This is useful when the user wants to do bias-variance tradeoff. ' +
+                        'A high CV training score with a low corresponding CV validation score ' +
+                        'indicates overfitting. [default: ' + str(self._DEF_RETURN_TRAIN_SCORE) + ']'}
+            }
+
+        # params dictionary for tune_model() function
+        self._tuner_hparam_dict = {
+            'search_algorithm': {'abbr':'search_algo', 'default': self._DEF_SEARCH_ALGO, 'type':str,
+                'help': 'The search algorithm depends on the search_library parameter. ' +
+                        'If None, will use search library-specific default algorithm. ' +
+                        'Other possible values are ‘random’ : random grid search (default) ' +
+                        'and ‘grid’ : grid search [default: ' + str(self._DEF_SEARCH_ALGO) + ']'},
+            'tuner_verbose': {'abbr':'tuner_verbose', 'default': self._DEF_TUNER_VERBOSE, 'type':bool,
+                'help': 'If True or above 0, will print messages from the tuner. ' +
+                        'Ignored when verbose param is False. [default: ' + str(self._DEF_TUNER_VERBOSE) + ']'}
+            }
+
+        self.caret_hparam_dict = self.get_caret_hparam_default_dict()
         
     # local names for model are 'dt', 'rf', ..., while global names are 'dt_caret'
     # 'rf_caret', to distinguish dt, rf, ... implementation in different packages
     def _algo_name_local2global(self, algo):
         return algo+'_caret'
     
-    # local hyper params dictionary
-    def get_caret_hparam_default_dict(self):
-        caret_hparam_deafult_dict = { # TODO !!! do we need metavar feild? metavar='CV_FOLDS',
-            'cv_folds': {'abbr':'cv_folds', 'default': DEF_CV_FOLDS, 'type':int,
-                'help': 'cross-validation folds [default: ' + str(DEF_CV_FOLDS) + ']'}
-        }
-        return caret_hparam_deafult_dict
-
+    # local name of hyper parameter (as in sklearn package) to global name;
+    # the global name is obtained from local name, say 'max_depth', by prefixing it
+    # with the global name of the algorithm, which results in 'dt_sklearn_max_depth'
+    def _hparam_name_local_to_global(self, hparam, algo):
+        #print('hparam global name', hparam, algo)
+        return self._algo_name_local2global(algo) + '_' + hparam
+        
+    # given training algo name like dt and the hyper parameter dictionary param_dict  
+    # for that algo in the python package used in this class), this function returns  
+    # a modified dictionary obtained from param_dictby by adds algo name like dt_sklearn
+    # (where sklearn is the name of the package used) to the parameter name and its
+    # correponding abbriviated name in param_dict.
+    def _param_dict_with_func_name(self, param_dict, func):
+        print('param_dict', param_dict)
+        result_dict = {}
+        for k, v in param_dict.items():
+            v_updated = v.copy()
+            v_updated['abbr'] = self._hparam_name_local_to_global(v['abbr'], func)
+            #print('updated abbrv', v_updated['abbr'])
+            #print('updated key', self._hparam_name_local_to_global(k, func))
+            result_dict[self._hparam_name_local_to_global(k, func)] = v_updated
+        #raise Exception('tmp')
+        return result_dict
+    
     # predictions for single response using models supported in caret package
     def _caret_train_single_response(self, inst, feature_names, resp_name, algo,
-            X_train, X_test, y_train, y_test, interactive_plots,
+            X_train, X_test, y_train, y_test, interactive_plots, seed,
             folds=3, sample_weights_vect=None, models_compare=False, 
-            predict=False, predict_new=False, save_final_model=False):
+            save_final_model=False):
 
         # prefix of output / report filename for this function -- includes _filename_prefix,
         # the name of the algo/model, name of the response, and report-specific suffix
@@ -67,13 +139,15 @@ class ModelCaret:
         perform_cv = folds > 1 # whether to perform cross-validation
         df_train = pd.concat([X_train, y_train], axis=1)
         #print('df_train\n', df_train); print(resp_name)
-        exp_clf = setup(df_train, target=resp_name)
-
+        exp_clf = setup(df_train, target=resp_name, session_id=seed, 
+            data_split_shuffle=self._hparam_name_local_to_global('data_split_shuffle', 'setup'))
+        
         # create multiple models to find best (this step is optional, useful but time consuming)
         if models_compare:
-            self._caret_logger.info('compare models')
+            eslf._caret_logger.info('compare models')
             best_model = compare_models(cross_validation=perform_cv, fold=max(2,folds), 
                 fit_kwargs={'sample_weight': sample_weights_vect}, n_select=1) ; #print('best model\n', best_model)
+        
         # Uses the default hyperparameters to train the model; need to pass it the required algo
         # since otherwise the best model found by compare models will be used (if it was run)
         self._caret_logger.info('Creating {} model: start'.format(algo))    
@@ -154,6 +228,18 @@ class ModelCaret:
 
         return final_model
 
+    # set logger from a caller script
+    def set_logger(self, logger):
+        self._caret_logger = logger 
+        
+    # local hyper params dictionary
+    def get_caret_hparam_default_dict(self):
+        caret_setup_hparam_dict = self._param_dict_with_func_name(self._setup_hparam_dict, 'setup')
+        caret_model_hparam_dict = self._param_dict_with_func_name(self._model_hparam_dict, 'model')
+        caret_tuner_hparam_dict = self._param_dict_with_func_name(self._tuner_hparam_dict, 'tuner')
+        caret_hparam_dict = caret_setup_hparam_dict | caret_model_hparam_dict | caret_tuner_hparam_dict
+        return caret_hparam_dict
+
     # supports training multiple responses by iterating caret_train_single_response()
     # on each response (for now, sequentially);
     # the return value is a dictionary with the response names as keys and the repsctive 
@@ -162,17 +248,17 @@ class ModelCaret:
     def caret_main(self, inst, feature_names, response_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots,
             seed, sample_weights_vect, models_compare=False, save_final_model=False):
-
         # supported model training algorithms
         if not algo in self._CARET_MODELS:
             raise Exception('Unsupported model ' + str(algo) + ' in caret_main')
-
-        folds = hparam_dict['cv_folds']
+        print(self._hparam_name_local_to_global('fold', 'setup'))
+        folds = hparam_dict[self._hparam_name_local_to_global('fold', 'setup')]
+        #max_depth = hparam_dict['caret_max_depth']
 
         models = {}
         for rn in response_names:
             models[rn] = self._caret_train_single_response(inst, feature_names, rn, algo,
-            X_train, X_test, y_train[[rn]], y_test[[rn]], interactive_plots,
+            X_train, X_test, y_train[[rn]], y_test[[rn]], interactive_plots, seed,
             folds, sample_weights_vect=sample_weights_vect, models_compare=models_compare, 
             save_final_model=save_final_model)
         return models

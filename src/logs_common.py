@@ -9,7 +9,7 @@
 
 import os, sys, json
 import logging
-
+from utils_common import str_to_bool
 
 class DataFileInstance:
     # data_file_prefix is the name of the data file including the full path to
@@ -100,80 +100,73 @@ class DataFileInstance:
         return self._filename_prefix + '_' + data_version + "_prediction_precisions.csv"
     
 
-    
 # LOGGER sources:
 # https://docs.python.org/3/howto/logging.html
 # https://stackoverflow.com/questions/29087297/is-there-a-way-to-change-the-filemode-for-a-logger-object-that-is-not-configured/29087645#29087645
-# TODO !!!: create SmlpLogger class? class SmlpLogger:
-# create python logger object with desired configuration  
-def create_logger(logger_name, log_file, log_level, log_mode, log_time):
-    # create logger for an application called logger_name
-    logger = logging.getLogger(logger_name)
-    
-    def log_level_to_level_object(level_str):
-        if level_str == 'critical':
-            return logging.CRITICAL
-        elif level_str == 'error':
-            return logging.ERROR
-        elif level_str == 'warning':
-            return logging.WARNING
-        elif level_str == 'info':
-            return logging.INFO
-        elif level_str == 'debug':
-            return logging.DEBUG
-        elif level_str == 'notset':
-            return logging.NOTSET
+# create python logger object with desired configuration ; define the default configuration logger_params_dict
+class SmlpLogger:
+    def __init__(self):
+        self._DEF_LOGGER_LEVEL = 'warning'
+        self._DEF_LOGGER_FMODE = 'w'
+        self._DEF_LOGGER_TIME = 'true'
+
+        self.logger_params_dict = {
+            'log_level': {'abbr':'log_level', 'default':'info', 'type':str,
+                'help':'The logger level or severity of the events they are used to track. The standard levels ' + 
+                    'are (in increasing order of severity): notset, debug, info, warning, error, critical; ' +
+                    'only events of this level and above will be tracked [default {}]'.format(self._DEF_LOGGER_LEVEL)}, 
+            'log_mode': {'abbr':'log_mode', 'default':'w', 'type':str,
+                'help':'The logger filemode for logging into log file [default {}]'.format(self._DEF_LOGGER_FMODE)},
+            'log_time': {'abbr':'log_time', 'default':self._DEF_LOGGER_TIME, 'type':str_to_bool,
+                'help':'Should time stamp be logged along with every message issued by logger [default {}]'.format(self._DEF_LOGGER_TIME)}}
+
+    # create python logger object with desired configuration 
+    def create_logger(self, logger_name, log_file, log_level, log_mode, log_time):
+        # create logger for an application called logger_name
+        logger = logging.getLogger(logger_name)
+
+        def log_level_to_level_object(level_str):
+            if level_str == 'critical':
+                return logging.CRITICAL
+            elif level_str == 'error':
+                return logging.ERROR
+            elif level_str == 'warning':
+                return logging.WARNING
+            elif level_str == 'info':
+                return logging.INFO
+            elif level_str == 'debug':
+                return logging.DEBUG
+            elif level_str == 'notset':
+                return logging.NOTSET
+            else:
+                raise Exception('Unsupported logging level {}'.format(log_level))
+
+        log_level_object = log_level_to_level_object(log_level)
+        # set the logging level 
+        logger.setLevel(log_level_object)
+
+        # create file handler which logs even debug messages
+        fh = logging.FileHandler(log_file, mode=log_mode)
+        fh.setLevel(log_level_object)
+
+        # create console handler with a higher log level
+        ch = logging.StreamHandler(stream=sys.stdout)
+        ch.setLevel(log_level_object)
+
+        # create formatter and add it to the handlers
+        if log_time:
+            formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         else:
-            raise Exception('Unsupported logging level {}'.format(log_level))
-    
-    log_level_object = log_level_to_level_object(log_level)
-    # set the logging level 
-    logger.setLevel(log_level_object)
+            formatter = logging.Formatter('\n%(name)s - %(levelname)s - %(message)s')
+        #formatter = logging.Formatter('[%(asctime)s] %(levelname)8s --- %(message)s ' +
+        #                             '(%(filename)s:%(lineno)s)',datefmt='%Y-%m-%d %H:%M:%S')
+        fh.setFormatter(formatter)
+        ch.setFormatter(formatter)
 
-    # create file handler which logs even debug messages
-    fh = logging.FileHandler(log_file, mode=log_mode)
-    fh.setLevel(log_level_object)
-    
-    # create console handler with a higher log level
-    ch = logging.StreamHandler(stream=sys.stdout)
-    ch.setLevel(log_level_object)
-    
-    # create formatter and add it to the handlers
-    if log_time:
-        formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    else:
-        formatter = logging.Formatter('\n%(name)s - %(levelname)s - %(message)s')
-    #formatter = logging.Formatter('[%(asctime)s] %(levelname)8s --- %(message)s ' +
-    #                             '(%(filename)s:%(lineno)s)',datefmt='%Y-%m-%d %H:%M:%S')
-    fh.setFormatter(formatter)
-    ch.setFormatter(formatter)
-    
-    # add the handlers to the logger
-    logger.addHandler(ch)
-    logger.addHandler(fh)
+        # add the handlers to the logger
+        logger.addHandler(ch)
+        logger.addHandler(fh)
 
-    return logger
+        return logger
 
-DEF_LOGGER_LEVEL = 'warning'
-DEF_LOGGER_FMODE = 'w'
-DEF_LOGGER_TIME = 'true'
-
-# function to be applied to args options that are intended to be Boolean
-# but are specified as strings
-def str_to_bool(value):
-    if value.lower() in {'false', 'f', '0', 'no', 'n'}:
-        return False
-    elif value.lower() in {'true', 't', '1', 'yes', 'y'}:
-        return True
-    raise ValueError(f'{value} is not a valid boolean value')
-        
-logger_params_dict = {
-    'log_level': {'abbr':'log_level', 'default':'info', 'type':str,
-        'help':'The logger level or severity of the events they are used to track. The standard levels ' + 
-            'are (in increasing order of severity): notset, debug, info, warning, error, critical; ' +
-            'only events of this level and above will be tracked [default {}]'.format(DEF_LOGGER_LEVEL)}, 
-    'log_mode': {'abbr':'log_mode', 'default':'w', 'type':str,
-        'help':'The logger filemode for logging into log file [default {}]'.format(DEF_LOGGER_FMODE)},
-    'log_time': {'abbr':'log_time', 'default':DEF_LOGGER_TIME, 'type':str_to_bool,
-        'help':'Should time stamp be logged along with every message issued by logger [default {}]'.format(DEF_LOGGER_TIME)}}
 

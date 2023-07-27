@@ -15,41 +15,255 @@ import pickle
 # SMLP
 from smlp.smlp_plot import *
 from smlp.formula_sklearn import SklearnFormula
-from logs_common import create_logger
+#from logs_common import create_logger
 
 
-# defaults for local parameters
-# TODO !!!: should way be within the class?
-DEF_POLY_DEGREE = 2
-
-# hyper params dictionary for sklearn model training
-sklearn_hparam_dict = {
-    'poly_degree': {'abbr':'poly_degree', 'default': DEF_POLY_DEGREE, 'type':int,
-        'help': 'Degree of the polynomial to train [default: ' + str(DEF_POLY_DEGREE) + ']'}}
-
-# methods for training and predction with SKLEARN package   
+# Methods for training and predction, results reproting with SKLEARN package   
 # Currently 'rf', 'dt', 'et', 'poly' are supported
 # When addig new models self._KERAS_MODELS = ['nn'] needs to be updated
 class ModelSklearn:
-    def __init__(self, log_file : str, log_level : str, log_mode : str, log_time : str):    
+    def __init__(self):
         #data_logger = logging.getLogger(__name__)
-        self._sklearn_logger = create_logger('sklearn_logger', log_file, log_level, log_mode, log_time)
+        self._sklearn_logger = None
         self._SKLEARN_MODELS = ['dt', 'et', 'rf', 'poly']
         self.SMLP_SKLEARN_MODELS = [self._algo_name_local2global(m) for m in self._SKLEARN_MODELS]
         self._instFormula = SklearnFormula()
         
+        # trees (rf, dt, et) common
+        self._DEF_MIN_SAMPLES_SPLIT = 2
+        self._DEF_MIN_SAMPLES_LEAF = 1
+        self._DEF_MAX_DEPTH = None
+        self._DEF_RAND_STATE = None
+        self._DEF_CRITERION = 'squared_error'
+        self._DEF_MAX_LEAF_NODES = None
+        self._DEF_MIN_WEIGHT_FRACTION_LEAF = 0.0
+        self._DEF_MIN_IMPURITY_DECREASE = 0.0
+        self._DEF_CCP_ALPHA = 0.0
+        # dt
+        self._DEF_MAX_FEATURS_DT = None
+        # rf
+        self._DEF_N_ESTIMATORS = 100
+        self._DEF_SPLITTER_RF = 'best'
+        self._DEF_MAX_FEATURS_RF = 1.0
+        self._DEF_BOOTSTRAP = True
+        self._DEF_VERBOSE_RF = 0
+        self._DEF_WARM_START = False
+        self._DEF_MAX_SAMPLES = None
+        # et
+        self._DEF_SPLITTER_ET = 'random'
+        self._DEF_MAX_FEATURS_ET = 1.0
+        # linear / polynomial rgeression
+        self._DEF_POLY_DEGREE = 2
+        self._DEF_FIT_INTERCEPT = True
+        self._DEF_COPY_X = True
+        self._DEF_N_JOBS = None
+        self._DEF_POSITIVE = False
+
+        # TODO !!!: Is there a way to get this dictionary through SKLEARN API?
+        # So this will work if hyperparameters are chenged in the future, and
+        # also there will not be to do copy/paste hyperparamer names, defaults
+        # and descriptions from the documentation. !!!!!!!!!!!!!!!!!!!!!!!
+        # hyperparameters that are exactly the same to rf, dt and et
+        self._trees_hyperparam_dict = {
+            'criterion': {'abbr':'criterion', 'default': self._DEF_CRITERION, 'type':str,
+                'help': 'The function to measure the quality of a split. Supported criteria are ' +
+                        '“squared_error” for the mean squared error, which is equal to variance ' +
+                        'reduction as feature selection criterion and minimizes the L2 loss using ' +
+                        'the mean of each terminal node, “friedman_mse”, which uses mean squared error ' +
+                        'with Friedman’s improvement score for potential splits, “absolute_error” for the ' +
+                        'mean absolute error, which minimizes the L1 loss using the median of each terminal ' +
+                        'node, and “poisson” which uses reduction in Poisson deviance to find splits. ' + 
+                        'Training using “absolute_error” is slower than when using “squared_error”. ' +
+                        '[default: ' + str(self._DEF_CRITERION) + ']'},
+            'max_depth': {'abbr':'max_depth', 'default': self._DEF_MAX_DEPTH, 'type':int,
+                'help': 'The maximum depth of the tree. If None, then nodes are expanded until all ' + 
+                        'leaves are pure or until all leaves contain less than min_samples_split samples. ' +
+                        '[default: ' + str(self._DEF_MAX_DEPTH) + ']'},
+            'min_samples_split': {'abbr':'min_samples_split', 'default': self._DEF_MIN_SAMPLES_SPLIT, 'type':str, # can be int or float
+                'help': 'The minimum number of samples required to split an internal node.' + 
+                        'If int, then consider min_samples_split as the minimum number. If float, ' +
+                        'min_samples_split is a fraction and ceil(min_samples_split * n_samples) ' +
+                        'is the minimum number of samples for each split. ' +
+                        '[default: ' + str(self._DEF_MIN_SAMPLES_SPLIT) + ']'},    
+            'min_samples_leaf': {'abbr':'min_samples_leaf', 'default': self._DEF_MIN_SAMPLES_LEAF, 'type':str, # can be int or float
+                'help': 'The minimum number of samples required to be at a leaf node. ' +
+                        'If int, then consider min_samples_leaf as the minimum number. If float, ' +
+                        'min_samples_leaf is a fraction and ceil(min_samples_leaf * n_samples) ' +
+                        'is the minimum number of samples for each node. '+
+                        ' [default: ' + str(self._DEF_MIN_SAMPLES_LEAF) + ']'},
+            'min_weight_fraction_leaf': {'abbr':'min_weight_fraction_leaf', 'default': self._DEF_MIN_WEIGHT_FRACTION_LEAF, 'type':float,
+                'help': 'The minimum weighted fraction of the sum total of weights ' +
+                        '(of all the input samples) required to be at a leaf node. ' +
+                        'Samples have equal weight when sample_weight is not provided. ' +
+                        ' [default: ' + str(self._DEF_MIN_WEIGHT_FRACTION_LEAF) + ']'},
+            'max_leaf_nodes': {'abbr':'max_leaf_nodes', 'default': self._DEF_MAX_LEAF_NODES, 'type':int,
+                'help': 'Grow a tree with max_leaf_nodes in best-first fashion. Best nodes are ' + 
+                        'defined as relative reduction in impurity. If None then unlimited ' + 
+                        'number of leaf nodes [default: ' + str(self._DEF_MAX_LEAF_NODES) + ']'},
+            'min_impurity_decrease': {'abbr':'min_impurity_decrease', 'default': self._DEF_MIN_IMPURITY_DECREASE, 'type':float,
+                'help': 'A node will be split if this split induces a decrease of the impurity ' +
+                        'greater than or equal to this value ' + 
+                        'N_t / N * (impurity - N_t_R / N_t * right_impurity - N_t_L / N_t * left_impurity), ' +
+                        'where N is the total number of samples, N_t is the number of samples at the current node, ' +
+                        'N_t_L is the number of samples in the left child, and N_t_R is the number of samples '
+                        'in the right child. N, N_t, N_t_R and N_t_L all refer to the weighted sum, ' +
+                        'if sample_weight is passed. [default: ' + str(self._DEF_MIN_IMPURITY_DECREASE) + ']'},
+            'ccp_alpha': {'abbr':'ccp_alpha', 'default': self._DEF_CCP_ALPHA, 'type':float,
+                'help': 'Complexity parameter used for Minimal Cost-Complexity Pruning. The subtree with ' + 
+                        'the largest cost complexity that is smaller than ccp_alpha will be chosen. ' +
+                        'By default, no pruning is performed. [default: ' + str(self._DEF_CCP_ALPHA) + ']'}
+            }
+
+        # parameters that are unique to dt or usage is slightly different from et, rf
+        self._dt_hyperparam_dict = {
+            'splitter': {'abbr':'splitter', 'default': self._DEF_SPLITTER_RF, 'type':str,
+                'help': 'The strategy used to choose the split at each node. Supported strategies are ' +
+                        '“best” to choose the best split and “random” to choose the best random split ' + 
+                        '[default: ' + str(self._DEF_SPLITTER_RF) + ']'},
+            'max_features': {'abbr':'max_features', 'default': self._DEF_MAX_FEATURS_DT, 'type':str, # can be int, float or constant string
+                'help': 'The number of features to consider when looking for the best split: ' +
+                        'If int, then consider max_features features at each split. ' +
+                        'If float, max_features is a fraction and max(1, int(max_features * n_features_in_)) ' +
+                        'features are considered at each split. ' + 
+                        'If “sqrt”, then max_features=sqrt(n_features). ' +
+                        'If “log2”, then max_features=log2(n_features). ' +
+                        'If None, then max_features=n_features. [default: ' + str(self._DEF_MAX_FEATURS_DT) + ']'},
+            'random_state': {'abbr':'rand_state', 'default': self._DEF_RAND_STATE, 'type':int,
+                'help': 'Controls the randomness of the estimator. The features are always ' + 
+                        'randomly permuted at each split, even if splitter is set to "best". ' +
+                        'When max_features < n_features, the algorithm will select max_features ' +
+                        'at random at each split before finding the best split among them. ' +
+                        'But the best found split may vary across different runs, even if ' +
+                        'max_features=n_features. That is the case, if the improvement of the ' +
+                        'criterion is identical for several splits and one split has to be selected ' +
+                        'at random. To obtain a deterministic behaviour during fitting, random_state ' +
+                        'has to be fixed to an integer. [default: ' + str(self._DEF_RAND_STATE) + ']'}
+            }
+
+        # parameters that are unique to rf or usage is slightly different from et, dt
+        self._rf_hyperparam_dict = {
+            'n_estimators': {'abbr':'n_estimators', 'default': self._DEF_N_ESTIMATORS, 'type':int,
+                'help': 'The number of trees in the forest. [default: ' + str(self._DEF_N_ESTIMATORS) + ']'},
+            'max_features': {'abbr':'max_features', 'default': self._DEF_MAX_FEATURS_RF, 'type':str, # can be int, float or constant string
+                'help': 'The number of features to consider when looking for the best split: ' +
+                        'If int, then consider max_features features at each split. ' +
+                        'If float, max_features is a fraction and max(1, int(max_features * n_features_in_)) ' +
+                        'features are considered at each split, where n_features_in_ is the number of features seen during fit. ' + 
+                        'If “sqrt”, then max_features=sqrt(n_features). ' +
+                        'If “log2”, then max_features=log2(n_features). ' +
+                        'If None or 1.0, then max_features=n_features. [default: ' + str(self._DEF_MAX_FEATURS_RF) + ']'},
+            'bootstrap': {'abbr':'bootstrap', 'default': self._DEF_BOOTSTRAP, 'type':bool,
+                'help': 'Whether bootstrap samples are used when building trees. If False, the whole ' +
+                        'dataset is used to build each tree [default: ' + str(self._DEF_BOOTSTRAP) + ']'},
+            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE_RF, 'type':bool,
+                'help': 'Controls the verbosity when fitting and predicting. [default: ' + str(self._DEF_VERBOSE_RF) + ']'},
+            'warm_start': {'abbr':'warm_start', 'default': self._DEF_WARM_START, 'type':bool,
+                'help': 'When set to True, reuse the solution of the previous call to fit and add more ' +
+                        'estimators to the ensemble, otherwise, just fit a whole new forest ' +
+                        '[default: ' + str(self._DEF_WARM_START) + ']'},
+            'max_samples': {'abbr':'max_samples', 'default': self._DEF_MAX_SAMPLES, 'type':str,
+                'help': 'If bootstrap is True, the number of samples to draw from X to train each base estimator. ' +
+                        'If None (default), then draw X.shape[0] samples. ' +
+                        'If int, then draw max_samples samples.' +
+                        'If float, then draw max(round(n_samples * max_samples), 1) samples. ' +
+                        'Thus, max_samples should be in the interval (0.0, 1.0]. ' +
+                        '[default: ' + str(self._DEF_MAX_SAMPLES) + ']'},
+            'random_state': {'abbr':'rand_state', 'default': self._DEF_RAND_STATE, 'type':int,
+                'help': 'Controls both the randomness of the bootstrapping of the samples used when building ' +
+                        'trees (if bootstrap=True) and the sampling of the features to consider when ' +
+                        'looking for the best split at each node (if max_features < n_features). ' +
+                        '[default: ' + str(self._DEF_RAND_STATE) + ']'}
+            }
+
+        # parameters that are unique to et or usage is slightly different from dt, rf
+        self._et_hyperparam_dict = {
+            'splitter': {'abbr':'splitter', 'default': self._DEF_SPLITTER_ET, 'type':str,
+                'help': 'The strategy used to choose the split at each node. Supported strategies are ' +
+                        '“best” to choose the best split and “random” to choose the best random split ' + 
+                        '[default: ' + str(self._DEF_SPLITTER_ET) + ']'},
+            'max_features': {'abbr':'max_features', 'default': self._DEF_MAX_FEATURS_ET, 'type':str, # can be int, float or constant string
+                'help': 'The number of features to consider when looking for the best split: ' +
+                        'If int, then consider max_features features at each split. ' +
+                        'If float, max_features is a fraction and max(1, int(max_features * n_features_in_)) ' +
+                        'features are considered at each split, where n_features_in_ is the number of features seen during fit. ' + 
+                        'If “sqrt”, then max_features=sqrt(n_features). ' +
+                        'If “log2”, then max_features=log2(n_features). ' +
+                        'If None, then max_features=n_features. [default: ' + str(self._DEF_MAX_FEATURS_ET) + ']'},
+            'random_state': {'abbr':'rand_state', 'default': self._DEF_RAND_STATE, 'type':int,
+                'help': 'Used to pick randomly the max_features used at each split. ' + 
+                        'Note that the mere presence of random_state doesn’t mean that randomization ' +
+                        'is always used, as it may be dependent on another parameter, e.g. shuffle, being set. ' +
+                        '[default: ' + str(self._DEF_RAND_STATE) + ']'}
+            }
+
+
+        # hyper params dictionary for sklearn model training
+        self._poly_hyperparam_dict = {
+            'degree': {'abbr':'degree', 'default': self._DEF_POLY_DEGREE, 'type':int,
+                'help': 'Degree of the polynomial to train [default: ' + str(self._DEF_POLY_DEGREE) + ']'},
+            'fit_intercept': {'abbr':'fit_intercept', 'default': self._DEF_FIT_INTERCEPT, 'type':bool,
+                'help': 'Whether to calculate the intercept for this model. If set to False, ' +
+                        'no intercept will be used in calculations (i.e. data is expected to be centered). ' +
+                        '[default: ' + str(self._DEF_FIT_INTERCEPT) + ']'},
+            'copy_X': {'abbr':'copy_X', 'default': self._DEF_COPY_X, 'type':bool,
+                'help': 'If True, X will be copied; else, it may be overwritten. [default: ' + str(self._DEF_COPY_X) + ']'},
+            'n_jobs': {'abbr':'n_jobs', 'default': self._DEF_N_JOBS, 'type':int,
+                'help': 'The number of jobs to use for the computation. This will only provide speedup ' +
+                        'in case of sufficiently large problems, that is if firstly n_targets > 1 and secondly ' + 
+                        'X is sparse or if positive is set to True. ' +
+                        'None means 1 unless in a joblib.parallel_backend context. ' +
+                        '-1 means using all processors [default: ' + str(self._DEF_N_JOBS) + ']'},
+            'positive': {'abbr':'positive', 'default': self._DEF_POSITIVE, 'type':bool,
+                'help': 'When set to True, forces the coefficients to be positive. ' +
+                        'This option is only supported for dense arrays. ' +
+                        '[default: ' + str(self._DEF_POSITIVE) + ']'}
+            }
+
+        
+        self.sklearn_hparam_dict = self.get_sklearn_hparam_default_dict()
+    
+    # set logger from a caller script
+    def set_logger(self, logger):
+        self._sklearn_logger = logger
+    
     # local names for model are 'dt', 'rf', ..., while global names are 'dt_sklearn'
     # 'rf_sklearn', to distinguish dt, rf, ... implementation in different packages
     def _algo_name_local2global(self, algo):
         return algo+'_sklearn'
     
+    # local name of hyper parameter (as in sklearn package) to global name;
+    # the global name is obtained from local name, say 'max_depth', by prefixing it
+    # with the global name of the algorithm, which results in 'dt_sklearn_max_depth'
+    def _hparam_name_local_to_global(self, hparam, algo):
+        #print('hparam global name', hparam, algo)
+        return self._algo_name_local2global(algo) + '_' + hparam
+        
+    # given training algo name like dt and the hyper parameter dictionary param_dict  
+    # for that algo in the python package used in this class), this function returns  
+    # a modified dictionary obtained from param_dictby by adds algo name like dt_sklearn
+    # (where sklearn is the name of the package used) to the parameter name and its
+    # correponding abbriviated name in param_dict.
+    def _param_dict_with_algo_name(self, param_dict, algo):
+        #print('param_dict', param_dict)
+        result_dict = {}
+        for k, v in param_dict.items():
+            v_updated = v.copy()
+            v_updated['abbr'] = self._hparam_name_local_to_global(v['abbr'], algo) # algo + '_' + v['abbr']
+            #print('updated abbrv', v_updated['abbr'])
+            #print('updated key', self._hparam_name_local_to_global(k, algo))
+            result_dict[self._hparam_name_local_to_global(k, algo)] = v_updated #algo + '_' + k
+        #raise Exception('tmp')
+        return result_dict
+    
     # local hyper params dictionary
     def get_sklearn_hparam_default_dict(self):
-        sklearn_hparam_deafult_dict = { # TODO !!! do we need metavar feild?
-            'poly_degree': {'abbr':'poly_degree', 'default': DEF_POLY_DEGREE, 'type':int,
-                'help': 'Degree of the polynomial to train [default: ' + str(DEF_POLY_DEGREE) + ']'}, 
-        }
-        return sklearn_hparam_deafult_dict
+        dt_sklearn_hyperparam_dict = self._param_dict_with_algo_name(self._dt_hyperparam_dict | self._trees_hyperparam_dict, 'dt')
+        rf_sklearn_hyperparam_dict = self._param_dict_with_algo_name(self._rf_hyperparam_dict | self._trees_hyperparam_dict, 'rf')
+        et_sklearn_hyperparam_dict = self._param_dict_with_algo_name(self._et_hyperparam_dict | self._trees_hyperparam_dict, 'et')
+        poly_sklearn_hyperparam_dict = self._param_dict_with_algo_name(self._poly_hyperparam_dict, 'poly')
+        sklearn_hparam_dict = poly_sklearn_hyperparam_dict | dt_sklearn_hyperparam_dict | \
+            rf_sklearn_hyperparam_dict | et_sklearn_hyperparam_dict
+        return sklearn_hparam_dict
 
     # train decision tree regression model with sklearn
     def dt_regr_train(self, feature_names, resp_names, algo,
@@ -137,7 +351,7 @@ class ModelSklearn:
             seed, sample_weights_vect, save_model):
 
         #print('sklearn_main, hparam_dict', hparam_dict); print('sample_weights_vect', sample_weights_vect)
-        degree = hparam_dict['poly_degree']
+        #degree = hparam_dict['poly_sklearn_degree']
 
         if algo == 'dt':
             model = self.dt_regr_train(input_names, resp_names, algo,
@@ -149,6 +363,7 @@ class ModelSklearn:
             model = self.et_regr_train(input_names, resp_names, algo,
                 X_train, X_test, y_train, y_test, seed, sample_weights_vect, save_model)
         elif algo == 'poly':
+            degree = hparam_dict[self._hparam_name_local_to_global('degree', 'poly')]
             model, poly_reg, X_train, X_test = self.poly_train(input_names, resp_names, degree,
                 X_train, X_test, y_train, y_test, seed, sample_weights_vect)
         else:

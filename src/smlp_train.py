@@ -8,15 +8,14 @@
 
 # coding: utf-8
 
-import os, sys, argparse
-import logging
+import os, sys, json, argparse
 import pandas as pd
 
 # imports from SMLP modules
-from logs_common import *
-from utils_common import np_JSONEncoder
-from smlp.train_common import ModelCommon, model_params_dict
-from smlp.data_common import data_params_dict, DataCommon
+from logs_common import DataFileInstance, SmlpLogger
+from utils_common import np_JSONEncoder, str_to_bool
+from smlp.train_common import ModelCommon
+from smlp.data_common import DataCommon
 
 
 # args parser to which some of the arguments are added explicitly in a regular way
@@ -27,7 +26,7 @@ from smlp.data_common import data_params_dict, DataCommon
 def args_dict_parse(argv, args_dict):
     #print('argv', argv)
     parser = argparse.ArgumentParser(prog=argv[0])
-    print('parser', parser)
+    #print('parser', parser)
     parser.add_argument('-data', '--labeled_data', metavar='DATA', type=str,
                         help='Path excluding the .csv suffix to input training data ' +
                         'file containing labels')
@@ -60,53 +59,47 @@ def args_dict_parse(argv, args_dict):
     args = parser.parse_args(argv[1:])
     return args
 
-'''
-# update args with parameters from args_dict (after args has already been created 
-# and populated by some other parameters)
-def args_dict_update_parse(argv, parser, args_dict):
-    #print('1 parser', parser, '\nargv', argv)
-    for p, v in args_dict.items():
-        #print(p, v)
-        parser.add_argument('-'+v['abbr'], '--'+p, default=v['default'], 
-                            type=v['type'], help=v['help'])
-    #print('2 parser', parser, '\nargv', argv)
-    args = parser.parse_args(argv[1:])
-    return args #, parser
-'''
 
 # Split input data into training and test, subset / resample from these
 # training and test data that will actually be used for training and validation.
 # execute training and prediction on training test, the entire input data
 # and on new data (new_data) if that is also provided along with data for training.
 def main(argv):
-    # get args
-    args_dict = model_params_dict | data_params_dict | logger_params_dict
-    args = args_dict_parse(argv, args_dict)
+    # data and model class instances
+    dataInst = DataCommon() # inst.log_file, args.log_level, 'a', args.log_time
+    modelInst = ModelCommon() # inst.log_file, args.log_level, 'a', args.log_time
+    loggerInst = SmlpLogger() 
     
-    # data, models and report related classes -- instantiation
-    inst = DataFileInstance(args.labeled_data, args.run_prefix, args.output_directory, args.new_data) 
-    dataInst = DataCommon(inst.log_file, args.log_level, 'a', args.log_time)
-    modelInst = ModelCommon(inst.log_file, args.log_level, 'a', args.log_time)
+    # get args
+    args_dict = modelInst.model_params_dict | dataInst.data_params_dict | loggerInst.logger_params_dict
+    args = args_dict_parse(argv, args_dict)
 
+    # eport related class -- instantiation
+    # TODO !!!: rename inst to reportInst, and class DataFileInstance to ReportsInstance?
+    inst = DataFileInstance(args.labeled_data, args.run_prefix, args.output_directory, args.new_data) 
+    
     # logs.
-    # TODO !!!: for now logger is independent from class inst; could be make part of it (any advantages ???)
-    logger = create_logger('smlp_logger', inst.log_file, args.log_level, args.log_mode, args.log_time)
+    # TODO !!!: for now logger is independent from class inst; could be made part of it (any advantages ???)
+    logger = loggerInst.create_logger('smlp_logger', inst.log_file, args.log_level, args.log_mode, args.log_time)
     logger.info('Executing smlp_train.py script: Start')
     logger.info('Params\n: {}'.format(vars(args)))
-
+    dataInst.set_logger(logger)
+    modelInst.set_logger(logger)
+    
+    
     # extract response and feature names
     if args.response is None:
         raise Exception('Response names should be provided')
     resp_names = args.response.split(',')
     feat_names = args.features.split(',') if not args.features is None else None
         
-    # prepare datat for model training
+    # prepare data for model training
     logger.info('PREPARE DATA FOR MODELING')
     split_test = DEF_SPLIT_TEST if args.split_test is None else args.split_test
     X, y, X_train, y_train, X_test, y_test, mm_scaler_feat, mm_scaler_resp, levels_dict = dataInst.prepare_data_for_modeling(
         inst.data_fname, True, split_test, feat_names, resp_names, inst._filename_prefix, 
         args.train_first_n, args.train_random_n, args.train_uniform_n, args.interactive_plots, 
-        args.scale_data)
+        args.scale_data, None, None, None)
     #print('(1)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
     feat_names = X_train.columns.tolist()
     
@@ -125,9 +118,10 @@ def main(argv):
         
     # run model training
     logger.info('TRAIN MODEL')
-    hparams_dict = modelInst.get_hyperparams_dict(args, args.model)
+    print('args', args); print('args_model', args.model)
+    hparams_dict = modelInst.get_hyperparams_dict(args, args.model); 
     model = modelInst.model_train(inst, feat_names, resp_names, args.model, X_train, X_test, y_train, y_test,
-        hparams_dict, args.interactive_plots, args.seed, args.sample_weights_coef, True, data=None)
+        hparams_dict, args.interactive_plots, args.seed, args.sample_weights_coef, True)
     if args.model == 'poly_sklearn':
         model, poly_reg, X_train, X_test = model
      

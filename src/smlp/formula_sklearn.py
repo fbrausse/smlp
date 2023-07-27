@@ -1,9 +1,11 @@
 # utilities to convert sklearn tree and polynomial models into formulas / rules
 
+
 import numpy as np
 from sklearn.tree import _tree
 
 
+# Generation and exporting model formulae for tree models, tree forests, and polynomial models
 class SklearnFormula:
     # generate rules from a single decision or regression tree that predicts a single response
     def _get_rules(self, tree, feature_names, resp_names, class_names, rounding=-1):
@@ -15,7 +17,7 @@ class SklearnFormula:
             feature_names[i] if i != _tree.TREE_UNDEFINED else "undefined!"
             for i in tree_.feature
         ]
-
+        #smlp.Var(feature_name)
         paths = []
         path = []
 
