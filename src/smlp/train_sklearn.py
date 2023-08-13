@@ -10,12 +10,12 @@ from sklearn.linear_model import LinearRegression
 # general
 import numpy as np
 import pandas as pd
-import pickle
+#import pickle
 
 # SMLP
 from smlp.smlp_plot import *
 from smlp.formula_sklearn import SklearnFormula
-#from logs_common import create_logger
+from utils_common import str_to_bool, lists_union_order_preserving_without_duplicates
 
 
 # Methods for training and predction, results reproting with SKLEARN package   
@@ -152,12 +152,12 @@ class ModelSklearn:
                         'If “sqrt”, then max_features=sqrt(n_features). ' +
                         'If “log2”, then max_features=log2(n_features). ' +
                         'If None or 1.0, then max_features=n_features. [default: ' + str(self._DEF_MAX_FEATURS_RF) + ']'},
-            'bootstrap': {'abbr':'bootstrap', 'default': self._DEF_BOOTSTRAP, 'type':bool,
+            'bootstrap': {'abbr':'bootstrap', 'default': self._DEF_BOOTSTRAP, 'type':str_to_bool,
                 'help': 'Whether bootstrap samples are used when building trees. If False, the whole ' +
                         'dataset is used to build each tree [default: ' + str(self._DEF_BOOTSTRAP) + ']'},
-            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE_RF, 'type':bool,
+            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE_RF, 'type':str_to_bool,
                 'help': 'Controls the verbosity when fitting and predicting. [default: ' + str(self._DEF_VERBOSE_RF) + ']'},
-            'warm_start': {'abbr':'warm_start', 'default': self._DEF_WARM_START, 'type':bool,
+            'warm_start': {'abbr':'warm_start', 'default': self._DEF_WARM_START, 'type':str_to_bool,
                 'help': 'When set to True, reuse the solution of the previous call to fit and add more ' +
                         'estimators to the ensemble, otherwise, just fit a whole new forest ' +
                         '[default: ' + str(self._DEF_WARM_START) + ']'},
@@ -201,11 +201,11 @@ class ModelSklearn:
         self._poly_hyperparam_dict = {
             'degree': {'abbr':'degree', 'default': self._DEF_POLY_DEGREE, 'type':int,
                 'help': 'Degree of the polynomial to train [default: ' + str(self._DEF_POLY_DEGREE) + ']'},
-            'fit_intercept': {'abbr':'fit_intercept', 'default': self._DEF_FIT_INTERCEPT, 'type':bool,
+            'fit_intercept': {'abbr':'fit_intercept', 'default': self._DEF_FIT_INTERCEPT, 'type':str_to_bool,
                 'help': 'Whether to calculate the intercept for this model. If set to False, ' +
                         'no intercept will be used in calculations (i.e. data is expected to be centered). ' +
                         '[default: ' + str(self._DEF_FIT_INTERCEPT) + ']'},
-            'copy_X': {'abbr':'copy_X', 'default': self._DEF_COPY_X, 'type':bool,
+            'copy_X': {'abbr':'copy_X', 'default': self._DEF_COPY_X, 'type':str_to_bool,
                 'help': 'If True, X will be copied; else, it may be overwritten. [default: ' + str(self._DEF_COPY_X) + ']'},
             'n_jobs': {'abbr':'n_jobs', 'default': self._DEF_N_JOBS, 'type':int,
                 'help': 'The number of jobs to use for the computation. This will only provide speedup ' +
@@ -213,7 +213,7 @@ class ModelSklearn:
                         'X is sparse or if positive is set to True. ' +
                         'None means 1 unless in a joblib.parallel_backend context. ' +
                         '-1 means using all processors [default: ' + str(self._DEF_N_JOBS) + ']'},
-            'positive': {'abbr':'positive', 'default': self._DEF_POSITIVE, 'type':bool,
+            'positive': {'abbr':'positive', 'default': self._DEF_POSITIVE, 'type':str_to_bool,
                 'help': 'When set to True, forces the coefficients to be positive. ' +
                         'This option is only supported for dense arrays. ' +
                         '[default: ' + str(self._DEF_POSITIVE) + ']'}
@@ -225,6 +225,7 @@ class ModelSklearn:
     # set logger from a caller script
     def set_logger(self, logger):
         self._sklearn_logger = logger
+        self._instFormula.set_logger(logger)
     
     # local names for model are 'dt', 'rf', ..., while global names are 'dt_sklearn'
     # 'rf_sklearn', to distinguish dt, rf, ... implementation in different packages
@@ -267,7 +268,7 @@ class ModelSklearn:
 
     # train decision tree regression model with sklearn
     def dt_regr_train(self, feature_names, resp_names, algo,
-            X_train, X_test, y_train, y_test, seed, weights, save_model):
+            X_train, X_test, y_train, y_test, seed, weights):
         # Fit the regressor, set max_depth = 3
         regr = DecisionTreeRegressor(max_depth=15, random_state=seed)
         model = regr.fit(X_train, y_train, sample_weight=weights)
@@ -284,11 +285,12 @@ class ModelSklearn:
         plt.show()
         plt.clf()
         '''  
+        
         return model
 
     # train random forest regression model with sklearn
     def rf_regr_train(self, feature_names, resp_names, algo,
-            X_train, X_test, y_train, y_test, seed, weights, save_model):
+            X_train, X_test, y_train, y_test, seed, weights):
         # Fit the regressor, set max_depth = 3
         model = ensemble.RandomForestRegressor(max_depth=15, random_state=seed)
         model = model.fit(X_train, y_train, sample_weight=weights)
@@ -298,7 +300,7 @@ class ModelSklearn:
 
     # train extra trees regression model with sklearn
     def et_regr_train(self, feature_names, resp_names, algo,
-            X_train, X_test, y_train, y_test, seed, weights, save_model):
+            X_train, X_test, y_train, y_test, seed, weights):
         # Fit the regressor, set max_depth = 3
         model = ensemble.ExtraTreesRegressor(max_depth=15, random_state=seed)
         model = model.fit(X_train, y_train, sample_weight=weights)
@@ -338,68 +340,81 @@ class ModelSklearn:
 
         ''' # writing spec file
         model_domain = training_data_to_domain_spec(X_train, input_names)
-        domain_file = open(inst._filename_prefix + "_poly_domain.txt"), "w")
+        domain_file = open(inst._report_name_prefix + "_poly_domain.txt"), "w")
         domain_file.write(model_domain)
         domain_file.close()
         '''
 
         assert(model == pol_reg)
-        return model, poly_reg, X_train, X_test
-
-    def sklearn_main(self, inst, input_names, resp_names, algo,
+        return model, poly_reg #, X_train, X_test
+        
+    # model for sklearn poly model is in fact a pair (linear_model, poly_reg), where
+    # poly_reg is transformer that creates polynomial terems (like x^2) from the original
+    # features (like x), and linear_model is a linear regeression model trained on the
+    # extended dataset obtained from original features X by applying transformer poly_reg.
+    # Therefore, to apply model to dataset we apply model[0] to model[1].transform(X).
+    def poly_sklearn_predict(self, model, X):
+        return model[0].predict(model[1].transform(X))
+        
+    def _sklearn_train_multi_response(self, inst, feat_names, resp_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
-            seed, sample_weights_vect, save_model):
-
-        #print('sklearn_main, hparam_dict', hparam_dict); print('sample_weights_vect', sample_weights_vect)
-        #degree = hparam_dict['poly_sklearn_degree']
-
-        if algo == 'dt':
-            model = self.dt_regr_train(input_names, resp_names, algo,
-                X_train, X_test, y_train, y_test, seed, sample_weights_vect, save_model)
-        elif algo == 'rf':
-            model = self.rf_regr_train(input_names, resp_names, algo,
-                X_train, X_test, y_train, y_test, seed, sample_weights_vect, save_model)
-        elif algo == 'et':
-            model = self.et_regr_train(input_names, resp_names, algo,
-                X_train, X_test, y_train, y_test, seed, sample_weights_vect, save_model)
-        elif algo == 'poly':
-            degree = hparam_dict[self._hparam_name_local_to_global('degree', 'poly')]
-            model, poly_reg, X_train, X_test = self.poly_train(input_names, resp_names, degree,
-                X_train, X_test, y_train, y_test, seed, sample_weights_vect)
-        else:
-            raise Exception('Unsupported model type ' + str(algo) + ' in function tree_main')
-
-        # export the model formula
-        if algo in ['dt', 'rf', 'et']:
-            # Print/save rule representation of the model (left-hand sides represent
-            # branhes of the tree till the leaves, right-hand side are the prdicted 
-            # values and they are the lables at the respective leaves of the tree
-            rules_filename = inst._filename_prefix + '_' + str(self._algo_name_local2global(algo)) + '_tree_rules.txt'
+            seed, sample_weights_vect):
+        if algo in ['dt', 'et', 'rf']:
             if algo == 'dt':
+                model = self.dt_regr_train(feat_names, resp_names, algo,
+                    X_train, X_test, y_train, y_test, seed, sample_weights_vect)
                 tree_estimators = [model]
-            elif algo in ['rf', 'et']:
+            elif algo == 'rf':
+                model = self.rf_regr_train(feat_names, resp_names, algo,
+                    X_train, X_test, y_train, y_test, seed, sample_weights_vect)
                 tree_estimators = model.estimators_
-            self._instFormula.trees_to_rules(tree_estimators, input_names, resp_names, None, True, rules_filename)
-        elif algo == 'poly':
-            #print('Polynomial model coef\n', model.coef_.shape, '\n', model.coef_)
-            #print('Polynomial model terms\n', poly_reg.powers_.shape, '\n', poly_reg.powers_)
-            for resp_id in range(len(resp_names)):
-                formula_filename = inst._filename_prefix + '_' + str(algo) + '_' + resp_names[resp_id] + "_poly_formula.txt"
-                model_formula = self._instFormula.poly_model_to_formula(input_names, resp_names, model.coef_, 
-                    poly_reg.powers_, resp_id, True, formula_filename)
-
-        # save model to enable re-running on new data sets
-        if save_model:
-            model_filename = inst._filename_prefix + '_' + self._algo_name_local2global(algo) + '.model'
-            pickle.dump(model, open(model_filename, 'wb'))
-
-            # load the model to see the content
-            loaded_model = pickle.load(open(model_filename, 'rb'))
-
-        if algo in ['dt', 'rf', 'et']: 
+            elif algo == 'et':
+                model = self.et_regr_train(feat_names, resp_names, algo,
+                    X_train, X_test, y_train, y_test, seed, sample_weights_vect)
+                tree_estimators = model.estimators_
+            else:
+                assert False
+                
+            # save tree model as rules
+            rules_report_name = inst.get_model_name_prefix(resp_names, self._algo_name_local2global(algo)) + '_tree_rules.txt'
+            print('rules_report_name', rules_report_name); print('feat_names', feat_names); print('resp_names', resp_names); 
+            self._instFormula.trees_to_rules(tree_estimators, feat_names, resp_names, 
+                None, True, rules_report_name)
             return model
         elif algo == 'poly':
-            return model, poly_reg, X_train, X_test
+            degree = hparam_dict[self._hparam_name_local_to_global('degree', 'poly')]
+            #model, poly_reg, X_train, X_test 
+            linear_model, poly_reg = self.poly_train(feat_names, resp_names, degree,
+                X_train, X_test, y_train, y_test, seed, sample_weights_vect)
+            for resp_id in range(len(resp_names)):
+                #formula_report_name = inst._report_name_prefix + '_' + str(algo) + '_' + resp_names[resp_id] + "_poly_formula.txt"
+                formula_report_name = inst.get_model_name_prefix(resp_names, self._algo_name_local2global(algo)) + '_formula.txt'
+                model_formula = self._instFormula.poly_model_to_formula(feat_names, resp_names, linear_model.coef_, 
+                    poly_reg.powers_, resp_id, True, formula_report_name)
+            return linear_model, poly_reg #, X_train, X_test
+        else:
+            raise Exception('Unsupported model type ' + str(algo) + ' in function tree_main')
+        
+    def sklearn_main(self, inst, feat_names_dict, resp_names, algo,
+            X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
+            seed, sample_weights_vect, model_per_response):
+        # train a separate models for each response, pack into a dictionary with response names
+        # as keys and the correponding models as values
+        if model_per_response:
+            model = {}
+            for rn in resp_names:
+                rn_model = self._sklearn_train_multi_response(inst, feat_names_dict[rn], [rn], algo,
+                    X_train, X_test, y_train[[rn]], y_test[[rn]], hparam_dict, interactive_plots, 
+                    seed, sample_weights_vect)
+                model[rn] = rn_model
+            return model
+        else:
+            #union_feat_names = list(set(sum(list(feat_names_dict.values()), []))) - the ordering is affected 
+            union_feat_names = lists_union_order_preserving_without_duplicates(list(feat_names_dict.values()))
+            model = self._sklearn_train_multi_response(inst, union_feat_names, resp_names, algo,
+                X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
+                seed, sample_weights_vect)
+            return model
 
 '''
     # generates domain file in current format for running the solvers.

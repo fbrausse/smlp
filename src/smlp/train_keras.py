@@ -10,7 +10,6 @@ from sklearn.metrics import mean_squared_error, r2_score
 # SMLP
 from logs_common import *
 from smlp.smlp_plot import plot  #, evaluate_model, evaluate_prediction, distplot_dataframe,
-#from logs_common import create_logger
 
 
 # Methods for training and predction, results reporting with Tensorflow/KERAS package.
@@ -283,12 +282,9 @@ class ModelKeras:
             raise Exception('Parameter ' + str(param) + ' is missing in hparam_dict')
         return hparam_dict[param] #if not hparam_dict[param] is None else default
 
-    # runs Keras NN algorithm, outputs lots of stats, saves model to disk
-    # epochs and batch_size are arguments of NN algorithm from keras library
-    def keras_main(self, inst, input_names, resp_names : list, algo,
+    def _keras_train_multi_response(self, inst, input_names, resp_names : list, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
-            seed, weights_coef, save_model):
-
+            seed, weights_coef, model_per_response:bool):
         layers_spec = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('layers', algo)) #DEF_LAYERS_SPEC 'nn_layers'
         epochs = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('epochs', algo)) #DEF_EPOCHS)
         batch_size = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('batch_size', algo)) #DEF_BATCH_SIZE
@@ -296,7 +292,7 @@ class ModelKeras:
         hid_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('hid_activation', algo)) #HID_ACTIVATION
         out_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('out_activation', algo)) #OUT_ACTIVATION
 
-        self._keras_logger.info('keras_main: start')
+        self._keras_logger.info('_keras_train_multi_response: start')
         #print('layers_spec =', layers_spec, '; seed =', seed, '; weights =', weights_coef)
         #print('epochs =', epochs, '; batch_size =', batch_size, '; optimizer =', optimizer)
         #print('hid_activation =', hid_activation, 'out_activation =', out_activation)
@@ -319,7 +315,7 @@ class ModelKeras:
             },
         }
         # TODO: need a different filename for persistance of hyperparameters
-        with open(inst.model_gen_file + '_hyperparameters', 'w') as f:
+        with open(inst.model_gen_file, 'w') as f:
             json.dump(hyperparam_persist, f)
 
         SEQUENTIAL_MODEL = weights_coef == 0
@@ -333,17 +329,33 @@ class ModelKeras:
         history = self._nn_train(model, epochs, batch_size, inst.model_checkpoint_pattern,
                            X_train, X_test, y_train, y_test, weights_coef)
 
-        # save th emodel in two ways
-        model.save(inst.model_file)
-        with open(inst.model_config_file, "w") as json_file:
-            json_file.write(model.to_json())
-
         # plot how training iterations improve error/model precision
-        self._report_training_regression(history, epochs, interactive_plots, resp_names, inst._filename_prefix)
+        self._report_training_regression(history, epochs, interactive_plots, resp_names, inst._report_name_prefix)
 
         #  print("evaluate")
         #  score = model.evaluate(x_test, y_test, batch_size=200)
         #  print(score)
 
+        self._keras_logger.info('_keras_train_multi_response: end')
+        return model
+        
+    # runs Keras NN algorithm, outputs lots of stats, saves model to disk
+    # epochs and batch_size are arguments of NN algorithm from keras library
+    def keras_main(self, inst, input_names, resp_names : list, algo,
+            X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
+            seed, weights_coef, model_per_response:bool):
+        self._keras_logger.info('keras_main: start')
+        if model_per_response:
+            model = {}
+            for rn in resp_names:
+                rn_model = self._keras_train_multi_response(inst, input_names, resp_names, algo,
+                    X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
+                    seed, weights_coef, model_per_response)
+                model[rn] = rn_model
+        else:
+            model = self._keras_train_multi_response(inst, input_names, resp_names, algo,
+                X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
+                seed, weights_coef, model_per_response)
+            
         self._keras_logger.info('keras_main: end')
         return model

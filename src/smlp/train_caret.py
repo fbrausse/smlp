@@ -4,12 +4,11 @@ from pycaret.datasets import get_data
 import pandas as pd
 import numpy as np
 import os
-import pickle
 
 # SMLP
 from smlp.smlp_plot import *
 from smlp.formula_sklearn import SklearnFormula
-#from logs_common import create_logger
+from utils_common import str_to_bool
 
 
 # TODO: couldn't manage to disable cross-validation, looks like at least two folds is a must.
@@ -53,24 +52,24 @@ class ModelCaret:
                         'When an integer is passed, it is interpreted as the ‘n_splits’ ' +
                         'parameter of the CV generator in the setup function. ' +
                         '[default: ' + str(self._DEF_CV_FOLDS) + ']'},
-            'data_split_shuffle': {'abbr':'data_split_shuffle', 'default': self._DEF_DATA_SPLIT_SHUFFLE, 'type':bool,
+            'data_split_shuffle': {'abbr':'data_split_shuffle', 'default': self._DEF_DATA_SPLIT_SHUFFLE, 'type':str_to_bool,
                 'help': 'When set to False, prevents shuffling of rows during ‘train_test_split’. ' + 
                         '[default: ' + str(self._DEF_DATA_SPLIT_SHUFFLE) + ']'},
-            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE, 'type':bool,
+            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE, 'type':str_to_bool,
                 'help': 'When set to False, Information grid is not printed. ' +
                         '[default: ' + str(self._DEF_VERBOSE) + ']'},
             }
 
         # params dictionary for create_model() function
         self._model_hparam_dict = {
-            'cross_validation': {'abbr':'cross_validation', 'default': self._DEF_CROSS_VALIDATION, 'type':bool,
+            'cross_validation': {'abbr':'cross_validation', 'default': self._DEF_CROSS_VALIDATION, 'type':str_to_bool,
                 'help': 'When set to False, metrics are evaluated on holdout set. ' +
                         'fold param is ignored when cross_validation is set to False. ' +
                         '[default: ' + str(self._DEF_CROSS_VALIDATION) + ']'},
-            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE, 'type':bool,
+            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE, 'type':str_to_bool,
                 'help': 'Score grid is not printed when verbose is set to False. ' +
                         '[default: ' + str(self._DEF_VERBOSE) + ']'},
-            'return_train_score': {'abbr':'return_train_score', 'default': self._DEF_RETURN_TRAIN_SCORE, 'type':bool,
+            'return_train_score': {'abbr':'return_train_score', 'default': self._DEF_RETURN_TRAIN_SCORE, 'type':str_to_bool,
                 'help': 'If False, returns the CV Validation scores only. If True, returns ' +
                         'the CV training scores along with the CV validation scores. ' +
                         'This is useful when the user wants to do bias-variance tradeoff. ' +
@@ -85,7 +84,7 @@ class ModelCaret:
                         'If None, will use search library-specific default algorithm. ' +
                         'Other possible values are ‘random’ : random grid search (default) ' +
                         'and ‘grid’ : grid search [default: ' + str(self._DEF_SEARCH_ALGO) + ']'},
-            'tuner_verbose': {'abbr':'tuner_verbose', 'default': self._DEF_TUNER_VERBOSE, 'type':bool,
+            'tuner_verbose': {'abbr':'tuner_verbose', 'default': self._DEF_TUNER_VERBOSE, 'type':str_to_bool,
                 'help': 'If True or above 0, will print messages from the tuner. ' +
                         'Ignored when verbose param is False. [default: ' + str(self._DEF_TUNER_VERBOSE) + ']'}
             }
@@ -124,12 +123,11 @@ class ModelCaret:
     # predictions for single response using models supported in caret package
     def _caret_train_single_response(self, inst, feature_names, resp_name, algo,
             X_train, X_test, y_train, y_test, interactive_plots, seed,
-            folds=3, sample_weights_vect=None, models_compare=False, 
-            save_final_model=False):
+            folds=3, sample_weights_vect=None, models_compare=False):
 
-        # prefix of output / report filename for this function -- includes _filename_prefix,
+        # prefix of output / report filename for this function -- includes _report_name_prefix,
         # the name of the algo/model, name of the response, and report-specific suffix
-        resp_model_report_filename_prefix = inst._filename_prefix + '_' + self._algo_name_local2global(algo) + '_' + resp_name
+        resp_model_report_report_name_prefix = inst._model_name_prefix + '_' + self._algo_name_local2global(algo) + '_' + resp_name
 
         # compute sample waights based on the value in the response y_train
         # Sample weights do not work with cross-validation (see the comment above)
@@ -180,16 +178,16 @@ class ModelCaret:
             self._caret_logger.info('Residuals Plot:')
             #plot_model(tuned_model, plot='residuals_interactive')
             plot_model(tuned_model, save=True) # Residuals Plot
-            os.rename('./Residuals.png', resp_model_report_filename_prefix + '_Residuals.png')
+            os.rename('./Residuals.png', resp_model_report_report_name_prefix + '_Residuals.png')
             self._caret_logger.info('Errors Plot')
             plot_model(tuned_model, plot='error', save=True)
-            os.rename('./Prediction Error.png', resp_model_report_filename_prefix + '_PredictionError.png')
+            os.rename('./Prediction Error.png', resp_model_report_report_name_prefix + '_PredictionError.png')
 
             # 'knn' does not support feature ranking, it does not have attribute 'feature_importances_'
             if hasattr(tuned_model, 'coef_') and hasattr(tuned_model, 'feature_importances_'): 
                 self._caret_logger.info('Features Ranking')
                 plot_model(tuned_model, plot = 'feature', save=True)
-                os.rename('./Residuals.png', resp_model_report_filename_prefix + '_Residuals.png')
+                os.rename('./Residuals.png', resp_model_report_report_name_prefix + '_Residuals.png')
 
         # train model on entire input data -- training and test sets together
         self._caret_logger.info('Finalizing {} model: start'.format(algo))
@@ -199,7 +197,7 @@ class ModelCaret:
         self._caret_logger.info('Finalizing {} model: end'.format(algo))
 
         # export trees into stdout and into file
-        rules_filename = resp_model_report_filename_prefix + '_tree_rules.txt'
+        rules_filename = resp_model_report_report_name_prefix + '_tree_rules.txt'
         if algo == 'dt':
             tree_estimators = [final_model]
         elif algo in ['rf', 'et']:
@@ -214,23 +212,12 @@ class ModelCaret:
             raise Exception('Algo ' + str(algo) + ' is not supported in model to formula conversion')
         self._instFormula.trees_to_rules(tree_estimators, feature_names, [resp_name], None, False, rules_filename)
 
-        # Save the final model; to load the saved model later on use this function
-        # Loaded pkl model is actually not so useful, it does not describe the model formula/trees
-        model_filename = resp_model_report_filename_prefix + '_caret_model'
-        if save_final_model:
-            save_model(final_model, model_filename)
-            # read model in two ways, see the content
-            with open(model_filename + '.pkl', 'rb') as f:
-                data = pickle.load(f)
-            #print('pkl model\n', data)
-            model_loaded = load_model(model_filename)
-            #print('loaded model\n', model_loaded)
-
         return final_model
 
     # set logger from a caller script
     def set_logger(self, logger):
-        self._caret_logger = logger 
+        self._caret_logger = logger
+        self._instFormula.set_logger(logger)
         
     # local hyper params dictionary
     def get_caret_hparam_default_dict(self):
@@ -245,9 +232,9 @@ class ModelCaret:
     # the return value is a dictionary with the response names as keys and the repsctive 
     # models as values (this is true also if there is only one response in training data).
     # TODO !!!: couldn't figure out how to add a seed to ensure reproducibility
-    def caret_main(self, inst, feature_names, response_names, algo,
+    def caret_main(self, inst, feature_names_dict, response_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots,
-            seed, sample_weights_vect, models_compare=False, save_final_model=False):
+            seed, sample_weights_vect, models_compare=False):
         # supported model training algorithms
         if not algo in self._CARET_MODELS:
             raise Exception('Unsupported model ' + str(algo) + ' in caret_main')
@@ -257,8 +244,8 @@ class ModelCaret:
 
         models = {}
         for rn in response_names:
-            models[rn] = self._caret_train_single_response(inst, feature_names, rn, algo,
+            models[rn] = self._caret_train_single_response(inst, feature_names_dict[rn], rn, algo,
             X_train, X_test, y_train[[rn]], y_test[[rn]], interactive_plots, seed,
-            folds, sample_weights_vect=sample_weights_vect, models_compare=models_compare, 
-            save_final_model=save_final_model)
+            folds, sample_weights_vect=sample_weights_vect, models_compare=models_compare)
+        
         return models

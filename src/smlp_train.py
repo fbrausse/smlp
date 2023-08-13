@@ -8,12 +8,12 @@
 
 # coding: utf-8
 
-import os, sys, json, argparse
+import os, sys, argparse #json, 
 import pandas as pd
 
 # imports from SMLP modules
 from logs_common import DataFileInstance, SmlpLogger
-from utils_common import np_JSONEncoder, str_to_bool
+from utils_common import str_to_bool #np_JSONEncoder, 
 from smlp.train_common import ModelCommon
 from smlp.data_common import DataCommon
 
@@ -36,9 +36,6 @@ def args_dict_parse(argv, args_dict):
                    help='What kind of analysis should be performed '+
                         'the supported modes are train and prediction ' +
                         '[default: train]')
-    parser.add_argument('-scale', '--scale_data', type=str_to_bool, default=True,
-                   help='Should features and responses be scaled to [0,1] in input data?'+
-                        '[default: True]')
     parser.add_argument('-plots', '--interactive_plots', type=str_to_bool, default=True,
                    help='Should plots be displayed interactively (or only saved)?'+
                         '[default: True]')
@@ -53,8 +50,11 @@ def args_dict_parse(argv, args_dict):
 
     for p, v in args_dict.items():
         #print('p', p, 'v', v); print('type', v['type'])
-        parser.add_argument('-'+v['abbr'], '--'+p, default=v['default'], 
-                            type=v['type'], help=v['help'])
+        if 'default' in v:
+            parser.add_argument('-'+v['abbr'], '--'+p, default=v['default'], 
+                                type=v['type'], help=v['help'])
+        else:
+            parser.add_argument('-'+v['abbr'], '--'+p, type=v['type'], help=v['help'])
     
     args = parser.parse_args(argv[1:])
     return args
@@ -76,7 +76,7 @@ def main(argv):
 
     # eport related class -- instantiation
     # TODO !!!: rename inst to reportInst, and class DataFileInstance to ReportsInstance?
-    inst = DataFileInstance(args.labeled_data, args.run_prefix, args.output_directory, args.new_data) 
+    inst = DataFileInstance(args.labeled_data, args.run_prefix, args.output_directory, args.new_data, args.model_name) 
     
     # logs.
     # TODO !!!: for now logger is independent from class inst; could be made part of it (any advantages ???)
@@ -84,111 +84,31 @@ def main(argv):
     logger.info('Executing smlp_train.py script: Start')
     logger.info('Params\n: {}'.format(vars(args)))
     dataInst.set_logger(logger)
+    dataInst.set_paths(inst)
     modelInst.set_logger(logger)
-    
     
     # extract response and feature names
     if args.response is None:
         raise Exception('Response names should be provided')
     resp_names = args.response.split(',')
     feat_names = args.features.split(',') if not args.features is None else None
-        
     # prepare data for model training
-    logger.info('PREPARE DATA FOR MODELING')
-    split_test = DEF_SPLIT_TEST if args.split_test is None else args.split_test
-    X, y, X_train, y_train, X_test, y_test, mm_scaler_feat, mm_scaler_resp, levels_dict = dataInst.prepare_data_for_modeling(
-        inst.data_fname, True, split_test, feat_names, resp_names, inst._filename_prefix, 
+    logger.info('PREPARE DATA FOR MODELING')    
+    X, y, X_train, y_train, X_test, y_test, X_new, y_new, mm_scaler_feat, mm_scaler_resp, \
+    levels_dict, model_features_dict = dataInst.process_data(
+        inst, inst.data_fname, inst.new_data_fname, True, args.split_test, feat_names, resp_names, 
         args.train_first_n, args.train_random_n, args.train_uniform_n, args.interactive_plots, 
-        args.scale_data, None, None, None)
-    #print('(1)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
-    feat_names = X_train.columns.tolist()
-    
-    X_train_proc = X_train #.copy()
-    X_test_proc = X_test #.copy()
-    # saving the column min/max info into json file to be able to scale model prediction
-    # results back to the original scale of the responses. The information in this file
-    # is essetially the same as that avilable within mm_scaler but is easier to consume.
-    with open(inst.data_bounds_file, 'w') as f:
-        json.dump({
-            col: { 'min': mm_scaler_feat.data_min_[i], 'max': mm_scaler_feat.data_max_[i] }
-            for i,col in enumerate(feat_names) } |
-            {col: { 'min': mm_scaler_resp.data_min_[i], 'max': mm_scaler_resp.data_max_[i] }
-            for i,col in enumerate(resp_names)
-        }, f, indent='\t', cls=np_JSONEncoder)
-        
-    # run model training
-    logger.info('TRAIN MODEL')
-    print('args', args); print('args_model', args.model)
-    hparams_dict = modelInst.get_hyperparams_dict(args, args.model); 
-    model = modelInst.model_train(inst, feat_names, resp_names, args.model, X_train, X_test, y_train, y_test,
-        hparams_dict, args.interactive_plots, args.seed, args.sample_weights_coef, True)
-    if args.model == 'poly_sklearn':
-        model, poly_reg, X_train, X_test = model
-     
-    
-    logger.info('PREDICT ON TRAINING DATA')
-    #print('(2)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test);
-    y_train_pred = modelInst.model_predict(inst, model, X_train, y_train, resp_names, args.model)
-    modelInst.report_prediction_results(inst, args.model, resp_names, y_train, y_train_pred, True, mm_scaler_resp, #X_train_proc
-        args.interactive_plots, 'training')
-     
-    
-    logger.info('PREDICT ON TEST DATA')
-    #print('(3)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test);
-    y_test_pred = modelInst.model_predict(inst, model, X_test, y_test, resp_names, args.model)
-    #print('(3b)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
-    modelInst.report_prediction_results(inst, args.model, resp_names, y_test, y_test_pred, True, mm_scaler_resp, #X_test_proc, 
-        args.interactive_plots, 'test')
-    
-    
-    logger.info('PREDICT ON LABELED DATA')
-    #print('(4)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
-    # In case a polynomial model was run, polynomial features have been added to X_train and X_test,
-    # therefore we need to reconstruct X before evaluating the model on all labeled features. 
-    # once X has been updated, we need to update y as well in case X_train/y_train and/or X_test/y_test
-    # was modified after generating them from X,y and before feeding to training.
-    # use original X vs using X_train and X_test that were generated using sampling X_tran and/or X_test
-    run_on_orig_X = True         
-    if run_on_orig_X and args.model == 'poly_sklearn':
-        X = poly_reg.transform(X)
-    elif not run_on_orig_X:
-        X = np.concatenate((X_train, X_test)); 
-        y = pd.concat([y_train, y_test])
+        args.data_scaler, args.mrmr_feat_count_for_prediction,
+        args.save_model, args.use_model)
 
-    y_pred = modelInst.model_predict(inst, model, X, y, resp_names, args.model)
-    modelInst.report_prediction_results(inst, args.model, resp_names, y, y_pred, True, mm_scaler_resp,
-        args.interactive_plots, 'labeled')
+    # model training, validation, testing, prediction on training and labeled data as well as new data when available.    
+    model = modelInst.build_models(inst, args.model, X, y, X_train, y_train, X_test, y_test, X_new, y_new,
+        resp_names, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict, 
+        modelInst.get_hyperparams_dict(args, args.model),
+        args.interactive_plots, args.seed, args.sample_weights_coef, args.save_model, args.use_model, args.model_per_response)
     
-    if not args.new_data is None:
-        logger.info('PREDICT ON NEW DATA')
-        X_new, y_new = dataInst.prepare_data_for_modeling(
-            inst.new_data_fname, False, None, feat_names, resp_names, inst._filename_prefix, 
-            None, None, None, args.interactive_plots, args.scale_data, mm_scaler_feat, mm_scaler_resp, levels_dict)
-        X_new_proc = X_new
-        if args.model == 'poly_sklearn':
-            X_new = poly_reg.transform(X_new)
-        y_new_pred = modelInst.model_predict(inst, model, X_new, y_new, resp_names, args.model)
-        modelInst.report_prediction_results(inst, args.model, resp_names, y_new, y_new_pred, True, mm_scaler_resp, #X_new_proc, 
-            args.interactive_plots, 'new')
-        return
-        try:
-            X_new, y_new = dataInst.prepare_data_for_modeling(
-                inst.new_data_fname, False, None, feat_names, resp_names, inst._filename_prefix, 
-                None, None, None, args.interactive_plots, args.scale_data, mm_scaler_feat, mm_scaler_res, levels_dict)
-            X_new_proc = X_new
-            if args.model == 'poly_sklearn':
-                X_new = poly_reg.transform(X_new)
-            y_new_pred = modelInst.model_predict(inst, model, X_new, y_new, resp_names, args.model)
-            modelInst.report_prediction_results(inst, args.model, resp_names, y_new, y_new_pred, True, mm_scaler_resp, #X_new_proc, 
-                args.interactive_plots, 'new')
-        except Exception as error:
-            logger.info('Error occured during prediction on new data:\n' + str(error))
-            error_file = open(inst.error_file, "wt")
-            error_file.write('Error occured during prediction on new data:\n' + str(error))
-            error_file.close()
-
-    logger.info('Executing smlp_train.py script: End')
-
+    return model
+    
 
 if __name__ == "__main__":
     main(sys.argv)
