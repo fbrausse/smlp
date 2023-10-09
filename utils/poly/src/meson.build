@@ -31,7 +31,7 @@ endif
 flint_dep = cxx.find_library('flint',
   dirs: flint_dirs,
   has_headers: ['flint/fmpz.h', 'flint/fmpq.h'],
-  header_include_directories: flint_hdrs,
+  header_include_directories: include_directories(flint_hdrs),
   required: get_option('flint'))
 all_deps += {'flint':flint_dep}
 
