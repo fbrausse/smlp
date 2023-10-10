@@ -250,9 +250,9 @@ PYTHON=${PYTHON:-python3}
 PIP=${PIP:-pip}
 
 require_sys_programs \
-	command test [ [[ mkdir uname \
+	command test [ [[ mkdir uname tr awk grep env touch rm \
 	"${CC}" "${CXX}" tar gzip unzip bzip2 xz \
-	install make nproc "${NINJA}" curl \
+	install make nproc "${NINJA}" wget \
 	"${PYTHON}" "${PIP}" "$PYTHON"-config cmake
 
 [[ "$(uname)" = Linux ]] || error "unsupported OS"
