@@ -1,6 +1,6 @@
 #!/bin/bash
 
-STAGES=( boost kjson kay gmp mpfr flint z3 pipdeps smlp )
+STAGES=( boost kjson kay gmp mpfr flint z3 hdf5 pipdeps smlp )
 
 help() {
 	echo "usage: $0 [-OPTS] TARGET"
@@ -172,6 +172,23 @@ install_z3() {
 	cd ../.. && rm -rf z3-z3-4.11.2
 }
 
+get_hdf5() {
+	local MAJOR_P=hdf5-1.14
+	local MY_P=hdf5-1.14.2
+	[[ -f ${MY_P}.tar.bz2 ]] ||
+	wget https://www.hdfgroup.org/ftp/HDF5/releases/${MAJOR_P}/${MY_P}/src/${MY_P}.tar.bz2
+}
+
+install_hdf5() {
+	rm -rf hdf5-1.14.2 &&
+	tar xfj hdf5-1.14.2.tar.bz2 &&
+	cd hdf5-1.14.2 &&
+	./configure CC=$CC CXX=$CXX --enable-cxx --prefix=$TGT &&
+	make -j`nproc` &&
+	make install &&
+	cd .. && rm -rf hdf5-1.14.2
+}
+
 get_smlp() {
 	: # nothing to see, please move along
 }
@@ -224,8 +241,8 @@ PIP=${PIP:-pip}
 
 require_sys_programs \
 	command test [ [[ mkdir uname \
-	"${CC}" "${CXX}" tar gzip unzip xz \
-	install make "${NINJA}" curl \
+	"${CC}" "${CXX}" tar gzip unzip bzip2 xz \
+	install make nproc "${NINJA}" curl \
 	"${PYTHON}" "${PIP}" cmake
 
 [[ "$(uname)" = Linux ]] || error "unsupported OS"
