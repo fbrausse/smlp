@@ -3,7 +3,7 @@
 STAGES=( boost kjson kay gmp mpfr flint z3 hdf5 pipdeps smlp )
 
 help() {
-	echo "usage: $0 [-OPTS] TARGET"
+	echo "usage: $0 [-OPTS]"
 	echo
 	echo "Options:"
 	echo "  -d      enable debug mode for this script"
@@ -52,13 +52,21 @@ get_boost() {
 install_boost() {
 	local gv=$($CXX -v |& grep 'gcc version' | awk '{print $3}') &&
 	local pv=$($PYTHON -V | tr . ' ' | awk '{print $2 "." $3}') &&
+	local pc=python$pv-config &&
+	local inc=$($pc --includes) &&
 	rm -rf boost_1_82_0 &&
 	tar xfz boost_1_82_0.tar.gz &&
 	cd boost_1_82_0 &&
-	./bootstrap.sh --prefix=$TGT --with-libraries=python --with-python=$PYTHON --with-python-version=$pv --with-python-root=`$(command -v $PYTHON)-config --prefix` &&
-	sed -ri "12s,^    using gcc ;,    using gcc : $gv : \"$(command -v $CXX)\" ;," project-config.jam &&
+	./bootstrap.sh --prefix=$TGT --with-libraries=python \
+		--with-python=$PYTHON --with-python-version=$pv \
+		--with-python-root=$VIRTUAL_ENV &&
+	sed -ri "s\
+,\busing gcc ;\
+,using gcc : $gv : \"$(command -v $CXX)\" : <cflags>\"$inc\" <cxxflags>\"$inc\" ;\
+," \
+		project-config.jam &&
 	./b2 -j`nproc` &&
-	./b2 install
+	./b2 install &&
 	cd .. && rm -rf boost_1_82_0
 }
 
@@ -158,7 +166,8 @@ install_z3() {
 	cd z3-z3-4.11.2 &&
 	mkdir build &&
 	cd build &&
-	env CC=$CC CXX=$CXX CFLAGS="-I$TGT/include" CXXFLAGS="-I$TGT/include" LDFLAGS="-L$TGT/lib64" cmake -G Ninja \
+	env CC=$CC CXX=$CXX CFLAGS="-I$TGT/include" CXXFLAGS="-I$TGT/include" \
+		LDFLAGS="-L$TGT/lib64" cmake -G Ninja \
 		-DCMAKE_INSTALL_PREFIX=$TGT \
 		-DZ3_USE_LIB_GMP=yes \
 		-DZ3_ENABLE_EXAMPLE_TARGETS=OFF \
@@ -167,7 +176,7 @@ install_z3() {
 		-DZ3_BUILD_JAVA_BINDINGS=no \
 		-DPYTHON_EXECUTABLE=$(command -v $PYTHON) \
 		.. &&
-	ninja &&
+	ninja -j`nproc` &&
 	ninja install &&
 	cd ../.. && rm -rf z3-z3-4.11.2
 }
@@ -194,10 +203,15 @@ get_smlp() {
 }
 
 install_smlp() {
+	local pv=$($PYTHON -V | tr . ' ' | awk '{print $2 "." $3}') &&
+	local lib=$VIRTUAL_ENV/lib/python$pv/site-packages/smlp/libsmlp.cpython-$(echo $pv | tr -d .)-x86_64-linux-gnu.so &&
 	echo "please run inside smlp/utils/poly:"
-	echo "env BOOST_ROOT=$TGT PKG_CONFIG_PATH=$TGT/lib64/pkgconfig CC=$CC CXX=$CXX \
-		meson setup build -D{kay,kjson,flint,hdf5}-prefix=$TGT --prefix $VIRTUAL_ENV &&
-	ninja -C build install"
+	echo \
+	"env BOOST_ROOT=$TGT PKG_CONFIG_PATH=$TGT/lib64/pkgconfig CC=$CC CXX=$CXX " \
+	"meson setup --wipe build -D{kay,kjson,flint,hdf5}-prefix=$TGT --prefix $VIRTUAL_ENV && " \
+	"ninja -C build install && " \
+	"patchelf --set-rpath '\$ORIGIN/../../../../lib64' $lib && " \
+	"patchelf --set-rpath '\$ORIGIN/../lib64' $VIRTUAL_ENV/bin/smlp"
 }
 
 do_stage() {
@@ -222,16 +236,12 @@ while [ $# -gt 0 ]; do
 	shift
 done
 
-if [ $# -eq 0 ]; then
-	error "TARGET directory required"
-fi
-TGT=`realpath $1`
-shift
-
 if [ $# -ne 0 ]; then
 	error "unrecognized additional parameters: $*"
 fi
 
+[[ -n "$VIRTUAL_ENV" ]] || error "environment variable VIRTUAL_ENV empty, please activate the python venv to install SMLP to"
+TGT=$VIRTUAL_ENV
 
 CC=${CC:-cc}
 CXX=${CXX:-c++}
@@ -243,12 +253,11 @@ require_sys_programs \
 	command test [ [[ mkdir uname \
 	"${CC}" "${CXX}" tar gzip unzip bzip2 xz \
 	install make nproc "${NINJA}" curl \
-	"${PYTHON}" "${PIP}" cmake
+	"${PYTHON}" "${PIP}" "$PYTHON"-config cmake
 
 [[ "$(uname)" = Linux ]] || error "unsupported OS"
-#[[ -n "$VIRTUAL_ENV" ]] || error "environment variable VIRTUAL_ENV empty, please activate the python venv to install SMLP to"
 
-PIP+=" --python=$(command -v $PYTHON)"
+#PIP+=" --python=$(command -v $PYTHON)"
 echo -n "Testing integrity of pip... "
 $PIP check || error "pip installation seems to be broken"
 
