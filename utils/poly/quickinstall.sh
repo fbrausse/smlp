@@ -196,7 +196,7 @@ get_smlp() {
 install_smlp() {
 	echo "please run inside smlp/utils/poly:"
 	echo "env BOOST_ROOT=$TGT PKG_CONFIG_PATH=$TGT/lib64/pkgconfig CC=$CC CXX=$CXX \
-		meson setup build -D{kay,kjson,flint}-prefix=$TGT --prefix $VIRTUAL_ENV &&
+		meson setup build -D{kay,kjson,flint,hdf5}-prefix=$TGT --prefix $VIRTUAL_ENV &&
 	ninja -C build install"
 }
 
