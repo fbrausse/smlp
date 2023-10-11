@@ -273,7 +273,7 @@ echo "PYTHON       : $PYTHON"
 echo "PIP          : $PIP"
 
 require_sys_programs \
-	command test [ [[ mkdir uname tr awk grep env touch rm \
+	command test [ [[ mkdir uname tr awk grep env touch rm patchelf \
 	"$CC" "$CXX" "$NINJA" "$PYTHON" "$PIP"
 
 default_py_cfg() {
