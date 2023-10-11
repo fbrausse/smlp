@@ -40,6 +40,21 @@ require_sys_programs() {
 	done
 }
 
+check_platform() {
+	# this script assumes a filesystem layout conforming (mostly)
+	# to FHS (Filesystem Hierarchy Standard)
+	[[ "$(uname)" = Linux ]] || error "unsupported OS"
+
+	# need lib64
+	[[ "$(uname -m)" = x86_64 ]] || error "unsupported target processor"
+
+	local tgt=$($CC -v |& grep Target | cut -d: -f2)
+	case $tgt in
+	*64-*-linux*) ;;
+	*) error "unsupported compiler target: $tgt" ;;
+	esac
+}
+
 prepare() {
 	mkdir -p $TGT/.smlp-quickinstall &&
 	export PKG_CONFIG_PATH=$TGT/lib64/pkgconfig:$PKG_CONFIG_PATH
@@ -191,8 +206,8 @@ install_z3() {
 	$NINJA install &&
 	# Need to patch up Z3's dynamic objects to look for gmp in the right place.
 	# For some reason CMake doesn't do it...
-	patchelf --set-rpath '$ORIGIN/../lib64' $TGT/bin/z3 &&
-	patchelf --set-rpath '$ORIGIN/../lib64' $TGT/lib64/libz3.so &&
+	patchelf --set-rpath '$ORIGIN/../$LIB' $TGT/bin/z3 &&
+	patchelf --set-rpath '$ORIGIN/../$LIB' $TGT/lib64/libz3.so &&
 	cd ../.. && rm -rf z3-z3-4.11.2
 }
 
@@ -226,8 +241,8 @@ install_smlp() {
 	"env BOOST_ROOT=$TGT PKG_CONFIG_PATH=$TGT/lib64/pkgconfig CC=$CC CXX=$CXX " \
 	"meson setup --wipe build -D{kay,kjson,flint,hdf5}-prefix=$TGT --prefix $VIRTUAL_ENV && " \
 	"$NINJA -C build install && " \
-	"patchelf --set-rpath '\$ORIGIN/../../../../lib64' $lib && " \
-	"patchelf --set-rpath '\$ORIGIN/../lib64' $VIRTUAL_ENV/bin/smlp"
+	"patchelf --set-rpath '\$ORIGIN/../../../../\$LIB' $lib && " \
+	"patchelf --set-rpath '\$ORIGIN/../\$LIB' $VIRTUAL_ENV/bin/smlp"
 }
 
 do_stage() {
@@ -293,11 +308,7 @@ require_sys_programs \
 	tar gzip unzip bzip2 xz install make nproc wget cmake \
 	"$PYTHON_CONFIG"
 
-# this script assumes a filesystem layout conforming (mostly)
-# to FHS (Filesystem Hierarchy Standard)
-[[ "$(uname)" = Linux ]] || error "unsupported OS"
-# need lib64
-[[ "$(uname -m)" = x86_64 ]] || error "unsupported target processor"
+check_platform
 
 #PIP+=" --python=$(command -v $PYTHON)"
 echo -n "Testing integrity of pip installation... "
