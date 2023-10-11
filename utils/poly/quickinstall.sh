@@ -42,7 +42,7 @@ require_sys_programs() {
 
 prepare() {
 	mkdir -p $TGT/.smlp-quickinstall &&
-	return 0
+	export PKG_CONFIG_PATH=$TGT/lib64/pkgconfig:$PKG_CONFIG_PATH
 }
 
 get_boost() {
@@ -52,20 +52,26 @@ get_boost() {
 
 install_boost() {
 	local gv pv pc inc
+	# GCC version
 	gv=$($CXX -v |& grep 'gcc version' | awk '{print $3}') &&
+	# Python version (only major.minor)
 	pv=$($PYTHON -V | tr . ' ' | awk '{print $2 "." $3}') &&
+	# include flags for compiler
 	inc=$($PYTHON_CONFIG --includes) &&
 	rm -rf boost_1_82_0 &&
 	tar xfz boost_1_82_0.tar.gz &&
 	cd boost_1_82_0 &&
+	# first build the 'b2' tool using any compiler
 	./bootstrap.sh --prefix=$TGT --with-libraries=python \
 		--with-python=$PYTHON --with-python-version=$pv \
 		--with-python-root=$VIRTUAL_ENV &&
+	# set the correct compiler and flags in the generated "project-config.jam"
 	sed -ri "s\
 ,\busing gcc ;\
 ,using gcc : $gv : \"$(command -v $CXX)\" : <cflags>\"$inc\" <cxxflags>\"$inc\" ;\
 ," \
 		project-config.jam &&
+	# and build...
 	./b2 -j`nproc` &&
 	./b2 install &&
 	cd .. && rm -rf boost_1_82_0
@@ -80,6 +86,7 @@ install_kjson() {
 	rm -rf kjson-0.2.1 &&
 	tar xfz kjson-v0.2.1.tar.gz &&
 	cd kjson-0.2.1 &&
+	# need /sbin in the PATH in order for 'ldconfig' to be found
 	env PATH=/sbin:$PATH make DESTDIR=$TGT install &&
 	cd .. && rm -rf kjson-0.2.1
 }
@@ -94,7 +101,8 @@ install_kay() {
 	rm -rf kay &&
 	mv kay-master kay &&
 	cd kay &&
-	make DESTDIR=$TGT install
+	# do not check error status, bug in kay's Makefile, but it is not tragic
+	{ make DESTDIR=$TGT install; true; } &&
 	cd .. && rm -rf kay
 }
 
@@ -171,6 +179,7 @@ install_z3() {
 		LDFLAGS="-L$TGT/lib64" cmake -G Ninja \
 		-DCMAKE_MAKE_PROGRAM="$NINJA" \
 		-DCMAKE_INSTALL_PREFIX=$TGT \
+		-DCMAKE_PREFIX_PATH=$TGT \
 		-DZ3_USE_LIB_GMP=yes \
 		-DZ3_ENABLE_EXAMPLE_TARGETS=OFF \
 		-DZ3_BUILD_DOCUMENTATION=no \
@@ -180,6 +189,10 @@ install_z3() {
 		.. &&
 	$NINJA -j`nproc` &&
 	$NINJA install &&
+	# Need to patch up Z3's dynamic objects to look for gmp in the right place.
+	# For some reason CMake doesn't do it...
+	patchelf --set-rpath '$ORIGIN/../lib64' $TGT/bin/z3 &&
+	patchelf --set-rpath '$ORIGIN/../lib64' $TGT/lib64/libz3.so &&
 	cd ../.. && rm -rf z3-z3-4.11.2
 }
 
@@ -280,7 +293,11 @@ require_sys_programs \
 	tar gzip unzip bzip2 xz install make nproc wget cmake \
 	"$PYTHON_CONFIG"
 
+# this script assumes a filesystem layout conforming (mostly)
+# to FHS (Filesystem Hierarchy Standard)
 [[ "$(uname)" = Linux ]] || error "unsupported OS"
+# need lib64
+[[ "$(uname -m)" = x86_64 ]] || error "unsupported target processor"
 
 #PIP+=" --python=$(command -v $PYTHON)"
 echo -n "Testing integrity of pip installation... "
