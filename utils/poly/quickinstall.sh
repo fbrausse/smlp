@@ -185,6 +185,8 @@ get_z3() {
 }
 
 install_z3() {
+	local pl
+	pl=$($PYTHON -c 'from sysconfig import get_path; print(get_path("purelib"))')
 	rm -rf z3-z3-4.11.2 &&
 	tar xfz z3-4.11.2.tar.gz &&
 	cd z3-z3-4.11.2 &&
@@ -201,6 +203,7 @@ install_z3() {
 		-DZ3_BUILD_PYTHON_BINDINGS=yes \
 		-DZ3_BUILD_JAVA_BINDINGS=no \
 		-DPYTHON_EXECUTABLE=$(command -v $PYTHON) \
+		-DCMAKE_INSTALL_PYTHON_PKG_DIR="$pl" \
 		.. &&
 	$NINJA -j`nproc` &&
 	$NINJA install &&
