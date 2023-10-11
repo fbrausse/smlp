@@ -15,6 +15,7 @@ help() {
 	echo "  NINJA   path to ninja, current: '$NINJA', default: ninja"
 	echo "  PIP     path to pip, current: '$PIP', default: pip"
 	echo "  PYTHON  path to python, current: '$PYTHON', default: python3"
+	echo "  PYTHON_CONFIG  path to python-config utility, current: '$PYTHON_CONFIG', default: auto-detect"
 	echo
 	echo "Other environment variables may influence the operation of the above programs."
 	echo
@@ -33,9 +34,9 @@ error() {
 }
 
 require_sys_programs() {
-	local p
+	local p r
 	for p in "$@"; do
-		command -V $p >/dev/null || error "program '$p' not found"
+		r=$(command -V $p) || error "program '$p' not found"
 	done
 }
 
@@ -50,10 +51,10 @@ get_boost() {
 }
 
 install_boost() {
-	local gv=$($CXX -v |& grep 'gcc version' | awk '{print $3}') &&
-	local pv=$($PYTHON -V | tr . ' ' | awk '{print $2 "." $3}') &&
-	local pc=python$pv-config &&
-	local inc=$($pc --includes) &&
+	local gv pv pc inc
+	gv=$($CXX -v |& grep 'gcc version' | awk '{print $3}') &&
+	pv=$($PYTHON -V | tr . ' ' | awk '{print $2 "." $3}') &&
+	inc=$($PYTHON_CONFIG --includes) &&
 	rm -rf boost_1_82_0 &&
 	tar xfz boost_1_82_0.tar.gz &&
 	cd boost_1_82_0 &&
@@ -168,6 +169,7 @@ install_z3() {
 	cd build &&
 	env CC=$CC CXX=$CXX CFLAGS="-I$TGT/include" CXXFLAGS="-I$TGT/include" \
 		LDFLAGS="-L$TGT/lib64" cmake -G Ninja \
+		-DCMAKE_MAKE_PROGRAM="$NINJA" \
 		-DCMAKE_INSTALL_PREFIX=$TGT \
 		-DZ3_USE_LIB_GMP=yes \
 		-DZ3_ENABLE_EXAMPLE_TARGETS=OFF \
@@ -176,8 +178,8 @@ install_z3() {
 		-DZ3_BUILD_JAVA_BINDINGS=no \
 		-DPYTHON_EXECUTABLE=$(command -v $PYTHON) \
 		.. &&
-	ninja -j`nproc` &&
-	ninja install &&
+	$NINJA -j`nproc` &&
+	$NINJA install &&
 	cd ../.. && rm -rf z3-z3-4.11.2
 }
 
@@ -203,13 +205,14 @@ get_smlp() {
 }
 
 install_smlp() {
-	local pv=$($PYTHON -V | tr . ' ' | awk '{print $2 "." $3}') &&
-	local lib=$VIRTUAL_ENV/lib/python$pv/site-packages/smlp/libsmlp.cpython-$(echo $pv | tr -d .)-x86_64-linux-gnu.so &&
+	local pv lib
+	pv=$($PYTHON -V | tr . ' ' | awk '{print $2 "." $3}') &&
+	lib=$VIRTUAL_ENV/lib/python$pv/site-packages/smlp/libsmlp$($PYTHON_CONFIG --extension-suffix) &&
 	echo "please run inside smlp/utils/poly:"
 	echo \
 	"env BOOST_ROOT=$TGT PKG_CONFIG_PATH=$TGT/lib64/pkgconfig CC=$CC CXX=$CXX " \
 	"meson setup --wipe build -D{kay,kjson,flint,hdf5}-prefix=$TGT --prefix $VIRTUAL_ENV && " \
-	"ninja -C build install && " \
+	"$NINJA -C build install && " \
 	"patchelf --set-rpath '\$ORIGIN/../../../../lib64' $lib && " \
 	"patchelf --set-rpath '\$ORIGIN/../lib64' $VIRTUAL_ENV/bin/smlp"
 }
@@ -249,20 +252,42 @@ NINJA=${NINJA:-ninja}
 PYTHON=${PYTHON:-python3}
 PIP=${PIP:-pip}
 
+echo "Settings from environment:"
+echo "CC           : $CC"
+echo "CXX          : $CXX"
+echo "NINJA        : $NINJA"
+echo "PYTHON       : $PYTHON"
+echo "PIP          : $PIP"
+
 require_sys_programs \
 	command test [ [[ mkdir uname tr awk grep env touch rm \
-	"${CC}" "${CXX}" tar gzip unzip bzip2 xz \
-	install make nproc "${NINJA}" wget \
-	"${PYTHON}" "${PIP}" "$PYTHON"-config cmake
+	"$CC" "$CXX" "$NINJA" "$PYTHON" "$PIP"
+
+default_py_cfg() {
+	local pp pr pc
+	pp=$(command -v $PYTHON) &&
+	pr=$(realpath "$pp") &&
+	pc=$pr-config &&
+	[[ -x "$pc" ]] && echo "$pc"
+}
+
+PYTHON_CONFIG=${PYTHON_CONFIG:-$(default_py_cfg)} ||
+error "cannot auto-detect python-config tool, please set the PYTHON_CONFIG environment variable"
+
+echo "PYTHON_CONFIG: $PYTHON_CONFIG"
+
+require_sys_programs \
+	tar gzip unzip bzip2 xz install make nproc wget cmake \
+	"$PYTHON_CONFIG"
 
 [[ "$(uname)" = Linux ]] || error "unsupported OS"
 
 #PIP+=" --python=$(command -v $PYTHON)"
-echo -n "Testing integrity of pip... "
+echo -n "Testing integrity of pip installation... "
 $PIP check || error "pip installation seems to be broken"
 
 prepare || error "preparing $TGT directory for installation"
 for stage in ${STAGES[@]}; do
-	cd $TGT/.smlp-quickinstall
-	do_stage $stage || error "stage '$stage' could not be completed"
+	(cd $TGT/.smlp-quickinstall && do_stage $stage) ||
+	error "stage '$stage' could not be completed"
 done
