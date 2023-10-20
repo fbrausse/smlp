@@ -3,6 +3,7 @@
 # optimization: {plain, 0, g, 1, 2, 3, s}
 project('poly', ['c','cpp'], license: 'Apache-2.0', version: '0.10.1',
         default_options: [
+        'c_std=c11',
 	'cpp_std=c++20',
 	'b_staticpic=true',
 	'warning_level=2',

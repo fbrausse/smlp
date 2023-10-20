@@ -246,7 +246,10 @@ else
   smlp = executable('smlp', 'smlp.cc',
     dependencies: poly_deps,
     override_options: 'cpp_std=c++20',
-    include_directories: [include_directories('../include'),libsmlp_static.private_dir_include()],
+    include_directories: [
+      include_directories('../include'),
+      libsmlp_static.private_dir_include(),
+    ],
     install: true,
     link_args: link_args_smlp,
     link_with: libsmlp_static,

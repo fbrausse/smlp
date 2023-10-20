@@ -3,6 +3,7 @@
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
 
 #include "expr2.hh"
+#include "infix.hh"
 #include "nn.hh"
 #include "poly.hh"
 #include "solver.hh"
@@ -63,7 +64,7 @@ static sptr<term2> mk_cnst(kay::Q v)
 	return make2t(cnst2 { move(v) });
 }
 
-static boost::python::object dt_cnst(sptr<term2> t)
+static boost::python::object dt_cnst_term(sptr<term2> t)
 {
 	using boost::python::object;
 	if (const cnst2 *c = t->get<cnst2>())
@@ -72,6 +73,14 @@ static boost::python::object dt_cnst(sptr<term2> t)
 		[](const kay::Q &q) { return object(q); },
 		[](const A &a) { return object(a); }
 		);
+	return {};
+}
+
+static boost::python::object dt_cnst_form(sptr<form2> t)
+{
+	using boost::python::object;
+	if (const lbop2 *c = t->get<lbop2>(); c && c->args.empty())
+		return object(c->op == lbop2::AND);
 	return {};
 }
 
@@ -442,7 +451,8 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	def("_mk_and", mk_lbop2<lbop2::AND>, args("as : list[form2]"));
 	def("_mk_or", mk_lbop2<lbop2::OR>, args("as : list[form2]"));
 	def("_mk_cnst", mk_cnst);
-	def("_dt_cnst", dt_cnst);
+	def("_dt_cnst", dt_cnst_term);
+	def("_dt_cnst", dt_cnst_form);
 
 	def("Ite", mk_ite);
 	def("Var", mk_name);

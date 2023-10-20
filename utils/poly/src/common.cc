@@ -129,13 +129,16 @@ void smlp::set_loglvl(char *arg)
 }
 
 // #include <boost/stacktrace.hpp>
+#ifndef _WIN32
 #include <execinfo.h>
 #include <fcntl.h>
+#endif
 
 #define BT_BUF_SIZE	256
 
 void smlp::signal_backtrace_handler(int sig)
 {
+#ifndef _WIN32
 	::signal(sig, SIG_DFL);
 	// boost::stacktrace::safe_dump_to("smlp-stacktrace");
 	void *buffer[BT_BUF_SIZE];
@@ -151,5 +154,6 @@ void smlp::signal_backtrace_handler(int sig)
 			rd = write(STDERR_FILENO, buffer, rd);
 		close(fd);
 	}
+#endif
 	::raise(SIGABRT);
 }

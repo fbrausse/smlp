@@ -30,7 +30,8 @@ def Cnst(c) -> term2:
 	This latter case should never happen.
 	"""
 	# sys.set_int_max_str_digits()
-	return libsmlp._dt_cnst(c) if isinstance(c, term2) else libsmlp._mk_cnst(Q(c))
+	return (libsmlp._dt_cnst(c) if isinstance(c, term2) or isinstance(c, form2) else
+	        libsmlp._mk_cnst(Q(c)))
 
 def And(*args) -> form2:
 	"""
@@ -84,6 +85,12 @@ def component(ty : libsmlp.type, *, interval=None, grid=None) -> component:
 		return libsmlp._mk_component_list(ty, [Q(v) for v in grid])
 	return libsmlp._mk_component_entire(ty)
 
+del domain.append
+del domain.extend
+
+def domain(comps : dict) -> domain:
+	return libsmlp._mk_domain(comps)
+
 Q.__repr__ = lambda self: '<' + self.__module__ + '.Q ' + str(self) + '>'
 Q.__hash__ = lambda self: fractions.Fraction(self.numerator, self.denominator).__hash__()
 
@@ -134,10 +141,5 @@ def parse_nn(gen_path : str, hdf5_path : str, spec_path : str,
              clamp_inputs : bool = False,
              single_obj : bool = False) -> pre_problem:
 	return libsmlp._parse_nn(gen_path, hdf5_path, spec_path, io_bounds_path,
-	                         clamp_inputs, single_obj)
+	                         obj_bounds_path, clamp_inputs, single_obj)
 
-del domain.append
-del domain.extend
-
-def domain(comps : dict) -> domain:
-	return libsmlp._mk_domain(comps)

@@ -6,6 +6,8 @@
 
 #pragma once
 
+#define BOOST_NO_AUTO_PTR
+
 #include "config.h"
 
 #include <cassert>
