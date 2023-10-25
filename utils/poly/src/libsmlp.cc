@@ -9,6 +9,7 @@
 #include "solver.hh"
 
 using namespace smlp;
+using namespace reals::eager;
 
 template <decltype(bop2::op) op>
 static sptr<term2> mk_bop2(sptr<term2> a, sptr<term2> b)
@@ -327,6 +328,11 @@ static kay::Q _Q_abs(const kay::Q &a)
 	return abs(a);
 }
 
+static kay::Z _lbound_log2(const R &r)
+{
+	return lbound_log2(r);
+}
+
 static const char * smlp_version() { return SMLP_VERSION; }
 
 template <cmp_t c, typename T>
@@ -346,6 +352,15 @@ static bool do_cmp(const T &l, const T &r)
 	if constexpr (c == GE)
 		return l >= r;
 	unreachable();
+}
+
+static boost::python::object R_approx(const R &r, const boost::python::long_ &p)
+{
+	str s = boost::python::extract<str>(boost::python::str(p));
+	kay::Z z;
+	if (parse_Z(s, z))
+		return boost::python::object(approx(r, z));
+	return {};
 }
 
 BOOST_PYTHON_MODULE(libsmlp)
@@ -509,6 +524,10 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	    args("simple_domain_path", "poly_expression_path", "python_compat",
 	         "dump_pe", "infix"));
 
+	/* exported infix.hh API */
+	def("_parse_infix", (expr(*)(std::string, bool))parse_infix,
+	    args("str", "python_compat"));
+
 	def("_options", options);
 	def("set_loglvl", set_loglvl);
 
@@ -555,11 +574,27 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 		.def("__neg__", _Q_un<uop2::USUB>)
 		.def("__abs__", _Q_abs)
 		;
-	class_<A>("A", no_init)
-		;
 	def("_mk_Q_Z", _mk_Q_Z);
 	def("_mk_Q_F", _mk_Q_F);
 	def("_mk_Q_Q", _mk_Q_Q);
+
+	class_<A>("A", no_init)
+		.def("__eq__", do_cmp<EQ, A>)
+		.def("__ne__", do_cmp<NE, A>)
+		.def("__lt__", do_cmp<LT, A>)
+		.def("__le__", do_cmp<LE, A>)
+		.def("__gt__", do_cmp<GT, A>)
+		.def("__ge__", do_cmp<GE, A>)
+		.def("__str__", &A::get_str)
+		.def("to_R", &A::to_R)
+		.def("to_Q", (kay::Q (*)(const A &))[](const A &a){ return to_Q(a); })
+		.def("known_Q", (bool (*)(const A &))[](const A &a){ return known_Q(a); })
+		;
+
+	class_<R>("R", no_init)
+		.def("_approx", R_approx);
+		;
+	def("_lbound_log2", _lbound_log2);
 
 	class_<sptr<solver>>("solver", no_init)
 		.def("declare", solver_declare)

@@ -20,18 +20,27 @@ __version__ = libsmlp._version()
 
 def Cnst(c) -> term2:
 	"""
-	Either creates a constant term2 from the Python object c, or destructs
-	a constant term2 into its value.
+	Either creates a constant term2 or form2 from the Python object c, or
+	destructs a constant term2 or form2 into its value.
 
-	For the first case, supported types of c are:
+	For creating term2, supported types of c are:
 	int, float, fractions.Fraction, fractions.Decimal and libsmlp.Q.
 	Raises a TypeError in case the type of c does not match one of these.
 	Raises a ValueError in case the representation of c could not be parsed.
 	This latter case should never happen.
+
+	For creating form2, supported values of c are:
+	True and False. These cases are equivalent to calling And() and Or()
+	with an empty argument list, respectively.
 	"""
 	# sys.set_int_max_str_digits()
-	return (libsmlp._dt_cnst(c) if isinstance(c, term2) or isinstance(c, form2) else
-	        libsmlp._mk_cnst(Q(c)))
+	if isinstance(c, term2) or isinstance(c, form2):
+		return libsmlp._dt_cnst(c)
+	if c is True:
+		return And()
+	if c is False:
+		return Or()
+	return libsmlp._mk_cnst(Q(c))
 
 def And(*args) -> form2:
 	"""
@@ -121,6 +130,72 @@ def Q(c, *args) -> Q:
 	if r is None:
 		raise ValueError("cannot interpret " + repr(c) + " as a rational constant")
 	return r
+
+def _R_approx(self, precision : int):
+	assert isinstance(precision, int)
+	r = self._approx(precision)
+	if r is None:
+		raise ValueError('cannot approximate smlp.R to precision ' + str(precision) + ' of type ' + type(precision))
+	return r
+libsmlp.R.approx = _R_approx
+
+def approx(value, /, *, type=float, precision=None):
+	"""
+	Approximates 'value'. 'value' must be one of: smlp.Q, smlp.A, smlp.R.
+	The following parameters can optionally be specified:
+	- precision: request a specific precision; required when type != float;
+	  default: None
+	- type: type of the result, defaults to 'float'; must be one of:
+	  float, smlp.Q, smlp.R
+
+	The default, when 'type=float', is to approximate 'value' as a floating
+	point number. This can have unexpected results when the quantity cannot
+	be represented in the range Python's 'float' supports, e.g. a non-zero
+	'value' could be approximated by 0.0 or by float("inf"), depending on
+	its magnitude.
+
+	Note that the 'precision' parameter is ignored for type=float.
+
+	When type != float, the precision parameter is required to be set to an
+	integer. In this case approx() returns an approximation to 'value'
+	which is accurate up to absolute error 2 ** precision. For instance,
+	approx(value, precision=-5) will return a result such that |value -
+	approx(value, precision=-5)| <= 2 ** -5 = 1/32 holds.
+	"""
+	assert type is float or precision is not None
+	if isinstance(value, libsmlp.A):
+		value = value.to_Q() if value.known_Q() else value.to_R()
+	assert isinstance(value, libsmlp.Q) or isinstance(value, libsmlp.R)
+
+	if type is float:
+		def Q2F(v):
+			return float(fractions.Fraction(v.numerator,
+			                                v.denominator))
+
+		if isinstance(value, libsmlp.Q):
+			return Q2F(value)
+		n = -3
+		zero = Q(0)
+		one = Q(1)
+		precision = None
+		while True:
+			if n < -1074:
+				return 0.0
+			v = value.approx(n)
+			d = abs(v) - Q(1, 2 ** -n)
+			if d >= one:
+				precision = -54
+				break
+			df = Q2F(d)
+			if d > zero:
+				precision = _lbound_log2(value) - 54
+				break
+			n *= 2
+		return Q2F(value.approx(precision))
+	assert isinstance(precision, int)
+	if isinstance(value, libsmlp.Q):
+		return value
+	return value.approx(precision)
 
 libsmlp.component.__repr__ = lambda self: (
 	'<' + self.__module__ + '.component of type ' + repr(self.type) +

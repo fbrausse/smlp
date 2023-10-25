@@ -125,23 +125,23 @@ void upoly<T>::assert_minimal() const
 	for (Z f0 = 1, c0n = abs(c0.get_num()); f0 <= c0n; f0++) {
 		if (c0n % f0 != 0)
 			continue;
-	for (Z fn = 1, cnn = abs(cn.get_num()); fn <= cnn; fn++) {
-		if (cnn % fn != 0)
-			continue;
-		Q x(f0,fn);
+		for (Z fn = 1, cnn = abs(cn.get_num()); fn <= cnn; fn++) {
+			if (cnn % fn != 0)
+				continue;
+			Q x(f0,fn);
 #ifdef KAY_USE_GMPXX
-		kay::canonicalize(x);
+			kay::canonicalize(x);
 #endif
-		if (x.get_num() != f0)
-			continue;
-		Q p = (*this)(x);
-		Q n = (*this)(-x);
-		dbg(mod_prob, "upoly(+/-%s) = %s, %s\n",
-		    x.get_str().c_str(),
-		    p.get_str().c_str(), n.get_str().c_str());
-		assert(p);
-		assert(n);
-	}
+			if (x.get_num() != f0)
+				continue;
+			Q p = (*this)(x);
+			Q n = (*this)(-x);
+			dbg(mod_prob, "upoly(+/-%s) = %s, %s\n",
+			    x.get_str().c_str(),
+			    p.get_str().c_str(), n.get_str().c_str());
+			assert(p);
+			assert(n);
+		}
 	}
 #endif
 }
@@ -160,7 +160,8 @@ template struct upoly<kay::Q>;
 str A::get_str() const
 {
 	return "(root-of " + to_string(p, var) + " (" +
-	       kay::to_string(lo(*this)) + " " + kay::to_string(hi(*this)) + "))";
+	       kay::to_string(lo(*this)) + " " +
+	       kay::to_string(hi(*this)) + "))";
 }
 
 R A::to_R() const
