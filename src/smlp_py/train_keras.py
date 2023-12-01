@@ -8,17 +8,17 @@ import numpy as np
 from sklearn.metrics import mean_squared_error, r2_score
 
 # SMLP
-from logs_common import *
-from smlp.smlp_plot import plot  #, evaluate_model, evaluate_prediction, distplot_dataframe,
-
+from smlp_py.smlp_logs import *
+from smlp_py.smlp_plots import plot  #, evaluate_model, evaluate_prediction, distplot_dataframe,
+from smlp_py.smlp_utils import str_to_bool
 
 # Methods for training and predction, results reporting with Tensorflow/KERAS package.
 # Currently NN only (with sequential and functional APIs)
 # When addig new models self._KERAS_MODELS = ['nn'] needs to be updated
 class ModelKeras:
-    def __init__(self): # , log_file : str, log_level : str, log_mode : str, log_time : str   
+    def __init__(self): 
         #data_logger = logging.getLogger(__name__)
-        self._keras_logger = None #create_logger('keras_logger', log_file, log_level, log_mode, log_time)
+        self._keras_logger = None
         
         self._KERAS_MODELS = ['nn']
         self.SMLP_KERAS_MODELS = [self._algo_name_local2global(m) for m in self._KERAS_MODELS]
@@ -30,6 +30,7 @@ class ModelKeras:
         self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
         self._HID_ACTIVATION = 'relu'
         self._OUT_ACTIVATION = 'linear'
+        self._SEQUENTIAL_API = True
         
         # model accuracy parameters
         self._DEF_LOSS       = 'mse'
@@ -61,15 +62,40 @@ class ModelKeras:
             'hid_activation': {'abbr':'hid_activation', 'default': self._HID_ACTIVATION, 'type':str,
                 'help':'hidden layer activation for NN [default: {}]'.format(self._HID_ACTIVATION)}, 
             'out_activation': {'abbr':'out_activation', 'default': self._OUT_ACTIVATION, 'type':str,
-                'help':'output layer activation for NN [default: {}]'.format(self._OUT_ACTIVATION)}}
+                'help':'output layer activation for NN [default: {}]'.format(self._OUT_ACTIVATION)},
+            'sequential_api': {'abbr':'seq_api', 'default': self._SEQUENTIAL_API, 'type':str_to_bool,
+                'help':'Should sequential api be used building NN layers or should functional ' +\
+                        'api be used instead? [default: {}]'.format(str(self._SEQUENTIAL_API))}
+        }
     
+    # set logger from a caller script
     def set_logger(self, logger):
         self._keras_logger = logger 
     
+    # set report_file_prefix from a caller script
+    def set_report_file_prefix(self, report_file_prefix):
+        self.report_file_prefix = report_file_prefix
+        
+     # set model_file_prefix from a caller script
+    def set_model_file_prefix(self, model_file_prefix):
+        self.model_file_prefix = model_file_prefix
+        
     # local names for model is/are 'nn, ..., while global names are 'nn_ceras',...
     # to distinguish dt, rf, ... implementation in different packages
     def _algo_name_local2global(self, algo):
         return algo+'_keras'
+    
+    # file to save NN Keras/tensorflow training / error convergence info, known as checkpoints
+    @property
+    def model_checkpoint_pattern(self):
+        assert self.model_file_prefix is not None
+        return self.model_file_prefix + '_model_checkpoint.h5'
+    
+    # TODO !!!: add description
+    @property
+    def model_gen_file(self):
+        assert self.model_file_prefix is not None
+        return self.model_file_prefix + '_model_gen.json'
     
     # local name of hyper parameter (as in sklearn package) to global name;
     # the global name is obtained from local name, say 'epochs', by prefixing it
@@ -101,13 +127,16 @@ class ModelKeras:
         return nn_keras_hyperparam_dict
         
     # initialize Keras NN model using sequential API; it does not use sample weights.
-    def _nn_init_model(self, input_dim, optimizer, hid_activation, out_activation, layers_spec, n_out):
+    def _nn_init_model_sequential(self, input_dim, optimizer, hid_activation, out_activation, layers_spec, n_out):
+        self._keras_logger.info('building NN model using Keras Sequential API')
         model = keras.models.Sequential()
         first = True
-        for fraction in map(float, layers_spec.split(',')):
+        layers_spec_list = [float(x) for x in layers_spec.split(',')] #map(float, layers_spec.split(',')); 
+        self._keras_logger.info('layers_spec_list ' + str([1] + layers_spec_list))
+        for fraction in layers_spec_list:
             assert fraction > 0
-            n = ceil(input_dim * fraction)
-            self._keras_logger.info("dense layer of size", n)
+            n = ceil(input_dim * fraction);
+            self._keras_logger.info('dense layer of size ' + str(n))
             model.add(keras.layers.Dense(n, activation=hid_activation,
                                          input_dim=input_dim if first else None))
             first = False
@@ -137,6 +166,7 @@ class ModelKeras:
     '''
     # initialize Leras NN model using functional API. It uses sample weights.
     def _nn_init_model_functional(self, input_dim, optimizer, hid_activation, out_activation, layers_spec, resp_names):
+        self._keras_logger.info('building NN model using Keras Functional API')
         layers_spec_list = [float(x) for x in layers_spec.split(',')]
         layers_spec_list = [1] + layers_spec_list
         self._keras_logger.info('layers_spec_list ' + str(layers_spec_list))
@@ -149,13 +179,14 @@ class ModelKeras:
             #print('fraction', fraction)
             assert fraction > 0
 
-            n = ceil(input_dim * fraction)
-            self._keras_logger.info('dense layer of size ' + str(n))
-            #print('assigning variable', nn_layer_names[i])
+            # the size of the current layer
+            n = ceil(input_dim * fraction)            
             if i == 0:
+                self._keras_logger.info('input layer of size ' + str(n))
                 assert fraction == 1
                 globals()[nn_layer_names[i]] = keras.layers.Input(shape=(input_dim,))
             else:        
+                self._keras_logger.info('dense layer of size ' + str(n))
                 globals()[nn_layer_names[i]] = keras.layers.Dense(n, activation=hid_activation, input_dim=None)(globals()[nn_layer_names[i-1]])
                 #print('var i-1', nn_layer_vars[i-1], 'gl name i-1', globals()[nn_layer_names[i-1]])
                 assert (globals()[nn_layer_names[i-1]]) is (nn_layer_vars[i-1])
@@ -282,7 +313,7 @@ class ModelKeras:
             raise Exception('Parameter ' + str(param) + ' is missing in hparam_dict')
         return hparam_dict[param] #if not hparam_dict[param] is None else default
 
-    def _keras_train_multi_response(self, inst, input_names, resp_names : list, algo,
+    def _keras_train_multi_response(self, feat_names, resp_names : list, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, weights_coef, model_per_response:bool):
         layers_spec = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('layers', algo)) #DEF_LAYERS_SPEC 'nn_layers'
@@ -291,7 +322,15 @@ class ModelKeras:
         optimizer = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('optimizer', algo)) #DEF_OPTIMIZER
         hid_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('hid_activation', algo)) #HID_ACTIVATION
         out_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('out_activation', algo)) #OUT_ACTIVATION
-
+        sequential_api = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('sequential_api', algo)) #SEQUENTIAL_API
+        
+        # sample weights are supported only with functional api, therefore if sample weights are provided (different from None)
+        # functional api will be used even if sequential_api was specifed as True
+        # Old: SEQUENTIAL_MODEL = weights_coef == None; #print(weights_coef); print(SEQUENTIAL_MODEL)
+        SEQUENTIAL_MODEL = sequential_api
+        if not weights_coef is None:
+            SEQUENTIAL_MODEL = False
+        
         self._keras_logger.info('_keras_train_multi_response: start')
         #print('layers_spec =', layers_spec, '; seed =', seed, '; weights =', weights_coef)
         #print('epochs =', epochs, '; batch_size =', batch_size, '; optimizer =', optimizer)
@@ -315,22 +354,22 @@ class ModelKeras:
             },
         }
         # TODO: need a different filename for persistance of hyperparameters
-        with open(inst.model_gen_file, 'w') as f:
+        with open(self.model_gen_file, 'w') as f:
             json.dump(hyperparam_persist, f)
 
-        SEQUENTIAL_MODEL = weights_coef == 0
         input_dim = X_train.shape[1] #num_columns
         if SEQUENTIAL_MODEL:
-            model = self._nn_init_model(input_dim, optimizer, hid_activation, out_activation, layers_spec, len(resp_names))
+            model = self._nn_init_model_sequential(input_dim, optimizer, hid_activation, out_activation, 
+                layers_spec, len(resp_names))
         else:
             model = self._nn_init_model_functional(input_dim, optimizer, hid_activation, out_activation, 
-                                             layers_spec, resp_names)
+                layers_spec, resp_names)
 
-        history = self._nn_train(model, epochs, batch_size, inst.model_checkpoint_pattern,
-                           X_train, X_test, y_train, y_test, weights_coef)
+        history = self._nn_train(model, epochs, batch_size, self.model_checkpoint_pattern,
+            X_train, X_test, y_train, y_test, weights_coef)
 
         # plot how training iterations improve error/model precision
-        self._report_training_regression(history, epochs, interactive_plots, resp_names, inst._report_name_prefix)
+        self._report_training_regression(history, epochs, interactive_plots, resp_names, self.report_file_prefix)
 
         #  print("evaluate")
         #  score = model.evaluate(x_test, y_test, batch_size=200)
@@ -341,19 +380,20 @@ class ModelKeras:
         
     # runs Keras NN algorithm, outputs lots of stats, saves model to disk
     # epochs and batch_size are arguments of NN algorithm from keras library
-    def keras_main(self, inst, input_names, resp_names : list, algo,
+    def keras_main(self, feat_names, resp_names : list, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, weights_coef, model_per_response:bool):
         self._keras_logger.info('keras_main: start')
+        print('feat_names', feat_names, 'resp_names', resp_names)
         if model_per_response:
             model = {}
             for rn in resp_names:
-                rn_model = self._keras_train_multi_response(inst, input_names, resp_names, algo,
-                    X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
+                rn_model = self._keras_train_multi_response(feat_names, [rn], algo,
+                    X_train, X_test, y_train[[rn]], y_test[[rn]], hparam_dict, interactive_plots, 
                     seed, weights_coef, model_per_response)
-                model[rn] = rn_model
+                model[rn] = rn_model   
         else:
-            model = self._keras_train_multi_response(inst, input_names, resp_names, algo,
+            model = self._keras_train_multi_response(feat_names, resp_names, algo,
                 X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
                 seed, weights_coef, model_per_response)
             

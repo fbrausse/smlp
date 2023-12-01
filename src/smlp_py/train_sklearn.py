@@ -1,5 +1,5 @@
 # Fitting sklearn regression tree models
-from sklearn.tree import DecisionTreeRegressor
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 #from sklearn.tree import _tree
 from sklearn import tree, ensemble
 
@@ -13,9 +13,9 @@ import pandas as pd
 #import pickle
 
 # SMLP
-from smlp.smlp_plot import *
-from smlp.formula_sklearn import SklearnFormula
-from utils_common import str_to_bool, lists_union_order_preserving_without_duplicates
+from smlp_py.smlp_plots import *
+from smlp_py.smlp_terms import TreeTerms, PolyTerms
+from smlp_py.smlp_utils import str_to_bool, lists_union_order_preserving_without_duplicates
 
 
 # Methods for training and predction, results reproting with SKLEARN package   
@@ -27,7 +27,8 @@ class ModelSklearn:
         self._sklearn_logger = None
         self._SKLEARN_MODELS = ['dt', 'et', 'rf', 'poly']
         self.SMLP_SKLEARN_MODELS = [self._algo_name_local2global(m) for m in self._SKLEARN_MODELS]
-        self._instFormula = SklearnFormula()
+        self._instTreeTerms = TreeTerms()
+        self._instPolyTerms = PolyTerms()
         
         # trees (rf, dt, et) common
         self._DEF_MIN_SAMPLES_SPLIT = 2
@@ -225,7 +226,16 @@ class ModelSklearn:
     # set logger from a caller script
     def set_logger(self, logger):
         self._sklearn_logger = logger
-        self._instFormula.set_logger(logger)
+        self._instTreeTerms.set_logger(logger)
+        self._instPolyTerms.set_logger(logger)
+    
+    # set report_file_prefix from a caller script
+    def set_report_file_prefix(self, report_file_prefix):
+        self.report_file_prefix = report_file_prefix
+    
+    # set model_file_prefix from a caller script
+    def set_model_file_prefix(self, model_file_prefix):
+        self.model_file_prefix = model_file_prefix
     
     # local names for model are 'dt', 'rf', ..., while global names are 'dt_sklearn'
     # 'rf_sklearn', to distinguish dt, rf, ... implementation in different packages
@@ -241,17 +251,15 @@ class ModelSklearn:
         
     # given training algo name like dt and the hyper parameter dictionary param_dict  
     # for that algo in the python package used in this class), this function returns  
-    # a modified dictionary obtained from param_dictby by adds algo name like dt_sklearn
-    # (where sklearn is the name of the package used) to the parameter name and its
-    # correponding abbriviated name in param_dict.
+    # a modified dictionary obtained from param_dict by by adding algo name like 
+    # dt_sklearn (where sklearn is the name of the package used) to the parameter name 
+    # and its correponding abbriviated name in param_dict).
     def _param_dict_with_algo_name(self, param_dict, algo):
         #print('param_dict', param_dict)
         result_dict = {}
         for k, v in param_dict.items():
             v_updated = v.copy()
             v_updated['abbr'] = self._hparam_name_local_to_global(v['abbr'], algo) # algo + '_' + v['abbr']
-            #print('updated abbrv', v_updated['abbr'])
-            #print('updated key', self._hparam_name_local_to_global(k, algo))
             result_dict[self._hparam_name_local_to_global(k, algo)] = v_updated #algo + '_' + k
         #raise Exception('tmp')
         return result_dict
@@ -270,6 +278,16 @@ class ModelSklearn:
     def dt_regr_train(self, feature_names, resp_names, algo,
             X_train, X_test, y_train, y_test, seed, weights):
         # Fit the regressor, set max_depth = 3
+        '''
+        is_classification = True
+        for resp_name in resp_names:
+            if set(y_train[resp_name].values()) == {0,1}:
+                continue
+            else:
+                is_classification = False
+                break
+        print('is_classification', is_classification); assert False
+        '''
         regr = DecisionTreeRegressor(max_depth=15, random_state=seed)
         model = regr.fit(X_train, y_train, sample_weight=weights)
         assert(regr == model)
@@ -306,7 +324,6 @@ class ModelSklearn:
         model = model.fit(X_train, y_train, sample_weight=weights)
         #assert regr == model
         #assert regr.estimators_[0].tree_.value.shape[1] == 1 # no support for multi-output
-        #self._instFormula.trees_to_rules(inst, regr.estimators_, feature_names, resp_names, None, True, True)
 
         return model
 
@@ -338,13 +355,6 @@ class ModelSklearn:
         pol_reg = LinearRegression()
         model = pol_reg.fit(X_train, y_train, sample_weight=weights)
 
-        ''' # writing spec file
-        model_domain = training_data_to_domain_spec(X_train, input_names)
-        domain_file = open(inst._report_name_prefix + "_poly_domain.txt"), "w")
-        domain_file.write(model_domain)
-        domain_file.close()
-        '''
-
         assert(model == pol_reg)
         return model, poly_reg #, X_train, X_test
         
@@ -356,7 +366,7 @@ class ModelSklearn:
     def poly_sklearn_predict(self, model, X):
         return model[0].predict(model[1].transform(X))
         
-    def _sklearn_train_multi_response(self, inst, feat_names, resp_names, algo,
+    def _sklearn_train_multi_response(self, get_model_file_prefix, feat_names, resp_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, sample_weights_vect):
         if algo in ['dt', 'et', 'rf']:
@@ -376,10 +386,12 @@ class ModelSklearn:
                 assert False
                 
             # save tree model as rules
-            rules_report_name = inst.get_model_name_prefix(resp_names, self._algo_name_local2global(algo)) + '_tree_rules.txt'
-            print('rules_report_name', rules_report_name); print('feat_names', feat_names); print('resp_names', resp_names); 
-            self._instFormula.trees_to_rules(tree_estimators, feat_names, resp_names, 
-                None, True, rules_report_name)
+            #rules_report_file = paths.get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_tree_rules.txt'
+            #rules_report_file = model_file_prefix + '_tree_rules.txt'
+            rules_report_file = get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_tree_rules.txt'
+            print('rules_report_file', rules_report_file); print('feat_names', feat_names); print('resp_names', resp_names)
+            self._instTreeTerms.trees_to_rules(tree_estimators, feat_names, resp_names, 
+                None, True, rules_report_file)
             return model
         elif algo == 'poly':
             degree = hparam_dict[self._hparam_name_local_to_global('degree', 'poly')]
@@ -387,15 +399,17 @@ class ModelSklearn:
             linear_model, poly_reg = self.poly_train(feat_names, resp_names, degree,
                 X_train, X_test, y_train, y_test, seed, sample_weights_vect)
             for resp_id in range(len(resp_names)):
-                #formula_report_name = inst._report_name_prefix + '_' + str(algo) + '_' + resp_names[resp_id] + "_poly_formula.txt"
-                formula_report_name = inst.get_model_name_prefix(resp_names, self._algo_name_local2global(algo)) + '_formula.txt'
-                model_formula = self._instFormula.poly_model_to_formula(feat_names, resp_names, linear_model.coef_, 
-                    poly_reg.powers_, resp_id, True, formula_report_name)
+                #formula_report_file = paths.get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_formula.txt'
+                #formula_report_file = model_file_prefix + '_formula.txt'
+                formula_report_file = get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_formula.txt'
+                model_formula = self._instPolyTerms.poly_model_to_term_single_response(feat_names, resp_names, linear_model.coef_, 
+                    poly_reg.powers_, resp_id, True, formula_report_file)
+            print('poly model computed', (linear_model, linear_model.coef_, poly_reg, poly_reg.powers_)) 
             return linear_model, poly_reg #, X_train, X_test
         else:
             raise Exception('Unsupported model type ' + str(algo) + ' in function tree_main')
         
-    def sklearn_main(self, inst, feat_names_dict, resp_names, algo,
+    def sklearn_main(self, get_model_file_prefix, feat_names_dict, resp_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, sample_weights_vect, model_per_response):
         # train a separate models for each response, pack into a dictionary with response names
@@ -403,7 +417,7 @@ class ModelSklearn:
         if model_per_response:
             model = {}
             for rn in resp_names:
-                rn_model = self._sklearn_train_multi_response(inst, feat_names_dict[rn], [rn], algo,
+                rn_model = self._sklearn_train_multi_response(get_model_file_prefix, feat_names_dict[rn], [rn], algo,
                     X_train, X_test, y_train[[rn]], y_test[[rn]], hparam_dict, interactive_plots, 
                     seed, sample_weights_vect)
                 model[rn] = rn_model
@@ -411,24 +425,7 @@ class ModelSklearn:
         else:
             #union_feat_names = list(set(sum(list(feat_names_dict.values()), []))) - the ordering is affected 
             union_feat_names = lists_union_order_preserving_without_duplicates(list(feat_names_dict.values()))
-            model = self._sklearn_train_multi_response(inst, union_feat_names, resp_names, algo,
+            model = self._sklearn_train_multi_response(get_model_file_prefix, union_feat_names, resp_names, algo,
                 X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
                 seed, sample_weights_vect)
             return model
-
-'''
-    # generates domain file in current format for running the solvers.
-    # TODO: this is for temporary usage, amd also does not belong to this file
-    def training_data_to_domain_spec(X_poly, input_names):
-        X_poly_df = pd.DataFrame(X_poly)
-        print('X_poly_df\n', X_poly_df)
-        X_test_scaled_df = X_poly_df[range(1,len(input_names)+1)]
-        X_test_scaled_df.columns = input_names
-        print('X_test_scaled_df\n', X_test_scaled_df)
-        domain_spec = ''
-        for col in X_test_scaled_df.columns.tolist():
-            print(col, '\n', X_test_scaled_df[col].sort_values())
-            domain_spec = domain_spec + col + ' -- ' + '[' + str(X_test_scaled_df[col].min()) + ',' + str(X_test_scaled_df[col].max()) + ']\n'
-        print('domain_spec\n', domain_spec)
-        return domain_spec
-'''

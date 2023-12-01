@@ -1,7 +1,7 @@
 from mrmr import mrmr_classif, mrmr_regression
 import pandas as pd
 
-class MrmrFeatures:
+class SmlpMrmr:
     def __init__(self):
         self._mrmr_logger = None
         self._MRMR_FEATURES_PRED = 15
@@ -21,9 +21,9 @@ class MrmrFeatures:
         return df.select_dtypes(include=['category', 'object']).columns.tolist()
     
     # Extract the computed scores from MRMR algo result mrmr_res and return it as a dataframe.
-    # MRMR result mrmrm_res is a list of three elements where the first elemet is the ranked
-    # list of selected features, the second elemet contains the feature scores; and the third
-    # element is a matrix of mutual correlation scores between all the input features. 
+    # MRMR result mrmrm_res is a list of three elements where the first element is the ranked
+    # list of selected features, the second element contains the feature scores; and the third
+    # element is a matrix of mutual correlation scores between all pairs of input features. 
     def _mrmr_res_to_scores_df(self, mrmr_res):
         #print('mrmr_res: ranking\n', mrmr_res[0], '\ntarget corr\n', mrmr_res[1], '\nfeat corr\n',  mrmr_res[2])
         mrmr_scores_df = pd.DataFrame(mrmr_res[1])
@@ -59,8 +59,9 @@ class MrmrFeatures:
 
     # mrmr feature selection using mrmr-feature package, where y is a categorical variable (pandas.Series)
     # TODO !!!: not tested
-    def mrmr_class(self, X:pd.DataFrame, y:pd.Series, resp_name:str, K:int, relevance='f', redundancy='c', denominator='mean',
-            cat_encoding='leave_one_out', only_same_domain=False, return_scores=False, n_jobs=-1, show_progress=False):
+    def mrmr_class(self, X:pd.DataFrame, y:pd.Series, resp_name:str, K:int, relevance='f', 
+            redundancy='c', denominator='mean', cat_encoding='leave_one_out', only_same_domain=False,
+            return_scores=False, n_jobs=-1, show_progress=False):
         self._mrmr_logger.info('MRMR feature selection for response ' + str(resp_name) + ' : start')
         
         ctg_features = self._get_df_categorical_feat_names(X); #print('ctg_features', ctg_features)

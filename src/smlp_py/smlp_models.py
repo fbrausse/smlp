@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 import pickle
+import json
+import os
 
 from sklearn.metrics import mean_squared_error, r2_score
 from pycaret.regression import predict_model as caret_predict_model
@@ -9,23 +11,38 @@ from pycaret.regression import load_model as caret_load_model
 
 from keras.models import load_model as keras_load_model
 
-from smlp.smlp_plot import evaluate_prediction
-from smlp.train_keras import ModelKeras 
-from smlp.train_caret import ModelCaret 
-from smlp.train_sklearn import ModelSklearn
-from utils_common import str_to_bool
+from smlp_py.smlp_plots import evaluate_prediction
+from smlp_py.train_keras import ModelKeras 
+from smlp_py.train_caret import ModelCaret 
+from smlp_py.train_sklearn import ModelSklearn
+from smlp_py.smlp_utils import str_to_bool
 
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
-# Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages
-class ModelCommon:
+# Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
+# Model training parameter model_per_response controls whther one model is build that covers all responses
+# or a separate model is built for each response. In the latter case, when MRMR option mrmr_pred is on,
+# model for each response is built from the subset of features selected by MRMR algorithm fro that 
+# response -- these subsets of features might be different for different responses. Also, in this case
+# (when model_per_response is true) result of training is a dictionary with response names as keys and
+# the model trained for a given response as the correponding value in the dictionary. When model_per_response
+# is false, the trained model is not a dictionary, it is a model of the type that corresponds to the training
+# algorithm; and in this case the features used for training are all features as specifed in command line
+# if MRMR is not used, and otherwise is the union of features selected by MRMR for at least one response.
+# In model exploration modes (lie verification, querying, optimixzation) if SMLP terms and solver instances
+# need to be built, each model in the dictionary of the models or a model trained for all responses is 
+# converted to terms separtely, the constraints and assertions built on the top of model responses are added
+# to solver instance separately (as many as required, depending on whether all responses are anlysed together).
+class SmlpModels:
     def __init__(self):
-        #data_logger = logging.getLogger(__name__)
-        #self._model_logger = create_logger('model_logger', log_file, log_level, log_mode, log_time)
         self._model_logger = None
         self._DEF_SAVE_MODEL = True
         self._DEF_USE_MODEL = False
+        self._DEF_SAVE_MODEL_CONFIG = True
         self._MODEL_PER_RESPONSE = False
+
         self._model_params_common_dict = {
+            'model': {'abbr': 'model', 'type':str,
+                'help': 'Type of model to train (NN, Poly, ... [default: none]'},
             'save_model': {'abbr':'save_model', 'default': self._DEF_SAVE_MODEL, 'type':str_to_bool,
                 'help': 'Should the trained models be saved for future use? ' +
                     '[default: ' + str(self._DEF_SAVE_MODEL) + ']'},
@@ -38,24 +55,105 @@ class ModelCommon:
                     'where filename_prefix is concatenation of the output directory and the prefix '
                     'identifying the run, model_algo is the training algo name and model_format ' +
                     'is .h5 for nn_keras and .pkl for models trained using sklearn and keras packages.'},
+            'save_model_rerun_configuration': {'abbr':'save_model_config', 
+                                               'default': self._DEF_SAVE_MODEL_CONFIG, 'type':str_to_bool,
+                'help': 'Should a config file enabling to re-run a saved model be written out? ' +
+                    '[default: ' + str(self._DEF_SAVE_MODEL_CONFIG) + ']'},
             'model_per_response': {'abbr':'model_per_response', 'type':str_to_bool,
                 'help': 'Should a separate model, possible with a different, dedicated feature set, ' +
                     'be built per response (as opposite to building one multi-response model)?' +
                     '[default: ' + str(self._MODEL_PER_RESPONSE) + ']'}
         }
-        self._instKeras = ModelKeras() #log_file, log_level, log_mode, log_time
-        self._instSklearn = ModelSklearn() # log_file, log_level, log_mode, log_time
-        self._instCaret = ModelCaret() # log_file, log_level, log_mode, log_time
+        self._instKeras = ModelKeras()
+        self._instSklearn = ModelSklearn()
+        self._instCaret = ModelCaret()
         self._sklearn_dict = self._instSklearn.get_sklearn_hparam_default_dict()
         self._caret_dict = self._instCaret.get_caret_hparam_default_dict()
         self._keras_dict = self._instKeras.get_keras_hparam_default_dict()
         self.model_params_dict = self._model_params_common_dict | self._keras_dict | self._sklearn_dict | self._caret_dict
     
+    # report_file_prefix is a string used as prefix in all report files of SMLP
+    def set_report_file_prefix(self, report_file_prefix):
+        self.report_file_prefix = report_file_prefix
+        self._instKeras.report_file_prefix = report_file_prefix
+        self._instSklearn.report_file_prefix = report_file_prefix
+        self._instCaret.report_file_prefix = report_file_prefix
+        
+    # model_file_prefix is a string used as prefix in all outut files of SMLP that are used to 
+    # save a trained ML model and to re-run the model on new data (without need for re-training)
+    def set_model_file_prefix(self, model_file_prefix):
+        self.model_file_prefix = model_file_prefix
+        self._instKeras.model_file_prefix = model_file_prefix
+        self._instSklearn.model_file_prefix = model_file_prefix
+        self._instCaret.model_file_prefix = model_file_prefix
+    
+    # required for generating file names of the reports containing model prediction results;
+    # might cover multiple models (algorithms like NN, DT, RF) as well as multiple responses
+    def predictions_summary_filename(self, data_version):
+        assert self.report_file_prefix is not None
+        return self.report_file_prefix + '_' + data_version + '_predictions_summary.csv'
+    
+    # required for generating file names of the reports containing model precision (rmse, R2, etc.) reults;
+    # might cover multiple models (algorithms like NN, DT, RF) as well as multiple responses
+    def prediction_precisions_filename(self, data_version):
+        assert self.report_file_prefix is not None
+        return self.report_file_prefix + '_' + data_version + '_prediction_precisions.csv'
+        
+    # saved model file name -- model_algo is the training algo name like nn_keras, sklearn_dt;
+    # model_format is the format used to save the model -- for nn_keras .h5 format is used,
+    # (implies suffix .h5); for sklearn and caret models pickle format is used (implies suffix .pkl)
+    def model_filename(self, model_algo, model_format, response=None):
+        assert self.model_file_prefix is not None
+        if response is None:
+            return self.model_file_prefix + '_' + model_algo + '_model_complete' + model_format
+        else:
+            return self.model_file_prefix + '_' + str(response) + '_' + model_algo + '_model_complete' + model_format
+
+    # configuration file created when saving a trained model, and loaded when re-using
+    # the model
+    @property
+    def model_rerum_config_file(self):
+        return self.model_file_prefix + '_rerun_model_config.json'
+    
+    # Compute file name prefix (including the directory path) to model files.
+    # If there are multiple responses in the "responses" argument, the response names
+    # are ignored in model file prefix generation. We also want the response name
+    # to be ignored when there is only one response, say called resp_name, 
+    # therefore in this case the function should be called with None for argument 
+    # "responses" instead of passing list [resp_name] for the "responses" argument.
+    def get_model_file_prefix(self, responses=None, algo=None):
+        assert self.model_file_prefix is not None
+        res = self.model_file_prefix
+        if not responses is None:
+            if len(responses) == 1:
+                res = res + '_' + str(responses[0])
+        if not algo is None:
+            res = res + '_' + str(algo)
+        return res
+
+    # save model configuration file enabling to re-run a saved model with the same  
+    # configuration for which it was generated
+    def _save_model_rerun_config(self, model_rerun_config):
+        if model_rerun_config is not None:
+            with open(self.model_rerum_config_file, 'w') as f:
+                f.write(json.dumps(model_rerun_config,  indent=4, sort_keys=True))
+                f.close()
+
+    # load model configuration file enabling to re-run a saved model with the same  
+    # configurationfor which it was generated
+    def _load_model_rerun_config(self):
+        print('self.model_rerum_config_file', self.model_rerum_config_file)
+        if os. path. exists(self.model_rerum_config_file):
+            with open(self.model_rerum_config_file, 'r') as f:
+                return json.load(f)
+        else:
+            return None
+    
     # Several of model training packages return prediction results as np.array.
     # This function converts prediction results from np.array to pd.DataFrame.
     def _pred_results_to_df(self, algo, resp_names, resp, pred):
-        print('pred\n', pred); print('\npred_type', type(pred));
-        print('resp\n', resp); print('\nresp_type', type(resp));
+        #print('pred\n', pred); print('\npred_type', type(pred));
+        #print('resp\n', resp); print('\nresp_type', type(resp));
         predictions_colnames = [rn+'_'+algo for rn in resp_names]
 
         # expecting here pred to be np array (while resp is expected to be a data frames)
@@ -78,8 +176,8 @@ class ModelCommon:
         return predictions_df
 
     
-    # compute sample weights per response or mean value of all reponses:
-    # resp_vals is either a response column or mean of all reponses (per sample).
+    # compute sample weights per response or mean value of all responses:
+    # resp_vals is either a response column or mean of all responses (per sample).
     def _sample_weights_per_response_vals(self, resp_vals, sw_coef):
         mid_range = (resp_vals.max() - resp_vals.min()) / 2
         w_coef = sw_coef / mid_range
@@ -88,8 +186,8 @@ class ModelCommon:
         assert any([w >= 0 for w in sw])
         return np.array(sw)
 
-    # compute sample weights per reponse using sample_weights_per_response_vals
-    # and return as a dictionary with the reponses as keys and corresponding 
+    # compute sample weights per response using _sample_weights_per_response_vals
+    # and return as a dictionary with the responses as keys and the corresponding 
     # sample weight as the respective values. Required for training with algorithms
     # that can take sample weights per response (e.g., nn_keras).
     def _compute_sample_weights_dict(self, y_train, sw_coef):
@@ -99,11 +197,11 @@ class ModelCommon:
         for resp in y_train.columns.tolist(): 
             #print('y_train', y_train[outp])
             sw = y_train[resp].values; #print('sw', len(sw), type(sw))
-            sw = sample_weights_per_response_vals(sw, sw_coef); #print('sw', len(sw))
+            sw = self._sample_weights_per_response_vals(sw, sw_coef); #print('sw', len(sw))
             sw_dict[resp] = sw
         return sw_dict
 
-    # compute sample weights for all responses by applying sample_weights_per_response_vals
+    # compute sample weights for all responses by applying _sample_weights_per_response_vals
     # to the vector of mean values of all responses (per sample). Required for training
     # for algorithms / packages that cannot take sample weights per response.
     def _compute_sample_weights_vect(self, y_train, sw_coef):
@@ -112,7 +210,7 @@ class ModelCommon:
         if sw_coef == 0:
             return np.array([1] * y_train.shape[0])
         resp_vals = y_train.mean(axis='columns').values;
-        return sample_weights_per_response_vals(resp_vals, sw_coef)
+        return self._sample_weights_per_response_vals(resp_vals, sw_coef)
     
     # set a logger to ModelCommon from the caller script
     # then set the same logger to the used instances of ModelKeras, ModelCaret, ModelSklearn
@@ -124,10 +222,10 @@ class ModelCommon:
     
     # generate out_dir/prefix_data_{train/test/labeled/new/}_prediction_precision.csv and 
     # out_dir/prefix_data_{train/test/labeled/new/}_prediction_summary.csv files with
-    # msqe and R2_score (for now) precision columns and prediction results, respectively.
-    # data_version indicates the data origin -- training (train), test (rather, validation), 
-    # full labeled data (labeled) and new/unseen data (new).
-    def report_prediction_results(self, inst, algo, resp_names, resp_df, pred_df,
+    # msqe and R2_score (for now) precision columns and prediction results in the original
+    # scale of training data, respectively. The argument data_version indicates the data origin:
+    # training (train), test/validation, full labeled data (labeled) and new/unseen data (new).
+    def _report_prediction_results(self, algo, resp_names, resp_df, pred_df,
             mm_scaler_resp, interactive_plots, data_version):
         self._model_logger.info('Reporting prediction results: start')
 
@@ -146,18 +244,20 @@ class ModelCommon:
         #print('orig_resp_df\n', orig_resp_df); print('orig_pred_df\n', orig_pred_df)
         predictions_df = pd.concat([orig_resp_df, orig_pred_df], axis=1) 
         self._model_logger.info('Saving predictions summary into file: \n' + \
-                                str(inst.predictions_summary_filename(data_version)))
-        predictions_df.to_csv(inst.predictions_summary_filename(data_version), index=True)
+                                str(self.predictions_summary_filename(data_version)))
+        predictions_df.to_csv(self.predictions_summary_filename(data_version), index=True)
         #print('predictions_df\n', predictions_df) 
 
         # generate prediction precisions table / file
         if not resp_df is None:
-            r2_vec = [r2_score(orig_resp_df[resp_names[i]], orig_pred_df[pred_colnames[i]]) for i in range(len(resp_names))]
-            msqe_vec = [mean_squared_error(orig_resp_df[resp_names[i]], orig_pred_df[pred_colnames[i]]) for i in range(len(resp_names))]
+            r2_vec = [r2_score(orig_resp_df[resp_names[i]], orig_pred_df[pred_colnames[i]]) 
+                for i in range(len(resp_names))]
+            msqe_vec = [mean_squared_error(orig_resp_df[resp_names[i]], orig_pred_df[pred_colnames[i]]) 
+                for i in range(len(resp_names))]
             precisions_df = pd.DataFrame(data={'response' : resp_names, 'msqe' : msqe_vec, 'r2_score' : r2_vec})
             self._model_logger.info('Saving prediction precisions into file: \n' + \
-                                    str(inst.prediction_precisions_filename(data_version)))
-            precisions_df.to_csv(inst.prediction_precisions_filename(data_version), index=False)
+                                    str(self.prediction_precisions_filename(data_version)))
+            precisions_df.to_csv(self.prediction_precisions_filename(data_version), index=False)
 
         if not resp_df is None:
             # renaming columns is required because evaluate_prediction is using column names
@@ -168,7 +268,7 @@ class ModelCommon:
             self._model_logger.info("{1} r2_score: {0:.3f}".format(r2_score(orig_resp_df, orig_pred_df), legend))
     
             evaluate_prediction(algo, orig_resp_df, orig_pred_df, data_version, interactive_plots,
-                                out_prefix=inst._report_name_prefix, log_scale=False)
+                                out_prefix=self.report_file_prefix, log_scale=False)
 
         assert isinstance(orig_pred_df, pd.DataFrame)
         assert isinstance(orig_resp_df, pd.DataFrame) or resp_df is None
@@ -192,26 +292,26 @@ class ModelCommon:
 
 
     # training model for all supported algorithms from verious python packages
-    def model_train(self, inst, feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
+    def model_train(self, feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
             hparams_dict :dict, plots : bool, seed : int, sample_weights_coef : float, model_per_response:bool):
         self._model_logger.info('Model training: start')
-        print('feat_names_dict', feat_names_dict); 
+        print('feat_names_dict', feat_names_dict, 'resp_names', resp_names)
         if algo == 'nn_keras':
             keras_algo = algo[:-len('_keras')]
             sample_weights_dict = self._compute_sample_weights_dict(y_train, sample_weights_coef)
-            model = self._instKeras.keras_main(inst, feat_names_dict, resp_names, keras_algo,
+            model = self._instKeras.keras_main(feat_names_dict, resp_names, keras_algo,
                 X_train, X_test, y_train, y_test, hparams_dict, plots,
                 seed, sample_weights_dict, model_per_response)
         elif algo in ['dt_sklearn', 'et_sklearn', 'rf_sklearn', 'poly_sklearn']:
             sklearn_algo = algo[:-len('_sklearn')]
             sample_weights_vect = self._compute_sample_weights_vect(y_train, sample_weights_coef)
-            model = self._instSklearn.sklearn_main(inst, feat_names_dict, resp_names, sklearn_algo,
+            model = self._instSklearn.sklearn_main(self.get_model_file_prefix, feat_names_dict, resp_names, sklearn_algo,
                 X_train, X_test, y_train, y_test, hparams_dict, plots, 
                 seed, sample_weights_vect, model_per_response)
         elif algo in self._instCaret.SMLP_CARET_MODELS:
             caret_algo = algo[:-len('_caret')]
             sample_weights_vect = self._compute_sample_weights_vect(y_train, sample_weights_coef)
-            model = self._instCaret.caret_main(inst, feat_names_dict, resp_names, caret_algo,
+            model = self._instCaret.caret_main(self.get_model_file_prefix, feat_names_dict, resp_names, caret_algo,
                 X_train, X_test, y_train, y_test, hparams_dict, plots,
                 seed, sample_weights_vect, False)       
         else:
@@ -226,7 +326,7 @@ class ModelCommon:
     # correponding models as values. For example, the caret package currently does not support 
     # training of multiple responses at once therefore we train a caret model per response and
     # combine prediction results as one np.array(). 
-    def model_predict(self, inst, model, X, y, resp_names : list, algo : str, model_per_response:bool):
+    def _model_predict(self, model, X, y, resp_names : list, algo : str, model_per_response:bool):
         self._model_logger.info('Model prediction: start')
 
         model_lib = algo.rsplit('_', 1)[1]
@@ -246,7 +346,7 @@ class ModelCommon:
                 if isinstance(y_pred[0], np.ndarray):
                     y_pred = np.concatenate(y_pred, axis=1)
         elif model_lib == 'caret' or model_per_response:
-            # we have multiple models (if there are multiple reponses) -- one per response
+            # we have multiple models (if there are multiple responses) -- one per response
             # iterate over all responses and merge all predicitions into one return value y_pred
             y_pred = pd.DataFrame(index=np.arange(y.shape[0]), columns=np.arange(0))
             for rn in model.keys():
@@ -259,14 +359,16 @@ class ModelCommon:
                         #rn_model, rn_poly_reg = model[rn] #, rn_X_train, rn_X_test
                         #y_pred[rn] = rn_model.predict(rn_poly_reg.transform(X))
                     else:
+                        print('model', model); print(' model[rn]',  model[rn])
+                        print('model[rn].predict(X)', model[rn].predict(X))
                         y_pred[rn] = model[rn].predict(X)
                 else:
                     assert False
             #print('y_pred df\n', y_pred)
             y_pred = np.array(y_pred); #print('y_pred array\n', y_pred)
         else:
-            raise Exception('Unsupported model_lib ' + str(model_lib) + ' in function model_predict')
-
+            raise Exception('Unsupported model_lib ' + str(model_lib) + ' in function _model_predict')
+        
         y_pred_df = self._pred_results_to_df(algo, resp_names, y, y_pred)
         assert type(y_pred_df) == type(pd.DataFrame())
         assert isinstance(y_pred_df, pd.DataFrame)
@@ -275,9 +377,10 @@ class ModelCommon:
     
     # training, validation, testing of models and prediction on training, test, entire labeled data
     # as well as new data, if available. Reporting model prediction results as well as accuracy scores.
-    def build_models(self, inst, algo : str, X, y, X_train, y_train, X_test, y_test, X_new, y_new, 
-            resp_names : list, mm_scaler_feat, mm_scaler_resp, levels_dict:dict, feat_names_dict:dict, hparams_dict : dict, 
-            plots : bool, seed : int, sample_weights_coef : float, save_model : bool, use_model : bool, model_per_response:bool):
+    def build_models(self, algo : str, X, y, X_train, y_train, X_test, y_test, X_new, y_new, 
+            resp_names : list, mm_scaler_feat, mm_scaler_resp, levels_dict:dict, feat_names_dict:dict, 
+            hparams_dict : dict, plots : bool, seed : int, sample_weights_coef : float, save_model : bool, 
+            use_model : bool, model_per_response:bool, model_rerun_config:dict):
         if not y_train is None:
             assert resp_names == y_train.columns.tolist()
         if not y_test is None:
@@ -286,59 +389,74 @@ class ModelCommon:
         model_lib = algo.rsplit('_', 1)[1]
         if use_model:
             self._model_logger.info('LOAD TRAINED MODEL')
+            model_rerun_config_dict = self._load_model_rerun_config()
             if model_lib =='sklearn':
-                model = pickle.load(open(inst.model_fname(algo, '.pkl'), 'rb'))
+                model = pickle.load(open(self.model_filename(algo, '.pkl'), 'rb'))
             elif model_lib == 'caret':
-                model = {}
-                for resp in resp_names:
-                    resp_model = caret_load_model(inst.model_fname(algo, '', resp))
-                    model[resp] = resp_model
+                # caret currently does not support training models with multiple responses 
+                # (or we missed to see in documentation how this is done); thus caret trained
+                # models are always dictionaries with responses as keys and models per response as values
+                model = dict([(resp_name, caret_load_model(self.model_filename(algo, '', resp_name))) 
+                    for resp_name in resp_names])
             elif model_lib == 'keras':
-                model = keras_load_model(inst.model_fname(algo, '.h5'))
+                if model_per_response:
+                    if model_rerun_config_dict is not None:
+                        #print('model_per_response', model_per_response)
+                        #print(' model_rerun_config_dict[model_per_response]',  model_rerun_config_dict['model_per_response'])
+                        assert model_rerun_config_dict['model_per_response'] == model_per_response
+                    # models are dictionaries with responses as keys and models per response as values
+                    model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name))) 
+                        for resp_name in resp_names])
+                else:
+                    model = keras_load_model(self.model_filename(algo, '.h5'))
             else:
                 raise Exception('Unsupported lib (package) ' + str(model_lib) + ' in function build_models')
         else:
             # run model training
             self._model_logger.info('TRAIN MODEL')
             #feat_names = X_train.columns.tolist()
-            model = self.model_train(inst, feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
+            model = self.model_train(feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
                 hparams_dict, plots, seed, sample_weights_coef, model_per_response)
-                
+
             if save_model:
+                self._save_model_rerun_config(model_rerun_config)
                 if model_lib == 'sklearn':
-                    pickle.dump(model, open(inst.model_fname(algo, '.pkl'), 'wb'))
+                    print('model', model, type(model))
+                    pickle.dump(model, open(self.model_filename(algo, '.pkl'), 'wb'))
                 elif model_lib == 'caret':
                     # when saving a model, save_model() adds '.pkl' suffic to the filename supplied to it;
                     # we therefore use '' instead of 'pkl' when computing model_filename
                     # argument model is actually a dict with response names as keys and the correponding 
                     # models as values, thus we save/dump multiple models, one for each response:
                     for resp in model:
-                        caret_save_model(model[resp], inst.model_fname(algo, '', resp))
-                    #pickle.dump(model, open(inst.model_fname(algo, '.pkl'), 'wb'))
+                        caret_save_model(model[resp], self.model_filename(algo, '', resp))
+                    #pickle.dump(model, open(self.model_filename(algo, '.pkl'), 'wb'))
                 elif model_lib == 'keras':
                     # could save the model in two ways; currently saved model in json format is not used
-                    model.save(inst.model_fname(algo, '.h5'))
-                    #with open(inst.model_config_file, "w") as json_file:
-                    #    json_file.write(model.to_json())
+                    if isinstance(model, dict):
+                        for resp in model:
+                            model[resp].save(self.model_filename(algo, '.h5', resp))
+                    else:
+                        model.save(self.model_filename(algo, '.h5'))
                 else:
                     raise Exception('Unsupported lib (package) ' + str( model_lib) + ' in function build_models')
         
         if not X_train is None and not y_train is None:
             self._model_logger.info('PREDICT ON TRAINING DATA')
             #print('(2)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test);
-            y_train_pred = self.model_predict(inst, model, X_train, y_train, resp_names, algo, model_per_response)
-            self.report_prediction_results(inst, algo, resp_names, y_train, y_train_pred, mm_scaler_resp,
+            y_train_pred = self._model_predict(model, X_train, y_train, resp_names, algo, model_per_response)
+            self._report_prediction_results(algo, resp_names, y_train, y_train_pred, mm_scaler_resp,
                 plots, 'training')
         
         if not X_test is None and not y_test is None:
             self._model_logger.info('PREDICT ON TEST DATA')
             #print('(3)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test);
-            y_test_pred = self.model_predict(inst, model, X_test, y_test, resp_names, algo, model_per_response)
+            y_test_pred = self._model_predict(model, X_test, y_test, resp_names, algo, model_per_response)
             #print('(3b)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
-            self.report_prediction_results(inst, algo, resp_names, y_test, y_test_pred, mm_scaler_resp, 
+            self._report_prediction_results(algo, resp_names, y_test, y_test_pred, mm_scaler_resp, 
                 plots, 'test')
 
-        if not X is None and not y is None:
+        if X is not None and y is not None:
             self._model_logger.info('PREDICT ON LABELED DATA')
             #print('(4)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
             # In case a polynomial model was run, polynomial features have been added to X_train and X_test,
@@ -353,18 +471,15 @@ class ModelCommon:
                 X = np.concatenate((X_train, X_test)); 
                 y = pd.concat([y_train, y_test])
 
-            y_pred = self.model_predict(inst, model, X, y, resp_names, algo, model_per_response)
-            self.report_prediction_results(inst, algo, resp_names, y, y_pred, mm_scaler_resp,
+            y_pred = self._model_predict(model, X, y, resp_names, algo, model_per_response)
+            self._report_prediction_results(algo, resp_names, y, y_pred, mm_scaler_resp,
                 plots, 'labeled')
 
-        if not X_new is None:
+        if X_new is not None:
             self._model_logger.info('PREDICT ON NEW DATA')
-            #if algo == 'poly_sklearn':
-            #    X_new = poly_reg.transform(X_new)
-            y_new_pred = self.model_predict(inst, model, X_new, y_new, resp_names, algo, model_per_response)
+            y_new_pred = self._model_predict(model, X_new, y_new, resp_names, algo, model_per_response)
             #print('y_new\n', y_new, '\ny_new_pred\n', y_new_pred)
-            self.report_prediction_results(inst, algo, resp_names, y_new, y_new_pred, mm_scaler_resp, 
+            self._report_prediction_results(algo, resp_names, y_new, y_new_pred, mm_scaler_resp, 
                 plots, 'new')
 
-        self._model_logger.info('Executing smlp_train.py script: End')
         return model

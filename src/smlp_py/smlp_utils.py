@@ -8,8 +8,8 @@
 import os, datetime, sys, json
 from fractions import Fraction
 from collections import OrderedDict
-from pandas import DataFrame
-
+from pandas import DataFrame, concat
+from pandas.api.types import is_object_dtype
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
 
@@ -49,6 +49,7 @@ def timed(f, desc=None, log=lambda *args: print(*args, file=sys.stderr)):
         return r
     return r, t
 
+'''
 # extract names of system/desigh inputs from interface spec file
 def get_input_names(spec):
     return [s['label'] for s in spec if s['type'] != 'response']
@@ -149,13 +150,13 @@ def response_scalers(gen, bnds):
 
 class SolverTimeoutError(Exception):
     pass
-
+'''
 # intersection of two lists, preserves the order in the first list but is not efficient
 def list_intersection(lst1, lst2):
     if not isinstance(lst1, list) :
-        raise Exception('Argument lst1 of hvm_utils.list_intersection() is not a list')
+        raise Exception('Argument lst1 of utils.list_intersection() is not a list')
     if not isinstance(lst2, list):
-        raise Exception('Argument lst2 of hvm_utils.list_intersection() is not a list')
+        raise Exception('Argument lst2 of utils.list_intersection() is not a list')
     lst = [value for value in lst1 if value in lst2]
     #print('lst', lst)
     return(lst)
@@ -165,9 +166,9 @@ def list_intersection(lst1, lst2):
 # in list2; this behavior is different from function list_intersection_set() below.
 def list_subtraction(lst1, lst2):
     if not isinstance(lst1, list) :
-        raise Exception('Argument lst1 of hvm_utils.list_subtraction() is not a list')
+        raise Exception('Argument lst1 of utils.list_subtraction() is not a list')
     if not isinstance(lst2, list):
-        raise Exception('Argument lst2 of hvm_utils.list_subtraction() is not a list')
+        raise Exception('Argument lst2 of utils.list_subtraction() is not a list')
     lst = [value for value in lst1 if value not in lst2]
     return lst
 
@@ -177,9 +178,9 @@ def list_subtraction(lst1, lst2):
 # not have repeated occurrences of an element,unlike function list_intersection_set() above.
 def list_intersection_set(lst1, lst2):
     if not isinstance(lst1, list) :
-        raise Exception('Argument lst1 of hvm_utils.list_intersection_set() is not a list')
+        raise Exception('Argument lst1 of utils.list_intersection_set() is not a list')
     if not isinstance(lst2, list):
-        raise Exception('Argument lst2 of hvm_utils.list_intersection_set() is not a list')
+        raise Exception('Argument lst2 of utils.list_intersection_set() is not a list')
     lst = list(set.intersection(set(lst1), set(lst2)))
     #print('lst', lst)
     return(lst)
@@ -189,9 +190,9 @@ def list_intersection_set(lst1, lst2):
 # subtraction of two lists; order in the returned list might be differnt from the prder in lst1
 def list_subtraction_set(lst1, lst2):
     if not isinstance(lst1, list) :
-        raise Exception('Argument lst1 of hvm_utils.list_subtraction_set() is not a list')
+        raise Exception('Argument lst1 of utils.list_subtraction_set() is not a list')
     if not isinstance(lst2, list):
-        raise Exception('Argument lst2 of hvm_utils.list_subtraction_set() is not a list')
+        raise Exception('Argument lst2 of utils.list_subtraction_set() is not a list')
     #print('input lst1', lst1, 'lst2', lst2)
     lst = list(set(lst1).difference(set(lst2)))
     #print('return lst', lst)
@@ -201,24 +202,25 @@ def list_subtraction_set(lst1, lst2):
 # subtraction of two lists
 def list_is_subset(lst1, lst2):
     if not isinstance(lst1, list) :
-        raise Exception('Argument lst1 of hvm_utils.list_is_subset() is not a list')
+        raise Exception('Argument lst1 of utils.list_is_subset() is not a list')
     if not isinstance(lst2, list):
-        raise Exception('Argument lst2 of hvm_utils.list_is_subset() is not a list')
+        raise Exception('Argument lst2 of utils.list_is_subset() is not a list')
     for e in lst1:
         if not e in lst2:
             return False
     return True
 
-# unique elements of a list lst if we do not need to preserve the order 
+# unique elements of a list lst if we do not need to preserve the order; also, the order 
+# (and the result) might not be deterministic
 def list_unique_unordered(lst):
     if not isinstance(lst, list) :
-        raise Exception('Argument lst of hvm_utils.list_unique_unordered() is not a list')
+        raise Exception('Argument lst of utils.list_unique_unordered() is not a list')
     return list(set(lst))
 
 # unique elements of a list lst if we do need to preserve the order
 def list_unique_ordered(lst):
     if not isinstance(lst, list) :
-        raise Exception('Argument lst of hvm_utils.list_unique_ordered() is not a list')
+        raise Exception('Argument lst of utils.list_unique_ordered() is not a list')
     d = {}
     for x in lst:
         d[x] = 1
@@ -239,3 +241,79 @@ def list_remove_duplicates(lst):
 # duplicates are dropped so that the order of elements is not affected.
 def lists_union_order_preserving_without_duplicates(list_of_lists):
     return list_remove_duplicates(lists_union(list_of_lists))
+
+# determaine whether pandas dataframe column is numeric using numpy's mp.number type
+def pd_df_col_is_numeric(df, col_name):
+    res = np.issubdtype(df[col_name].dtype, np.number)
+    if res:
+        assert df[col_name].dtype in [int, float]
+    return res
+
+def pd_df_col_is_categorical(df, col_name):
+    return is_object_dtype(df[col_name])
+
+# given an algo name like dt and the hyper parameter dictionary param_dict  
+# this function returns a modified dictionary obtained from param_dictby by 
+# adding algo name to the parameter name and its abbriviated name in param_dict.
+def param_dict_with_algo_name(param_dict, algo):
+    #print('param_dict', param_dict)
+    result_dict = {}
+    for k, v in param_dict.items():
+        v_updated = v.copy()
+        v_updated['abbr'] = algo + '_' + v['abbr']
+        result_dict[algo + '_' + k] = v_updated
+    return result_dict
+
+# Whether a response is numeric or binary. Numeric responses are defined as ones
+# that have float values or int values besides 0 and 1. Responses with values 0 or 1 
+# are defined as binary, It is expected that if response vas of of type object/string
+# with 1 or 2 values then these value have been renames to 1 and 0 based of definition
+# of which one of these two strings is positive and which one is nagative, and based
+# on smlp postive and negative values declared by user (where by default 1 is positive 
+# and 0 is negative)
+def get_response_type(df:DataFrame, resp_name:str):
+    assert resp_name in df.columns.tolist()
+    print('df.shape', df.shape)
+    if df.shape[1] > 1:
+        resp_type = df.dtypes[resp_name]
+    else:
+        resp_type = df.dtypes[0]
+    print('response dtype', resp_type)
+    resp_vals = set(df[resp_name].tolist()); print('resp_vals', resp_vals, resp_vals.issubset({0,1}))
+    if resp_type == int and resp_vals.issubset({0,1}):
+        return "classification"
+    elif resp_type == float:
+        return "regression"
+    else:
+        raise Exception('Classification vs regression mode cannot be determined for response ' + str(resp_name))
+                              
+
+def rows_dict_to_df(rows_dict, colnames, index=True):
+    df = None
+    for rowname, row in rows_dict.items():
+        if index:
+            row_df = DataFrame([row], index=[rowname], columns=colnames);  #print('row_df\n', row_df)
+        else:
+            row_df = DataFrame([row], columns=colnames);  #print('row_df\n', row_df)
+         
+        if df is None:
+            df = row_df
+        else:
+            df = concat([df, row_df], axis=0)
+    return df
+
+def cast_type(obj, tp):
+    #print('obj', obj, 'source tp', type(obj), 'target tp', tp)
+    if tp == int:
+        res = int(obj)
+    elif tp == float:
+        res = float(obj)
+    elif tp == str:
+        res = str(obj)
+    else:
+        raise Exception('Unsupported type ' + str(tp) + ' in function cast_type')
+    #print('res', type(res), res)
+    if tp in [int, float]:
+        if np.isnan(res) or res is None:
+            raise Exception('Casting of ' + str(obj) + ' to type ' + str(tp) + ' failed')
+    return res

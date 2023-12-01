@@ -6,9 +6,9 @@ import numpy as np
 import os
 
 # SMLP
-from smlp.smlp_plot import *
-from smlp.formula_sklearn import SklearnFormula
-from utils_common import str_to_bool
+from smlp_py.smlp_plots import *
+from smlp_py.smlp_terms import TreeTerms
+from smlp_py.smlp_utils import str_to_bool
 
 
 # TODO: couldn't manage to disable cross-validation, looks like at least two folds is a must.
@@ -23,7 +23,7 @@ class ModelCaret:
         self._caret_logger = None # TODO !!! create a default logger?
         self._CARET_MODELS = ['rf', 'dt', 'et', 'lightgbm', 'gbr', 'knn']
         self.SMLP_CARET_MODELS = [self._algo_name_local2global(m) for m in self._CARET_MODELS]
-        self._instFormula = SklearnFormula()
+        self._instTreeTerms = TreeTerms()
         
         # params for setup() function: session_id, verbose, fold, data_split_shuffle (set to False to acheive reproducibility?)
         # setup() hyper parameter defaults
@@ -91,6 +91,19 @@ class ModelCaret:
 
         self.caret_hparam_dict = self.get_caret_hparam_default_dict()
         
+    # set logger from a caller script
+    def set_logger(self, logger):
+        self._caret_logger = logger
+        self._instTreeTerms.set_logger(logger)
+    
+    # set report_file_prefix from a caller script
+    def set_report_file_prefix(self, report_file_prefix):
+        self.report_file_prefix = report_file_prefix
+    
+    # set model_file_prefix from a caller script
+    def set_model_file_prefix(self, model_file_prefix):
+        self.model_file_prefix = model_file_prefix
+    
     # local names for model are 'dt', 'rf', ..., while global names are 'dt_caret'
     # 'rf_caret', to distinguish dt, rf, ... implementation in different packages
     def _algo_name_local2global(self, algo):
@@ -109,7 +122,7 @@ class ModelCaret:
     # (where sklearn is the name of the package used) to the parameter name and its
     # correponding abbriviated name in param_dict.
     def _param_dict_with_func_name(self, param_dict, func):
-        print('param_dict', param_dict)
+        #print('param_dict', param_dict)
         result_dict = {}
         for k, v in param_dict.items():
             v_updated = v.copy()
@@ -121,14 +134,14 @@ class ModelCaret:
         return result_dict
     
     # predictions for single response using models supported in caret package
-    def _caret_train_single_response(self, inst, feature_names, resp_name, algo,
+    def _caret_train_single_response(self, get_model_file_prefix, feature_names, resp_name, algo,
             X_train, X_test, y_train, y_test, interactive_plots, seed,
             folds=3, sample_weights_vect=None, models_compare=False):
 
         # prefix of output / report filename for this function -- includes _report_name_prefix,
         # the name of the algo/model, name of the response, and report-specific suffix
-        resp_model_report_report_name_prefix = inst._model_name_prefix + '_' + self._algo_name_local2global(algo) + '_' + resp_name
-
+        resp_model_file_prefix = get_model_file_prefix([resp_name], self._algo_name_local2global(algo))
+        
         # compute sample waights based on the value in the response y_train
         # Sample weights do not work with cross-validation (see the comment above)
         # cross-validation cannot be disabled, therefore currently sample weights are 
@@ -178,16 +191,16 @@ class ModelCaret:
             self._caret_logger.info('Residuals Plot:')
             #plot_model(tuned_model, plot='residuals_interactive')
             plot_model(tuned_model, save=True) # Residuals Plot
-            os.rename('./Residuals.png', resp_model_report_report_name_prefix + '_Residuals.png')
+            os.rename('./Residuals.png', resp_model_file_prefix + '_Residuals.png')
             self._caret_logger.info('Errors Plot')
             plot_model(tuned_model, plot='error', save=True)
-            os.rename('./Prediction Error.png', resp_model_report_report_name_prefix + '_PredictionError.png')
+            os.rename('./Prediction Error.png', resp_model_file_prefix + '_PredictionError.png')
 
             # 'knn' does not support feature ranking, it does not have attribute 'feature_importances_'
             if hasattr(tuned_model, 'coef_') and hasattr(tuned_model, 'feature_importances_'): 
                 self._caret_logger.info('Features Ranking')
                 plot_model(tuned_model, plot = 'feature', save=True)
-                os.rename('./Residuals.png', resp_model_report_report_name_prefix + '_Residuals.png')
+                os.rename('./Residuals.png', resp_model_file_prefix + '_Residuals.png')
 
         # train model on entire input data -- training and test sets together
         self._caret_logger.info('Finalizing {} model: start'.format(algo))
@@ -197,7 +210,7 @@ class ModelCaret:
         self._caret_logger.info('Finalizing {} model: end'.format(algo))
 
         # export trees into stdout and into file
-        rules_filename = resp_model_report_report_name_prefix + '_tree_rules.txt'
+        rules_filename = resp_model_file_prefix + '_tree_rules.txt'
         if algo == 'dt':
             tree_estimators = [final_model]
         elif algo in ['rf', 'et']:
@@ -210,14 +223,9 @@ class ModelCaret:
             raise Exception('Conversion of light GBM model to tree rules is not implemented yet')
         else:
             raise Exception('Algo ' + str(algo) + ' is not supported in model to formula conversion')
-        self._instFormula.trees_to_rules(tree_estimators, feature_names, [resp_name], None, False, rules_filename)
+        self._instTreeTerms.trees_to_rules(tree_estimators, feature_names, [resp_name], None, False, rules_filename)
 
         return final_model
-
-    # set logger from a caller script
-    def set_logger(self, logger):
-        self._caret_logger = logger
-        self._instFormula.set_logger(logger)
         
     # local hyper params dictionary
     def get_caret_hparam_default_dict(self):
@@ -231,8 +239,8 @@ class ModelCaret:
     # on each response (for now, sequentially);
     # the return value is a dictionary with the response names as keys and the repsctive 
     # models as values (this is true also if there is only one response in training data).
-    # TODO !!!: couldn't figure out how to add a seed to ensure reproducibility
-    def caret_main(self, inst, feature_names_dict, response_names, algo,
+    # TODO !!!: couldn't find a way to build one model covering all responses -- likely not possible currently
+    def caret_main(self, get_model_file_prefix, feature_names_dict, response_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots,
             seed, sample_weights_vect, models_compare=False):
         # supported model training algorithms
@@ -244,7 +252,7 @@ class ModelCaret:
 
         models = {}
         for rn in response_names:
-            models[rn] = self._caret_train_single_response(inst, feature_names_dict[rn], rn, algo,
+            models[rn] = self._caret_train_single_response(get_model_file_prefix, feature_names_dict[rn], rn, algo,
             X_train, X_test, y_train[[rn]], y_test[[rn]], interactive_plots, seed,
             folds, sample_weights_vect=sample_weights_vect, models_compare=models_compare)
         
