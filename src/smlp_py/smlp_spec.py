@@ -16,6 +16,8 @@ class SmlpSpec:
         self._SPEC_VARIABLE_TYPE = None
         self._SPEC_INPUT_TAG = None
         self._SPEC_KNOB_TAG = None
+        self._SPEC_RANGE_INTEGER = 'int'
+        self._SPEC_RANGE_REAL = 'float'
         self._SPEC_INPUTS_BOUNDS = None
         self._SPEC_KNOBS_GRID = None
         self._SPEC_KNOBS_ABSOLUTE_RADIUS = None
@@ -66,7 +68,7 @@ class SmlpSpec:
     @property
     def get_spec_alpha_bounds_dict(self):
         alpha_dict = {}
-        print('self.spec', self.spec)
+        #print('self.spec', self.spec)
         for var_spec in self.spec:
             #print('var_spec', var_spec)
             if self._SPEC_INPUTS_BOUNDS in var_spec.keys():
@@ -83,7 +85,7 @@ class SmlpSpec:
     @property
     def get_spec_eta_grids_dict(self):
         eta_dict = {}
-        print('self.spec', self.spec)
+        #print('self.spec', self.spec)
         for var_spec in self.spec:
             #print('var_spec', var_spec)
             if var_spec[self._SPEC_VARIABLE_TYPE] != self._SPEC_KNOB_TAG:
@@ -97,7 +99,7 @@ class SmlpSpec:
     @property
     def get_spec_theta_radii_dict(self):
         theta_dict = {}
-        print('self.spec', self.spec)
+        #print('self.spec', self.spec)
         for var_spec in self.spec:
             #print('var_spec', var_spec)
             if var_spec[self._SPEC_VARIABLE_TYPE] != self._SPEC_KNOB_TAG:
@@ -125,17 +127,20 @@ class SmlpSpec:
         domain_dict = {}
         for var_spec in self.spec:
             print('var_spec', var_spec)
-            if var_spec[self._SPEC_VARIABLE_RANGE] == 'float':
+            if var_spec[self._SPEC_VARIABLE_RANGE] == self._SPEC_RANGE_REAL:
                 if self._SPEC_INPUTS_BOUNDS in var_spec.keys():
                     domain_dict[var_spec['label']] = {'interval': var_spec[self._SPEC_INPUTS_BOUNDS], 
                         self._SPEC_KNOBS_GRID: None}
                 else:
                     domain_dict[var_spec['label']] = {'interval': [], self._SPEC_KNOBS_GRID: None}
-            elif var_spec[self._SPEC_VARIABLE_RANGE] == 'integer':
+            elif var_spec[self._SPEC_VARIABLE_RANGE] == self._SPEC_RANGE_INTEGER:
                 if self._SPEC_KNOBS_GRID in var_spec.keys():
                     domain_dict[var_spec['label']] = {'interval': None, self._SPEC_KNOBS_GRID: 
                         var_spec[self._SPEC_KNOBS_GRID]}
                 else:
                     domain_dict[var_spec['label']] = {'interval': None, self._SPEC_KNOBS_GRID: []}
+            else:
+                raise Exception('Unsupported variable range ' + str(var_spec[self._SPEC_VARIABLE_RANGE]) + 
+                    ' in the spec: value must be ' + self._SPEC_RANGE_REAL + ' or ' + self._SPEC_RANGE_INTEGER)
         print('domain_dict', domain_dict); 
         return domain_dict
