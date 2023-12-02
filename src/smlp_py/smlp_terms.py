@@ -515,7 +515,7 @@ class TreeTerms:
         tree_term_dict_dict = {} 
         for i, tree_rules in enumerate(rules):
             #print('====== tree_rules ======\n', tree_rules)
-            tree_term_dict = self.rules_to_term(tree_rules); print('tree term_dict', tree_term_dict); 
+            tree_term_dict = self.rules_to_term(tree_rules); #print('tree term_dict', tree_term_dict); 
             assert list(tree_term_dict.keys()) == resp_names
             tree_term_dict_dict['tree_'+str(i)] = tree_term_dict
         #print('**********tree_term_dict_dict\n', tree_term_dict_dict)
@@ -951,7 +951,7 @@ class ModelTerms(SmlpTerms):
             feat_names, resp_names)
         #print('model_term_dict', model_term_dict.keys())
         
-        model_full_term_dict = model_term_dict; print('model_full_term_dict', model_full_term_dict)
+        model_full_term_dict = model_term_dict; #print('model_full_term_dict', model_full_term_dict)
         
         # compute features scaling term (skipped when it is identity);
         # substitute them instead of scaled feature variables in the model
@@ -1012,7 +1012,7 @@ class ModelTerms(SmlpTerms):
         else:
             models_full_terms_dict = self._compute_model_terms_dict(algo, model_or_model_dict, 
                 feat_names, resp_names, data_bounds, data_scaler, scale_features, scale_responses)
-        print('models_full_terms_dict', models_full_terms_dict)
+        #print('models_full_terms_dict', models_full_terms_dict)
         return models_full_terms_dict
     
     # This function computes orig_objv_terms_dict with names of objectives as keys and smlp terms
@@ -1093,7 +1093,7 @@ class ModelTerms(SmlpTerms):
         if delta is not None:
             assert delta >= 0
         theta_form = smlp.true
-        theta_grids_dict = self._specInst.get_spec_theta_radii_dict; print('theta_grids_dict', theta_grids_dict)
+        theta_grids_dict = self._specInst.get_spec_theta_radii_dict; #print('theta_grids_dict', theta_grids_dict)
         for var,radii in theta_grids_dict.items():
             var_term = smlp.Var(var)
             if radii['rad-abs'] is not None:
@@ -1108,7 +1108,7 @@ class ModelTerms(SmlpTerms):
                 rad_term = smlp.Cnst(rad)
                 rad_term = rad_term * abs(cex[var])
             theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
-        print('theta_form', theta_form)
+        #print('theta_form', theta_form)
         return theta_form
 
     '''
@@ -1196,9 +1196,9 @@ class ModelTerms(SmlpTerms):
     # Creates eta constraints on control inputs (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
     def compute_grid_range_formulae_eta(self):
-        print('generate eta constraint')
+        #print('generate eta constraint')
         eta_grid_form = smlp.true
-        eta_grids_dict = self._specInst.get_spec_eta_grids_dict; print('eta_grids_dict', eta_grids_dict)
+        eta_grids_dict = self._specInst.get_spec_eta_grids_dict; #print('eta_grids_dict', eta_grids_dict)
         for var,grid in eta_grids_dict.items():
             eta_grid_disj = smlp.false
             var_term = smlp.Var(var)
@@ -1211,7 +1211,7 @@ class ModelTerms(SmlpTerms):
                 eta_grid_form = eta_grid_disj
             else:
                 eta_grid_form = self.smlp_and(eta_grid_form, eta_grid_disj)
-        print('eta_grid_form', eta_grid_form); 
+        #print('eta_grid_form', eta_grid_form); 
         return eta_grid_form
                 
 
@@ -1225,7 +1225,7 @@ class ModelTerms(SmlpTerms):
     # */
     def compute_input_ranges_formula_alpha(self):
         alpha_form = smlp.true
-        alpha_dict = self._specInst.get_spec_alpha_bounds_dict; print('alpha_dict', alpha_dict)
+        alpha_dict = self._specInst.get_spec_alpha_bounds_dict; #print('alpha_dict', alpha_dict)
         for v,b in alpha_dict.items():
             mn = b['min']
             mx = b['max']
@@ -1280,35 +1280,36 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Building model terms: Start')
         
         spec_domain_dict = self._specInst.get_spec_domain_dict
+        print('spec_domain_dict', spec_domain_dict)
         domain_dict = {}
+        correct = True
         for var,val in spec_domain_dict.items():
             interval = val['interval']
             grid = val['grid']
             if interval is None:
                 assert isinstance(grid, list)
-                comp = smlp.component(smlp.Integer, grid=[1,4,7]) # TODO !!!
-                '''
-                if len(grid) > 0:
-                    comp = smlp.component(smlp.Integer, grid=grid) #[1,4,7]
+                if not correct:
+                    comp = smlp.component(smlp.Integer, grid=[1,4,7]) # TODO !!!
                 else:
-                    comp = smlp.component(smlp.Integer)
-                '''
+                    if len(grid) > 0:
+                        comp = smlp.component(smlp.Integer, grid=grid) #[1,4,7]
+                    else:
+                        comp = smlp.component(smlp.Integer)
             elif grid is None:
                 assert isinstance(interval, list)
                 assert len(interval) == 0 or len(interval) == 2
-                comp = smlp.component(smlp.Real, interval=[0,10]) # TODO !!!
-                '''
-                if len(interval) == 2:
-                    print('interval', interval)
-                    if interval[0] is None:
-                        interval[0] = 100000 # TODO !!!! 
-                    if interval[1] is None:
-                        interval[1] = 100000 # TODO !!!! 
-                    comp = smlp.component(smlp.Real, interval=interval) #[0,10]
+                if not correct:
+                    comp = smlp.component(smlp.Real, interval=[0,10]) # TODO !!!
                 else:
-                    # TODO !!!!: need comp = smlp.component(smlp.Real)
-                    comp = smlp.component(smlp.Real, interval=[0,10])
-                '''
+                    if len(interval) == 2:
+                        print('interval', interval)
+                        if interval[0] is None:
+                            interval[0] = 100000 # TODO !!!! 
+                        if interval[1] is None:
+                            interval[1] = 100000 # TODO !!!! 
+                        comp = smlp.component(smlp.Real, interval=interval) #[0,10]
+                    else:
+                        comp = smlp.component(smlp.Real)
             else:
                 assert False
             domain_dict[var] = comp
@@ -1323,11 +1324,9 @@ class ModelTerms(SmlpTerms):
                 comp = smlp.component(smlp.Integer, grid=[1,4,7])
             domain_dict[var_spec['label']] = comp
         '''
-        print('domain_dict', domain_dict); 
-                
+        print('domain_dict', domain_dict)
         domain = smlp.domain(domain_dict)
-        print('domain', domain); print('dom type', type(domain))
-        
+
         # model terms with terms for scaling inputs and / or unscaling responses are all composed to 
         # build model terms with inputs and outputs in the original scale. 
         model_full_term_dict = self.compute_models_terms_dict(algo, model, 
