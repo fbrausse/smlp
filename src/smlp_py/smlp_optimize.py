@@ -1,9 +1,7 @@
 import smlp
-from smlp_py.smlp_models import SmlpModels
-from smlp_py.smlp_terms import SmlpTerms, TreeTerms, PolyTerms, NNKerasTerms, ModelTerms, ScalerTerms
+from smlp_py.smlp_terms import SmlpTerms, ModelTerms, ScalerTerms
 from smlp_py.smlp_query import SmlpQuery
-from smlp_py.smlp_utils import (str_to_bool, np_JSONEncoder, lists_union_order_preserving_without_duplicates,
-                                list_unique_ordered)
+from smlp_py.smlp_utils import (str_to_bool, np_JSONEncoder)
             
 from fractions import Fraction
 from decimal import Decimal
@@ -478,6 +476,36 @@ class SmlpOptimize:
             float_approx, float_precision, data_bounds_json_path)
         print('eta, alpha, beta', eta, alpha, beta)
         
+        if pareto:
+            self.optimize_pareto_objectives(X, y, feat_names, resp_names, model_full_term_dict,
+                objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler,
+                sat_approx=True, sat_precision=64, save_trace=False)
+        else:
+            self.optimize_single_objectives(X, y, feat_names, resp_names, model_full_term_dict,
+                objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler, 
+                sat_approx=True, sat_precision=64, save_trace=False)
+
+    def smlp_tune(self, algo, model, X, y, model_features_dict, feat_names, resp_names, 
+            objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
+            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
+            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+        domain, model_full_term_dict, eta, alpha, beta, base_solver = self._modelTermsInst.create_model_exploration_base_instance(
+            algo, model, X, y, model_features_dict, feat_names, resp_names, 
+            objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
+            alph_expr, beta_expr, eta_expr, True, data_scaler, scale_feat, scale_resp, scale_objv, 
+            float_approx, float_precision, data_bounds_json_path)
+        print('eta, alpha, beta', eta, alpha, beta)
+        
+        if asrt_exprs is not None:
+            assert asrt_names is not None
+            asrt_forms_dict = dict([(asrt_name, self._smlpTermsInst.ast_expr_to_term(asrt_expr)) \
+                    for asrt_name, asrt_expr in zip(asrt_names, asrt_exprs)])
+            asrt_conj = self._smlpTermsInst.smlp_and_multi(list(asrt_forms_dict.values()))
+        else:
+            asrt_conj = smlp.true
+        
+        beta = self._smlpTermsInst.smlp_and(beta, asrt_conj) if beta != smlp.true else asrt_conj
+                                                           
         if pareto:
             self.optimize_pareto_objectives(X, y, feat_names, resp_names, model_full_term_dict,
                 objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler,

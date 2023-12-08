@@ -15,6 +15,7 @@ from smlp_py.smlp_plots import response_distribution_plot
 from smlp_py.smlp_utils import (np_JSONEncoder, list_intersection, str_to_bool,
     lists_union_order_preserving_without_duplicates, get_response_type, cast_type, pd_df_col_is_numeric)
 from smlp_py.smlp_mrmr import SmlpMrmr
+#from smlp_py.smlp_spec import SmlpSpec
 from smlp_py.smlp_constants import *
 from smlp_py.smlp_discretize import SmlpDiscretize
 #from smlp_py.smlp_correlations import SmlpCorrelations
@@ -31,6 +32,8 @@ class SmlpData:
         # and in that case we might need to instantiate MrmrFeatures at a top level script (like smslp_train.py)
         # along with instantiating DataCommon (and maybe ModelsCommon).
         self._mrmrInst = SmlpMrmr() 
+        self._specInst = None # SmlpSpec()
+        
         # default values of parameters related to dataset; used to generate args.
         self._DEF_TRAIN_FIRST = 0 # subseting first_n rows from training data
         self._DEF_TRAIN_RAND = 0  # sampling random_n rows from training data
@@ -48,6 +51,9 @@ class SmlpData:
         # SMLP default values of positive and negative samples in banary responses 
         self.SMLP_NEGATIVE_VALUE = int(0)
         self.SMLP_POSITIVE_VALUE = int(1)
+        
+        # features that must be used in training models (assuming they are within initially defined input features)
+        self._DEF_KEEP_FEATURES = []
         
         # Dictionary with features (names) that have a missing values as dictionary keys and row indices of the 
         # missing values as dictionary values. It is computed just before imputing missing values in features. 
@@ -164,6 +170,10 @@ class SmlpData:
                 'help':'Names of response variables, must be provided [default None]'}, 
             'features': {'abbr':'feat', 'default':None, 'type':str,
                 'help':'Names of input features (can be computed from data) [default None]'},
+            'keep_features': {'abbr':'keep_feat', 'default':self._DEF_KEEP_FEATURES, 'type':str,
+                'help':'Names of input features that should be used in model training: feature selection ' +
+                    'or other heuristics for selecting features that will be used in model training ' +
+                    'cannot drop these input features [default {}]'.format(str(self._DEF_KEEP_FEATURES))},
             'new_data': {'abbr':'new_data', 'default':None, 'type':str,
                 'help':'Path excluding the .csv suffix to new data file [default: None]'},
             'data_scaler': {'abbr':'data_scaler', 'default':self._DEF_SCALER, 'type':str, 
@@ -231,6 +241,9 @@ class SmlpData:
     # save a trained ML model and to re-run the model on new data (without need for re-training)
     def set_model_file_prefix(self, model_file_prefix):
         self.model_file_prefix = model_file_prefix
+    
+    def set_spec_inst(self, spec_inst):
+        self._specInst = spec_inst
     
     @property
     def unscaled_training_features(self):
@@ -835,7 +848,7 @@ class SmlpData:
     # Besides training and test subsets, the function returns also the MinMaxScaler object 
     # used for data normalization, to be reused for applying the model to unseen datasets
     # and also to rescale back the prediction results to the original scale where needed.
-    def _prepare_data_for_modeling(self, data_file, is_training, split_test, feat_names, resp_names,
+    def _prepare_data_for_modeling(self, data_file, is_training, split_test, feat_names, resp_names, keep_feat,
             out_prefix, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots:bool, 
             mrmr_features_n:int, pos_value, neg_value, resp_to_bool, scaler_type:str, scale_features:bool, 
             scale_responses:bool, mm_scaler_feat=None, mm_scaler_resp=None, levels_dict=None, model_features_dict=None):
@@ -855,6 +868,7 @@ class SmlpData:
         if not y is None:
             assert set(resp_names) == set(y.columns.tolist())
         
+        
         # TMP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! start
         try_correlations = False
         if try_correlations: # use test 46
@@ -867,15 +881,20 @@ class SmlpData:
         # TMP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! end
         
         # Feature selection / MRMR go here, will refine model_features_dict
+        
         if is_training:
+            keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); print('keep_feat', keep_feat)
             #print('features before mrmr', feat_names)
             for rn in resp_names:
-                mrmr_feat = self._mrmrInst.mrmr_regres(X, y[rn], rn, mrmr_features_n)
-                model_features_dict[rn] = mrmr_feat
+                mrmr_feat = self._mrmrInst.mrmr_regres(X, y[rn], rn, mrmr_features_n) print('mrmr_feat', mrmr_feat)
+                model_feat = [ft for ft in feat_names if (ft in mrmr_feat or ft in keep_feat)]; print(model_feat); 
+                model_features_dict[rn] = model_feat #mrmr_feat
+            feat_names2 = [ft for ft in feat_names if ft in lists_union_order_preserving_without_duplicates(list(model_features_dict.values()))]
             feat_names = lists_union_order_preserving_without_duplicates(list(model_features_dict.values()))
+            assert feat_names2 == feat_names
             X = X[feat_names]
             #print('model_features_dict after MRMR', model_features_dict);
-        
+
         # encode levels of categorical features as integers for model training (in feature selection tasks 
         # it is best to use the original categorical features). 
         X, levels_dict = self._encode_categorical(X, levels_dict)
@@ -910,7 +929,7 @@ class SmlpData:
     # Process data to prepare components required for training models and prediction, and reporting results in
     # original scale. Supports also prediction and results reporting in origibal scale from saved model
     def process_data(self, report_file_prefix, data_file, new_data_file, is_training, split_test, feat_names, 
-            resp_names, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots, 
+            resp_names, keep_feat, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots, 
             scaler_type:str, scale_features:bool, scale_responses:bool, mrmr_features_n:int, pos_value, neg_value, 
             resp_to_bool, save_model:bool, use_model:bool):
         print('process_data: feat_names', feat_names, 'resp_names', resp_names)
@@ -919,7 +938,7 @@ class SmlpData:
             split_test = self._DEF_SPLIT_TEST if split_test is None else split_test
             X, y, X_train, y_train, X_test, y_test, mm_scaler_feat, mm_scaler_resp, \
             feat_names, resp_names, levels_dict, model_features_dict = self._prepare_data_for_modeling(
-                data_file, True, split_test, feat_names, resp_names, report_file_prefix, 
+                data_file, True, split_test, feat_names, resp_names, keep_feat, report_file_prefix, 
                 train_first_n, train_random_n, train_uniform_n, interactive_plots, 
                 mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type, 
                 scale_features, scale_responses, None, None, None, None)
@@ -946,7 +965,7 @@ class SmlpData:
         
         if new_data_file is not None:
             X_new, y_new = self._prepare_data_for_modeling(
-                new_data_file, False, None, feat_names, resp_names, report_file_prefix,  None, None, None, 
+                new_data_file, False, None, feat_names, resp_names, keep_feat, report_file_prefix,  None, None, None, 
                 interactive_plots, mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type,
                 scale_features, scale_responses, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict)
         else:

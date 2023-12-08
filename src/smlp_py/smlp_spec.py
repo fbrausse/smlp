@@ -2,11 +2,24 @@ import os
 import json
 from fractions import Fraction
 
+from smlp_py.smlp_utils import get_expression_variables, list_unique_unordered
+
+
 # spec file API
 class SmlpSpec:
     def __init__(self):
         self.spec = None
         self.version = None
+        self._alpha_dict = None
+        self._eta_dict = None
+        self._theta_dict = None
+        self._domain_dict = None
+        self._asrt_exprs = None
+        self._quer_exprs = None
+        self._objv_exprs = None
+        self._alpha_global_expr = None
+        self._beta_global_expr = None 
+        
         
         # feilds in sec file defining spec of each variable
         self._SPEC_DICTIONARY_VERSION = 'version'
@@ -23,6 +36,8 @@ class SmlpSpec:
         self._SPEC_KNOBS_ABSOLUTE_RADIUS = None
         self._SPEC_KNOBS_RELATIVE_RADIUS = None
         self._SPEC_VARIABLE_RANGE = None
+        self._SPEC_DOMAIN_RANGE_TAG = 'range'
+        self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
         
 
     def set_spec_tokens(self):
@@ -38,15 +53,38 @@ class SmlpSpec:
             self._SPEC_VARIABLE_RANGE = 'range'
         else:
             raise Exception('Spec version ' + str(self.version) + ' is not supported')
-        
+    
+    @property
+    def get_spec_integer_tag(self):
+        return self._SPEC_RANGE_INTEGER
+    
+    @property
+    def get_spec_real_tag(self):
+        return self._SPEC_RANGE_REAL
+    
+    @property
+    def get_spec_range_tag(self):
+        return self._SPEC_DOMAIN_RANGE_TAG
+    
+    @property
+    def get_spec_interval_tag(self):
+        return self._SPEC_DOMAIN_INTERVAL_TAG
+    
+    # sanity checks on declarations in the spec file
     def sanity_check_spec(self):
         for var_spec in self.spec:
             #print('var_spec', var_spec)
             if self._SPEC_VARIABLE_LABEL not in var_spec.keys():
-                raise Exception('A variable does not have the label (name) defined in spec file')
+                raise Exception('A variable does not have the label (name) declared in spec file')
             if self._SPEC_VARIABLE_TYPE not in var_spec.keys():
                 raise Exception('Variable ' + str(var_spec[self._SPEC_VARIABLE_LABEL] + 
-                    ' does not have type defined in spec file'))
+                    ' does not have type declared in spec file'))
+            if self._SPEC_VARIABLE_RANGE not in var_spec.keys():
+                raise Exception('Variable ' + str(var_spec[self._SPEC_VARIABLE_LABEL] + 
+                    ' does not have range declared in spec file'))
+            if self._SPEC_INPUTS_BOUNDS in var_spec.keys():
+                if not var_spec[self._SPEC_VARIABLE_TYPE] in [self._SPEC_INPUT_TAG, self._SPEC_KNOB_TAG]:
+                    raise Exception('Domain intervals (bounds) are only supported for free inputs and knobs')
         
     def set_spec_file(self, spec_file):
         if spec_file is None:
@@ -65,8 +103,30 @@ class SmlpSpec:
             self.set_spec_tokens()
             self.sanity_check_spec()
 
+    def set_spec_global_alpha_exprs(self, alph_expr):
+        print('setting alph_expr', alph_expr)
+        self._alpha_global_expr = alph_expr
+        
+    def set_spec_global_beta_exprs(self, beta_expr):
+        self._beta_global_expr = beta_expr
+        
+    def set_spec_asrt_exprs(self, asrt_exprs):
+        self._asrt_exprs = asrt_exprs
+        
+    def set_spec_objv_exprs(self, objv_exprs):
+        self._objv_exprs = objv_exprs
+        
+    def set_spec_quer_exprs(self, quer_exprs):
+        self._quer_exprs = quer_exprs
+    
+    # Create dictionary that maps input variables (free inputs and knobs) to respective
+    # domains specified as a closed interval. Other constraints on domains of inputs can
+    # be specified using command line option -alpha
     @property
     def get_spec_alpha_bounds_dict(self):
+        if self._alpha_dict is not None:
+            return self._alpha_dict
+        
         alpha_dict = {}
         #print('self.spec', self.spec)
         for var_spec in self.spec:
@@ -80,10 +140,14 @@ class SmlpSpec:
                     'min': var_spec[self._SPEC_INPUTS_BOUNDS][0], 
                     'max':var_spec[self._SPEC_INPUTS_BOUNDS][1]}
         print('alpha_dict', alpha_dict)
+        
+        self._alpha_dict = alpha_dict
         return alpha_dict
             
     @property
     def get_spec_eta_grids_dict(self):
+        if self._eta_dict is not None:
+            return self._eta_dict
         eta_dict = {}
         #print('self.spec', self.spec)
         for var_spec in self.spec:
@@ -94,10 +158,15 @@ class SmlpSpec:
                 continue
             eta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = var_spec[self._SPEC_KNOBS_GRID]
         print('eta_dict', eta_dict)
+        
+        self._eta_dict = eta_dict
         return eta_dict
     
     @property
     def get_spec_theta_radii_dict(self):
+        if self._theta_dict is not None:
+            return self._theta_dict
+        
         theta_dict = {}
         #print('self.spec', self.spec)
         for var_spec in self.spec:
@@ -119,11 +188,32 @@ class SmlpSpec:
             if self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
                 theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {self._SPEC_KNOBS_ABSOLUTE_RADIUS: None, 
                     self._SPEC_KNOBS_RELATIVE_RADIUS: var_spec[self._SPEC_KNOBS_RELATIVE_RADIUS]}
-        print('theta_dict', theta_dict)
+        #print('theta_dict', theta_dict)
+        
+        self._theta_dict = theta_dict
         return theta_dict   
     
     @property
     def get_spec_domain_dict(self):
+        if self._domain_dict is not None:
+            return self._domain_dict
+        
+        self._domain_dict = {}
+        for var_spec in self.spec:
+            print('var_spec', var_spec)
+            var_bounds = var_spec[self._SPEC_INPUTS_BOUNDS] if self._SPEC_INPUTS_BOUNDS in var_spec.keys() else None
+            var_range = var_spec[self._SPEC_VARIABLE_RANGE]
+            if not var_range in [self._SPEC_RANGE_INTEGER, self._SPEC_RANGE_REAL]:
+                raise Exception('Unsupported variable range (type) ' + var_spec[self._SPEC_VARIABLE_RANGE])
+            self._domain_dict[var_spec['label']] = {'range': var_range, 'interval': var_bounds}
+        print('self._domain_dict', self._domain_dict)
+        return self._domain_dict
+    
+    @property
+    def get_spec_domain_dict2(self):
+        #if self._domain_dict is not None:
+        #    return self._domain_dict
+        
         domain_dict = {}
         for var_spec in self.spec:
             print('var_spec', var_spec)
@@ -143,4 +233,31 @@ class SmlpSpec:
                 raise Exception('Unsupported variable range ' + str(var_spec[self._SPEC_VARIABLE_RANGE]) + 
                     ' in the spec: value must be ' + self._SPEC_RANGE_REAL + ' or ' + self._SPEC_RANGE_INTEGER)
         print('domain_dict', domain_dict); 
+        
+        self._domain_dict = domain_dict
         return domain_dict
+    
+    
+    def get_spec_constraint_vars(self):
+        constraints_vars = []
+        print('spec self', self._alpha_global_expr, self._beta_global_expr, self._asrt_exprs)
+        if self._alpha_global_expr is not None:
+            alph_vars = get_expression_variables(self._alpha_global_expr); print('alph_vars', alph_vars)
+            constraints_vars = constraints_vars + alph_vars
+        if self._beta_global_expr is not None:
+            beta_vars = get_expression_variables(self._beta_global_expr); print('beta_vars', beta_vars)
+            constraints_vars = constraints_vars + beta_vars
+        if self._objv_exprs is not None:
+            for objv_expr in self._objv_exprs:
+                objv_vars = get_expression_variables(objv_expr); print('objv_expr', objv_expr)
+                constraints_vars = constraints_vars + objv_vars
+        if self._asrt_exprs is not None:
+            for asrt_expr in self._asrt_exprs:
+                asrt_vars = get_expression_variables(asrt_expr); print('asrt_vars', asrt_vars)
+                constraints_vars = constraints_vars + asrt_vars
+        if self._quer_exprs is not None:
+            for quer_expr in self._quer_exprs:
+                quer_vars = get_expression_variables(quer_expr); print('quer_expr', quer_expr)
+                constraints_vars = constraints_vars + quer_vars
+        
+        return list_unique_unordered(constraints_vars)

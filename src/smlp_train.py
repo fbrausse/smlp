@@ -11,12 +11,27 @@
 import os, sys, argparse #json, 
 import pandas as pd
 
-# imports from SMLP modules
-from logs_common import DataFileInstance, SmlpLogger
-from utils_common import str_to_bool #np_JSONEncoder, 
-from smlp.train_common import ModelCommon
-from smlp.data_common import DataCommon
 
+# /usr/intel/pkgs/gcc/8.2.0/lib64
+from local_paths import SMLP_BOOST_PATH, SMLP_PYTHONPATH
+print('setenv LD_LIBRARY_PATH')
+#os.environ['LD_LIBRARY_PATH'] = SMLP_BOOST_PATH
+#os.system("export LD_LIBRARY_PATH={boost_path}".format(boost_path=SMLP_BOOST_PATH)
+print('import smlp')
+print(os.getenv('LD_LIBRARY_PATH')); 
+print('DONE')
+#assert False
+
+import smlp
+print(smlp.__path__); 
+#assert False
+
+
+# imports from SMLP modules
+from smlp_py.logs_common import DataFileInstance, SmlpLogger
+from smlp_py.utils_common import str_to_bool #np_JSONEncoder, 
+from smlp_py.train_common import ModelCommon
+from smlp_py.data_common import DataCommon
 
 # args parser to which some of the arguments are added explicitly in a regular way
 # and in addition it adds additional arguments from args_dict defined elsewhere;
@@ -92,6 +107,7 @@ def main(argv):
         raise Exception('Response names should be provided')
     resp_names = args.response.split(',')
     feat_names = args.features.split(',') if not args.features is None else None
+            
     # prepare data for model training
     logger.info('PREPARE DATA FOR MODELING')    
     X, y, X_train, y_train, X_test, y_test, X_new, y_new, mm_scaler_feat, mm_scaler_resp, \
@@ -100,7 +116,7 @@ def main(argv):
         args.train_first_n, args.train_random_n, args.train_uniform_n, args.interactive_plots, 
         args.data_scaler, args.mrmr_feat_count_for_prediction,
         args.save_model, args.use_model)
-
+    
     # model training, validation, testing, prediction on training and labeled data as well as new data when available.    
     model = modelInst.build_models(inst, args.model, X, y, X_train, y_train, X_test, y_test, X_new, y_new,
         resp_names, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict, 

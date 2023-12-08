@@ -7,12 +7,15 @@ import keras
 from sklearn.tree import _tree
 import json
 import ast
+import builtins
 import operator as op
 from fractions import Fraction
 
 import smlp
-from smlp_py.smlp_utils import np_JSONEncoder, lists_union_order_preserving_without_duplicates
+from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
+    list_subtraction_set, get_expression_variables)
 from smlp_py.smlp_spec import SmlpSpec
+
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
@@ -94,6 +97,12 @@ class SmlpTerms:
         #assert res1 == res2
         return res1 # form1 & form2
     
+    def smlp_and_multi(self, form_list:list[smlp.form2]):
+        res = None
+        for form in form_list:
+            res = form if res is None else self.smlp_and(res, form)
+        return res
+    
     def smlp_or(self, form1:smlp.form2, form2:smlp.form2):
         res1 = op.or_(form1, form2)
         res2 = form1 | form2
@@ -112,7 +121,7 @@ class SmlpTerms:
     # modified to generate SMLP terms.
     # reference to tres in python (not used currently) 
     # https://www.tutorialspoint.com/python_data_structure/python_binary_tree.htm
-    # https://docs.python.org/3/library/operator.html -- pythn operators documentation
+    # https://docs.python.org/3/library/operator.html -- python operators documentation
     def ast_expr_to_term(self, expr):
         #print('evaluating AST expression ====', expr)
         assert isinstance(expr, str)
@@ -842,6 +851,11 @@ class ModelTerms(SmlpTerms):
                         '[default: {}]'.format(str(self._DEF_ETA))},
         }
         
+        # control parameter to decide whether to add variable input and knob variable ranges
+        # as part of solver domain declaration or to only add variable type (int, real) declarion.
+        # This option for experiemntation, as looks like this choice can affect solver performance
+        self._domain_interface_only = True
+    
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
@@ -1060,7 +1074,7 @@ class ModelTerms(SmlpTerms):
         for i, (objv_name, objv_cond) in enumerate(zip(objv_names, objv_exprs)):
             #print('objv_cond', objv_cond, type(objv_cond))
             #print('y', y.columns.tolist(), '\n', y) 
-            objv_series = df_resp_feat.apply(lambda row : eval_objv(row), axis=1); print('objv_series', objv_series)
+            objv_series = df_resp_feat.apply(lambda row : eval_objv(row), axis=1); print('objv_series', objv_series.tolist())
             objv_bounds[objv_name] = {'min': float(objv_series.min()), 'max': float(objv_series.max())}
         for o, b in objv_bounds.items():
             if b['min'] == b['max']:
@@ -1087,7 +1101,7 @@ class ModelTerms(SmlpTerms):
         return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict, objv_bounds
     
     
-    # compute stability range theta; used also in generating lemmas during stable solution search.   
+    # Compute stability range theta; used also in generating lemmas during stable solution search.   
     def compute_stability_formula_theta(self, cex, delta): 
         #print('generate stability constraint theta')
         if delta is not None:
@@ -1106,7 +1120,26 @@ class ModelTerms(SmlpTerms):
                 if delta is not None:
                     rad = rad * (1 + delta)
                 rad_term = smlp.Cnst(rad)
+                
+                # abs(!delta ? e : nm); !delta means the argument cex is sat-model for candidate, we use constant from the 
+                # model; delta means we want lemma to exclude region around cex to candidate, we want lemma to restrict 
+                # the next candidate; the circle to rule out from search is around cex to counter-example, but the 
+                # radius is calculated based on candidate values, not the values in the counter-example to candidate.
+                #
+                # Condition "delta is None" (= !delta) means the argument cex is a sat-model defining a candidate, and in this case
+                # we use constants from the cex as the factors to compute absolute radius from relative radius, for each cex variable. 
+                # Condition "delata is not None" means the argument cex is a counter-example to candidate, and we want a lemma to 
+                # exclude a circle-shaped region around cex to candidate, while we want the radious of this circle to be computed 
+                # based on the values in the candidate and not values in the counter-example to the candidate; this is a matter of
+                # definition of relative radius, and seems cleaner than computing actual radius from relative radius based on 
+                # variable values in the counter-exaples to candidate rather than variable values in the candidate itself.
                 rad_term = rad_term * abs(cex[var])
+                '''
+                if delta is None: # temporary, until regression gets updated
+                    rad_term = rad_term * abs(cex[var])
+                else:
+                    rad_term = rad_term * abs(var)
+                '''
             theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
         #print('theta_form', theta_form)
         return theta_form
@@ -1223,29 +1256,39 @@ class ModelTerms(SmlpTerms):
     # *
     # * domain constraints from 'dom' have to hold for x and y.
     # */
-    def compute_input_ranges_formula_alpha(self):
+    def compute_input_ranges_formula_alpha(self, model_inputs):
         alpha_form = smlp.true
         alpha_dict = self._specInst.get_spec_alpha_bounds_dict; #print('alpha_dict', alpha_dict)
         for v,b in alpha_dict.items():
+            if v not in model_inputs:  # XXXXXXXXXXXX
+                continue
             mn = b['min']
             mx = b['max']
-            #print('mn', mn, 'mx', mx)
+            print('mn', mn, 'mx', mx)
             if mn is not None and mx is not None:
-                rng = self.smlp_and(smlp.Var(v) >= smlp.Cnst(mn), smlp.Var(v) <= smlp.Cnst(mx))
+                if self._domain_interface_only: # XXXXXXXXXXXX True or 
+                    rng = self.smlp_and(smlp.Var(v) >= smlp.Cnst(mn), smlp.Var(v) <= smlp.Cnst(mx))
+                    alpha_form = self.smlp_and(alpha_form, rng)
             elif mn is not None:
                 rng = smlp.Var(v) >= smlp.Cnst(mn)
+                alpha_form = self.smlp_and(alpha_form, rng)
             elif mx is not None:
                 rng = smlp.Var(v) <= smlp.Cnst(mx)
+                alpha_form = self.smlp_and(alpha_form, rng)
             else:
                 assert False
-            alpha_form = self.smlp_and(alpha_form, rng)
         return alpha_form
 
-    def compute_alpha_formula(self, alph_expr):
-        alph_form = self.compute_input_ranges_formula_alpha() 
+    def compute_alpha_formula(self, alph_expr, model_inputs):
+        alph_form = self.compute_input_ranges_formula_alpha(model_inputs) 
+        #alph_form = smlp.true
         if alph_expr is None:
             return alph_form
         else:
+            alph_expr_vars = get_expression_variables(alph_expr)
+            dont_care_vars = list_subtraction_set(alph_expr_vars, model_inputs)
+            if len(dont_care_vars) > 0:
+                raise Exception('Variables ' + str(dont_care_vars) + ' in input constraints are not part of the model')
             alph_glob = self._smlpTermsInst.ast_expr_to_term(alph_expr)
             return self._smlpTermsInst.smlp_and(alph_form, alph_glob)
     
@@ -1282,37 +1325,75 @@ class ModelTerms(SmlpTerms):
         spec_domain_dict = self._specInst.get_spec_domain_dict
         print('spec_domain_dict', spec_domain_dict)
         domain_dict = {}
+        
+        print('model_features_dict', model_features_dict, 'feat_names', feat_names)
+        interface_vars = feat_names + resp_names
+        for var,val_dict in spec_domain_dict.items():
+            if var not in interface_vars: # XXXXXXXXXXXX
+                continue
+            interval = spec_domain_dict[var][self._specInst.get_spec_interval_tag]; print('interval', interval)
+            if interval is None:
+                interva_has_none = True
+            elif interval[0] is None or interval[1] is None:
+                interva_has_none = True
+            else:
+                interva_has_none = False
+            if spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_integer_tag:
+                if self._domain_interface_only or interva_has_none:
+                    domain_dict[var] = smlp.component(smlp.Integer)
+                else:
+                    domain_dict[var] = smlp.component(smlp.Integer, 
+                        interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
+            elif spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_real_tag:
+                if self._domain_interface_only or interva_has_none:
+                    domain_dict[var] = smlp.component(smlp.Real)
+                else:
+                    domain_dict[var] = smlp.component(smlp.Real, 
+                        interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
+        '''
+        domain_dict2 = {}
+        spec_domain_dict2 = self._specInst.get_spec_domain_dict2
         correct = True
-        for var,val in spec_domain_dict.items():
+        for var,val in spec_domain_dict2.items():
+            print('var', var, 'val', val)
             interval = val['interval']
             grid = val['grid']
             if interval is None:
                 assert isinstance(grid, list)
                 if not correct:
-                    comp = smlp.component(smlp.Integer, grid=[1,4,7]) # TODO !!!
+                    domain_dict2[var] = smlp.component(smlp.Integer, grid=[1,4,7]) # TODO !!!
                 else:
                     if len(grid) > 0:
-                        comp = smlp.component(smlp.Integer, grid=grid) #[1,4,7]
+                        print('adding grid', grid)
+                        domain_dict2[var] = smlp.component(smlp.Integer, grid=grid) #[1,4,7]
                     else:
-                        comp = smlp.component(smlp.Integer)
+                        domain_dict2[var] = smlp.component(smlp.Integer)
             elif grid is None:
                 assert isinstance(interval, list)
                 assert len(interval) == 0 or len(interval) == 2
                 if not correct:
-                    comp = smlp.component(smlp.Real, interval=[0,10]) # TODO !!!
+                    domain_dict2[var] = smlp.component(smlp.Real, interval=[0,10]) # TODO !!!
+                    continue
                 else:
                     if len(interval) == 2:
                         print('interval', interval)
                         if interval[0] is None:
-                            interval[0] = 100000 # TODO !!!! 
+                            domain_dict2[var] = smlp.component(smlp.Real)
+                            continue
+                            #interval[0] = 100000 # TODO !!!! 
                         if interval[1] is None:
-                            interval[1] = 100000 # TODO !!!! 
-                        comp = smlp.component(smlp.Real, interval=interval) #[0,10]
+                            domain_dict2[var] = smlp.component(smlp.Real)
+                            continue
+                            #interval[1] = 100000 # TODO !!!! 
+                        print('adding interval', interval)
+                        domain_dict2[var] = smlp.component(smlp.Real, interval=interval) #[0,10]
                     else:
-                        comp = smlp.component(smlp.Real)
+                        domain_dict2[var] = smlp.component(smlp.Real)
             else:
                 assert False
-            domain_dict[var] = comp
+            #domain_dict2[var] = comp
+        domain_dict = domain_dict2
+        #'''
         '''
         domain_dict = {}
         for var_spec in spec:
@@ -1334,7 +1415,7 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Building model terms: End')
         
         # contraints on features used as control variables and on the responses
-        alpha = self.compute_alpha_formula(alph_expr) 
+        alpha = self.compute_alpha_formula(alph_expr, feat_names) 
         beta = self.compute_beta_formula(beta_expr)
         eta_grids = self.compute_grid_range_formulae_eta()
         #eta_guards = self._smlpTermsInst.smlp_and(eta_grids, eta_ranges); print('eta_guards', eta_guards)

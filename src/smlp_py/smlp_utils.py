@@ -12,7 +12,8 @@ from pandas import DataFrame, concat
 from pandas.api.types import is_object_dtype
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
-
+import ast
+import builtins
 
         
 NP2PY = {
@@ -317,3 +318,17 @@ def cast_type(obj, tp):
         if np.isnan(res) or res is None:
             raise Exception('Casting of ' + str(obj) + ' to type ' + str(tp) + ' failed')
     return res
+
+
+# This function is copied from 
+# https://stackoverflow.com/questions/68390248/ast-get-the-list-of-only-the-variable-names-in-an-expression
+# It computes variable names in python expression. This function does not properly cover all constructs 
+# allowed within general python expressions; e.g., loops (loop iteration variables will be returned
+# among the leaf variables in the expression).
+def get_expression_variables(expression):
+    tree = ast.parse(expression)
+    variables = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name):
+            variables.append(node.id)
+    return [v for v in set(variables) if v not in vars(builtins)]

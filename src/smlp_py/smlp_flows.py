@@ -3,12 +3,13 @@ from smlp_py.smlp_logs import SmlpLogger
 from smlp_py.smlp_utils import str_to_bool, np_JSONEncoder
 from smlp_py.smlp_models import SmlpModels
 from smlp_py.smlp_data import SmlpData
-#from smlp_py.smlp_subgroups import SubgroupDiscovery
+from smlp_py.smlp_subgroups import SubgroupDiscovery
 from smlp_py.smlp_config import SmlpConfig
 from smlp_py.smlp_doe import SmlpDoepy
 from smlp_py.smlp_discretize import SmlpDiscretize
 from smlp_py.smlp_terms import ModelTerms
 from smlp_py.smlp_spec import SmlpSpec
+from smlp_py.smlp_solver import SmlpSolver
 from smlp_py.smlp_verify import SmlpVerify
 from smlp_py.smlp_query import SmlpQuery
 from smlp_py.smlp_optimize import SmlpOptimize
@@ -21,7 +22,7 @@ class SmlpFlows:
         # data and model class instances
         self.dataInst = SmlpData()
         self.modelInst = SmlpModels()
-        #self.psgInst = SubgroupDiscovery()
+        self.psgInst = SubgroupDiscovery()
         self.loggerInst = SmlpLogger() 
         self.configInst = SmlpConfig()
         self.doeInst = SmlpDoepy();
@@ -29,6 +30,7 @@ class SmlpFlows:
         self.specInst = SmlpSpec()
         self.modelTernaInst = ModelTerms()
         self.modelTernaInst.set_smlp_spec_inst(self.specInst)
+        self.solverInst = SmlpSolver()
         self.verifyInst = SmlpVerify()
         self.verifyInst.set_model_terms_inst(self.modelTernaInst)
         self.queryInst = SmlpQuery()
@@ -46,8 +48,9 @@ class SmlpFlows:
                     self.modelTernaInst.constraints_params_dict | \
                     self.verifyInst.verify_params_dict | \
                     self.queryInst.query_params_dict | \
-                    self.optInst.opt_params_dict
-                    #self.psgInst.get_subgroup_hparam_default_dict() | \
+                    self.optInst.opt_params_dict | \
+                    self.solverInst.solver_params_dict | \
+                    self.psgInst.get_subgroup_hparam_default_dict()
         
         self.args = self.configInst.args_dict_parse(argv, args_dict)
         self.log_file = self.configInst.report_file_prefix + '.txt'
@@ -57,7 +60,7 @@ class SmlpFlows:
             self.args.log_mode, self.args.log_time)
         self.dataInst.set_logger(self.logger)
         self.modelInst.set_logger(self.logger)
-        #self.psgInst.set_logger(self.logger)
+        self.psgInst.set_logger(self.logger)
         self.doeInst.set_logger(self.logger)
         self.discrInst.set_logger(self.logger)
         self.optInst.set_logger(self.logger)
@@ -65,7 +68,7 @@ class SmlpFlows:
         self.queryInst.set_logger(self.logger)
         
         # set report and model files / file prefixes
-        #self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
+        self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_model_file_prefix(self.configInst.model_file_prefix)
         self.modelInst.set_report_file_prefix(self.configInst.report_file_prefix)
@@ -77,9 +80,18 @@ class SmlpFlows:
         self.queryInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.queryInst.set_model_file_prefix(self.configInst.model_file_prefix)
         
-        # set spec file
+        # set spec components
+        self.specInst.set_spec_global_alpha_exprs(self.args.alpha)
+        self.specInst.set_spec_global_beta_exprs(self.args.beta)
+        
+        # set spec file / spec
         self.modelTernaInst.set_spec_file(self.args.spec)
-    
+        self.dataInst.set_spec_inst(self.specInst)
+        
+        # set external solver to SMLP
+        self.solverInst.set_solver_path(self.args.solver_path)
+        
+        
     # TODO !!!: is this the right place to define data_fname and new_data_fname and error_file ???
     @property
     def data_fname(self):
@@ -96,7 +108,7 @@ class SmlpFlows:
         else:
             return self.args.new_data + '.csv'
         
-    ''' not ised currently
+    ''' not used currently
     # filename with full path for logging error message before aborting
     @property
     def error_file(self):
@@ -110,7 +122,7 @@ class SmlpFlows:
         args = self.args
         # extract response and feature names
         if args.analytics_mode in ['train', 'predict', 'subgroups', 'discretize', 
-                                   'optimize', 'verify', 'query']: # SUPERVISED
+                                   'optimize', 'verify', 'query', 'tune']: # SUPERVISED
             if args.response is None:
                 raise Exception('Response names should be provided')
             resp_names = args.response.split(',')
@@ -158,14 +170,39 @@ class SmlpFlows:
             self.logger.info('Executing run_smlp.py script: End')
             return None
 
+        if args.analytics_mode in ['optimize', 'verify', 'query', 'tune']:
+            # We want to set to SmlpSpec object self.specInst expressions of assertions, queries, optimization 
+            # objectives, in order to compute variables input feature names that way depend on. This is to
+            # ensure that these variables are used in building models analyses in the above model exploration
+            # modes. Usueally )objectives, assertions, queries do not refer to inpputs and knobs but currently
+            # usage of inputs and knobs are not disallowed in (objectives, assertions, and queries thus we want 
+            # them varibles inputs/knobs occuring in them to be part of the trained models. Not all model 
+            # xploration modes require all these components (objectives, assertions, queries) but their computation
+            # is not a real overhead and we prefer to keep code readable and computate all these expressions.
+            
+            # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
+            # the reponses as objectives, and the names of objectives are names of the responses prefixed bu 'objv_'.
+            objv_names, objv_exprs = self.optInst.get_objectives(args.objectives_names, args.objectives_expressions,
+                resp_names, self.dataInst.commandline_condition_separator)
+            # compute assertion names and expressions
+            asrt_names, asrt_exprs = self.verifyInst.get_assertions(args.assertions_names, args.assertions_expressions,
+                self.dataInst.commandline_condition_separator)
+            # compute query names and expressions
+            quer_names, quer_exprs = self.queryInst.get_queries(args.query_names, args.query_expressions,
+                self.dataInst.commandline_condition_separator)
+            
+            self.specInst.set_spec_asrt_exprs(asrt_exprs);
+            self.specInst.set_spec_objv_exprs(objv_exprs)
+            self.specInst.set_spec_quer_exprs(quer_exprs)
+
         # prepare data for model training
-        if args.analytics_mode in ['train', 'predict', 'optimize', 'verify', 'query']:
+        if args.analytics_mode in ['train', 'predict', 'optimize', 'verify', 'query', 'tune']:
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             self.logger.info('PREPARE DATA FOR MODELING')    
             X, y, X_train, y_train, X_test, y_test, X_new, y_new, mm_scaler_feat, mm_scaler_resp, \
             levels_dict, model_features_dict, feat_names, resp_names = self.dataInst.process_data(
                 self.configInst.report_file_prefix,
-                self.data_fname, self.new_data_fname, True, args.split_test, feat_names, resp_names, 
+                self.data_fname, self.new_data_fname, True, args.split_test, feat_names, resp_names, args.keep_features,
                 args.train_first_n, args.train_random_n, args.train_uniform_n, args.interactive_plots, 
                 args.data_scaler, args.scale_features, args.scale_responses, args.mrmr_feat_count_for_prediction, 
                 args.positive_value, args.negative_value, args.response_to_bool, args.save_model, args.use_model)
@@ -182,8 +219,8 @@ class SmlpFlows:
                 self.logger.info('Executing run_smlp.py script: End')
                 return model
         
-        if args.analytics_mode in ['optimize', 'verify', 'query']:
-            #self.optInst.set_model(model)
+        if args.analytics_mode in ['optimize', 'verify', 'query', 'tune']:
+            '''
             # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
             # the reponses as objectives, and the names of objectives are names of the responses prefixed bu 'objv_'.
             objv_names, objv_exprs = self.optInst.get_objectives(args.objectives_names, args.objectives_expressions,
@@ -195,6 +232,10 @@ class SmlpFlows:
             quer_names, quer_exprs = self.queryInst.get_queries(args.query_names, args.query_expressions,
                 self.dataInst.commandline_condition_separator)
             
+            self.specInst.set_spec_asrt_exprs(asrt_exprs); print('asrt_exprs', asrt_exprs); assert False
+            self.specInst.set_spec_objv_exprs(objv_exprs)
+            self.specInst.set_spec_quer_exprs(quer_exprs)
+            '''
             # TODO !!!: check X and y are processed, and that X = concat(X_train, X_test) and y = concat(y_train, y_test)
             if args.analytics_mode == 'verify':
                 self.verifyInst.smlp_verify(args.model, model,
@@ -217,6 +258,12 @@ class SmlpFlows:
                     args.delta, args.epsilon, args.alpha, args.beta, args.eta, args.data_scaler, 
                     args.scale_features, args.scale_responses, args.scale_objectives, args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
-            
+            elif args.analytics_mode == 'tune':
+                self.optInst.smlp_tune(args.model, model,
+                    self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, model_features_dict, 
+                    feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, 
+                    args.delta, args.epsilon, args.alpha, args.beta, args.eta, args.data_scaler, 
+                    args.scale_features, args.scale_responses, args.scale_objectives, args.approximate_fractions, args.fraction_precision,
+                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')

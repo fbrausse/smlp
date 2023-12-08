@@ -4,4 +4,39 @@
 /lib/pkgconfig/kjson.pc
 /lib/libkjson.a
 /lib/libkjson.so
+lib/libcheck-data.so
 *.d
+
+# src directory
+/src/.ipynb_checkpoints/*
+#/src/run_smlp.py
+/src/local_paths.py
+/src/process_shai.py
+
+# smlp_tmp directory
+/src/smlp_tmp/*
+
+# smlp directory
+/src/smlp/.ipynb_checkpoints/*
+/src/smlp/subgroups.py
+
+# smlp_py directory
+/src/smlp_py/.ipynb_checkpoints/*
+/src/smlp_py/subgroups.py
+/src/smlp_py/correlations.py
+/src/smlp_py/range_plots_template.html
+/src/smlp_py/range_plots.py
+/src/smlp_py/range_plots.py_save
+
+# bin directory
+bin/check-data-cmd
+
+# regeression
+/regr/*
+
+# obj directory
+obj/cbuf.c.o
+obj/check-data-lib.c.o
+obj/check-data.c.o
+obj/response.c.o
+obj/table.c.o
