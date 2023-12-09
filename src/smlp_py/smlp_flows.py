@@ -22,7 +22,7 @@ class SmlpFlows:
         # data and model class instances
         self.dataInst = SmlpData()
         self.modelInst = SmlpModels()
-        self.psgInst = SubgroupDiscovery()
+        #self.psgInst = SubgroupDiscovery()
         self.loggerInst = SmlpLogger() 
         self.configInst = SmlpConfig()
         self.doeInst = SmlpDoepy();
@@ -49,8 +49,8 @@ class SmlpFlows:
                     self.verifyInst.verify_params_dict | \
                     self.queryInst.query_params_dict | \
                     self.optInst.opt_params_dict | \
-                    self.solverInst.solver_params_dict | \
-                    self.psgInst.get_subgroup_hparam_default_dict()
+                    self.solverInst.solver_params_dict #| \
+                    #self.psgInst.get_subgroup_hparam_default_dict()
         
         self.args = self.configInst.args_dict_parse(argv, args_dict)
         self.log_file = self.configInst.report_file_prefix + '.txt'
@@ -60,7 +60,7 @@ class SmlpFlows:
             self.args.log_mode, self.args.log_time)
         self.dataInst.set_logger(self.logger)
         self.modelInst.set_logger(self.logger)
-        self.psgInst.set_logger(self.logger)
+        #self.psgInst.set_logger(self.logger)
         self.doeInst.set_logger(self.logger)
         self.discrInst.set_logger(self.logger)
         self.optInst.set_logger(self.logger)
@@ -68,7 +68,7 @@ class SmlpFlows:
         self.queryInst.set_logger(self.logger)
         
         # set report and model files / file prefixes
-        self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
+        #self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_model_file_prefix(self.configInst.model_file_prefix)
         self.modelInst.set_report_file_prefix(self.configInst.report_file_prefix)
@@ -149,7 +149,7 @@ class SmlpFlows:
                 result_type=args.discretization_type)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
-        #'''
+        '''
         if args.analytics_mode == 'subgroups':
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             #from smlp.subgroups import SubgroupDiscovery
@@ -167,7 +167,7 @@ class SmlpFlows:
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
-        #'''
+        '''
         if args.analytics_mode in ['optimize', 'verify', 'query', 'tune']:
             # We want to set to SmlpSpec object self.specInst expressions of assertions, queries, optimization 
             # objectives, in order to compute variables input feature names that way depend on. This is to
