@@ -10,8 +10,8 @@ import pandas as pd
 import keras
 import numpy as np
 
-# single or multi-objective optimization, with stability constraints and
-# any user given constraints on input, control and output variables satisfied.
+# single or multi-objective optimization, with stability constraints and any user
+# given constraints on free input, control (knob) and output variables satisfied.
 class SmlpOptimize:
     def __init__(self):
         self._opt_logger = None 
@@ -344,7 +344,7 @@ class SmlpOptimize:
                 
                        
     
-    # pareto
+    # pareto optimization
     def optimize_pareto_objectives(self, X:pd.DataFrame, y:pd.DataFrame, feat_names:list, resp_names:list, 
             model_full_term_dict:dict, objv_names:list, objv_exprs:list, alpha:smlp.form2, beta:smlp.form2, eta:smlp.form2, 
             epsilon:float, smlp_domain:smlp.domain, delta:float, scale_objv:bool, data_scaler:str, 
@@ -464,7 +464,7 @@ class SmlpOptimize:
         
         return s
             
-
+    # optimization of multiple objectives -- pareto optimization or optimization per objective
     def smlp_optimize(self, algo, model, X, y, model_features_dict, feat_names, resp_names, 
             objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
             alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
@@ -485,6 +485,9 @@ class SmlpOptimize:
                 objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler, 
                 sat_approx=True, sat_precision=64, save_trace=False)
 
+    # smlp tune mode that performs multi-objective optimization (pareto or per-objective) and insures
+    # that with the selected configuration of knobs all assertions are also satisfied (in addition to
+    # any other model interface constraints or configuration stability constraints)
     def smlp_tune(self, algo, model, X, y, model_features_dict, feat_names, resp_names, 
             objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
             alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 

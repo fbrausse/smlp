@@ -5,7 +5,9 @@ from fractions import Fraction
 from smlp_py.smlp_utils import get_expression_variables, list_unique_unordered
 
 
-# spec file API
+# spec file API; in addition, gives access to query constraints' expressions
+# and expressions of assertions, queries, optimization objectives specified 
+# through command line or through other files.
 class SmlpSpec:
     def __init__(self):
         self.spec = None
@@ -104,7 +106,7 @@ class SmlpSpec:
             self.sanity_check_spec()
 
     def set_spec_global_alpha_exprs(self, alph_expr):
-        print('setting alph_expr', alph_expr)
+        #print('setting alph_expr', alph_expr)
         self._alpha_global_expr = alph_expr
         
     def set_spec_global_beta_exprs(self, beta_expr):
@@ -143,11 +145,13 @@ class SmlpSpec:
         
         self._alpha_dict = alpha_dict
         return alpha_dict
-            
+     
+    # Compute dictionary that maps knobs to respective value grids in the spec file
     @property
     def get_spec_eta_grids_dict(self):
         if self._eta_dict is not None:
             return self._eta_dict
+        
         eta_dict = {}
         #print('self.spec', self.spec)
         for var_spec in self.spec:
@@ -162,6 +166,7 @@ class SmlpSpec:
         self._eta_dict = eta_dict
         return eta_dict
     
+    # Compute dictionary that maps knobs to theta radii specified in spec file
     @property
     def get_spec_theta_radii_dict(self):
         if self._theta_dict is not None:
@@ -193,6 +198,10 @@ class SmlpSpec:
         self._theta_dict = theta_dict
         return theta_dict   
     
+    # Compute dictionary that maps variables to their domains (lower and upper bounds).
+    # Domain bounds are usually defined for inputs, but upper or lower bounds may in general be
+    # defined on model outputs (responses) to be served as constraints during model exploration,
+    # therefore there is no sanity check to ensure the bounds are defined for inputs only.
     @property
     def get_spec_domain_dict(self):
         if self._domain_dict is not None:
@@ -200,7 +209,7 @@ class SmlpSpec:
         
         self._domain_dict = {}
         for var_spec in self.spec:
-            print('var_spec', var_spec)
+            #print('var_spec', var_spec)
             var_bounds = var_spec[self._SPEC_INPUTS_BOUNDS] if self._SPEC_INPUTS_BOUNDS in var_spec.keys() else None
             var_range = var_spec[self._SPEC_VARIABLE_RANGE]
             if not var_range in [self._SPEC_RANGE_INTEGER, self._SPEC_RANGE_REAL]:
@@ -209,55 +218,32 @@ class SmlpSpec:
         print('self._domain_dict', self._domain_dict)
         return self._domain_dict
     
-    @property
-    def get_spec_domain_dict2(self):
-        #if self._domain_dict is not None:
-        #    return self._domain_dict
-        
-        domain_dict = {}
-        for var_spec in self.spec:
-            print('var_spec', var_spec)
-            if var_spec[self._SPEC_VARIABLE_RANGE] == self._SPEC_RANGE_REAL:
-                if self._SPEC_INPUTS_BOUNDS in var_spec.keys():
-                    domain_dict[var_spec['label']] = {'interval': var_spec[self._SPEC_INPUTS_BOUNDS], 
-                        self._SPEC_KNOBS_GRID: None}
-                else:
-                    domain_dict[var_spec['label']] = {'interval': [], self._SPEC_KNOBS_GRID: None}
-            elif var_spec[self._SPEC_VARIABLE_RANGE] == self._SPEC_RANGE_INTEGER:
-                if self._SPEC_KNOBS_GRID in var_spec.keys():
-                    domain_dict[var_spec['label']] = {'interval': None, self._SPEC_KNOBS_GRID: 
-                        var_spec[self._SPEC_KNOBS_GRID]}
-                else:
-                    domain_dict[var_spec['label']] = {'interval': None, self._SPEC_KNOBS_GRID: []}
-            else:
-                raise Exception('Unsupported variable range ' + str(var_spec[self._SPEC_VARIABLE_RANGE]) + 
-                    ' in the spec: value must be ' + self._SPEC_RANGE_REAL + ' or ' + self._SPEC_RANGE_INTEGER)
-        print('domain_dict', domain_dict); 
-        
-        self._domain_dict = domain_dict
-        return domain_dict
-    
-    
+    # Compute variables in model exploration constraints -- constraints on model interface
+    # (inputs that can be knobs or free inputs, and outputs), assertions, queries, optimization
+    # objectives. Some of these constraints are specified through a spec file, some through
+    # command line. This function is used to make sure that variables in these constraints are
+    # used during model training (and not dropped during data processing or feature selection),
+    # therefore the model exploration constraints are well defined on the model interface.
     def get_spec_constraint_vars(self):
         constraints_vars = []
-        print('spec self', self._alpha_global_expr, self._beta_global_expr, self._asrt_exprs)
+        #print('spec self', self._alpha_global_expr, self._beta_global_expr, self._asrt_exprs)
         if self._alpha_global_expr is not None:
-            alph_vars = get_expression_variables(self._alpha_global_expr); print('alph_vars', alph_vars)
+            alph_vars = get_expression_variables(self._alpha_global_expr); #print('alph_vars', alph_vars)
             constraints_vars = constraints_vars + alph_vars
         if self._beta_global_expr is not None:
-            beta_vars = get_expression_variables(self._beta_global_expr); print('beta_vars', beta_vars)
+            beta_vars = get_expression_variables(self._beta_global_expr); #print('beta_vars', beta_vars)
             constraints_vars = constraints_vars + beta_vars
         if self._objv_exprs is not None:
             for objv_expr in self._objv_exprs:
-                objv_vars = get_expression_variables(objv_expr); print('objv_expr', objv_expr)
+                objv_vars = get_expression_variables(objv_expr); #print('objv_expr', objv_expr)
                 constraints_vars = constraints_vars + objv_vars
         if self._asrt_exprs is not None:
             for asrt_expr in self._asrt_exprs:
-                asrt_vars = get_expression_variables(asrt_expr); print('asrt_vars', asrt_vars)
+                asrt_vars = get_expression_variables(asrt_expr); #print('asrt_vars', asrt_vars)
                 constraints_vars = constraints_vars + asrt_vars
         if self._quer_exprs is not None:
             for quer_expr in self._quer_exprs:
-                quer_vars = get_expression_variables(quer_expr); print('quer_expr', quer_expr)
+                quer_vars = get_expression_variables(quer_expr); #print('quer_expr', quer_expr)
                 constraints_vars = constraints_vars + quer_vars
         
         return list_unique_unordered(constraints_vars)

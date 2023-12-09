@@ -12,7 +12,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.impute import SimpleImputer
 
 from smlp_py.smlp_plots import response_distribution_plot
-from smlp_py.smlp_utils import (np_JSONEncoder, list_intersection, str_to_bool,
+from smlp_py.smlp_utils import (np_JSONEncoder, list_intersection, str_to_bool, list_unique_unordered,
     lists_union_order_preserving_without_duplicates, get_response_type, cast_type, pd_df_col_is_numeric)
 from smlp_py.smlp_mrmr import SmlpMrmr
 #from smlp_py.smlp_spec import SmlpSpec
@@ -746,10 +746,7 @@ class SmlpData:
             
         return X, y, feat_names, resp_names, feat_names_dict
     
-    
-                    
-                
-                                         
+
     # Feature and response scaling (optional) will be done only on responses and features that occur
     # in model_features_dict. For the optimization task, X and y befoee scling are saved in self.
     def _scale_data(self, X, y, scale_features, scale_responses, scaler_type, mm_scaler_feat, mm_scaler_resp, 
@@ -881,20 +878,18 @@ class SmlpData:
         # TMP !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! end
         
         # Feature selection / MRMR go here, will refine model_features_dict
-        
         if is_training:
             keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); print('keep_feat', keep_feat)
             #print('features before mrmr', feat_names)
             for rn in resp_names:
-                mrmr_feat = self._mrmrInst.mrmr_regres(X, y[rn], rn, mrmr_features_n) print('mrmr_feat', mrmr_feat)
-                model_feat = [ft for ft in feat_names if (ft in mrmr_feat or ft in keep_feat)]; print(model_feat); 
+                mrmr_feat = self._mrmrInst.mrmr_regres(X, y[rn], rn, mrmr_features_n); #print('mrmr_feat', mrmr_feat)
+                model_feat = [ft for ft in feat_names if (ft in mrmr_feat or ft in keep_feat)]; #print(model_feat); 
                 model_features_dict[rn] = model_feat #mrmr_feat
-            feat_names2 = [ft for ft in feat_names if ft in lists_union_order_preserving_without_duplicates(list(model_features_dict.values()))]
-            feat_names = lists_union_order_preserving_without_duplicates(list(model_features_dict.values()))
-            assert feat_names2 == feat_names
+            feat_names = [ft for ft in feat_names if ft in 
+                lists_union_order_preserving_without_duplicates(list(model_features_dict.values()))]
             X = X[feat_names]
-            #print('model_features_dict after MRMR', model_features_dict);
-
+            #print('features after mrmr', feat_names); print('model_features_dict after MRMR', model_features_dict);
+        
         # encode levels of categorical features as integers for model training (in feature selection tasks 
         # it is best to use the original categorical features). 
         X, levels_dict = self._encode_categorical(X, levels_dict)

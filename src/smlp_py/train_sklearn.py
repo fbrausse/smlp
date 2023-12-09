@@ -369,8 +369,11 @@ class ModelSklearn:
     def _sklearn_train_multi_response(self, get_model_file_prefix, feat_names, resp_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, sample_weights_vect):
+        assert feat_names == X_train.columns.tolist()
+        assert feat_names == X_test.columns.tolist()
         if algo in ['dt', 'et', 'rf']:
             if algo == 'dt':
+                print('feat_names', feat_names, 'X_train\n', X_train, '\nX_test\n',  X_test)
                 model = self.dt_regr_train(feat_names, resp_names, algo,
                     X_train, X_test, y_train, y_test, seed, sample_weights_vect)
                 tree_estimators = [model]
@@ -386,10 +389,7 @@ class ModelSklearn:
                 assert False
                 
             # save tree model as rules
-            #rules_report_file = paths.get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_tree_rules.txt'
-            #rules_report_file = model_file_prefix + '_tree_rules.txt'
             rules_report_file = get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_tree_rules.txt'
-            print('rules_report_file', rules_report_file); print('feat_names', feat_names); print('resp_names', resp_names)
             self._instTreeTerms.trees_to_rules(tree_estimators, feat_names, resp_names, 
                 None, True, rules_report_file)
             return model
@@ -404,7 +404,7 @@ class ModelSklearn:
                 formula_report_file = get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_formula.txt'
                 model_formula = self._instPolyTerms.poly_model_to_term_single_response(feat_names, resp_names, linear_model.coef_, 
                     poly_reg.powers_, resp_id, True, formula_report_file)
-            print('poly model computed', (linear_model, linear_model.coef_, poly_reg, poly_reg.powers_)) 
+            #print('poly model computed', (linear_model, linear_model.coef_, poly_reg, poly_reg.powers_)) 
             return linear_model, poly_reg #, X_train, X_test
         else:
             raise Exception('Unsupported model type ' + str(algo) + ' in function tree_main')
@@ -414,6 +414,7 @@ class ModelSklearn:
             seed, sample_weights_vect, model_per_response):
         # train a separate models for each response, pack into a dictionary with response names
         # as keys and the correponding models as values
+        #print('sklearn_main: feat_names_dict', feat_names_dict, 'X_train cols', X_train.columns.tolist())
         if model_per_response:
             model = {}
             for rn in resp_names:

@@ -1134,97 +1134,10 @@ class ModelTerms(SmlpTerms):
                 # definition of relative radius, and seems cleaner than computing actual radius from relative radius based on 
                 # variable values in the counter-exaples to candidate rather than variable values in the candidate itself.
                 rad_term = rad_term * abs(cex[var])
-                '''
-                if delta is None: # temporary, until regression gets updated
-                    rad_term = rad_term * abs(cex[var])
-                else:
-                    rad_term = rad_term * abs(var)
-                '''
             theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
         #print('theta_form', theta_form)
         return theta_form
 
-    '''
-    def compute_stability_formula_theta_old(self, spec, cex, delta):
-        #print('generate stability constraint theta')
-        #print('spec', spec, 'cex', cex, 'delta', delta)
-        theta_form = smlp.true
-        for var_spec in spec:
-            #print('var_spec', var_spec)
-            if var_spec['type'] != 'knob':
-                continue
-            if 'rad-abs' not in var_spec.keys() and 'rad-rel' not in var_spec.keys():
-                # TODO !!!: should delta be used as absolute radius?
-                continue
-            if 'rad-abs' in var_spec.keys() and 'rad-rel' in var_spec.keys():
-                raise Exception('Both absolute and relative radii are specified for variable ' + str(var_spec))
-            assert 'rad-abs' in var_spec.keys() or 'rad-rel' in var_spec.keys()
-            var_term = smlp.Var(var_spec['label'])
-            if 'rad-abs' in var_spec.keys():
-                rad = var_spec['rad-abs']; #print('rad', rad); 
-            elif 'rad-rel' in var_spec.keys():
-                rad = var_spec['rad-rel']; #print('rad', rad)
-            if delta > 0:
-                rad = rad * (1 + delta)
-            rad_term = smlp.Cnst(rad); #print('rad_term', rad_term)
-            if 'rad-rel' in var_spec.keys():
-                #if delta <= 0:
-                    #rad_term = rad_term * smlp.Cnst(cex[var_spec['label']])
-                rad_term = rad_term * abs(cex[var_spec['label']])
-            #print('rad_term', rad_term); print('abs', abs(var_term - cex[var_spec['label']]))
-            #theta_form = theta_form and ((abs(var_term - cex[var_spec['label']])) <= rad_term)
-            theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var_spec['label']])) <= rad_term))
-        #print('theta_form', theta_form)
-        return theta_form
-            
-    # delta None menas usage use for stability, otherwise for lemma
-    def compute_stability_formula_theta_new(self, spec, cex, delta):
-        #print('generate stability constraint theta')
-        #print('spec', spec, 'cex', cex, 'delta', delta)
-        if delta is not None:
-            assert delta >= 0
-        
-        theta_form = smlp.true
-        for var_spec in spec:
-            #print('var_spec', var_spec)
-            if var_spec['type'] != 'knob':
-                continue
-            if 'rad-abs' not in var_spec.keys() and 'rad-rel' not in var_spec.keys():
-                # TODO !!!: should delta be used as absolute radius?
-                continue
-            if 'rad-abs' in var_spec.keys() and 'rad-rel' in var_spec.keys():
-                raise Exception('Both absolute and relative radii are specified for variable ' + str(var_spec))
-            assert 'rad-abs' in var_spec.keys() or 'rad-rel' in var_spec.keys()
-            var_term = smlp.Var(var_spec['label'])
-            # It is actually ligel that sone solvers can return a don't care values for a variable, which
-            # means that the sat assignment is actually valid for every value of that variable satisfying
-            # contsraints on it; so will need to figure out how to best support such cases.
-            assert var_spec['label'] in cex
-            if 'rad-abs' in var_spec.keys():
-                rad = var_spec['rad-abs']; #print('rad', rad); 
-                #if delta > 0:
-                if delta is not None:
-                    rad = rad + delta
-                rad_term = smlp.Cnst(rad);
-            elif 'rad-rel' in var_spec.keys():
-                rad = var_spec['rad-rel']; #print('rad', rad)
-                rad_term = smlp.Cnst(rad)
-                #if delta is None:
-                #    # theta is used to mpose stability
-                #    rad_term = rad_term * abs(cex[var_spec['label']])
-                #else:
-                #    # theta is used as part of lemma for candidate search
-                #    rad_term = rad_term * abs(var_spec['label'])
-                rad_term = rad_term * abs(cex[var_spec['label']]) # TODO !!! don't use counter-example value, use variable itself var(var_spec['label'])
-                
-                if delta > 0:
-                    rad_term = rad_term + smlp.Cnst(delta)
-            #print('knob rad', ((abs(var_term - cex[var_spec['label']])) <= rad_term))
-            
-            theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var_spec['label']])) <= rad_term))
-        #print('theta_form', theta_form)
-        return theta_form
-    '''
     
     # Creates eta constraints on control inputs (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
@@ -1260,13 +1173,13 @@ class ModelTerms(SmlpTerms):
         alpha_form = smlp.true
         alpha_dict = self._specInst.get_spec_alpha_bounds_dict; #print('alpha_dict', alpha_dict)
         for v,b in alpha_dict.items():
-            if v not in model_inputs:  # XXXXXXXXXXXX
+            if v not in model_inputs:
                 continue
             mn = b['min']
             mx = b['max']
-            print('mn', mn, 'mx', mx)
+            #print('mn', mn, 'mx', mx)
             if mn is not None and mx is not None:
-                if self._domain_interface_only: # XXXXXXXXXXXX True or 
+                if self._domain_interface_only:
                     rng = self.smlp_and(smlp.Var(v) >= smlp.Cnst(mn), smlp.Var(v) <= smlp.Cnst(mx))
                     alpha_form = self.smlp_and(alpha_form, rng)
             elif mn is not None:
@@ -1323,15 +1236,15 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Building model terms: Start')
         
         spec_domain_dict = self._specInst.get_spec_domain_dict
-        print('spec_domain_dict', spec_domain_dict)
+        #print('spec_domain_dict', spec_domain_dict)
         domain_dict = {}
         
-        print('model_features_dict', model_features_dict, 'feat_names', feat_names)
+        #print('model_features_dict', model_features_dict, 'feat_names', feat_names)
         interface_vars = feat_names + resp_names
         for var,val_dict in spec_domain_dict.items():
-            if var not in interface_vars: # XXXXXXXXXXXX
+            if var not in interface_vars:
                 continue
-            interval = spec_domain_dict[var][self._specInst.get_spec_interval_tag]; print('interval', interval)
+            interval = spec_domain_dict[var][self._specInst.get_spec_interval_tag];
             if interval is None:
                 interva_has_none = True
             elif interval[0] is None or interval[1] is None:
@@ -1350,62 +1263,8 @@ class ModelTerms(SmlpTerms):
                 else:
                     domain_dict[var] = smlp.component(smlp.Real, 
                         interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
-        '''
-        domain_dict2 = {}
-        spec_domain_dict2 = self._specInst.get_spec_domain_dict2
-        correct = True
-        for var,val in spec_domain_dict2.items():
-            print('var', var, 'val', val)
-            interval = val['interval']
-            grid = val['grid']
-            if interval is None:
-                assert isinstance(grid, list)
-                if not correct:
-                    domain_dict2[var] = smlp.component(smlp.Integer, grid=[1,4,7]) # TODO !!!
-                else:
-                    if len(grid) > 0:
-                        print('adding grid', grid)
-                        domain_dict2[var] = smlp.component(smlp.Integer, grid=grid) #[1,4,7]
-                    else:
-                        domain_dict2[var] = smlp.component(smlp.Integer)
-            elif grid is None:
-                assert isinstance(interval, list)
-                assert len(interval) == 0 or len(interval) == 2
-                if not correct:
-                    domain_dict2[var] = smlp.component(smlp.Real, interval=[0,10]) # TODO !!!
-                    continue
-                else:
-                    if len(interval) == 2:
-                        print('interval', interval)
-                        if interval[0] is None:
-                            domain_dict2[var] = smlp.component(smlp.Real)
-                            continue
-                            #interval[0] = 100000 # TODO !!!! 
-                        if interval[1] is None:
-                            domain_dict2[var] = smlp.component(smlp.Real)
-                            continue
-                            #interval[1] = 100000 # TODO !!!! 
-                        print('adding interval', interval)
-                        domain_dict2[var] = smlp.component(smlp.Real, interval=interval) #[0,10]
-                    else:
-                        domain_dict2[var] = smlp.component(smlp.Real)
-            else:
-                assert False
-            #domain_dict2[var] = comp
-        domain_dict = domain_dict2
-        #'''
-        '''
-        domain_dict = {}
-        for var_spec in spec:
-            print('var_spec', var_spec)
-            if var_spec['range'] == 'float':
-                #if var_spec['safe']
-                comp = smlp.component(smlp.Real, interval=[0,10])
-            elif var_spec['range'] == 'integer':
-                comp = smlp.component(smlp.Integer, grid=[1,4,7])
-            domain_dict[var_spec['label']] = comp
-        '''
-        print('domain_dict', domain_dict)
+
+        #print('domain_dict', domain_dict)
         domain = smlp.domain(domain_dict)
 
         # model terms with terms for scaling inputs and / or unscaling responses are all composed to 
@@ -1449,8 +1308,8 @@ class ModelTerms(SmlpTerms):
             objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
             alph_expr, beta_expr, eta_expr, incremental, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
-        print('(1) eta, alpha, beta',  eta, alpha, beta)
+        print('(1) eta', eta, 'alpha', alpha, 'beta', beta)
         base_solver = self.create_model_exploration_instance_from_smlp_components(domain, model_full_term_dict, 
             alpha, beta, eta, incremental)
-        print('(2) eta, alpha, beta',  eta, alpha, beta)
+        print('(2) eta', eta, 'alpha', alpha, 'beta', beta)
         return domain, model_full_term_dict, eta, alpha, beta, base_solver        

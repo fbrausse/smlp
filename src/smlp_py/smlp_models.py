@@ -15,7 +15,7 @@ from smlp_py.smlp_plots import evaluate_prediction
 from smlp_py.train_keras import ModelKeras 
 from smlp_py.train_caret import ModelCaret 
 from smlp_py.train_sklearn import ModelSklearn
-from smlp_py.smlp_utils import str_to_bool
+from smlp_py.smlp_utils import str_to_bool, model_features_sanity_check
 
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
@@ -296,6 +296,8 @@ class SmlpModels:
             hparams_dict :dict, plots : bool, seed : int, sample_weights_coef : float, model_per_response:bool):
         self._model_logger.info('Model training: start')
         print('feat_names_dict', feat_names_dict, 'resp_names', resp_names)
+        model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
+            
         if algo == 'nn_keras':
             keras_algo = algo[:-len('_keras')]
             sample_weights_dict = self._compute_sample_weights_dict(y_train, sample_weights_coef)

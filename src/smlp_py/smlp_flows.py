@@ -1,6 +1,6 @@
 # imports from SMLP modules
 from smlp_py.smlp_logs import SmlpLogger
-from smlp_py.smlp_utils import str_to_bool, np_JSONEncoder
+from smlp_py.smlp_utils import str_to_bool, np_JSONEncoder, model_features_sanity_check
 from smlp_py.smlp_models import SmlpModels
 from smlp_py.smlp_data import SmlpData
 from smlp_py.smlp_subgroups import SubgroupDiscovery
@@ -149,7 +149,7 @@ class SmlpFlows:
                 result_type=args.discretization_type)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
-        
+        #'''
         if args.analytics_mode == 'subgroups':
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             #from smlp.subgroups import SubgroupDiscovery
@@ -162,14 +162,12 @@ class SmlpFlows:
                 args.positive_value, args.negative_value, args.psg_quality_target, args.psg_max_dimension, 
                 args.psg_top_ranked, args.interactive_plots)
             #print('fs_ranking_df\n', fs_ranking_df); 
-            '''
-            for col in results_dict['num1']['psg_df'].columns.tolist():
-                print('\ncol ', col, '\n', results_dict['num1']['psg_df'][col]) #
-            '''
+            #for col in results_dict['num1']['psg_df'].columns.tolist():
+            #    print('\ncol ', col, '\n', results_dict['num1']['psg_df'][col]) #
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
-
+        #'''
         if args.analytics_mode in ['optimize', 'verify', 'query', 'tune']:
             # We want to set to SmlpSpec object self.specInst expressions of assertions, queries, optimization 
             # objectives, in order to compute variables input feature names that way depend on. This is to
@@ -207,6 +205,10 @@ class SmlpFlows:
                 args.data_scaler, args.scale_features, args.scale_responses, args.mrmr_feat_count_for_prediction, 
                 args.positive_value, args.negative_value, args.response_to_bool, args.save_model, args.use_model)
 
+            # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
+            # the same; this is mostly important for model exploration modes 
+            model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
+            
             # model training, validation, testing, prediction on training, labeled and new data (when available)   
             model = self.modelInst.build_models(args.model, X, y, X_train, y_train, X_test, y_test, X_new, y_new,
                 resp_names, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict, 
@@ -214,28 +216,20 @@ class SmlpFlows:
                 args.sample_weights_coef, args.save_model, args.use_model, args.model_per_response, 
                 self.configInst.model_rerun_config)
             
+            # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
+            # the same; this is mostly important for model exploration modes 
+            model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
+            
             if args.analytics_mode in ['train', 'predict']:
                 self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
                 self.logger.info('Executing run_smlp.py script: End')
                 return model
         
+        # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
+        # the same; this is mostly important for model exploration modes 
+        model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
+        
         if args.analytics_mode in ['optimize', 'verify', 'query', 'tune']:
-            '''
-            # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
-            # the reponses as objectives, and the names of objectives are names of the responses prefixed bu 'objv_'.
-            objv_names, objv_exprs = self.optInst.get_objectives(args.objectives_names, args.objectives_expressions,
-                resp_names, self.dataInst.commandline_condition_separator)
-            
-            asrt_names, asrt_exprs = self.verifyInst.get_assertions(args.assertions_names, args.assertions_expressions,
-                self.dataInst.commandline_condition_separator)
-            
-            quer_names, quer_exprs = self.queryInst.get_queries(args.query_names, args.query_expressions,
-                self.dataInst.commandline_condition_separator)
-            
-            self.specInst.set_spec_asrt_exprs(asrt_exprs); print('asrt_exprs', asrt_exprs); assert False
-            self.specInst.set_spec_objv_exprs(objv_exprs)
-            self.specInst.set_spec_quer_exprs(quer_exprs)
-            '''
             # TODO !!!: check X and y are processed, and that X = concat(X_train, X_test) and y = concat(y_train, y_test)
             if args.analytics_mode == 'verify':
                 self.verifyInst.smlp_verify(args.model, model,

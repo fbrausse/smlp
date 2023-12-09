@@ -228,7 +228,7 @@ def list_unique_ordered(lst):
     return list(d.keys())
 
 # union of the lists in a list of lists (argument list_of_lists).
-# just a concatenation, withot changing the prder or dropping duplicates
+# just a concatenation, withot changing the order or dropping duplicates
 def lists_union(list_of_lists):
     return [x for y in list_of_lists for x in y]
 
@@ -332,3 +332,30 @@ def get_expression_variables(expression):
         if isinstance(node, ast.Name):
             variables.append(node.id)
     return [v for v in set(variables) if v not in vars(builtins)]
+
+# sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
+# the same; this is mostly important for model exploration modes 
+def model_features_sanity_check(model_features_dict:dict, feat_names:list[str], train_df:DataFrame, 
+        test_df:DataFrame, feat_df:DataFrame):
+    if feat_names is not None: 
+        if train_df is not None:
+            assert feat_names == train_df.columns.tolist()
+        if test_df is not None:
+            assert feat_names == test_df.columns.tolist()    
+        if feat_df is not None:
+            assert feat_names == feat_df.columns.tolist()
+    if model_features_dict is not None:
+        for resp, feats in model_features_dict.items():
+            if feat_names is not None:
+                feats_ordered = [ft for ft in feat_names if ft in feats]
+                assert feats == feats_ordered
+            if train_df is not None:
+                feats_ordered = [ft for ft in train_df.columns.tolist() if ft in feats]
+                assert feats == feats_ordered
+            if test_df is not None:
+                feats_ordered = [ft for ft in test_df.columns.tolist() if ft in feats]
+                assert feats == feats_ordered
+            if feat_df is not None:
+                feats_ordered = [ft for ft in feat_df.columns.tolist() if ft in feats]
+                assert feats == feats_ordered
+    
