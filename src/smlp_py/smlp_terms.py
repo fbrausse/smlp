@@ -91,8 +91,14 @@ class SmlpTerms:
         return res2 #~form
     
     def smlp_and(self, form1:smlp.form2, form2:smlp.form2):
+        ''' test 83 gets stuck with this simplification
+        if form1 == smlp.true:
+            return form2
+        if form2 == smlp.true:
+            return form1
+        '''
         res1 = op.and_(form1, form2)
-        res2 = form1 & form2
+        #res2 = form1 & form2
         #print('res1', res1, type(res1)); print('res2', res2, type(res2))
         #assert res1 == res2
         return res1 # form1 & form2
@@ -194,17 +200,19 @@ class SmlpTerms:
                     for i in range(1, len(node.ops)):
                         right_term_i = eval_(node.comparators[i])
                         #print('i', i, 'left', left_term_i, 'right', right_term_i)
-                        res_comp_i = self._ast_operators_map[type(node.ops[i])](left_term_i, right_term_i); print('res_comp_i', res_comp_i)
+                        res_comp_i = self._ast_operators_map[type(node.ops[i])](left_term_i, right_term_i)
                         res_comp = op.and_(res_comp, res_comp_i) # self._ast_operators_map[type(node.op.And)]
                         # for the next iteration (if any):
                         left_term_i = right_term_i
                 #print('res_comp', res_comp)
                 return res_comp 
             elif isinstance(node, ast.List):
-                print('node List', 'elts', node.elts, type(node.elts), 'expr_context', node.expr_context);
+                self._smlp_terms_logger.error('Parsing expressions with lists is not supported')
+                #print('node List', 'elts', node.elts, type(node.elts), 'expr_context', node.expr_context);
                 raise Exception('Parsing expressions with lists is not supported')
             else:
-                print('node type', type(node))
+                self._smlp_terms_logger.error('Unexpected node type ' + str(type(node)))
+                #print('node type', type(node))
                 raise TypeError(node)
 
         return eval_(ast.parse(expr, mode='eval').body)
@@ -232,7 +240,8 @@ class SmlpTerms:
                     if smlp.Cnst(smlp_const).denominator is not None and smlp.Cnst(smlp_const).numerator is not None:
                         val = Fraction(smlp.Cnst(smlp_const).numerator, smlp.Cnst(smlp_const).denominator)
                 except Exception as err:
-                    print(f"Unexpected {err=}, {type(err)=}")
+                    self._smlp_terms_logger.error(f"Unexpected {err=}, {type(err)=}")
+                    #print(f"Unexpected {err=}, {type(err)=}")
                     raise
         else:
             raise Exception('Failed to computel value for smlp expression ' + str(expr) + 
@@ -827,30 +836,7 @@ class ModelTerms(SmlpTerms):
         self.report_file_prefix = None
         self.model_file_prefix = None
         self._smlp_terms_logger = None
-        
-        self._DEF_DELTA = 0.01 
-        self._DEF_ALPHA = None
-        self._DEF_BETA = None
-        self._DEF_ETA = None 
-        
-        self.constraints_params_dict = {
-            'spec': {'abbr':'spec', 'default':None, 'type':str,
-                'help':'Names of spe file, must be provided [default None]'}, 
-            'delta': {'abbr':'delta', 'default':self._DEF_DELTA, 'type':float, 
-                'help':'exclude (1+DELTA)*radius region for non-grid components ' +
-                        '[default: {}]'.format(str(self._DEF_DELTA))},
-            'alpha': {'abbr':'alpha', 'default':self._DEF_ALPHA, 'type':str, 
-                'help':'constraints on model inputs (free inputs or configuration knobs) ' +
-                        '[default: {}]'.format(str(self._DEF_ALPHA))},
-            'beta': {'abbr':'beta', 'default':self._DEF_BETA, 'type':str, 
-                'help':'constraints on model outputs, relevant for "optimize" mode only ' +
-                     '(when selecting model configuration that are safe and near-optimal) ' +
-                        '[default: {}]'.format(str(self._DEF_BETA))},
-            'eta': {'abbr':'eta', 'default':self._DEF_ETA, 'type':str, 
-                'help':'constraints only on the candidates ' +
-                        '[default: {}]'.format(str(self._DEF_ETA))},
-        }
-        
+
         # control parameter to decide whether to add variable input and knob variable ranges
         # as part of solver domain declaration or to only add variable type (int, real) declarion.
         # This option for experiemntation, as looks like this choice can affect solver performance
@@ -1045,7 +1031,7 @@ class ModelTerms(SmlpTerms):
     # TODO !!!: it might make sense to create a SmlpObjectives class and move this function there
     # maybe other functions like get_objectives()
     def compute_objectives_terms(self, objv_names, objv_exprs, scale_objv, feat_names, resp_names, X, y):
-        print('objv_exprs', objv_exprs)
+        #print('objv_exprs', objv_exprs)
         if objv_exprs is None:
             return None, None, None, None
         orig_objv_terms_dict = dict([(objv_name, self._smlpTermsInst.ast_expr_to_term(objv_expr)) \
@@ -1074,7 +1060,7 @@ class ModelTerms(SmlpTerms):
         for i, (objv_name, objv_cond) in enumerate(zip(objv_names, objv_exprs)):
             #print('objv_cond', objv_cond, type(objv_cond))
             #print('y', y.columns.tolist(), '\n', y) 
-            objv_series = df_resp_feat.apply(lambda row : eval_objv(row), axis=1); print('objv_series', objv_series.tolist())
+            objv_series = df_resp_feat.apply(lambda row : eval_objv(row), axis=1); #print('objv_series', objv_series.tolist())
             objv_bounds[objv_name] = {'min': float(objv_series.min()), 'max': float(objv_series.max())}
         for o, b in objv_bounds.items():
             if b['min'] == b['max']:
@@ -1101,14 +1087,14 @@ class ModelTerms(SmlpTerms):
         return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict, objv_bounds
     
     
-    # Compute stability range theta; used also in generating lemmas during stable solution search.   
-    def compute_stability_formula_theta(self, cex, delta): 
+    # Compute stability range theta; used also in generating lemmas during search for a stable solution.   
+    def compute_stability_formula_theta(self, cex, delta, theta_radii_dict): 
         #print('generate stability constraint theta')
         if delta is not None:
             assert delta >= 0
         theta_form = smlp.true
-        theta_grids_dict = self._specInst.get_spec_theta_radii_dict; #print('theta_grids_dict', theta_grids_dict)
-        for var,radii in theta_grids_dict.items():
+        #print('theta_radii_dict', theta_radii_dict)
+        for var,radii in theta_radii_dict.items():
             var_term = smlp.Var(var)
             if radii['rad-abs'] is not None:
                 rad = radii['rad-abs']; #print('rad', rad); 
@@ -1191,41 +1177,70 @@ class ModelTerms(SmlpTerms):
             else:
                 assert False
         return alpha_form
-
-    def compute_alpha_formula(self, alph_expr, model_inputs):
-        alph_form = self.compute_input_ranges_formula_alpha(model_inputs) 
+    
+    # alph_expr is alpha constraint specified in command line. If it is not None 
+    # it overrides alpha constraint defined in spec file through feild "alpha".
+    # Otherwise we get definition of alpha if it is specified in spec, and otherwise
+    # global alha is None and global alpha constraint formula is smlp.true
+    # This function computes alpha constraints originated from spec input variable 
+    # "bounds" escription using compute_input_ranges_formula_alpha and combines
+    # with global alpha constraint (retunrns the conjunction).
+    def compute_global_alpha_formula(self, alph_expr, model_inputs):
+        #alph_form = self.compute_input_ranges_formula_alpha(model_inputs) 
         #alph_form = smlp.true
         if alph_expr is None:
-            return alph_form
+            alpha_expr = self._specInst.get_spec_alpha_global_expr
+        if alph_expr is None:
+            return smlp.true
         else:
             alph_expr_vars = get_expression_variables(alph_expr)
             dont_care_vars = list_subtraction_set(alph_expr_vars, model_inputs)
             if len(dont_care_vars) > 0:
-                raise Exception('Variables ' + str(dont_care_vars) + ' in input constraints are not part of the model')
+                raise Exception('Variables ' + str(dont_care_vars) + 
+                    ' in input constraints (alpha) are not part of the model')
             alph_glob = self._smlpTermsInst.ast_expr_to_term(alph_expr)
-            return self._smlpTermsInst.smlp_and(alph_form, alph_glob)
+            return alph_glob #self._smlpTermsInst.smlp_and(alph_form, alph_glob)
     
-    def compute_beta_formula(self, beta_expr):
+    # The argument model_inps_outps is the union of model input and output varaiables.
+    # We want to make sure that the global beta constraint beta_expr contains only variables 
+    # in model_inps_outps, so that the (global) beta constraint on the model is well defined.
+    # Besides the above sanity check, this function simply converts beta constraint expression
+    # into smlp formula. Reminder: input variables that occur in globas alpha, beta and eta
+    # constrints are added to variables that shoud be kept as model inputs during model training,
+    # and are not dropped during data processing (see function SmlpData._prepare_data_for_modeling).
+    def compute_beta_formula(self, beta_expr, model_inps_outps):
         if beta_expr is None:
             return smlp.true
         else:
+            beta_expr_vars = get_expression_variables(beta_expr)
+            dont_care_vars = list_subtraction_set(beta_expr_vars, model_inps_outps)
+            if len(dont_care_vars) > 0:
+                raise Exception('Variables ' + str(dont_care_vars) + 
+                    ' in optimization constraints (beta) are not part of the model')
             return self._smlpTermsInst.ast_expr_to_term(beta_expr)
     
-    def compute_eta_formula(self, eta_expr):
+    def compute_eta_formula(self, eta_expr, model_inputs):
         if eta_expr is None:
             return smlp.true
         else:
+            # eta_expr can only contain knobs (control inputs), not free inputs or outputs (responses)
+            eta_expr_vars = get_expression_variables(eta_expr)
+            dont_care_vars = list_subtraction_set(eta_expr_vars, model_inputs)
+            if len(dont_care_vars) > 0:
+                raise Exception('Variables ' + str(dont_care_vars) + 
+                    ' in knob constraints (eta) are not part of the model')
             return self._smlpTermsInst.ast_expr_to_term(eta_expr)
         
-                
-    def create_model_exploration_base_components(self, algo, model, X, y, model_features_dict, feat_names, resp_names, 
+    # TODO !!! arguments  data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None are not used;
+    # they are taken forn previous implementations; need to check whether they are needed
+    def create_model_exploration_base_components(self, algo, model, model_features_dict, feat_names, resp_names, 
             objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr:str, beta_expr:str, eta_expr:str, incremental, data_scaler, scale_feat, scale_resp, scale_objv, 
+            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self._smlp_terms_logger.info('Creating model exploration base components: Start')
         
         self._smlp_terms_logger.info('Parsing the SPEC: Start')
-        print('spec from SmlpSpec', self._specInst.spec);
+        #print('spec from SmlpSpec', self._specInst.spec);
         if data_bounds_json_path is not None:
             with open(data_bounds_json_path, 'r') as f:
                 data_bounds = json.load(f, parse_float=Fraction)
@@ -1274,42 +1289,38 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Building model terms: End')
         
         # contraints on features used as control variables and on the responses
-        alpha = self.compute_alpha_formula(alph_expr, feat_names) 
-        beta = self.compute_beta_formula(beta_expr)
+        alph_ranges = self.compute_input_ranges_formula_alpha(feat_names) 
+        alph_global = self.compute_global_alpha_formula(alph_expr, feat_names)
+        alpha = self._smlpTermsInst.smlp_and(alph_ranges, alph_global)
+        #alpha = self.compute_global_alpha_formula(alph_expr, feat_names) 
+        beta = self.compute_beta_formula(beta_expr, feat_names+resp_names)
         eta_grids = self.compute_grid_range_formulae_eta()
-        #eta_guards = self._smlpTermsInst.smlp_and(eta_grids, eta_ranges); print('eta_guards', eta_guards)
-        eta_global = self.compute_eta_formula(eta_expr); print('eta_global', eta_global)
-        #eta = self._smlpTermsInst.smlp_and(eta_guards, eta_global); print('eta', eta)
-        eta = self._smlpTermsInst.smlp_and(eta_grids, eta_global); print('eta', eta)
+        eta_global = self.compute_eta_formula(eta_expr, feat_names); #print('eta_global', eta_global)
+        eta = self._smlpTermsInst.smlp_and(eta_grids, eta_global); #print('eta', eta)
         
+        self._smlp_terms_logger.info('Alpha global   constraints: ' + str(alph_global))
+        self._smlp_terms_logger.info('Alpha ranges   constraints: ' + str(alph_ranges))
+        self._smlp_terms_logger.info('Alpha combined constraints: ' + str(alpha))
+        self._smlp_terms_logger.info('Beta  global   constraints: ' + str(beta))
+        self._smlp_terms_logger.info('Eta   grid     constraints: ' + str(eta_grids))
+        self._smlp_terms_logger.info('Eta   global   constraints: ' + str(eta_global))
+        self._smlp_terms_logger.info('Eta   combined constraints: ' + str(eta))
         self._smlp_terms_logger.info('Creating model exploration base components: End')
         return domain, model_full_term_dict, eta, alpha, beta
     
-    def create_model_exploration_instance_from_smlp_components(self, domain, model_full_term_dict, 
-            alpha, beta, eta, incremental):
-        
+    # create base solver instance with model constraints, declare logic and (non/)incremental mode
+    def create_model_exploration_instance_from_smlp_components(self, domain, model_full_term_dict, incremental, logic):
         # create base solver -- it has model and other constraints that are common for all model
         # exloration modes in SMLP: querying, assertion verification, configuration optimization
-        base_solver = smlp.solver(incremental=incremental)
-        base_solver.declare(domain) #pp.dom
+        if logic is not None and logic != 'ALL':
+            base_solver = smlp.solver(incremental, logic)
+        else:
+            #base_solver = smlp.solver(incremental=incremental)
+            base_solver = smlp.solver(incremental, 'ALL')
+        base_solver.declare(domain)
         
-        # let solver know definition of responses
+        # let solver know definition of responses (the model's function)
         for resp_name, resp_term in model_full_term_dict.items():
             base_solver.add(smlp.Var(resp_name) == resp_term)
-        
         return base_solver
 
-    def create_model_exploration_base_instance(self, algo, model, X, y, model_features_dict, feat_names, resp_names, 
-            objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr:str, beta_expr:str, eta_expr:str, incremental, data_scaler, scale_feat, scale_resp, scale_objv, 
-            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
-        domain, model_full_term_dict, eta, alpha, beta = self.create_model_exploration_base_components(
-            algo, model, X, y, model_features_dict, feat_names, resp_names, 
-            objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr, beta_expr, eta_expr, incremental, data_scaler, scale_feat, scale_resp, scale_objv, 
-            float_approx, float_precision, data_bounds_json_path)
-        print('(1) eta', eta, 'alpha', alpha, 'beta', beta)
-        base_solver = self.create_model_exploration_instance_from_smlp_components(domain, model_full_term_dict, 
-            alpha, beta, eta, incremental)
-        print('(2) eta', eta, 'alpha', alpha, 'beta', beta)
-        return domain, model_full_term_dict, eta, alpha, beta, base_solver        

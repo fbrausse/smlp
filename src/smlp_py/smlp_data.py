@@ -547,8 +547,10 @@ class SmlpData:
             resp_bounds_dict = {col: { 'min': mm_scaler_resp.data_min_[i], 'max': mm_scaler_resp.data_max_[i] }
                 for i,col in enumerate(resp_names) } if mm_scaler_resp is not None else {}
             data_bounds_dict = feat_bounds_dict | resp_bounds_dict
-        print('data_bounds_dict', data_bounds_dict)
+
         if data_bounds_dict != {}:
+            self._data_logger.info('Saving data bounds into file:' + str(data_bounds_file))
+            self._data_logger.info(str(data_bounds_dict))
             self.data_bounds_dict = data_bounds_dict
             with open(data_bounds_file, 'w') as f:
                 json.dump(data_bounds_dict, f, indent='\t', cls=np_JSONEncoder)
@@ -701,14 +703,14 @@ class SmlpData:
             feat_names = [col for col in data.columns.tolist() if not col in resp_names]
         elif feat_names is None: # not is_training: infer features from feat_names_dict
             assert feat_names_dict is not None
-            print('feat_names_dict', feat_names_dict)
+            #print('feat_names_dict', feat_names_dict)
             feat_names = lists_union_order_preserving_without_duplicates(list(feat_names_dict.values()))
             
         if is_training:
             feat_names_dict = {}
             for rn in resp_names:
                 feat_names_dict[rn] = feat_names
-            print('feat_names_dict used for feat_names', feat_names_dict)
+            #print('feat_names_dict used for feat_names', feat_names_dict)
 
         # extract the required columns in data -- features and responses
         if is_training or new_labeled:
@@ -851,7 +853,7 @@ class SmlpData:
             scale_responses:bool, mm_scaler_feat=None, mm_scaler_resp=None, levels_dict=None, model_features_dict=None):
         data_version_str = 'training' if is_training else 'new'
         self._data_logger.info('Preparing ' + data_version_str + ' data for modeling: start')
-        print('_prepare_data_for_modeling: feat_names', feat_names, 'resp_names', resp_names)
+
         # sanity check that the function is called correctly (as intended)
         if is_training:
             assert levels_dict==None
@@ -927,7 +929,7 @@ class SmlpData:
             resp_names, keep_feat, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots, 
             scaler_type:str, scale_features:bool, scale_responses:bool, mrmr_features_n:int, pos_value, neg_value, 
             resp_to_bool, save_model:bool, use_model:bool):
-        print('process_data: feat_names', feat_names, 'resp_names', resp_names)
+
         #scale = not self._get_data_scaler(scaler_type) is None
         if data_file is not None:
             split_test = self._DEF_SPLIT_TEST if split_test is None else split_test
@@ -955,7 +957,7 @@ class SmlpData:
             levels_dict = self._load_model_levels(self.model_levels_dict_file)
             model_features_dict = self._load_model_features(self.model_features_dict_file)
             feat_names = lists_union_order_preserving_without_duplicates(list(model_features_dict.values()))
-            print('model_features_dict loaded', model_features_dict); print('feat_names loaded', feat_names)
+            #print('model_features_dict loaded', model_features_dict); print('feat_names loaded', feat_names)
             X, y, X_train, y_train, X_test, y_test =  None, None, None, None, None, None 
         
         if new_data_file is not None:

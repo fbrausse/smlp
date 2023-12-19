@@ -1,4 +1,4 @@
-
+#import textwrap
 import os, argparse, json
 from smlp_py.smlp_utils import str_to_bool
 
@@ -89,7 +89,8 @@ class SmlpConfig:
         #                    help='Type of model to train (NN, Poly, ... ')
         parser.add_argument('-mode', '--analytics_mode', type=str, default=None,
                         help='What kind of analysis should be performed '+
-                            'the supported modes are train and prediction ' +
+                            'the supported modes are: "train", "predict", "subgroups",  ' +
+                            '"doe", "discretize", "optimize", "verify", "query", "tune" ' +
                             '[default: train]')
         parser.add_argument('-plots', '--interactive_plots', type=str_to_bool, default=True,
                         help='Should plots be displayed interactively (or only saved)?'+
@@ -174,3 +175,4 @@ class SmlpConfig:
             self.model_rerun_config = model_args
         #print('args', args)
         return args
+    

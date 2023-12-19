@@ -11,7 +11,7 @@
 
 import os, sys, json
 import logging
-print(logging.__path__)
+#print(logging.__path__)
 from smlp_py.smlp_utils import str_to_bool
     
 # LOGGER sources:

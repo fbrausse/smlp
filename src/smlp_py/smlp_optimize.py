@@ -29,10 +29,9 @@ class SmlpOptimize:
         self._DEF_CENTER_OFFSET = '0'
         #self._DEF_BO_CEX = 'no'
         #self._DEF_BO_CAND = 'no'
-        self._DEF_OBJECTIVES_NAMES = None
         self._DEF_SCALE_OBJECTIVES = True
-        self._DEF_OBJECTIVES_EXPRS = None
         self._OPTIMIZE_PARETO = True
+        self._DEF_VACUITY_CHECK = True
         
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int  = 64
@@ -56,8 +55,6 @@ class SmlpOptimize:
         # domain constraints eta from 'dom' have to hold for x and y.
 
         self.opt_params_dict = {
-            #'spec': {'abbr':'spec', 'default':None, 'type':str,
-            #    'help':'Names of spe file, must be provided [default None]'}, 
             'epsilon': {'abbr':'epsilon', 'default':self._DEF_EPSILON, 'type':float, 
                 'help':'ratio of the length of an estimated range of an objective, '+ 
                         'computed per objective based on its estimated min and max bounds ' +
@@ -71,12 +68,6 @@ class SmlpOptimize:
             #'bo_cand': {'abbr':'bo_cand', 'default':self._DEF_BO_CAND, 'type':str, 
             #    'help':'use BO_CAD iterations of BO to find a candidate prior to falling back to Z3  ' +
             #            '[default: {}]'.format(str(self._DEF_BO_CAND))},
-            'objectives_names': {'abbr':'objv_names', 'default':str(self._DEF_OBJECTIVES_NAMES), 'type':str,
-                'help':'Names of optimization objectives [default {}]'.format(str(self._DEF_OBJECTIVES_NAMES))}, 
-            'objectives_expressions':{'abbr':'objv_exprs', 'default':self._DEF_OBJECTIVES_EXPRS, 'type':str,
-                'help':'Semicolon seperated list of expressions (functions) to be applied to the responses '
-                    'to convert them into optimization objectives ' +
-                    '[default: {}]'.format(str(self._DEF_OBJECTIVES_EXPRS))},
             'scale_objectives': {'abbr':'scale_objv', 'default': self._DEF_SCALE_OBJECTIVES, 'type':str_to_bool,
                 'help': 'Should optimization objectives be scaled using scaler specified through ' + 
                     'option "data_scaler"? [default: ' + str(self._DEF_SCALE_OBJECTIVES) + ']'},
@@ -89,6 +80,11 @@ class SmlpOptimize:
                     '[default: ' + str(self._DEF_APPROXIMATE_FRACTIONS) + ']'},
             'fraction_precision': {'abbr':'frac_prec', 'default':str(self._DEF_FRACTION_PRECISION), 'type':int,
                 'help':'Decimal precision when approximating fractions by reals [default {}]'.format(str(self._DEF_FRACTION_PRECISION))},
+            'vacuity_check': {'abbr':'vacuity', 'default': self._DEF_VACUITY_CHECK, 'type':str_to_bool,
+                'help': 'Should solver rpoblem instance vacuitr check be performed? ' + 
+                    'Vacuty checks whether the the constraints are consistent and therefore at least ' +
+                    'one satisfiable assignment exist to solver constraints. Relevant in "verify", "query", ' +
+                    '"optimize" and "tune" modes [default: ' + str(self._DEF_VACUITY_CHECK) + ']'}
         }
     
     def set_logger(self, logger):
@@ -118,23 +114,6 @@ class SmlpOptimize:
     def set_smlp_query_inst(self, smlp_query_inst):
         self._queryInst = smlp_query_inst
     
-    # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
-    # the reponses as objectives, and the names of objectives are names of the responses prefixed bu 'objv_'.
-    def get_objectives(self, arg_objv_names, arg_objv_exprs, resp_names, commandline_condition_separator):
-        if arg_objv_exprs is None:
-            objv_exprs = resp_names
-            objv_names = ['objv_' + resp_name for resp_name in resp_names]
-        else:
-            objv_exprs = arg_objv_exprs.split(commandline_condition_separator)
-            if arg_objv_names is not None:
-                objv_names = arg_objv_names.split(',')
-            else:
-                objv_names = ['objv_'+str(i) for i in enumerate(len(objv_exprs))];
-        assert objv_names is not None and objv_exprs is not None
-        assert len(objv_names) == len(objv_exprs); 
-        print('objv_names', objv_names); print('objv_exprs', objv_exprs)
-        return objv_names, objv_exprs
-
     @property
     def optimization_results_file(self):
         assert self.report_file_prefix is not None
@@ -156,11 +135,11 @@ class SmlpOptimize:
     # objv_bounds, data_scaler, objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict, 
     # also not using thresholds_dict -- covering a general case
     def optimize_single_objective(self, model_full_term_dict:dict, objv_name:str, objv_expr:str, objv_term:smlp.term2, 
-            epsilon:float, smlp_domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, beta:smlp.form2, delta:float, 
+            epsilon:float, smlp_domain:smlp.domain, eta:smlp.form2, theta_radii_dict:dict, alpha:smlp.form2, beta:smlp.form2, delta:float, solver_logic:str, 
             scale_objectives:bool, orig_objv_name:str, objv_bounds:dict, sat_approx=False, sat_precision=64, save_trace=False,
             l0=None, u0=None):
         self._opt_logger.info('Optimize single objective ' + str(objv_name) + ': Start')
-        #print('objv_name_expr_term', objv_name, objv_expr, objv_term)
+        
         #TODO !!!: we assume objectives were scaled to [0,1] and l0 and u0 are initialized to 0 and 1 respectively
         #assert scale_objectives 
         P = [] # known candidates and lower bounds
@@ -194,7 +173,7 @@ class SmlpOptimize:
             #print('quer_and_beta', quer_and_beta)
             quer_res = self._queryInst.query_condition(
                 model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain, # query_form
-                eta, alpha, delta, False, sat_approx, sat_precision); #print('quer_res', quer_res)  beta, 
+                eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision); #print('quer_res', quer_res)  beta, 
             stable_witness_status = quer_res['status']
             stable_witness_terms = quer_res['witness']
             if stable_witness_status == 'UNSAT':
@@ -258,12 +237,11 @@ class SmlpOptimize:
     # the objectives and finds a stable optimum for each one using function optimize_single_objective().
     def optimize_single_objectives(self, X:pd.DataFrame, y:pd.DataFrame, feat_names:list, resp_names:list, 
             model_full_term_dict:dict, objv_names:list, objv_exprs:list, alpha:smlp.form2, beta:smlp.form2, 
-            eta:smlp.form2, epsilon:float, smlp_domain:smlp.domain, delta:float, scale_objv:bool,  
+            eta:smlp.form2, theta_radii_dict:dict, epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, scale_objv:bool,  
             data_scaler:str, sat_approx=False, sat_precision=64, save_trace=False):
         assert X is not None
         assert y is not None
         assert epsilon > 0 and epsilon < 1
-        print('objv_names', objv_names, 'objv_exprs', objv_exprs)
         assert objv_names is not None and objv_exprs is not None
         assert len(objv_names) == len(objv_exprs)
         scale_objectives = scale_objv and data_scaler != 'none'
@@ -285,7 +263,7 @@ class SmlpOptimize:
                 objv_epsn = self._scalerTermsInst.unscale_constant_val(objv_bounds, objv_names[i], epsilon)
             #print('objv_epsn', objv_epsn)
             opt_conf[objv_names[i]] = self.optimize_single_objective(model_full_term_dict, objv_name, objv_expr, 
-                objv_term, objv_epsn, smlp_domain, eta, alpha, beta, delta, scale_objectives, objv_names[i], 
+                objv_term, objv_epsn, smlp_domain, eta, theta_radii_dict, alpha, beta, delta, solver_logic, scale_objectives, objv_names[i], 
                 objv_bounds, sat_approx=True, sat_precision=64, save_trace=False); #print('opt_conf', opt_conf)                                       
         with open(self.optimization_results_file, 'w') as f: #json.dump(asrt_res_dict, f)
             json.dump(opt_conf, f, indent='\t', cls=np_JSONEncoder)
@@ -299,8 +277,8 @@ class SmlpOptimize:
     # algorithm to determaine what is the best greatest lower bound that we can fins and fix for these objectives.
     # TODO !!!: do we need theta here???
     def unbound_objectives_max_min_bounds(self, model_full_term_dict:dict, objv_terms_dict:dict, t:list, 
-            smlp_domain:smlp.domain, alpha:smlp.form2, beta:smlp.form2, eta:smlp.form2, epsilon:float, 
-            delta:float, direction, scale_objectives, objv_bounds, sat_approx, sat_precision, save_trace):
+            smlp_domain:smlp.domain, alpha:smlp.form2, beta:smlp.form2, eta:smlp.form2, theta_radii_dict, epsilon:float, 
+            delta:float, solver_logic:str, direction, scale_objectives, objv_bounds, sat_approx, sat_precision, save_trace):
         assert direction == 'up'
         eta_F_t = eta
         min_objs = None
@@ -333,7 +311,7 @@ class SmlpOptimize:
         print('objv_bounds', objv_bounds)
         '''
         r = self.optimize_single_objective(model_full_term_dict, min_name, None, min_objs, 
-                epsilon, smlp_domain, eta_F_t, alpha, beta, delta, 
+                epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
                 scale_objectives, min_name, objv_bounds, sat_approx, sat_precision, save_trace, l0, u0)
 
         #print('r', r)
@@ -346,13 +324,12 @@ class SmlpOptimize:
     
     # pareto optimization
     def optimize_pareto_objectives(self, X:pd.DataFrame, y:pd.DataFrame, feat_names:list, resp_names:list, 
-            model_full_term_dict:dict, objv_names:list, objv_exprs:list, alpha:smlp.form2, beta:smlp.form2, eta:smlp.form2, 
-            epsilon:float, smlp_domain:smlp.domain, delta:float, scale_objv:bool, data_scaler:str, 
+            model_full_term_dict:dict, objv_names:list, objv_exprs:list, alpha:smlp.form2, beta:smlp.form2, eta:smlp.form2, theta_radii_dict:dict,
+            epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, scale_objv:bool, data_scaler:str, 
             sat_approx=False, sat_precision=64, save_trace=False):
         assert X is not None
         assert y is not None
         assert epsilon > 0 and epsilon < 1
-        print('objv_names', objv_names, 'objv_exprs', objv_exprs)
         assert objv_names is not None and objv_exprs is not None
         assert len(objv_names) == len(objv_exprs)
         scale_objectives = scale_objv and data_scaler != 'none'
@@ -389,7 +366,7 @@ class SmlpOptimize:
             #b_s = None # TODO !!!! compute b_s
             #c_lo, c_hi = self.approx_bounds(b_s, delta)
             c_lo, c_up = self.unbound_objectives_max_min_bounds(model_full_term_dict, objv_terms_dict, 
-                s, smlp_domain, alpha, beta, eta, epsilon, delta, direction,
+                s, smlp_domain, alpha, beta, eta, theta_radii_dict, epsilon, delta, solver_logic, direction,
                 scale_objectives, objv_bounds, sat_approx, sat_precision, save_trace)
             #print('c_lo', c_lo, 'c_up', c_up)
             assert c_lo != np.inf
@@ -415,7 +392,7 @@ class SmlpOptimize:
                     #print('objv_bounds_in_search', objv_bounds_in_search)
                     self._opt_logger.info('Checking whether to fix objective {} on threshold {}...\n'.format(str(j), str(s[j])))
                     t_lo, t_up = self.unbound_objectives_max_min_bounds(model_full_term_dict, objv_terms_dict, 
-                        t, smlp_domain, alpha, beta, eta, epsilon, delta, direction, 
+                        t, smlp_domain, alpha, beta, eta, theta_radii_dict, epsilon, delta, solver_logic, direction, 
                         scale_objectives, objv_bounds, sat_approx, sat_precision, save_trace)
                     assert t_lo != np.inf
                     #print('t_lo', t_lo); print('t_up', t_up); print('epsilon', epsilon); print('s', s, 's(j)', s[j])
@@ -465,40 +442,51 @@ class SmlpOptimize:
         return s
             
     # optimization of multiple objectives -- pareto optimization or optimization per objective
+    # TODO !!!: X and y are used to estimate bounds on objectives from training data, and the latter is not
+    #     available in model re-run mode. Need to estimate objectove bounds in a different way and pass to this
+    #     function (and to smlp_tune() instead of passing X,y; The bounds on objectives are nt strictly necessary,
+    #     any approximation may be used, but accurate approximation might reduce iterations count needed for
+    #     computing optimal confoguurations (in optimize and tune modes)
     def smlp_optimize(self, algo, model, X, y, model_features_dict, feat_names, resp_names, 
             objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
+            alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
-        domain, model_full_term_dict, eta, alpha, beta, base_solver = self._modelTermsInst.create_model_exploration_base_instance(
-            algo, model, X, y, model_features_dict, feat_names, resp_names, 
-            objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr, beta_expr, eta_expr, True, data_scaler, scale_feat, scale_resp, scale_objv, 
+        domain, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+            algo, model, model_features_dict, feat_names, resp_names, 
+            objv_names, objv_exprs, None, None, None, None, delta, epsilon, 
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
-        print('eta, alpha, beta', eta, alpha, beta)
-        
+
+        # instance consistency check (are the assumptions contradictory?)
+        if vacuity:
+            quer_res = self._queryInst.query_condition(model_full_term_dict, 'consistency_check', 'True', beta, 
+                domain, eta, alpha, theta_radii_dict, delta, solver_logic, False, float_approx, float_precision) 
+            if quer_res['status'] == 'UNSAT':
+                self._opt_logger.info('Model configuration optimization instance is inconsistent; aborting...')
+                return
+            
         if pareto:
             self.optimize_pareto_objectives(X, y, feat_names, resp_names, model_full_term_dict,
-                objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler,
+                objv_names, objv_exprs, alpha, beta, eta, theta_radii_dict, epsilon, domain, delta, solver_logic, scale_objv, data_scaler,
                 sat_approx=True, sat_precision=64, save_trace=False)
         else:
             self.optimize_single_objectives(X, y, feat_names, resp_names, model_full_term_dict,
-                objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler, 
+                objv_names, objv_exprs, alpha, beta, eta, theta_radii_dict, epsilon, domain, delta, solver_logic, scale_objv, data_scaler, 
                 sat_approx=True, sat_precision=64, save_trace=False)
 
-    # smlp tune mode that performs multi-objective optimization (pareto or per-objective) and insures
+    # smlp tune mode that performs multi-objective optimization (pareto or per-objective) and einsures
     # that with the selected configuration of knobs all assertions are also satisfied (in addition to
     # any other model interface constraints or configuration stability constraints)
     def smlp_tune(self, algo, model, X, y, model_features_dict, feat_names, resp_names, 
             objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
+            alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
-        domain, model_full_term_dict, eta, alpha, beta, base_solver = self._modelTermsInst.create_model_exploration_base_instance(
-            algo, model, X, y, model_features_dict, feat_names, resp_names, 
-            objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr, beta_expr, eta_expr, True, data_scaler, scale_feat, scale_resp, scale_objv, 
+        domain, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+            algo, model, model_features_dict, feat_names, resp_names, 
+            objv_names, objv_exprs, asrt_names, asrt_exprs, None, None, delta, epsilon, 
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
-        print('eta, alpha, beta', eta, alpha, beta)
-        
+
         if asrt_exprs is not None:
             assert asrt_names is not None
             asrt_forms_dict = dict([(asrt_name, self._smlpTermsInst.ast_expr_to_term(asrt_expr)) \
@@ -506,14 +494,21 @@ class SmlpOptimize:
             asrt_conj = self._smlpTermsInst.smlp_and_multi(list(asrt_forms_dict.values()))
         else:
             asrt_conj = smlp.true
-        
         beta = self._smlpTermsInst.smlp_and(beta, asrt_conj) if beta != smlp.true else asrt_conj
-                                                           
+        
+        # instance consistency check (are the assumptions contradictory?)
+        if vacuity:
+            quer_res = self._queryInst.query_condition(model_full_term_dict, 'consistency_check', 'True', beta, 
+                domain, eta, alpha, theta_radii_dict, delta, solver_logic, False, float_approx, float_precision) 
+            if quer_res['status'] == 'UNSAT':
+                self._opt_logger.info('Model querying instance is inconsistent; aborting...')
+                return
+                                                               
         if pareto:
             self.optimize_pareto_objectives(X, y, feat_names, resp_names, model_full_term_dict,
-                objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler,
+                objv_names, objv_exprs, alpha, beta, eta, theta_radii_dict, epsilon, domain, delta, solver_logic, scale_objv, data_scaler,
                 sat_approx=True, sat_precision=64, save_trace=False)
         else:
             self.optimize_single_objectives(X, y, feat_names, resp_names, model_full_term_dict,
-                objv_names, objv_exprs, alpha, beta, eta, epsilon, domain, delta, scale_objv, data_scaler, 
+                objv_names, objv_exprs, alpha, beta, eta, theta_radii_dict, epsilon, domain, delta, solver_logic, scale_objv, data_scaler, 
                 sat_approx=True, sat_precision=64, save_trace=False)
