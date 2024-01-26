@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+	<head>
+		<title>Data sets for Selecting Stable Safe Configurations for Systems
+Modelled by Neural Networks with ReLU
+Activation</title>
+	</head>
+	<body>
+		<p>
+			These data sets are released
+			as part of the submission 69,
+			<b>Selecting Stable Safe Configurations for Systems
+Modelled by Neural Networks with ReLU
+Activation</b>,
+			to <a href="https://fmcad.forsyte.at/FMCAD20/">FMCAD 2020</a>
+			by Franz Brau&#223;e, Zurab Khasidashvili and Konstantin Korovin
+			in 2020.
+		</p>
+		<p>
+			The features <tt>CH</tt> and <tt>Byte</tt> are of categorical
+			nature and contain values <tt>0 1</tt> and
+			<tt>0 1 2 3 4 5 6 7</tt>, respectively.
+			<tt>Timing</tt> is an integer feature.
+			All remaining features have been normalized to <tt>[0,1]</tt>.
+			These data sets each describe a device with parameters
+			<tt>i0</tt> to <tt>in</tt> and output <tt>o0</tt>.
+		</p>
+		<table>
+			<tr>
+				<th>Set</th>
+				<th>RX</th>
+				<th>TX</th>
+			</tr>
+			<tr>
+				<td>mu</td>
+				<td><a href="mu_rx.csv.bz2">mu_rx.csv.bz2</a></td>
+				<td><a href="mu_tx.csv.bz2">mu_tx.csv.bz2</a></td>
+			</tr>
+			<tr>
+				<td>h1</td>
+				<td><a href="h1_rx.csv.bz2">h1_rx.csv.bz2</a></td>
+				<td><a href="h1_tx.csv.bz2">h1_tx.csv.bz2</a></td>
+			</tr>
+			<tr>
+				<td>h1_iter</td>
+				<td><a href="h1_iter_rx.csv.bz2">h1_iter_rx.csv.bz2</a></td>
+				<td><a href="h1_iter_tx.csv.bz2">h1_iter_tx.csv.bz2</a></td>
+			</tr>
+			<tr>
+				<td>m2</td>
+				<td><a href="m2_rx.csv.bz2">m2_rx.csv.bz2</a></td>
+				<td><a href="m2_tx.csv.bz2">m2_tx.csv.bz2</a></td>
+			</tr>
+			<tr>
+				<td>s2</td>
+				<td><a href="s2_rx.csv.bz2">s2_rx.csv.bz2</a></td>
+				<td><a href="s2_tx.csv.bz2">s2_tx.csv.bz2</a></td>
+			</tr>
+		</table>
+	</body>
+
+<br>
+
+Example of a quantified SMT encoding: <a href="rx-rank0-ch0-byte-7.smt2">rx-rank0-ch0-byte-7.smt2</a> 
+
+<br>
+Such quantified formulas can not be solved by top SMT solvers (Z3, CVC4).
+<br>
+Note that our approach  avoids this and uses only quantifier-free calls to SMT solvers. 
+</html>
