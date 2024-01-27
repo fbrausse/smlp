@@ -14,6 +14,10 @@ where R only has to be bounded in the existentially quantified variables.
 See doc/doc.pdf for details on the exact problem statement as well as
 technical documentation. Below, we give a quick usage guide.
 
+Datasets for the FMCAD'20 submission can be found on its website:
+
+	<https://fbrausse.github.io/smlp/>
+
 
 Prepare SMLP
 ~~~~~~~~~~~~
