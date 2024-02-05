@@ -56,7 +56,7 @@ class SmlpModels:
                     'identifying the run, model_algo is the training algo name and model_format ' +
                     'is .h5 for nn_keras and .pkl for models trained using sklearn and keras packages.'},
             'save_model_rerun_configuration': {'abbr':'save_model_config', 
-                                               'default': self._DEF_SAVE_MODEL_CONFIG, 'type':str_to_bool,
+                    'default': self._DEF_SAVE_MODEL_CONFIG, 'type':str_to_bool,
                 'help': 'Should a config file enabling to re-run a saved model be written out? ' +
                     '[default: ' + str(self._DEF_SAVE_MODEL_CONFIG) + ']'},
             'model_per_response': {'abbr':'model_per_response', 'type':str_to_bool,
@@ -142,7 +142,8 @@ class SmlpModels:
     # load model configuration file enabling to re-run a saved model with the same  
     # configurationfor which it was generated
     def _load_model_rerun_config(self):
-        print('self.model_rerum_config_file', self.model_rerum_config_file)
+        self._model_logger.info('Seving model rerun configuration in file ' + \
+            str(self.model_rerum_config_file))
         if os. path. exists(self.model_rerum_config_file):
             with open(self.model_rerum_config_file, 'r') as f:
                 return json.load(f)
@@ -266,10 +267,10 @@ class SmlpModels:
             legend = 'Prediction on ' + data_version + ' data -- '
             self._model_logger.info("{1} msqe: {0:.3f}".format(mean_squared_error(orig_resp_df, orig_pred_df), legend))
             self._model_logger.info("{1} r2_score: {0:.3f}".format(r2_score(orig_resp_df, orig_pred_df), legend))
-    
+            
             evaluate_prediction(algo, orig_resp_df, orig_pred_df, data_version, interactive_plots,
                                 out_prefix=self.report_file_prefix, log_scale=False)
-
+        
         assert isinstance(orig_pred_df, pd.DataFrame)
         assert isinstance(orig_resp_df, pd.DataFrame) or resp_df is None
 
@@ -289,13 +290,12 @@ class SmlpModels:
         else:
             raise Exception('Unsupprted model training algo ' + str(algo))
         return hparams_dict
-
-
+    
     # training model for all supported algorithms from verious python packages
     def model_train(self, feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
             hparams_dict :dict, plots : bool, seed : int, sample_weights_coef : float, model_per_response:bool):
         self._model_logger.info('Model training: start')
-        print('feat_names_dict', feat_names_dict, 'resp_names', resp_names)
+        #print('feat_names_dict', feat_names_dict, 'resp_names', resp_names)
         model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
             
         if algo == 'nn_keras':
@@ -350,7 +350,7 @@ class SmlpModels:
         elif model_lib == 'caret' or model_per_response:
             # we have multiple models (if there are multiple responses) -- one per response
             # iterate over all responses and merge all predicitions into one return value y_pred
-            y_pred = pd.DataFrame(index=np.arange(y.shape[0]), columns=np.arange(0))
+            y_pred = pd.DataFrame(index=np.arange(X.shape[0]), columns=np.arange(0))
             for rn in model.keys():
                 #print('model_dict', model); print('model', model[rn])
                 if model_lib == 'caret':
@@ -361,8 +361,8 @@ class SmlpModels:
                         #rn_model, rn_poly_reg = model[rn] #, rn_X_train, rn_X_test
                         #y_pred[rn] = rn_model.predict(rn_poly_reg.transform(X))
                     else:
-                        print('model', model); print(' model[rn]',  model[rn])
-                        print('model[rn].predict(X)', model[rn].predict(X))
+                        #print('model', model); print(' model[rn]',  model[rn])
+                        #print('model[rn].predict(X)', model[rn].predict(X))
                         y_pred[rn] = model[rn].predict(X)
                 else:
                     assert False
@@ -379,15 +379,15 @@ class SmlpModels:
     
     # training, validation, testing of models and prediction on training, test, entire labeled data
     # as well as new data, if available. Reporting model prediction results as well as accuracy scores.
-    def build_models(self, algo : str, X, y, X_train, y_train, X_test, y_test, X_new, y_new, 
-            resp_names : list, mm_scaler_feat, mm_scaler_resp, levels_dict:dict, feat_names_dict:dict, 
-            hparams_dict : dict, plots : bool, seed : int, sample_weights_coef : float, save_model : bool, 
-            use_model : bool, model_per_response:bool, model_rerun_config:dict):
+    def build_models(self, algo:str, X, y, X_train, y_train, X_test, y_test, X_new, y_new, 
+            resp_names:list, mm_scaler_feat, mm_scaler_resp, levels_dict:dict, feat_names_dict:dict, 
+            hparams_dict:dict, plots:bool, seed:int, sample_weights_coef:float, save_model:bool, 
+            use_model:bool, model_per_response:bool, model_rerun_config:dict):
         if not y_train is None:
             assert resp_names == y_train.columns.tolist()
         if not y_test is None:
             assert resp_names == y_test.columns.tolist()
-
+        
         model_lib = algo.rsplit('_', 1)[1]
         if use_model:
             self._model_logger.info('LOAD TRAINED MODEL')
@@ -423,7 +423,8 @@ class SmlpModels:
             if save_model:
                 self._save_model_rerun_config(model_rerun_config)
                 if model_lib == 'sklearn':
-                    print('model', model, type(model))
+                    self._model_logger.info('Seving model in file ' + \
+                        str(self.model_filename(algo, '.pkl')))
                     pickle.dump(model, open(self.model_filename(algo, '.pkl'), 'wb'))
                 elif model_lib == 'caret':
                     # when saving a model, save_model() adds '.pkl' suffic to the filename supplied to it;
@@ -472,13 +473,14 @@ class SmlpModels:
             if not run_on_orig_X:
                 X = np.concatenate((X_train, X_test)); 
                 y = pd.concat([y_train, y_test])
-
+            #print('(4)'); print('y\n', y)
             y_pred = self._model_predict(model, X, y, resp_names, algo, model_per_response)
             self._report_prediction_results(algo, resp_names, y, y_pred, mm_scaler_resp,
                 plots, 'labeled')
 
         if X_new is not None:
             self._model_logger.info('PREDICT ON NEW DATA')
+            #print('(5)'); print('y_new\n', y_new)
             y_new_pred = self._model_predict(model, X_new, y_new, resp_names, algo, model_per_response)
             #print('y_new\n', y_new, '\ny_new_pred\n', y_new_pred)
             self._report_prediction_results(algo, resp_names, y_new, y_new_pred, mm_scaler_resp, 

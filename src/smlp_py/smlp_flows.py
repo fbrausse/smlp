@@ -3,7 +3,7 @@ from smlp_py.smlp_logs import SmlpLogger
 from smlp_py.smlp_utils import str_to_bool, np_JSONEncoder, model_features_sanity_check
 from smlp_py.smlp_models import SmlpModels
 from smlp_py.smlp_data import SmlpData
-#from smlp_py.smlp_subgroups import SubgroupDiscovery
+from smlp_py.smlp_subgroups import SubgroupDiscovery
 from smlp_py.smlp_config import SmlpConfig
 from smlp_py.smlp_doe import SmlpDoepy
 from smlp_py.smlp_discretize import SmlpDiscretize
@@ -22,7 +22,7 @@ class SmlpFlows:
         # data and model class instances
         self.dataInst = SmlpData()
         self.modelInst = SmlpModels()
-        #self.psgInst = SubgroupDiscovery()
+        self.psgInst = SubgroupDiscovery()
         self.loggerInst = SmlpLogger() 
         self.configInst = SmlpConfig()
         self.doeInst = SmlpDoepy();
@@ -45,20 +45,23 @@ class SmlpFlows:
                     self.loggerInst.logger_params_dict | \
                     self.doeInst.doepy_params_dict | \
                     self.discrInst.discr_params_dict | \
+                    self.psgInst.get_subgroup_hparam_default_dict() |\
                     self.specInst.spec_params_dict | \
+                    self.queryInst.query_params_dict | \
+                    self.verifyInst.asrt_params_dict | \
                     self.optInst.opt_params_dict | \
                     self.solverInst.solver_params_dict #| \
-                    #self.psgInst.get_subgroup_hparam_default_dict()
                     
+            
         self.args = self.configInst.args_dict_parse(argv, args_dict)
         self.log_file = self.configInst.report_file_prefix + '.txt'
 
         # set loggers
-        self.logger = self.loggerInst.create_logger('smlp_logger', self.log_file, self.args.log_level, 
-            self.args.log_mode, self.args.log_time)
+        self.logger = self.loggerInst.create_logger('smlp_logger', self.log_file, 
+            self.args.log_level, self.args.log_mode, self.args.log_time)
         self.dataInst.set_logger(self.logger)
         self.modelInst.set_logger(self.logger)
-        #self.psgInst.set_logger(self.logger)
+        self.psgInst.set_logger(self.logger)
         self.doeInst.set_logger(self.logger)
         self.discrInst.set_logger(self.logger)
         self.specInst.set_logger(self.logger)
@@ -67,7 +70,7 @@ class SmlpFlows:
         self.queryInst.set_logger(self.logger)
         
         # set report and model files / file prefixes
-        #self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
+        self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_model_file_prefix(self.configInst.model_file_prefix)
         self.modelInst.set_report_file_prefix(self.configInst.report_file_prefix)
@@ -82,11 +85,17 @@ class SmlpFlows:
         # set spec file / spec
         self.modelTernaInst.set_spec_file(self.args.spec)
         self.dataInst.set_spec_inst(self.specInst)
+        self.specInst.set_radii(self.args.radius_absolute, self.args.radius_relative)
         
         # set external solver to SMLP
         self.solverInst.set_solver_path(self.args.solver_path)
         
-        
+        # ML model exploration modes. They require a spec file for model exploration.
+        self.model_prediction_modes = ['train', 'predict']
+        self.model_exploration_modes = ['optimize', 'synthesize', 'verify', 'query', 'optsyn', 'certify']
+        self.supervised_modes = ['subgroups', 'discretize'] + self.model_prediction_modes + \
+            self.model_exploration_modes
+    
     # TODO !!!: is this the right place to define data_fname and new_data_fname and error_file ???
     @property
     def data_fname(self):
@@ -116,20 +125,29 @@ class SmlpFlows:
         self.logger.info('Executing run_smlp.py script: Start')
         args = self.args
         # extract response and feature names
-        if args.analytics_mode in ['train', 'predict', 'subgroups', 'discretize', 
-                                   'optimize', 'verify', 'query', 'tune']: # SUPERVISED
+        if args.analytics_mode in self.supervised_modes:
             if args.response is None:
-                raise Exception('Response names should be provided')
-            resp_names = args.response.split(',')
-            feat_names = args.features.split(',') if not args.features is None else None
-
+                if args.analytics_mode in self.model_exploration_modes:
+                    resp_names = self.specInst.get_spec_responses
+                else:
+                    raise Exception('Response names should be provided')
+            else:
+                resp_names = args.response.split(',')
+            if args.features is None:
+                if args.analytics_mode in self.model_exploration_modes:
+                    feat_names = self.specInst.get_spec_features
+                else:
+                    feat_names = None
+            else:
+                feat_names = args.features.split(',')
+        
         # doepy usage https://doepy.readthedocs.io/en/latest/
         if args.analytics_mode == 'doe':
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             doe_out_df = self.doeInst.sample_doepy(args.doe_algo, args.doe_spec_file, args.doe_num_samples, 
                 self.configInst.report_file_prefix, args.doe_prob_distribution, args.doe_design_resolution, 
                 args.doe_central_composite_center, args.doe_central_composite_face, 
-                args.doe_central_composite_alpha, args.doe_box_behnken_centers); print('doe_out_df\n', doe_out_df); 
+                args.doe_central_composite_alpha, args.doe_box_behnken_centers); #print('doe_out_df\n', doe_out_df); 
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
@@ -144,7 +162,7 @@ class SmlpFlows:
                 result_type=args.discretization_type)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
-        '''
+        
         if args.analytics_mode == 'subgroups':
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             #from smlp.subgroups import SubgroupDiscovery
@@ -162,8 +180,8 @@ class SmlpFlows:
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
-        '''
-        if args.analytics_mode in ['optimize', 'verify', 'query', 'tune']:
+        
+        if args.analytics_mode in self.model_exploration_modes:
             # We want to set to SmlpSpec object self.specInst expressions of assertions, queries, optimization 
             # objectives, in order to compute variables input feature names that way depend on. This is to
             # ensure that these variables are used in building models analyses in the above model exploration
@@ -174,15 +192,22 @@ class SmlpFlows:
             # is not a real overhead and we prefer to keep code readable and computate all these expressions.
             # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
             # the responses as objectives, and the names of objectives are names of the responses prefixed bu 'objv_'.
-            alpha_global_expr, beta_expr, theta_radii_dict, asrt_names, asrt_exprs, quer_names, quer_exprs, objv_names, objv_exprs = \
-            self.specInst.get_spec_component_exprs(
+            alpha_global_expr, beta_expr, theta_radii_dict, asrt_names, asrt_exprs, quer_names, quer_exprs, \
+                objv_names, objv_exprs, syst_expr_dict = self.specInst.get_spec_component_exprs(
                 args.alpha, args.beta, args.assertions_names, args.assertions_expressions, 
                 args.query_names, args.query_expressions, args.objectives_names, args.objectives_expressions,
                 resp_names, self.dataInst.commandline_condition_separator)
+
+            # make sure response names and objectives' names are different
+            if args.analytics_mode in ['optimize', 'optsyn']:
+                assert resp_names is not None
+                for resp_name in resp_names:
+                    if resp_name in objv_names:
+                        raise Exception('Response (output) names must be different from names of objectives')
             self.dataInst.set_spec_inst(self.specInst)
             
         # prepare data for model training
-        if args.analytics_mode in ['train', 'predict', 'optimize', 'verify', 'query', 'tune']:
+        if args.analytics_mode in self.model_prediction_modes + self.model_exploration_modes:
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             self.logger.info('PREPARE DATA FOR MODELING')    
             X, y, X_train, y_train, X_test, y_test, X_new, y_new, mm_scaler_feat, mm_scaler_resp, \
@@ -208,7 +233,7 @@ class SmlpFlows:
             # the same; this is mostly important for model exploration modes 
             model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
             
-            if args.analytics_mode in ['train', 'predict']:
+            if args.analytics_mode in self.model_prediction_modes:
                 self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
                 self.logger.info('Executing run_smlp.py script: End')
                 return model
@@ -217,34 +242,89 @@ class SmlpFlows:
         # the same; this is mostly important for model exploration modes 
         model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
         
-        if args.analytics_mode in ['optimize', 'verify', 'query', 'tune']:
+        if args.analytics_mode in self.model_exploration_modes:
             # TODO !!!: check X and y are processed, and that X = concat(X_train, X_test) and y = concat(y_train, y_test)
             if args.analytics_mode == 'verify':
-                self.verifyInst.smlp_verify(args.model, model, #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
-                    model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, alpha_global_expr, args.solver_logic, args.vacuity_check,
-                    args.data_scaler, args.scale_features, args.scale_responses, args.approximate_fractions, args.fraction_precision,
+                self.specInst.sanity_check_verification_spec()
+                self.verifyInst.smlp_verify(args.model, model, 
+                    #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
+                    model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, alpha_global_expr, 
+                    args.solver_logic, args.vacuity_check,
+                    args.data_scaler, args.scale_features, args.scale_responses, 
+                    args.approximate_fractions, args.fraction_precision,
+                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+            elif args.analytics_mode == 'certify':
+                self.queryInst.smlp_certify(args.model, model, 
+                    #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
+                    model_features_dict, feat_names, resp_names, quer_names, quer_exprs, args.witness_file,
+                    args.delta, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    args.solver_logic, args.vacuity_check, 
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
+                    args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'query':
-                self.queryInst.smlp_query(args.model, model, #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
+                self.queryInst.smlp_query(args.model, model, 
+                    #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, quer_names, quer_exprs, 
-                    args.delta, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, args.solver_logic, args.vacuity_check, args.data_scaler, 
-                    args.scale_features, args.scale_responses, args.scale_objectives, args.approximate_fractions, args.fraction_precision,
+                    args.delta, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    args.solver_logic, args.vacuity_check, 
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
+                    args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+            elif args.analytics_mode == 'synthesize':
+                print('eta_expr', args.eta); print('alpha_global_expr', alpha_global_expr); print('beta_expr', beta_expr)
+                self.optInst.smlp_synthesize(args.model, model,
+                    #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
+                    model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, #objv_names, objv_exprs, args.optimize_pareto, 
+                    #quer_names, quer_exprs, 
+                    syst_expr_dict, args.delta, #args.epsilon, 
+                    alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    args.solver_logic, args.vacuity_check, 
+                    args.data_scaler, args.scale_features, args.scale_responses, #args.scale_objectives, 
+                    args.sat_thresholds, args.approximate_fractions, args.fraction_precision,
+                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                '''
+                algo:str, model:dict, #X:pd.DataFrame, y:pd.DataFrame, 
+                model_features_dict:dict, 
+                feat_names:list[str], resp_names:list[str], 
+                #objv_names:list[str], objv_exprs, pareto:bool, #asrt_names:list[str], asrt_exprs, 
+                #quer_names:list[str], quer_exprs, 
+                syst_expr_dict:dict, delta:float, #epsilon:float, 
+                alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
+                data_scaler:str, scale_feat:bool, scale_resp:bool, #scale_objv:bool, 
+                sat_thresholds:bool,
+                float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None)
+            
+                smlp_synthesize(self, algo:str, model:dict, #X:pd.DataFrame, y:pd.DataFrame, 
+                model_features_dict:dict, 
+                feat_names:list[str], resp_names:list[str], 
+                #objv_names:list[str], objv_exprs, pareto:bool, #asrt_names:list[str], asrt_exprs, 
+                #quer_names:list[str], quer_exprs, 
+                syst_expr_dict:dict, delta:float, #epsilon:float, 
+                alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
+                data_scaler:str, scale_feat:bool, scale_resp:bool, #scale_objv:bool, 
+                sat_thresholds:bool,
+                float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None)
+                '''
             elif args.analytics_mode == 'optimize':
                 self.optInst.smlp_optimize(args.model, model,
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
-                    model_features_dict, 
-                    feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, 
-                    args.delta, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, args.solver_logic, args.vacuity_check, args.data_scaler, 
-                    args.scale_features, args.scale_responses, args.scale_objectives, args.approximate_fractions, args.fraction_precision,
+                    model_features_dict, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
+                    quer_names, quer_exprs, syst_expr_dict,
+                    args.delta, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    args.solver_logic, args.vacuity_check, 
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
+                    args.sat_thresholds, args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
-            elif args.analytics_mode == 'tune':
-                self.optInst.smlp_tune(args.model, model,
+            elif args.analytics_mode == 'optsyn':
+                self.optInst.smlp_optsyn(args.model, model, 
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
-                    model_features_dict, 
-                    feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, 
-                    args.delta, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, args.solver_logic, args.vacuity_check, args.data_scaler, 
-                    args.scale_features, args.scale_responses, args.scale_objectives, args.approximate_fractions, args.fraction_precision,
+                    model_features_dict, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
+                    asrt_names, asrt_exprs, quer_names, quer_exprs, syst_expr_dict,
+                    args.delta, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    args.solver_logic, args.vacuity_check, 
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
+                    args.sat_thresholds, args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')

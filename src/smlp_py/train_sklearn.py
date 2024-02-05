@@ -51,7 +51,7 @@ class ModelSklearn:
         self._DEF_WARM_START = False
         self._DEF_MAX_SAMPLES = None
         # et
-        self._DEF_SPLITTER_ET = 'random'
+        #self._DEF_SPLITTER_ET = 'random'
         self._DEF_MAX_FEATURS_ET = 1.0
         # linear / polynomial rgeression
         self._DEF_POLY_DEGREE = 2
@@ -178,10 +178,6 @@ class ModelSklearn:
 
         # parameters that are unique to et or usage is slightly different from dt, rf
         self._et_hyperparam_dict = {
-            'splitter': {'abbr':'splitter', 'default': self._DEF_SPLITTER_ET, 'type':str,
-                'help': 'The strategy used to choose the split at each node. Supported strategies are ' +
-                        '“best” to choose the best split and “random” to choose the best random split ' + 
-                        '[default: ' + str(self._DEF_SPLITTER_ET) + ']'},
             'max_features': {'abbr':'max_features', 'default': self._DEF_MAX_FEATURS_ET, 'type':str, # can be int, float or constant string
                 'help': 'The number of features to consider when looking for the best split: ' +
                         'If int, then consider max_features features at each split. ' +
@@ -242,16 +238,32 @@ class ModelSklearn:
     def _algo_name_local2global(self, algo):
         return algo+'_sklearn'
     
-    # local name of hyper parameter (as in sklearn package) to global name;
+    # Convert local name of hyper parameter (as in sklearn package) to global name;
     # the global name is obtained from local name, say 'max_depth', by prefixing it
     # with the global name of the algorithm, which results in 'dt_sklearn_max_depth'
     def _hparam_name_local_to_global(self, hparam, algo):
         #print('hparam global name', hparam, algo)
         return self._algo_name_local2global(algo) + '_' + hparam
-        
+    
+    # Inverse to function _hparam_name_local_to_global:
+    # Convert global name of hyper parameter to local name; the latter is the name used
+    # in sklearn package, while the global name is local name prefixed by algo+'_sklearn_'.
+    def _hparam_name_global_to_local(self, algo, hparam):
+        #print('algo', algo, 'hparam', hparam, 'prefix', self._algo_name_local2global(algo))
+        if not hparam.startswith(self._algo_name_local2global(algo)):
+            return None
+        return hparam.removeprefix(self._algo_name_local2global(algo)+'_')
+    
+    # Convert hparam_dict which maps global names of parameters to their values (in current run)
+    # into a parameter dictionary where the keys of hparam_dict are replaced by the respective  
+    # parameter local names.
+    def _hparam_dict_global_to_local(self, algo, hparam_dict):
+         return dict([(self._hparam_name_global_to_local(algo, k), v) 
+            for (k,v) in hparam_dict.items() if self._hparam_name_global_to_local(algo, k) is not None])
+    
     # given training algo name like dt and the hyper parameter dictionary param_dict  
     # for that algo in the python package used in this class), this function returns  
-    # a modified dictionary obtained from param_dict by by adding algo name like 
+    # a modified dictionary obtained from param_dict by adding algo name like 
     # dt_sklearn (where sklearn is the name of the package used) to the parameter name 
     # and its correponding abbriviated name in param_dict).
     def _param_dict_with_algo_name(self, param_dict, algo):
@@ -273,9 +285,9 @@ class ModelSklearn:
         sklearn_hparam_dict = poly_sklearn_hyperparam_dict | dt_sklearn_hyperparam_dict | \
             rf_sklearn_hyperparam_dict | et_sklearn_hyperparam_dict
         return sklearn_hparam_dict
-
+        
     # train decision tree regression model with sklearn
-    def dt_regr_train(self, feature_names, resp_names, algo,
+    def dt_regr_train(self, feature_names, resp_names, algo, hparam_dict,
             X_train, X_test, y_train, y_test, seed, weights):
         # Fit the regressor, set max_depth = 3
         '''
@@ -288,7 +300,9 @@ class ModelSklearn:
                 break
         print('is_classification', is_classification); assert False
         '''
-        regr = DecisionTreeRegressor(max_depth=15, random_state=seed)
+        hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
+        hparam_dict_local['random_state'] = seed
+        regr = DecisionTreeRegressor(**hparam_dict_local)
         model = regr.fit(X_train, y_train, sample_weight=weights)
         assert(regr == model)
 
@@ -307,20 +321,24 @@ class ModelSklearn:
         return model
 
     # train random forest regression model with sklearn
-    def rf_regr_train(self, feature_names, resp_names, algo,
+    def rf_regr_train(self, feature_names, resp_names, algo, hparam_dict,
             X_train, X_test, y_train, y_test, seed, weights):
         # Fit the regressor, set max_depth = 3
-        model = ensemble.RandomForestRegressor(max_depth=15, random_state=seed)
+        hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
+        hparam_dict_local['random_state'] = seed
+        model = ensemble.RandomForestRegressor(**hparam_dict_local)
         model = model.fit(X_train, y_train, sample_weight=weights)
         #assert regr == model
-
+        
         return model
 
     # train extra trees regression model with sklearn
-    def et_regr_train(self, feature_names, resp_names, algo,
+    def et_regr_train(self, feature_names, resp_names, algo, hparam_dict,
             X_train, X_test, y_train, y_test, seed, weights):
         # Fit the regressor, set max_depth = 3
-        model = ensemble.ExtraTreesRegressor(max_depth=15, random_state=seed)
+        hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
+        hparam_dict_local['random_state'] = seed
+        model = ensemble.ExtraTreesRegressor(**hparam_dict_local)
         model = model.fit(X_train, y_train, sample_weight=weights)
         #assert regr == model
         #assert regr.estimators_[0].tree_.value.shape[1] == 1 # no support for multi-output
@@ -340,21 +358,17 @@ class ModelSklearn:
                   'z_max', (df[col].max() - df[col].mean())/df[col].std())  
 
     # train polynomial regression model with sklearn
-    def poly_train(self, input_names, resp_names, degree,
-            X_train, X_test, y_train, y_test, seed, weights):
-        #print('poly_degree', degree); print('weigts', weights);     
+    def poly_train(self, input_names, resp_names, hparam_dict,
+            X_train, X_test, y_train, y_test, weights):
+        #print('poly_degree', degree); print('weigts', weights);
+        hparam_dict_local = self._hparam_dict_global_to_local('poly', hparam_dict)
+        degree = hparam_dict_local['degree']
+        hparam_dict_local.pop('degree')
         poly_reg = PolynomialFeatures(degree)
-        #dummy = df_cols_summary(X_train) 
         X_train = poly_reg.fit_transform(X_train)
         X_test = poly_reg.transform(X_test)
-        #print('X_train', X_train.shape, '\n', X_train)
-        #print('transformed X_train data')
-        #print(pd.DataFrame(X_train).describe())
-        #dummy = df_cols_summary(pd.DataFrame(X_train))
-        #raise Exception('tmp')
-        pol_reg = LinearRegression()
+        pol_reg = LinearRegression(**hparam_dict_local)
         model = pol_reg.fit(X_train, y_train, sample_weight=weights)
-
         assert(model == pol_reg)
         return model, poly_reg #, X_train, X_test
         
@@ -369,20 +383,22 @@ class ModelSklearn:
     def _sklearn_train_multi_response(self, get_model_file_prefix, feat_names, resp_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, sample_weights_vect):
+        print('feat_names', feat_names, 'X_train\n', X_train)
         assert feat_names == X_train.columns.tolist()
         assert feat_names == X_test.columns.tolist()
         if algo in ['dt', 'et', 'rf']:
             if algo == 'dt':
-                print('feat_names', feat_names, 'X_train\n', X_train, '\nX_test\n',  X_test)
-                model = self.dt_regr_train(feat_names, resp_names, algo,
+                #print('feat_names', feat_names, 'X_train\n', X_train, '\nX_test\n',  X_test)
+                model = self.dt_regr_train(feat_names, resp_names, algo, hparam_dict,
                     X_train, X_test, y_train, y_test, seed, sample_weights_vect)
                 tree_estimators = [model]
             elif algo == 'rf':
-                model = self.rf_regr_train(feat_names, resp_names, algo,
+                #print('hparam_dict', hparam_dict)
+                model = self.rf_regr_train(feat_names, resp_names, algo, hparam_dict,
                     X_train, X_test, y_train, y_test, seed, sample_weights_vect)
                 tree_estimators = model.estimators_
             elif algo == 'et':
-                model = self.et_regr_train(feat_names, resp_names, algo,
+                model = self.et_regr_train(feat_names, resp_names, algo, hparam_dict,
                     X_train, X_test, y_train, y_test, seed, sample_weights_vect)
                 tree_estimators = model.estimators_
             else:
@@ -394,13 +410,9 @@ class ModelSklearn:
                 None, True, rules_report_file)
             return model
         elif algo == 'poly':
-            degree = hparam_dict[self._hparam_name_local_to_global('degree', 'poly')]
-            #model, poly_reg, X_train, X_test 
-            linear_model, poly_reg = self.poly_train(feat_names, resp_names, degree,
-                X_train, X_test, y_train, y_test, seed, sample_weights_vect)
+            linear_model, poly_reg = self.poly_train(feat_names, resp_names, hparam_dict,
+                X_train, X_test, y_train, y_test, sample_weights_vect)
             for resp_id in range(len(resp_names)):
-                #formula_report_file = paths.get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_formula.txt'
-                #formula_report_file = model_file_prefix + '_formula.txt'
                 formula_report_file = get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_formula.txt'
                 model_formula = self._instPolyTerms.poly_model_to_term_single_response(feat_names, resp_names, linear_model.coef_, 
                     poly_reg.powers_, resp_id, True, formula_report_file)
@@ -419,7 +431,7 @@ class ModelSklearn:
             model = {}
             for rn in resp_names:
                 rn_model = self._sklearn_train_multi_response(get_model_file_prefix, feat_names_dict[rn], [rn], algo,
-                    X_train, X_test, y_train[[rn]], y_test[[rn]], hparam_dict, interactive_plots, 
+                    X_train[feat_names_dict[rn]], X_test[feat_names_dict[rn]], y_train[[rn]], y_test[[rn]], hparam_dict, interactive_plots, 
                     seed, sample_weights_vect)
                 model[rn] = rn_model
             return model

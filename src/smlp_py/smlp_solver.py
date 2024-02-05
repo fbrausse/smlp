@@ -23,14 +23,14 @@ class SmlpSolver:
         '''
         self.solver_params_dict = {
             'solver': {'abbr':'solver', 'default':self._DEF_SOLVER, 'type':str,
-                'help':'Solver to use in model exploration modes "verify," "query", "optimize" and "tune". ' +
+                'help':'Solver to use in model exploration modes "verify," "query", "optimize" and "optsyn". ' +
                         '[default: {}]'.format(str(self._DEF_SOLVER))},
             'solver_path': {'abbr':'solver_path', 'default': self._DEF_SOLVER_PATH, 'type':str,
-                'help':'Path to solver to use in model exploration modes "verify," "query", "optimize" and "tune". ' +
+                'help':'Path to solver to use in model exploration modes "verify," "query", "optimize" and "optsyn". ' +
                         '[default: {}]'.format(str(self._DEF_SOLVER_PATH))},
             'solver_logic': {'abbr':'solver_logic', 'default': self._DEF_SOLVER_LOGIC, 'type':str,
                 'help':'SMT2-lib theory with respect to which to solve model exploration task at hand, ' +
-                        'in modes "verify," "query", "optimize" and "tune". ' +
+                        'in modes "verify," "query", "optimize" and "optsyn". ' +
                         '[default: {}]'.format(str(self._DEF_SOLVER_LOGIC))},
             #'solver_incr': {'abbr':'solver_incr', 'default': self._DEF_SOLVER_INCREMENTAL, 'type':str_to_bool,
             #    'help':'Should sover be used in incremental mode? ' +

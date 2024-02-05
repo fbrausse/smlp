@@ -20,29 +20,29 @@ from smlp_py.smlp_spec import SmlpSpec
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
 
-# The classes in this module contain methods to genrate terms from trained tree, polynomial or NN models.
+# The classes in this module contain methods to generate terms from trained tree, polynomial or NN models.
 # Further, some of the methods convert scaling and unscaling constraints to terms so that after composing
 # generation of terms for models with feature and or responses scaling constraints the final term for each
-# model is a term with features as inputs and responses as oitputs -- that is, they are expressed in terms 
+# model is a term with features as inputs and responses as outputs -- that is, they are expressed in terms 
 # of SMLP variables that are declared in the solver domain. To parse expressions for constraints, assertions,
-# optimization objectives, etc. from cmmand line or a spec file, AST (Anstract Syntax Trees) module is used,
-# and it supports variables, constants, uniry and binary oprerators that are supported in SMLP to build terms
-# and formulas. Division is supported only when denumerator is integer, and pow function is only supported 
-# when the exponent is integer -- both are modeled by maltiplication and fractions (in case of division).
+# optimization objectives, etc. from command line or a spec file, AST (Abstract Syntax Trees) module is used,
+# and it supports variables, constants, unary and binary operators that are supported in SMLP to build terms
+# and formulas. Division is supported only when denominator is integer, and pow function is only supported 
+# when the exponent is integer -- both are modelled by multiplication and fractions (in case of division).
 
-# Model training parameter model_per_response controls whther one model is build that covers all responses
+# Model training parameter model_per_response controls whether one model is build that covers all responses
 # or a separate model is built for each response. In the latter case, when MRMR option mrmr_pred is on,
-# model for each response is built from the subset of features selected by MRMR algorithm fro that 
+# model for each response is built from the subset of features selected by MRMR algorithm for that 
 # response -- these subsets of features might be different for different responses. Also, in this case
 # (when model_per_response is true) result of training is a dictionary with response names as keys and
-# the model trained for a given response as the correponding value in the dictionary. When model_per_response
+# the model trained for a given response as the corresponding value in the dictionary. When model_per_response
 # is false, the trained model is not a dictionary, it is a model of the type that corresponds to the training
-# algorithm; and in this case the features used for training are all features as specifed in command line
+# algorithm; and in this case the features used for training are all features as specified in command line
 # if MRMR is not used, and otherwise is the union of features selected by MRMR for at least one response.
-# In model exploration modes (lie verification, querying, optimixzation) if SMLP terms and solver instances
+# In model exploration modes (lie verification, querying, optimization) if SMLP terms and solver instances
 # need to be built, each model in the dictionary of the models or a model trained for all responses is 
-# converted to terms separtely, the constraints and assertions built on the top of model responses are added
-# to solver instance separately (as many as required, depending on whether all responses are anlysed together).
+# converted to terms separately, the constraints and assertions built on the top of model responses are added
+# to solver instance separately (as many as required, depending on whether all responses are analysed together).
 
 # Class SmlpTerms has methods for generating terms, and classes TreeTerms, PolyTerms and NNKerasTerms are inherited
 # from it but this inheritance is probably not implemented in the best way: TODO !!!: see if that can be improved.
@@ -115,12 +115,17 @@ class SmlpTerms:
         #assert res1 == res2
         return res1 #form1 | form2
     
-    def smlp_eq(self, form1:smlp.form2, form2:smlp.form2):
-        res1 = op.eq(form1, form2)
-        res2 = form1 == form2
+    def smlp_eq(self, term1:smlp.term2, term2:smlp.term2):
+        res1 = op.eq(term1, term2)
+        #res2 = term1 == term2; print('res1', res1, 'res2', res2)
         #assert res1 == res2
-        return res1 #form1 | form2
+        return res1
     
+    def smlp_add(self, term1:smlp.term2, term2:smlp.term2):
+        return term1 + term2
+
+    def smlp_mult(self, term1:smlp.term2, term2:smlp.term2):
+        return term1 * term2    
     
     # compute smlp term for strings that represent python expressions, based on code from
     # https://stackoverflow.com/questions/2371436/evaluating-a-mathematical-expression-in-a-string
@@ -210,6 +215,12 @@ class SmlpTerms:
                 self._smlp_terms_logger.error('Parsing expressions with lists is not supported')
                 #print('node List', 'elts', node.elts, type(node.elts), 'expr_context', node.expr_context);
                 raise Exception('Parsing expressions with lists is not supported')
+            elif isinstance(node, ast.Constant):
+                if node.n == True:
+                    return smlp.true
+                if node.n == False:
+                    return smlp.false
+                raise Exception('Unsupported comstant ' + str(node.n) + ' in funtion ast_expr_to_term')
             else:
                 self._smlp_terms_logger.error('Unexpected node type ' + str(type(node)))
                 #print('node type', type(node))
@@ -249,19 +260,24 @@ class SmlpTerms:
         #print('smlp expr val', val)
         return val
     
-    # Converts values in sat assignmenet (sat model) from terms to python fractions when the value
-    # itself is of type smlp.libsmlp.Q (same as smlp.Q) and the argiment approximate is set to False; 
+    # Converts values in sat assignmenet (witness) from terms to python fractions when the value
+    # itself is of type smlp.libsmlp.Q (same as smlp.Q) and the argument approximate is set to False; 
     # and otherwise, as default converts into approximate float value if value_type is float or 
     # Note that the 'precision' parameter is ignored for type=float -- precision is defaulted to 64.
-    def sat_model_term_to_const(self, sat_model, approximate=False, precision=64, value_type=float):
+    def witness_term_to_const(self, witness, approximate=False, precision=64, value_type=float):
         assert value_type in [float, smlp.Q, smlp.R]
-        sat_model_vals_dict = {}
-        for k,t in sat_model.items():
-            #print('k', k, 't', t, type(t), smlp.Cnst(t), type(smlp.Cnst(t)))
-            #print('approx', smlp.approx(smlp.Cnst(smlp.cnst_fold(t))), type(smlp.approx(smlp.Cnst(smlp.cnst_fold(t)))))
-            sat_model_vals_dict[k] = self.ground_smlp_expr_to_value(t, approximate, precision)
-        return sat_model_vals_dict
+        witness_vals_dict = {}
+        for k,t in witness.items():
+            witness_vals_dict[k] = self.ground_smlp_expr_to_value(t, approximate, precision)
+        return witness_vals_dict
 
+    # Converts values in sat assignmenet (witness) from python fractions to terms.
+    def witness_const_to_term(self, witness):
+        witness_vals_dict = {}
+        for k,t in witness.items():
+            witness_vals_dict[k] = smlp.Cnst(t)
+        return witness_vals_dict
+    
 # Methods to generate smlp term and formula from rules associated to branches of an sklearn
 # (or caret) regression tree model (should work for classification trees as well, not tested)
 class TreeTerms:
@@ -277,6 +293,7 @@ class TreeTerms:
             '==':op.eq,
             '!=':op.ne
         }
+        self.instSmlpTerms = SmlpTerms()
     
     # set logger from a caller script
     def set_logger(self, logger):
@@ -410,7 +427,7 @@ class TreeTerms:
     # The 'coverage' feild reports how many samples are covered by the path condition in training data; this info is not
     # used say for model configuration optimization.
     def trees_to_rules(self, tree_estimators, feature_names, response_names, class_names, log, rules_filename):
-        if not rules_filename is None:
+        if rules_filename is not None:
             save = True
             self._smlp_terms_logger.info('Writing tree rules into file ' + rules_filename)
             rules_file = open(rules_filename, "w")
@@ -522,10 +539,10 @@ class TreeTerms:
         return rules_dict
     
     def tree_model_to_term(self, tree_model, algo, feat_names, resp_names):
-        if algo in ['dt_caret', 'dt_sklearn', 'rf_sklearn']:
+        if algo in ['dt_caret', 'dt_sklearn']:
             tree_estimators = [tree_model]
-        elif algo in ['rf_caret', 'et_caret']:
-            tree_estimators = [tree_model.estimators_]
+        elif algo in ['rf_caret', 'rf_sklearn', 'et_caret', 'et_sklearn']:
+            tree_estimators = tree_model.estimators_
         else:
             raise Exception('Model trained using algorithm ' + str(algo) + ' is currently not supported in smlp_opt')
         rules = self.trees_to_rules(tree_estimators, feat_names, resp_names, None, False, None) # rules_filename
@@ -545,9 +562,13 @@ class TreeTerms:
                 if j == 0:
                     tree_model_term_dict[resp_name] = tree_term_dict_dict['tree_'+str(j)][resp_name]
                 else:
-                    tree_model_term_dict[resp_name] = smlp.add(tree_model_term_dict[resp_name], tree_term_dict_dict['tree_'+str(j)][resp_name])
+                    #tree_model_term_dict[resp_name] = smlp.ADD(tree_model_term_dict[resp_name], tree_term_dict_dict['tree_'+str(j)][resp_name])
+                    #tree_model_term_dict[resp_name] = tree_model_term_dict[resp_name] + tree_term_dict_dict['tree_'+str(j)][resp_name]
+                    tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_add(tree_model_term_dict[resp_name], tree_term_dict_dict['tree_'+str(j)][resp_name])
                     if j == number_of_trees - 1: # the last tree -- compute the mean by dividing the sum on number_of_trees
-                        tree_model_term_dict[resp_name] = smlp.div(tree_model_term_dict[resp_name], smlp.Cnst(int(number_of_trees)))
+                        #tree_model_term_dict[resp_name] = smlp.Div(tree_model_term_dict[resp_name], smlp.Cnst(int(number_of_trees)))
+                        tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(smlp.Cnst(smlp.Q(1) / smlp.Q(int(number_of_trees))), tree_model_term_dict[resp_name])
+                    #print('tree_model_term_dict', tree_model_term_dict)
         
         return tree_model_term_dict
 
@@ -814,15 +835,12 @@ class ScalerTerms:
         return dict([(feat, self.feature_unscaler_to_term(feat, self._scaled_name(feat), 
             data_bounds[feat]['min'], data_bounds[feat]['max'])) for feat in feat_names])
 
-    def unscale_constant(self, data_bounds, feat_name, const):
+    # unscale constant const converted to smlp.term2 with respect to max and min values of 
+    # feat_name specified in data_bounds dictionary
+    def unscale_constant_term(self, data_bounds:dict, feat_name:str, const):
         orig_max = data_bounds[feat_name]['max']
         orig_min = data_bounds[feat_name]['min']
         return (smlp.Cnst(const) * smlp.Cnst(orig_max - orig_min)) + smlp.Cnst(orig_min)
-    
-    def unscale_constant_val(self, data_bounds, feat_name, const):
-        orig_max = data_bounds[feat_name]['max']
-        orig_min = data_bounds[feat_name]['min']
-        return const * (orig_max - orig_min)
 
 
 class ModelTerms(SmlpTerms):
@@ -837,11 +855,15 @@ class ModelTerms(SmlpTerms):
         self.model_file_prefix = None
         self._smlp_terms_logger = None
 
-        # control parameter to decide whether to add variable input and knob variable ranges
-        # as part of solver domain declaration or to only add variable type (int, real) declarion.
-        # This option for experiemntation, as looks like this choice can affect solver performance
-        self._domain_interface_only = True
-    
+        # control parameter to decide whether to add input and knob variable ranges as part
+        # of solver domain declaration or to only add variable type (int, real) declaration.
+        # This option is for experiemntation, as this choice can affect solver performance.
+        self._declare_domain_interface_only = True
+        
+        # in order to use QF_LRA instead of QF_LIRA theory solver, we want to incode integer
+        # variables as reals and add an integer grid constraint to make it range on integers.
+        self._declare_integer_as_real_with_grid = False
+        
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
@@ -912,7 +934,9 @@ class ModelTerms(SmlpTerms):
         elif algo == 'poly_sklearn':
             model_term_dict = self._polyTermsInst.poly_model_to_term(model_feat_names, model_resp_names, 
                 model[0].coef_, model[1].powers_, False, None)
-        elif algo == 'dt_sklearn':
+        elif algo in ['dt_sklearn', 'dt_caret']:
+            model_term_dict = self._treeTermsInst.tree_models_to_term(model, algo, model_feat_names, model_resp_names)
+        elif algo in ['rf_sklearn', 'rf_caret', 'et_sklearn', 'et_caret']:
             model_term_dict = self._treeTermsInst.tree_models_to_term(model, algo, model_feat_names, model_resp_names)
         else:
             raise Exception('Algo ' + str(algo) + ' is currently not suported in model exploration modes')
@@ -1030,42 +1054,13 @@ class ModelTerms(SmlpTerms):
     # repectively, from sat assignments in counter examples.
     # TODO !!!: it might make sense to create a SmlpObjectives class and move this function there
     # maybe other functions like get_objectives()
-    def compute_objectives_terms(self, objv_names, objv_exprs, scale_objv, feat_names, resp_names, X, y):
+    def compute_objectives_terms(self, objv_names, objv_exprs, objv_bounds, scale_objv):
         #print('objv_exprs', objv_exprs)
         if objv_exprs is None:
             return None, None, None, None
         orig_objv_terms_dict = dict([(objv_name, self._smlpTermsInst.ast_expr_to_term(objv_expr)) \
             for objv_name, objv_expr in zip(objv_names, objv_exprs)])
         #print('orig_objv_terms_dict', orig_objv_terms_dict)
-
-        # compute bounds on the objectives, required for scaling objectives
-        df_resp_feat = pd.concat([X,y], axis=1); #print('df_resp_feat\n', df_resp_feat)
-        objv_bounds = {}
-
-        # Function to evaluate objectives' expressions objv_cond on each row of training data.
-        # It computes the environment to be used by eval() function to assign values to the
-        # leaves of the objectives expressions and then propagate them to compute the value of
-        # each objective on training data. It is important to make sure that X and y parts of
-        # the training data (the features and the responses) are in the original scale (are not
-        # scaled to say [0,1] for improving training performance, using say the min-max scaler).
-        def eval_objv(row):
-            #print('inp_row\n', row, type(row))
-            eval_env = {}
-            for col in df_resp_feat.columns.tolist():
-                eval_env[col] = row[col]
-            #print('eval_env', eval_env)
-            res_row = eval(objv_cond, {}, eval_env); #print('res_row', res_row, type(res_row))
-            return res_row
-
-        for i, (objv_name, objv_cond) in enumerate(zip(objv_names, objv_exprs)):
-            #print('objv_cond', objv_cond, type(objv_cond))
-            #print('y', y.columns.tolist(), '\n', y) 
-            objv_series = df_resp_feat.apply(lambda row : eval_objv(row), axis=1); #print('objv_series', objv_series.tolist())
-            objv_bounds[objv_name] = {'min': float(objv_series.min()), 'max': float(objv_series.max())}
-        for o, b in objv_bounds.items():
-            if b['min'] == b['max']:
-                raise Exception('Objective ' + str(o) + ' is constant ' + str(b['min']) + ' on training set')
-        
         if scale_objv:
             scaled_objv_terms_dict = self._scalerTermsInst.feature_scaler_terms(objv_bounds, objv_names)
             #print('scaled_objv_terms_dict', scaled_objv_terms_dict)
@@ -1084,10 +1079,11 @@ class ModelTerms(SmlpTerms):
             assert list(scaled_objv_terms_dict.keys()) == [self._scalerTermsInst._scaled_name(objv_name) 
                 for objv_name in objv_names]
         #print('objv_terms_dict', objv_terms_dict)
-        return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict, objv_bounds
+        return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict
     
-    
-    # Compute stability range theta; used also in generating lemmas during search for a stable solution.   
+    # Compute stability range theta; used also in generating lemmas during search for a stable solution. 
+    # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
+    # are ignored as only variables which occur as keys in theta_radii_dict are used for building theta.
     def compute_stability_formula_theta(self, cex, delta, theta_radii_dict): 
         #print('generate stability constraint theta')
         if delta is not None:
@@ -1165,7 +1161,7 @@ class ModelTerms(SmlpTerms):
             mx = b['max']
             #print('mn', mn, 'mx', mx)
             if mn is not None and mx is not None:
-                if self._domain_interface_only:
+                if self._declare_domain_interface_only:
                     rng = self.smlp_and(smlp.Var(v) >= smlp.Cnst(mn), smlp.Var(v) <= smlp.Cnst(mx))
                     alpha_form = self.smlp_and(alpha_form, rng)
             elif mn is not None:
@@ -1177,6 +1173,36 @@ class ModelTerms(SmlpTerms):
             else:
                 assert False
         return alpha_form
+    
+    def compute_input_ranges_formula_alpha_eta(self, alpha_vs_eta, model_inputs):
+        alpha_or_eta_form = smlp.true
+        if alpha_vs_eta == 'alpha':
+            alpha_or_eta_ranges_dict = self._specInst.get_spec_alpha_bounds_dict
+        elif alpha_vs_eta == 'eta':
+            alpha_or_eta_ranges_dict = self._specInst.get_spec_eta_bounds_dict
+        else:
+            raise Exception('Unsupported value ' + str(alpha_vs_eta) + \
+                ' of argument alpha_vs_eta in function compute_input_ranges_formula_alpha_eta')
+        #print(alpha_vs_eta, 'alpha_or_eta_ranges_dict', alpha_or_eta_ranges_dict)
+        for v,b in alpha_or_eta_ranges_dict.items():
+            if v not in model_inputs:
+                continue
+            mn = b['min']
+            mx = b['max']
+            #print('mn', mn, 'mx', mx)
+            if mn is not None and mx is not None:
+                if self._declare_domain_interface_only:
+                    rng = self.smlp_and(smlp.Var(v) >= smlp.Cnst(mn), smlp.Var(v) <= smlp.Cnst(mx))
+                    alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
+            elif mn is not None:
+                rng = smlp.Var(v) >= smlp.Cnst(mn)
+                alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
+            elif mx is not None:
+                rng = smlp.Var(v) <= smlp.Cnst(mx)
+                alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
+            else:
+                assert False
+        return alpha_or_eta_form
     
     # alph_expr is alpha constraint specified in command line. If it is not None 
     # it overrides alpha constraint defined in spec file through feild "alpha".
@@ -1234,7 +1260,7 @@ class ModelTerms(SmlpTerms):
     # TODO !!! arguments  data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None are not used;
     # they are taken forn previous implementations; need to check whether they are needed
     def create_model_exploration_base_components(self, algo, model, model_features_dict, feat_names, resp_names, 
-            objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
+            delta, epsilon, #objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, 
             alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self._smlp_terms_logger.info('Creating model exploration base components: Start')
@@ -1261,19 +1287,23 @@ class ModelTerms(SmlpTerms):
                 continue
             interval = spec_domain_dict[var][self._specInst.get_spec_interval_tag];
             if interval is None:
-                interva_has_none = True
+                interval_has_none = True
             elif interval[0] is None or interval[1] is None:
-                interva_has_none = True
+                interval_has_none = True
             else:
-                interva_has_none = False
+                interval_has_none = False
             if spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_integer_tag:
-                if self._domain_interface_only or interva_has_none:
+                if self._declare_integer_as_real_with_grid and not interval_has_none:
+                    domain_dict[var] = smlp.component(smlp.Real, grid=list(range(interval[0], interval[1]+1)))
+                    assert False
+                    continue
+                if self._declare_domain_interface_only or interval_has_none:
                     domain_dict[var] = smlp.component(smlp.Integer)
                 else:
                     domain_dict[var] = smlp.component(smlp.Integer, 
                         interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
             elif spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_real_tag:
-                if self._domain_interface_only or interva_has_none:
+                if self._declare_domain_interface_only or interval_has_none:
                     domain_dict[var] = smlp.component(smlp.Real)
                 else:
                     domain_dict[var] = smlp.component(smlp.Real, 
@@ -1289,19 +1319,22 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Building model terms: End')
         
         # contraints on features used as control variables and on the responses
-        alph_ranges = self.compute_input_ranges_formula_alpha(feat_names) 
+        #alph_ranges = self.compute_input_ranges_formula_alpha(feat_names) 
+        alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names) 
         alph_global = self.compute_global_alpha_formula(alph_expr, feat_names)
         alpha = self._smlpTermsInst.smlp_and(alph_ranges, alph_global)
         #alpha = self.compute_global_alpha_formula(alph_expr, feat_names) 
         beta = self.compute_beta_formula(beta_expr, feat_names+resp_names)
+        eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names)
         eta_grids = self.compute_grid_range_formulae_eta()
         eta_global = self.compute_eta_formula(eta_expr, feat_names); #print('eta_global', eta_global)
-        eta = self._smlpTermsInst.smlp_and(eta_grids, eta_global); #print('eta', eta)
+        eta = self._smlpTermsInst.smlp_and_multi([eta_ranges, eta_grids, eta_global]); #print('eta', eta)
         
         self._smlp_terms_logger.info('Alpha global   constraints: ' + str(alph_global))
         self._smlp_terms_logger.info('Alpha ranges   constraints: ' + str(alph_ranges))
         self._smlp_terms_logger.info('Alpha combined constraints: ' + str(alpha))
         self._smlp_terms_logger.info('Beta  global   constraints: ' + str(beta))
+        self._smlp_terms_logger.info('Eta   ranges   constraints: ' + str(eta_ranges))
         self._smlp_terms_logger.info('Eta   grid     constraints: ' + str(eta_grids))
         self._smlp_terms_logger.info('Eta   global   constraints: ' + str(eta_global))
         self._smlp_terms_logger.info('Eta   combined constraints: ' + str(eta))

@@ -246,7 +246,7 @@ class ModelCaret:
         # supported model training algorithms
         if not algo in self._CARET_MODELS:
             raise Exception('Unsupported model ' + str(algo) + ' in caret_main')
-        print(self._hparam_name_local_to_global('fold', 'setup'))
+        #print(self._hparam_name_local_to_global('fold', 'setup'))
         folds = hparam_dict[self._hparam_name_local_to_global('fold', 'setup')]
         #max_depth = hparam_dict['caret_max_depth']
 

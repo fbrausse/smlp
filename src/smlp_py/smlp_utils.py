@@ -274,13 +274,13 @@ def param_dict_with_algo_name(param_dict, algo):
 # and 0 is negative)
 def get_response_type(df:DataFrame, resp_name:str):
     assert resp_name in df.columns.tolist()
-    print('df.shape', df.shape)
+    #print('df.shape', df.shape)
     if df.shape[1] > 1:
         resp_type = df.dtypes[resp_name]
     else:
         resp_type = df.dtypes[0]
-    print('response dtype', resp_type)
-    resp_vals = set(df[resp_name].tolist()); print('resp_vals', resp_vals, resp_vals.issubset({0,1}))
+    #print('response dtype', resp_type)
+    resp_vals = set(df[resp_name].tolist()); #print('resp_vals', resp_vals, resp_vals.issubset({0,1}))
     if resp_type == int and resp_vals.issubset({0,1}):
         return "classification"
     elif resp_type == float:

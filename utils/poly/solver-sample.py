@@ -1,5 +1,10 @@
 import smlp
 
+SMLP_EXTERNAL_PATH = '/nfs/iil/proj/dt/eva/smlp/external'
+#smlp.options({'inc_solver_cmd': ' env LD_LIBRARY_PATH={external_path}/lib/ {external_path}/bin/yices-smt2 --incremental '.format(external_path=SMLP_EXTERNAL_PATH)})
+smlp.options({'inc_solver_cmd': ' env LD_LIBRARY_PATH={external_path}/lib/ {external_path}/cvc5-Linux --incremental --force-logic ALL'.format(external_path=SMLP_EXTERNAL_PATH)})
+
+
 def print_result(res):
     if isinstance(res, smlp.sat):
         print('SAT with model')
@@ -21,16 +26,15 @@ dom = smlp.domain({
 })
 
 
-# !!!!!!!!!
 # initialize the solver with the domain, now it knows about variables 'x' and 'y'
-####slv.declare(dom)
+slv.declare(dom)
 
 # get the variables as terms
 x = smlp.Var('x')
 y = smlp.Var('y')
 
 # add some constraints to the solver
-#####slv.add((x > smlp.Cnst(5)) | (y < smlp.Cnst(5)))
+slv.add((x > smlp.Cnst(5)) | (y < smlp.Cnst(5)))
 slv.add(x > y)
 
 # solve the problem

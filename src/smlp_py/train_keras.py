@@ -103,7 +103,7 @@ class ModelKeras:
     def _hparam_name_local_to_global(self, hparam, algo):
         #print('hparam global name', hparam, algo)
         return self._algo_name_local2global(algo) + '_' + hparam
-        
+    
     # given training algo name like dt and the hyper parameter dictionary param_dict  
     # for that algo in the python package used in this class), this function returns  
     # a modified dictionary obtained from param_dictby by adds algo name like nn_keras
@@ -313,8 +313,8 @@ class ModelKeras:
             raise Exception('Parameter ' + str(param) + ' is missing in hparam_dict')
         return hparam_dict[param] #if not hparam_dict[param] is None else default
 
-    def _keras_train_multi_response(self, feat_names, resp_names : list, algo,
-            X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
+    def _keras_train_multi_response(self, feat_names:list[str], resp_names:list[str], algo:str,
+            X_train, X_test, y_train, y_test, hparam_dict, interactive_plots:bool, 
             seed, weights_coef, model_per_response:bool):
         layers_spec = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('layers', algo)) #DEF_LAYERS_SPEC 'nn_layers'
         epochs = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('epochs', algo)) #DEF_EPOCHS)
@@ -384,7 +384,7 @@ class ModelKeras:
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, weights_coef, model_per_response:bool):
         self._keras_logger.info('keras_main: start')
-        print('feat_names', feat_names, 'resp_names', resp_names)
+        #print('feat_names', feat_names, 'resp_names', resp_names)
         if model_per_response:
             model = {}
             for rn in resp_names:

@@ -9,7 +9,19 @@ class SmlpVerify:
     def __init__(self):
         self._smlpTermsInst = SmlpTerms()
         self._modelTermsInst = None #ModelTerms()
-
+        
+        self._VACUITY_ASSERTION_NAME = 'consistency_check'
+        self._DEF_ASSERTIONS_NAMES = None
+        self._DEF_ASSERTIONS_EXPRS = None
+        self.asrt_params_dict = {
+            'assertions_names': {'abbr':'asrt_names', 'default':str(self._DEF_ASSERTIONS_NAMES), 'type':str,
+                'help':'Names of optimization objectives [default {}]'.format(str(self._DEF_ASSERTIONS_NAMES))}, 
+            'assertions_expressions':{'abbr':'asrt_exprs', 'default':self._DEF_ASSERTIONS_EXPRS, 'type':str,
+                'help':'Semicolon seperated list of expressions (functions) to be applied to the responses '
+                    'to convert them into optimization objectives ' +
+                    '[default: {}]'.format(str(self._DEF_ASSERTIONS_EXPRS))}
+        }
+    
     def set_logger(self, logger):
         self._verify_logger = logger 
         self._smlpTermsInst.set_logger(logger)
@@ -43,23 +55,25 @@ class SmlpVerify:
         solver_instance = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
             domain, model_full_term_dict, True, solver_logic)
         solver_instance.add(alpha)
-        #solver_instance.add(eta)
+        solver_instance.add(eta)
         solver_instance.add(self._smlpTermsInst.smlp_not(asrt_form))
         res = solver_instance.check(); #self.print_result(res)
         
         if isinstance(res, smlp.unsat):
-            self._verify_logger.info('Completed with result: {}'.format('UNSAT'))
-            asrt_res_dict = {'status':'UNSAT', 'asrt':None, 'model':None}
+            status = 'UNSAT' if asrt_name == self._VACUITY_ASSERTION_NAME else 'PASS'
+            self._verify_logger.info('Completed with result: {}'.format(status)) #UNSAT 'PASS'
+            asrt_res_dict = {'status':'PASS', 'asrt':None, 'model':None}
         elif isinstance(res, smlp.sat):
-            self._verify_logger.info('Completed with result: {}'.format('SAT'))
+            status = 'SAT' if asrt_name == self._VACUITY_ASSERTION_NAME else 'FAIL'
+            self._verify_logger.info('Completed with result: {}'.format(status)) #SAT 'FAIL (SAT)'
             #print('res/model', res.model, type(res.model), type(res))
-            sat_model_vals_dict = self._smlpTermsInst.sat_model_term_to_const(res.model, 
+            witness_vals_dict = self._smlpTermsInst.witness_term_to_const(res.model, 
                 approximate=sat_approx, precision=sat_precision)
-            #print('domain sat_model_vals_dict', sat_model_vals_dict)
+            #print('domain witness_vals_dict', witness_vals_dict)
             # sanity check: the value of the negated assertion in the sat assignment should be true
-            asrt_ce_val = eval(asrt_expr, {},  sat_model_vals_dict); #print('asrt_ce_val', asrt_ce_val)
+            asrt_ce_val = eval(asrt_expr, {},  witness_vals_dict); #print('asrt_ce_val', asrt_ce_val)
             assert not asrt_ce_val
-            asrt_res_dict = {'status':'SAT', 'asrt': asrt_ce_val, 'model':sat_model_vals_dict}
+            asrt_res_dict = {'status':'FAIL', 'asrt': asrt_ce_val, 'model':witness_vals_dict}
         elif isinstance(res, smlp.unknown):
             self._verify_logger.info('Completed with result: {}'.format('UNKNOWN'))
             # TODO !!!: add reason for UNKNOWN or report that reason as 'status' field
@@ -84,13 +98,14 @@ class SmlpVerify:
     def smlp_verify(self, algo, model, model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs,
             alph_expr:str, solver_logic:str, vacuity:bool, data_scaler, scale_feat, scale_resp, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+        # sanity checking of knob values and assertions in the specification
+        #sanity_check_verification_spec()
         if asrt_exprs is None:
             self._query_logger.error('Assertions were not specified in the "verify" mode: aborting...')
             return
         
         domain, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
-            algo, model, model_features_dict, feat_names, resp_names, 
-            None, None, asrt_names, asrt_exprs, None, None, None, None, #delta, epsilon,
+            algo, model, model_features_dict, feat_names, resp_names, None, None, 
             alph_expr, None, None, data_scaler, scale_feat, scale_resp, None, 
             float_approx, float_precision, data_bounds_json_path)
         #print('eta', eta); print('alpha', alpha); print('beta',  beta)
@@ -103,11 +118,12 @@ class SmlpVerify:
         # instance consistency check (are the assumptions contradictory?)
         if vacuity:
             asrt_res = self.verify_asrt(
-                model_full_term_dict, 'consistency_check', 'False', smlp.false, 
+                model_full_term_dict, self._VACUITY_ASSERTION_NAME, 'False', smlp.false, 
                 domain, alpha, beta, eta, solver_logic, float_approx, float_precision)
-            if asrt_res['status'] == 'UNSAT':
+            if asrt_res['status'] == 'PASS': #UNSAT
                 self._verify_logger.info('Model querying instance is inconsistent; aborting...')
                 return
         
-        self.verify_assertions(model_full_term_dict, asrt_names, asrt_exprs, asrt_forms_dict, domain, alpha, beta, eta, solver_logic, float_approx, float_precision)
+        self.verify_assertions(model_full_term_dict, asrt_names, asrt_exprs, asrt_forms_dict, 
+            domain, alpha, beta, eta, solver_logic, float_approx, float_precision)
 

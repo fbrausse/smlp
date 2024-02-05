@@ -53,6 +53,7 @@ else:
 
 def plot(name, interactive, out_prefix=None, **show_kws):
     #print('saved figure filename: ', 'out_prefix', out_prefix, 'name', name)
+    #print('interactive', interactive); print('show_kws', show_kws)
     if out_prefix is not None:
         #print('Saving plot ' + out_prefix + '_' + name + '.png')
         plt.savefig(out_prefix + '_' + name + '.png')
@@ -126,7 +127,6 @@ def evaluate_model(model_name, model, X_train, X_test, y_train, y_test, interact
 # usually can be training, test, entire labeled data on new, unseen data
 def evaluate_prediction(model_name, resp, pred, data_version, 
         interactive=False, out_prefix=None, log_scale=False):
-    
     if not resp is None and not pred is None:
         plot_true_pred_runtime(resp, pred, interactive, model_name + '_' + data_version,
                                out_prefix=out_prefix, log_scale=log_scale)

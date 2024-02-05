@@ -90,7 +90,7 @@ class SmlpConfig:
         parser.add_argument('-mode', '--analytics_mode', type=str, default=None,
                         help='What kind of analysis should be performed '+
                             'the supported modes are: "train", "predict", "subgroups",  ' +
-                            '"doe", "discretize", "optimize", "verify", "query", "tune" ' +
+                            '"doe", "discretize", "optimize", "verify", "query", "optsyn" ' +
                             '[default: train]')
         parser.add_argument('-plots', '--interactive_plots', type=str_to_bool, default=True,
                         help='Should plots be displayed interactively (or only saved)?'+

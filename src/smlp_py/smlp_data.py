@@ -429,8 +429,8 @@ class SmlpData:
         return df
     
     # This function should be called after rows with missing values in at least one of the responses  
-    # have been dropped, and constant responses (with exactly one non-NaN value) have been dropped too. 
-    def _preprocess_responses(self, resp_df, pos_value, neg_value, resp_to_bool):
+    # have been dropped. Constant responses (with exactly one non-NaN value) are dropped here. 
+    def _preprocess_responses(self, resp_df, pos_value, neg_value, resp_to_bool, is_training):
         resp_names = resp_df.columns.tolist()
         resp_types = resp_df.dtypes
         for i, resp_name in enumerate(resp_names):
@@ -444,7 +444,7 @@ class SmlpData:
             neg_val = cast_type(neg_value, resp_val_type); #print('neg_value', neg_value, type(neg_value))
             resp_unique_vals = resp_df[resp_name].unique().tolist()
             
-            if len(resp_unique_vals) < 2:
+            if len(resp_unique_vals) < 2 and is_training:
                 raise Exception('Response ' + str(resp_name) + ' has only one value')
                 
             if set(resp_unique_vals) == {STAT_NEGATIVE_VALUE, STAT_POSITIVE_VALUE}:
@@ -742,7 +742,7 @@ class SmlpData:
         # seprate features and responses, process them separately
         X, y = self._get_response_features(data, feat_names, resp_names, is_training, new_labeled)
         if is_training or new_labeled:
-            y = self._preprocess_responses(y, pos_value, neg_value, resp_to_bool)
+            y = self._preprocess_responses(y, pos_value, neg_value, resp_to_bool, is_training)
         if not y is None:
             assert set(resp_names) == set(y.columns.tolist())
             
