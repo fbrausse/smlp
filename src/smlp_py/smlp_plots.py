@@ -32,7 +32,7 @@ if [0,9] <= list(map(int, sns.__version__.split('.'))) < [0,10]:
         plt.legend(resp_names, loc='upper right')
         plot('resp-distr', interactive, out_dir, block=False)
         
-elif [0,10] <= list(map(int, sns.__version__.split('.'))) < [0,13]:
+elif [0,10] <= list(map(int, sns.__version__.split('.'))) < [0,14]:
     '''
     def distplot_dataframe(inst, y, resp_names, interactive):
         plt.figure('Distribution of response features')
