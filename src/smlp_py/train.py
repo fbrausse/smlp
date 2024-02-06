@@ -49,7 +49,7 @@ if [0,9] <= list(map(int, sns.__version__.split('.'))) < [0,10]:
 		             color=[cc(c/len(resp_names)) for c,n in enumerate(resp_names)])
 		plt.legend(resp_names, loc='upper right')
 		plot('resp-distr', os.path.join(inst._dir, inst._out_prefix), block=False)
-elif [0,10] <= list(map(int, sns.__version__.split('.'))) < [0,13]:
+elif [0,10] <= list(map(int, sns.__version__.split('.'))) < [0,14]:
 	def distplot_dataframe(inst, y, resp_names):
 		plt.figure('Distribution of response features')
 		for c in y:
