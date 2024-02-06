@@ -1,4 +1,4 @@
-\documentclass[a4paper,parskip=half]{scrartcl}
+\documentclass[a4paper,parskip=half]{article} %scrartcl
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,mathtools,amssymb,listingsutf8,xspace}
@@ -208,6 +208,114 @@ this variable.
 \item kjson version 0.1.3 (bundled in release)
 	\url{https://github.com/fbrausse/kjson}
 \end{itemize}
+
+
+\section{Training ML models with SMLP}\label{sec:models}
+
+SMLP supports training tree-based and polynomial models using the scikit-learn\footnote{\url{https://scikit-learn.org/stable/}} and pycaret\footnote{\url{https://pycaret.org}} packages, 
+and training neural networks using the Keras package with TensorFlow\footnote{\url{https://keras.io}}. For systems with multiple outputs, SMLP supports training one model with multiple outputs as well as training separate models per response (this is controlled by command-line option $model\_per\_response$). Supporting these two options allows a trade-off between the accuracy of the models (models trained per response are likely to be more accurate) and with the size of the formulas that represent the model for symbolic analysis (one multi-output model formula will be at least smaller when the same training hyper-parameters are used). Conversion of models to formulas into SMLP language is done internally in SMLP (no encoding options are exposed to user in current implementation, which will change once alternative encodings will be developed).
+
+
+
+\section{ML model exploration with SMLP}\label{sec:exploration}
+
+SMLP supports the following model exploration modes (we assume that an ML model $M$ has already been trained). A formal definition of the tasks accomplished with these model exploration modes can be found in~\cite{BKK24}.
+
+\begin{itemize}
+\item[certify] Given an ML model $M$, a value assignment $a$ to knobs, and a query $q$, check that $a$ is a stable witness for query $q$ on model $m$. Multiple pairs $(a,q)$ of candidate witness $a$ and query $q$ can be checked in a single SMLP run.
+\item[query] Given an ML model $M$  and a query $q$, find a stable witness $a$  for query $q$ on model $M$.
+\item[verify] Given an ML model $M$,  a value assignment $a$ to knobs,  and an assertion $assert$, verify whether the assertion is valid on model $M$ for any legal inputs (for the given value assignment $a$ to knobs). SMLP supports verifying multiple assertions in a single run.
+\item[synthesize] Given an ML model $M$,  find a stable configuration of knobs (a value assignment $a$ to knobs) such that required constraints (possibly including assertions),  are valid for all legal value assignments to the inputs.
+\item[optimize]  Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of the optimization objectives (pareto-optimal with respect to the \emph{max-min} optimization problem defined in~\cite{BKK24}.
+\item[optsyn] Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of the optimization objectives and all constraints and assertions are valid for all legal values of inputs. This mode is a union of the \emph{optimize} and \emph{synthesize} modes, its full name is \emph{optimized synthesis}. All the previous modes can be seen as a special case of optimized synthesis mode.
+\end{itemize}
+
+
+\section{How to run SMLP}\label{sec:mrc}
+
+
+Consider a toy dataset in Table~\cref{toy_basic_df} with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.
+Command to run SMLP in \emph{optimize} mode is given in Figure~\cref{fig:command}.
+The optimization problem is specified in the spec file in Figure~\cref{fig:spec}.
+
+\begin{table*}[t]
+\centering\small
+\begin{tabular}{lrrrrrr}
+\hline %\toprule
+{} &      x1 &  x2 &    p1 &  p2 &       y1 &       y2 \\
+\hline %\midrule
+0 &  2.9800 &  -1 &   0.1 &   4 &   5.0233 &   8.0000 \\
+1 &  8.5530 &  -1 &   3.9 &   3 &   0.6936 &  12.0200 \\
+2 &  0.5580 &   1 &   2.0 &   4 &   0.6882 &   8.1400 \\
+3 &  3.8670 &   0 &   1.1 &   3 &   0.2400 &   8.0000 \\
+4 & -0.8218 &   0 &   4.0 &   3 &   0.3240 &   8.0000 \\
+5 &  5.2520 &   0 &   4.0 &   5 &   6.0300 &   8.0000 \\
+6 &  0.2998 &   1 &   7.1 &   6 &   0.9100 &  10.1250 \\
+7 &  7.1750 &   1 &   7.0 &   7 &   0.9600 &   1.1200 \\
+8 &  9.5460 &   0 &   7.0 &   6 &  10.7007 &   9.5661 \\
+9 & -0.4540 &   1 &  10.0 &   7 &   8.7932 &   6.4015 \\
+\hline %\bottomrule
+\end{tabular}
+\caption{Toy dataset with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.}
+\label{toy_basic_df}
+\end{table*}
+
+\begin{figure}%[tp]
+%\scriptsize
+%\tiny
+%\small
+\begin{verbatim}
+ ../src/run_smlp.py -data smlp_toy_basic -out_dir out -pref abc  -mode optimize -pareto t  \
+-sat_thresh f -resp y1,y2 -feat x1,x2,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 \
+-data_scaler min_max -epsilon 0.05 -delta 0.01 -save_model_config f -mrmr_pred 0 -plots f \
+-seed 10 -log_time f -spec smlp_toy_basic
+\end{verbatim}
+\caption{Example of SMLP's command to build a decision tree model and find .}
+\label{fig:command}
+\end{figure}
+
+
+
+\begin{figure}%[tp]
+%\scriptsize
+%\tiny
+\small
+\begin{verbatim}
+{
+  "version": "1.2",
+  "variables": [
+    {"label":"y1", "interface":"output", "type":"real"},
+    {"label":"y2", "interface":"output", "type":"real"},
+    {"label":"x1", "interface":"input", "type":"real", "range":[0,10]},
+    {"label":"x2", "interface":"input", "type":"int", "range":[-1,1]},
+    {"label":"p1", "interface":"knob", "type":"real", "range":[0,10], "rad-rel":0.1, "grid":[2,4,7]},
+    {"label":"p2", "interface":"knob", "type":"int", "range":[3,7], "rad-abs":0.2}
+  ],
+  "alpha": "p2<5 and x1==10 and x2<12",
+  "beta": "y1>=4 and y2>=8",
+  "eta": "p1==4 or (p1==8 and p2 > 3)",
+  "assertions": {
+    "assert1": "(y2**3+p2)/2>6",
+    "assert2": "y1>=0",
+    "assert3": "y2>0"
+  },
+  "objectives": {
+    "objective1": "(y1+y2)/2",
+    "objective2": "y1"
+  }
+}
+\end{verbatim}
+\begin{tikzpicture}[remember picture,overlay,shift={(22em,\baselineskip)}]
+\node[anchor=south west]{\includegraphics[height=14\baselineskip]{smlp_encoding.PNG}};
+\end{tikzpicture}
+\vspace*{-1\baselineskip}
+\caption{Specification $smlp\_toy\_basic$ used by SMLP command in Figure~\cref{fig:command}.}
+\label{fig:spec}
+\end{figure}
+
+
+
+
 
 
 
@@ -731,9 +839,19 @@ decimal float approximations.
 \bibitem{BKK20}
  F. Brauße, Z. Khasidashvili and K. Korovin.
 \newblock{Selecting Stable Safe Configurations for Systems Modelled by Neural Networks with ReLU Activation.}
-\newblock{2020 Formal Methods in Computer Aided Design, FMCAD 2020, online.}
-\newblock{To appear in IEEE, 2020}.
+\newblock{2020 Formal Methods in Computer Aided Design, FMCAD 2020}
+\newblock{IEEE, 2020}.
 
+\bibitem{BKK22}
+ F. Brauße, Z. Khasidashvili and K. Korovin.
+\newblock{Combining Constraint Solving and Bayesian Techniques for System Optimization.}  
+\newblock{31st International Joint Conference on Artificial Intelligence and the 25th European Conference on Artificial Intelligence, IJCAI-ECAI'22 2022.}
+
+
+\bibitem{BKK24}
+ F. Brauße, Z. Khasidashvili and K. Korovin.
+\newblock{SMLP: Symbolic Machine Learning Prover.}
+\newblock{Report arXiv: 2402.01415 , 2024.}
 \end{thebibliography}
 
 

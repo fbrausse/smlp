@@ -22,7 +22,7 @@ lib/libcheck-data.so
 
 # smlp_py directory
 /src/smlp_py/.ipynb_checkpoints/*
-/src/smlp_py/subgroups.py
+#/src/smlp_py/subgroups.py
 /src/smlp_py/correlations.py
 /src/smlp_py/range_plots_template.html
 /src/smlp_py/range_plots.py
