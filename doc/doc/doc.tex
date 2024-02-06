@@ -231,7 +231,7 @@ SMLP supports the following model exploration modes (we assume that an ML model 
 \end{itemize}
 
 
-\section{How to run SMLP}\label{sec:mrc}
+\section{How to run SMLP}\label{sec:run}
 
 
 Consider a toy dataset in Table~\cref{toy_basic_df} with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.
@@ -256,7 +256,7 @@ The optimization problem is specified in the spec file in Figure~\cref{fig:spec}
 9 & -0.4540 &   1 &  10.0 &   7 &   8.7932 &   6.4015 \\
 \hline %\bottomrule
 \end{tabular}
-\caption{Toy dataset with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.}
+\caption{Toy dataset $smlp\_toy\_basic.csv$ with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.}
 \label{toy_basic_df}
 \end{table*}
 
@@ -268,7 +268,7 @@ The optimization problem is specified in the spec file in Figure~\cref{fig:spec}
  ../src/run_smlp.py -data smlp_toy_basic -out_dir out -pref abc  -mode optimize -pareto t  \
 -sat_thresh f -resp y1,y2 -feat x1,x2,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 \
 -data_scaler min_max -epsilon 0.05 -delta 0.01 -save_model_config f -mrmr_pred 0 -plots f \
--seed 10 -log_time f -spec smlp_toy_basic
+-seed 10 -log_time f -spec smlp_toy_basic -pref try
 \end{verbatim}
 \caption{Example of SMLP's command to build a decision tree model and find .}
 \label{fig:command}
@@ -314,7 +314,7 @@ The optimization problem is specified in the spec file in Figure~\cref{fig:spec}
 \end{figure}
 
 
-
+Optimization progress is reported in  file $try\_smlp\_toy\_basic\_optimization\_progress.csv$, where $try$ is the run ID specified using option '-pref try'; $smlp\_toy\_basic$ is the name of the data file, and $optimization\_progress.csv$ is suffix for that report. More details on input, knob, output and objective values used to prove the upper and lower bounds of the objectives during search for pareto optimum are reported in file $try\_smlp\_toy\_basic\_optimization\_progress.json$. 
 
 
 
