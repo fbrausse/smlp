@@ -14,6 +14,15 @@
 \newcommand*\api[1]{\textcolor{purple}{\cmdstyle{#1}}}
 \newenvironment{cmdhelp}{\begin{quote}\footnotesize}{\end{quote}}
 
+
+\newcommand\removed[1]{}
+%\newcommand\added[1]{{\color{green!70!black}#1}}
+\newcommand\added[1]{#1}
+\newcommand\changedto[2]{%
+    \removed{#1}%
+    \added{#2}}
+
+
 \newcommand*\eqdef=
 
 
@@ -23,6 +32,13 @@
 \newcommand*\assert{\operatorname{\mathsf{assert}}}
 \newcommand*\rad{\operatorname{rad}}
 \newcommand*\regmin[2]{\llfloor{#1}\rrfloor_{#2}}
+%\newcommand*\regmax[2]{\llceil{#1}\rrceil_{#2}}
+\newcommand*\regmax[2]{[[{#1}]]_{#2}}
+%\newcommand*\objv{\operatorname{objv}}
+\newcommand*\objv{o}
+
+
+
 
 \newcommand*\Solver{Symbolic Machine Learning Prover\xspace}
 \newcommand*\SolverAbbrvText{SMLP}
@@ -648,7 +664,152 @@ abc
 
 
 \subsection{Optimized synthesis mode}
-abc
+
+
+
+In this subsection we consider the optimization problem for a real-valued function $f$ (in our case, an ML model),
+extended in two ways:
+(1) we consider a $\theta$-stable maximum to ensure that the objective function  does not drop drastically in a close neighborhood of the configuration where its maximum is achieved, and
+(2) we assume that the objective function besides knobs depends also on inputs, and the %\changed{value} of the
+function is maximized in the stability $\theta$-region of knobs, for any values of inputs in their respective legal ranges.
+We explain these extensions using two plots in Figure~\ref{smlp_maxmin}.
+
+\begin{figure}[tp]
+\center
+\includegraphics[width= 0.7\columnwidth]{smlp_maxmin.PNG}
+\caption{SMLP max-min optimization. On both plots, $p$ denote the knobs. On the right plot we also consider inputs $x$ (which are universally quantified) as part of $f$.} \label{smlp_maxmin}
+\end{figure}
+
+
+The left plot represents optimization problem for $f(p,x)$ when $f$ depends on knobs only (thus $x$ is an empty vector), while the right plot represents the general setting where $x$ is not empty (which is usually not considered in optimization research). In each plot, the blue threshold (in the form of a horizontal bar or a rectangle) denotes the stable maximum around the point where $f$ reaches its (regular) maximum, and the red threshold denotes the stable maximum, which is approximated by our optimization algorithms. In both plots, the regular maximum of $f$ is not stable due to a sharp drop of $f$'s value in the stability region. 
+\delete{The right plot depicts the situation when input $x$ ranges in interval $[a, b]$, thus in \emph{max-min} optimization problem, formalized below in Formulas~\eqref{form:opt1}  and  \eqref{form:opt2}, the minimum of $f$ is calculated in the stability region of knobs $p$, with values of $x$ ranging in $[a,b]$.}
+
+
+%\todozk{In the first formula, in phi condition, should z be y? both are legitimate formulations but b usually refers to model's interface while z represents an optimization threshold?}
+%\KK[inline]{ In progress: 
+%
+%Informally, the  optimization problem is the problem of finding parameters such that an objective function connecting outputs and inputs of the system is near-optimal under  all inputs under the required constraints. Further, in the presence of the stability requirement, the whole region around the solution should also satisfy optimality  constraints.
+%
+%In the optimization problem we want to find parameters such that output of our system is near-optimal under all constraints.
+%
+%\[ \regmin{ p}{\theta,\varphi}\coloneqq
+    %\min\{f(\vec x'):\vec x'\in  X,\theta(\vec x,\vec x')\} =
+%    \mathop{\min\nolimits_{ p'\in X}}\limits_{\theta(p, p')}\varphi(p)
+%\text. \]
+%
+%}
+
+\strut\todozk{remove `near' everywhere}%
+Let us first consider optimization without stability or inputs, i.e., far low corner in the exploration cube Figure~\ref{fig:cube}. %\todozk{edge instead of corner?}
+%
+Given a %binary predicate
+formula
+%\todofb{Do we need the index $M$ on $\varphi_M$?}%
+$\varphi_M$ encoding the model, and an objective function 
+$\objv:%
+\mathcal{D}_{\mathit{par}}\times
+%\mathcal{D}_{\mathit{in}}\times
+\mathcal{D}_\mathit{out}\to\mathbb R$, the
+%$\objv:\mathcal{D}_\mathit{out}\to\mathbb R$, 
+%\todofb{better word for `pure'? Can we re-use terminology from the cube or the intro?}%
+standard optimization problem solved by SMLP is stated by Formula~\eqref{form:opt_p}.
+%
+ \begin{equation}\label{form:opt_p}
+ \regmax{\varphi_M}{\objv}
+ \eqdef\mathop{\max\limits_{p}} \{z \mid  
+    \forall y\changedto[{~(} \varphi_M(p,y)  \implies  
+    \objv(p,y) \geq z
+    \changedto])\}
+\end{equation}
+%\todofb{domain of $\objv$ needs changes, they were done in~\ref{note:changes-to-objv}.}%
+A solution to this optimization problem %\eqref{form:opt_p}
+is the pair $(p^*,\regmax{\varphi_M}{\objv})$, where 
+$p^*{}\in\mathcal{D}_{\mathit{par}}$ is a value of parameters $p$ on which the maximum $\regmax{\varphi_M}{\objv}\in\mathbb R$ of the objective function $\objv$ is achieved
+for the output $y$ of the model on $p^*$.
+In most cases it is not feasible to exactly compute the maximum.
+To deal with this, SMLP computes maximum with a specified accuracy. 
+Consider $\varepsilon >0$. 
+We refer to %\todofb{$\vec x\in X$?}%
+values $(\tilde p,\tilde z)$ as a
+solution to the optimization problem with
+%\old{\todofb{Consider \emph{not} defining `accuracy' $\leadsto$ strengthened notion}}%
+\emph{accuracy} $\varepsilon$, or \emph{$\varepsilon$-solution},
+if $\tilde z\leq \regmax{ \varphi_M}{\objv}  <\tilde z+\varepsilon$ holds and
+%$z^*=%f(\vec x^*)
+ %for a solution $p^*$ to \eqref{eq:max-min},
+ %and
+%$\tilde y=\regmax{\tilde{p}}{\theta,o}$.
+%
+$\tilde z$ is a lower bound on the objective, i.e., $\forall y [ \varphi_M(p,y)  \implies  
+    \objv(p,y) \geq \tilde z] $ holds.
+
+
+Now, we consider \emph{stable optimized synthesis}, i.e., the top right corner of the exploration cube.
+%The problem can be formulated as the following formula \eqref{form:opt1}, expressing maximization of a lower bound  on the objective function over parameters values under GEAR formula constraints
+The problem can be formulated as the following Formula~\eqref{form:opt1}, expressing maximization of a lower bound  on the objective function $\objv$ over parameter values under stable synthesis constraints.
+%
+\begin{equation}\label{form:opt1}
+\regmax{\varphi_M}{\objv,\theta}
+\eqdef\mathop{\max\limits_{p}} \{z \mid\eta(p) \wedge
+    \forall p'~
+    \forall x y~[
+    \theta(p,p') \implies
+    (\varphi_M(p',x,y)  \implies 
+     \varphi_{\mathit{cond}}^{\geq}(p',x,y,z))
+    ]\}
+\end{equation}
+where
+\[
+\varphi_{\mathit{cond}}^{\geq}(p',x,y,z)
+\eqdef \alpha(p',x) \implies (\beta(p',x,y) \wedge \objv(p',x,y) \geq z).
+\]
+%
+The stable synthesis constraints are part of a GEAR formula and include usual $\eta, \alpha, \beta$ constraints together with the stability constraints $\theta$.
+%
+%that bounds over parameter values
+%
+Equivalently, stable optimized synthesis can be stated as the \emph{max-min} optimization problem, Formula~\eqref{form:opt2}
+\begin{equation}\label{form:opt2}
+\regmax{\varphi_M}{\objv,\theta}
+\eqdef
+\mathop{\max\limits_{p}} \mathop{\min\limits_{x, p'}}
+\{ z \mid \eta(p) \wedge
+    \forall y~[
+     \theta(p,p') \implies
+     (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}^{\leq}(p',x,y,z))]\}
+\end{equation}
+%
+%
+%     \begin{equation}\label{form:opt}
+%   \mathop{\max\limits_{p}} \mathop{\min\limits_{x, p'}\nolimits_{y}}  ~\eta(p) \wedge
+%    \forall y'~[
+%     \theta(p,p') \wedge \varphi_M(p',x,y')  \implies  \varphi_{\mathit{cond}}(p',x,y') \wedge o(p',x,y')
+ %   ]
+%\end{equation}
+where \[
+\varphi_{\mathit{cond}}^{\leq}(p',x,y,z)
+\eqdef\alpha(p',x) \implies (\beta(p',x,y) \wedge \objv(p',x,y) \leq z)\text.\]
+%\todofb{`The notion of $\varepsilon$-solutions carries over from the standard optimization problem'?}%
+In Formula~\eqref{form:opt2} the minimization predicate in the stability region corresponds to the universally quantified $p'$ ranging over this region in~\eqref{form:opt1}.
+An advantage of this formulation is that this formula can be adapted to define other aggregation functions over the objective's values on stability region.
+For example, that way one can represent the \emph{max-mean} optimization problem, where one wants to maximize the mean value of the function in the stability region rather one the min value (which is maximizing the worst-case value of $f$ in stability region).
+Likewise, Formula~\eqref{form:opt2} can be adapted to other interesting statistical properties of distribution of values of $f$ in the stability region.%\footnote{Solving such optimization problems with SMT solver
+
+We can explicitly incorporate assertions in stable optimized synthesis by defining $\beta(p',x,y)\eqdef \beta'(p',x,y) \wedge \assert(p',x,y)$, where  $\assert(p',x,y)$ are assertions required to be valid in the entire stability region around the selected configuration of knobs $p$.
+%(So even if the configuration is perturbed within the limits of stability guard $\theta$,
+%by the environment or an adversary,
+%the configuration will still be
+%near-optimal and assertions too will still be valid.)
+The notion of $\varepsilon$-solutions for these problems carries over from the one given above for Formula~\eqref{form:opt_p}.
+
+SMLP implements stable optimized synthesis based on the GearOPT$_\delta$ and GearOPT$_\delta$-BO algorithms~\cite{DBLP:conf/fmcad/BrausseKK20,DBLP:conf/ijcai/BrausseKK22}, which are shown to be complete and terminating 
+for this problem under mild conditions. 
+%
+%\todofb{Algorithms also complete under mild conditions}%
+These algorithms were further extended in SMLP to Pareto point computations to handle multiple objectives simultaneously.
+%\end{comment}
+
+
 
 
 
@@ -738,7 +899,7 @@ The optimization problem is specified in the spec file in Figure~\cref{fig:spec}
 Optimization progress is reported in  file $try\_smlp\_toy\_basic\_optimization\_progress.csv$, where $try$ is the run ID specified using option '-pref try'; $smlp\_toy\_basic$ is the name of the data file, and $optimization\_progress.csv$ is suffix for that report. More details on input, knob, output and objective values used to prove the upper and lower bounds of the objectives during search for pareto optimum are reported in file $try\_smlp\_toy\_basic\_optimization\_progress.json$. 
 
 
-%\delete{
+\delete{
 
 \section{MRC usage}\label{sec:mrc}
 
@@ -1254,7 +1415,7 @@ Shell script for processing trace files into a more human-readable format by
 filtering out non-SMT-related steps and displaying rational solutions as
 decimal float approximations.
 
-%} % end of delete macro
+} % end of delete macro
 
 \begin{thebibliography}{99}
 \bibitem{BKK20}
