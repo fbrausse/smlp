@@ -175,10 +175,10 @@ class SmlpQuery:
         
         witn_count = len(witn_dict.keys()); print('witn_count', witn_count)
         print('quer_names', quer_names, 'quer_exprs', quer_exprs)
-        # TODO !!!! do e need this way of defining queries as smlp.true?
+        # TODO !!!! do we need this way of defining queries as smlp.true?
               
         if quer_names is None and quer_exprs is None:
-            print('updating quer_exprs !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            print('updating quer_exprs')
             quer_names = list(witn_dict_filtered.keys())
             quer_exprs = ['True'] * witn_count
         
@@ -297,7 +297,7 @@ class SmlpQuery:
         with open(self.query_results_file, 'w') as f:
             json.dump(quer_res_dict, f, indent='\t', cls=np_JSONEncoder) #cls= , use_decimal=True
 
-    # querying conditions on a model to find a stable witness satisfying this condition in entre stability region
+    # querying conditions on a model to find a stable witness satisfying this condition in entire stability region
     # (defined by stability/theta radii) around that witness (which is a SAT assignment to model interface variables)
     def smlp_query(self, algo:str, model:dict, model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
             quer_names:list[str], quer_exprs:list[str], delta:float,
