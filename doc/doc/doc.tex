@@ -1,9 +1,15 @@
 \documentclass[a4paper,parskip=half]{article} %scrartcl
+
+\bibliographystyle{alpha}
+
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,mathtools,amssymb,listingsutf8,xspace}
 \usepackage{geometry,hyperref,cleveref,xcolor}
 \usepackage[disable]{todonotes}
+\usepackage{tikz-cd}
+
+\usetikzlibrary{positioning}
 
 \newcommand*\cmdstyle\texttt
 \newcommand*\file\cmdstyle
@@ -21,7 +27,7 @@
 \newcommand\changedto[2]{%
     \removed{#1}%
     \added{#2}}
-
+\newcommand\changed[1]{{\color{blue}#1}}
 
 \newcommand*\eqdef=
 
@@ -81,8 +87,8 @@
 
 \Solver (\SolverAbbrv) is a collection of tools for reasoning about machine
 learning models. \SolverAbbrv is based on SMT solver(s). In this document we
-desribe functionality for computing safe and stable regions of neural network
-models satisfying optput specifications. This correponds to solving
+describe functionality for computing safe and stable regions of neural network
+models satisfying optput specifications. This corresponds to solving
 $\epsilon$-guarded $\exists^*\forall^*$ formulas over NN
 representations~\cite{BKK20}.
 
@@ -131,6 +137,59 @@ respectively, all variables are inputs, all variables are knobs, and some of the
 
 Below by a \emph{model} we refer to an ML model that models the system under exploration.
 
+\ZK{Could not used column sep = {8.5em, between origins} option in the cube.}
+\begin{figure}[bp] %column sep = {8.5em, between origins}
+\centering
+\[
+    \begin{tikzcd}[row sep=1.5em, column sep = {8.5em}, my label/.style={midway, sloped}]
+    \bullet
+    \arrow[rr, "\text{stable-optimization}"]
+    \arrow[dr, swap,"\text{stable-synthesis}"{anchor=north,rotate=-18}]
+    &&
+    \bullet
+    \arrow[dr]
+    \\
+    &
+    \bullet
+    \arrow[rr]
+    &&
+    \bullet
+    \\
+    \bullet
+    \arrow[uu, "\text{stability}"{anchor=north,rotate=90}] 
+    \arrow[rr, dashed, "\text{optimization}"] 
+    \arrow[dr, swap, "\text{synthesis}"{anchor=south, rotate=-18}] 
+    \arrow[rrru, dashdotted, "\text{stable optimized synthesis}"{anchor=south, rotate=6}]
+    &&
+    \bullet  
+    \arrow[dr, dashed] 
+    \arrow[uu, dashed]
+    \\
+    &
+    \bullet
+    \arrow[rr] 
+    \arrow[uu]
+    && 
+    \bullet
+    \arrow[uu]
+    \end{tikzcd}
+\]
+\caption{Exploration Cube}
+\label{fig:cube}
+\end{figure}
+
+The \emph{model exploration cube} in Figure~\ref{fig:cube} provides a high level and intuitive idea on how the model exploration modes supported in SMLP are related.
+The three dimensions in this cube represent synthesis ($\searrow$-axis), optimization ($\rightarrow$-axis) and stability ($\uparrow$-axis).
+On the bottom plane of the cube, the edges represent the synthesis and optimization problems in the following sense:
+synthesis with constraints configures the knob values in a way that guarantees that assertions are valid, but unlike optimization, does not guarantee optimally with respect to optimization objectives.
+%\changed{%
+On the other hand, optimization by itself is not aware of assertions on inputs of the system and only guarantees optimality with respect to knobs, and not the validity of assertions in the configured system.
+%}%
+%\todofb{yet, optimization is not aware of assertions on inputs and thus its results are not guaranteed to be valid in the configured system by itself}%
+%while optimization guarantees near-optimality \todozk{near-optimality...; also drop ''(in a precise sense)''} (in a precise sense) with respect to optimization objectives but is not aware of assertions on inputs thus cannot guarantee their validity in the configured system.
+We refer to the process that combines synthesis with optimization and results in an optimal design that satisfies assertions as \emph{optimized synthesis}.
+The upper plane of the cube represents introducing stability requirements into synthesis (and as a special case, into verification), optimization, and optimized synthesis.
+The formulas that make definition of stable verification, optimization, synthesis and optimized synthesis precise are discussed in \changedto{Section~\ref{sect.exploration}}{Sections~\ref{sect.exploration} to \ref{sec:expl}}.
 
 \section{Concepts and Preliminaries}
 In this document, syntactical highlights are placed on
@@ -332,7 +391,7 @@ $\theta_r(p, p') \eqdef \Vert p - p' \Vert \leq r$, where  $\Vert p - p' \Vert$ 
 two configurations $p$ and $p'$, and $r$ is a relative or absolute \emph{radius}.
 
 
-\begin{defn}\label{def:witness:validity}
+\begin{defn}\label{def:stable:witness:validity}
 \begin{itemize}
 \item Given a value assignment $p^*$ to knobs $p$, an assignment $x^*$ to inputs $x$ is called a \emph{$\theta$-stable witness} 
 to $\query(p,x,y)$ for configuration $p^*$ if the following formula is valid:
@@ -559,7 +618,7 @@ The task of stable synthesis of knob values for a query $\query$ consists of sol
     ]\big]
 \end{equation} 
 
-Let $p^*, x^*$ be a solution to \cref{form:gear:synthesis:query}. Then according to Definition~\ref{def:witness:validity}, 
+Let $p^*, x^*$ be a solution to \cref{form:gear:synthesis:query}. Then according to Definition~\ref{def:stable:witness:validity}, 
 $x^*$ is a stable witness for  $\query(p^*, x, y)$. 
 
 
@@ -597,7 +656,7 @@ through the constraints, therefore usually in the context of assertion verificat
 to formalize stability also in the context of verification, SMLP assumes that the values of knobs $p$ are assigned constant values $p^*$, 
 but can be perturbed (by environmental effects or by an adversary), therefore treatment of $p^*$ is explicit. Then the problem of 
 verifying an assertion $\assert(p^*,x,y)$ under allowed perturbations $p'$ of knob values $p^*$ controlled by $\theta_r(p^*, p')$, 
-as defined in Definition~\ref{def:witness:validity}, is exactly the problem of certification of stability 
+as defined in Definition~\ref{def:stable:witness:validity}, is exactly the problem of certification of stability 
 of witness $p^*$ for query $\assert(p^*,x,y)$, as formalized in~\cref{form:gear:certify}, 
 where now  \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \assert(p,x,y).\] Therefore, in current implementation, 
 in mode ``verify'', SMLP supports verification without stability considerations, that is, assumes the stability predicate $\theta(p,p')$ on 
@@ -897,6 +956,144 @@ The optimization problem is specified in the spec file in Figure~\cref{fig:spec}
 
 
 Optimization progress is reported in  file $try\_smlp\_toy\_basic\_optimization\_progress.csv$, where $try$ is the run ID specified using option '-pref try'; $smlp\_toy\_basic$ is the name of the data file, and $optimization\_progress.csv$ is suffix for that report. More details on input, knob, output and objective values used to prove the upper and lower bounds of the objectives during search for pareto optimum are reported in file $try\_smlp\_toy\_basic\_optimization\_progress.json$. 
+
+\subsection{Design of experiments}\label{sssect:doe}
+
+Most DOE methods
+are %mainly
+based on understanding multivariate distribution of legal value combinations
+of inputs and knobs %, possibly combined with random sampling
+in order to sample the system.
+\pagebreak[3]
+When the number of system inputs and/or knobs is large (say hundreds or more), the DOE may not  generate a high-quality coverage of the system’s behavior to enable training models with high accuracy.
+%When the number of system inputs and/or knobs is large (say hundreds or more),
+%the DOE methods that are mainly based on understanding multivariate distribution of legal value combinations of inputs and knobs,
+%possibly combined with random sampling,
+%cannot generate a high-quality coverage of the system's behavior to enable training models with high accuracy.
+Model training process itself becomes less manageable when number of input variables grows,
+and models are not explainable and thus cannot be trusted.
+One way to curb this problem is to select a subset of input features for DOE and for model training.
+The problem of combining feature selection with DOE generation and model training
+is an important research topic of practical interest,
+and SMLP supports multiple practically proven ways
+to select subsets of features and feature combinations as inputs to DOE and training,
+including the \emph{MRMR} feature selection algorithm~\cite{DBLP:journals/jbcb/DingP05},
+and a \emph{Subgroup Discovery (SD)} algorithm~\cite{DBLP:books/mit/fayyadPSU96/Klosgen96,DBLP:conf/pkdd/Wrobel97,DBLP:journals/widm/Atzmueller15}.
+The MRMR algorithm selects a subset of features according to the principle of \emph{maximum relevance and minimum redundancy}.
+It is widely used for the purpose of selecting a subset of features for building accurate models,
+and is therefore useful for selecting a subset of features to be used in DOE;
+it is a default choice in SMLP for that usage.
+The SD algorithm selects regions in the input space relevant to the response,
+using heuristic statistical methods,
+and such regions can be prioritized for sampling in DOE algorithms.
+
+
+
+\subsection{Root cause analysis}
+
+We view the problem of root cause analysis as dual to the stable optimized synthesis problem: while during optimization with stability we are searching for regions in the input space (or in other words, characterizing those regions) where the system response is good or excellent, the task of root-causing can be seen as searching for regions in the input space where the system response is not good (is unacceptable). Thus simply by swapping the definition of excellent vs unacceptable, we can apply SMLP to explore weaknesses and failing behaviors of the system.
+
+Even if a number of witnesses (counter-examples to an assertion) are available, they represent discrete points in the input space and it is not immediately clear which value assignments to which variables in these witnesses are critical to explain the failures. Root causing capability in SMLP is currently supported through two independent approaches:
+a \emph{Subgroup Discovery (SD)} algorithm that searches through the data for the input regions where there is a higher ratio (thus, higher probability) of failure; to be precise, SD algorithms support a variety of \emph{quality functions} which play the role of optimization objectives in the context of optimization.
+%\delete{SD and Rule Learning algorithms have been used successfully for root-causing in a number of EDA domains (and beyond).}
+To find input regions with high probability of failure, SMLP searches for stable witnesses to failures. These capabilities, together with feature selection algorithms supported in SMLP, enable researchers to develop new root causing capabilities that combine formal methods with statistical methods for root cause analysis. 
+
+
+\subsection{Model refinement loop}\label{s.refinement}
+
+Support in SMLP for selecting DOE vectors to sample the system and generate a training set was discussed in Subsection~\ref{sssect:doe}.
+Initially, when selecting sampling points for the system, it is unknown which regions in the input space are really relevant for the exploration task at hand.
+Therefore some DOE algorithms also incorporate random sampling and
+sampling based on previous experience and familiarity with the design, such as sampling nominal cases and corner cases, when these are known.
+For model exploration tasks supported by SMLP, it is not required to train a model that will be an accurate match to the system everywhere in 
+the legal search space of inputs and knobs.
+%\todofb{I don't understand what `adequate' means. First time distinguished from `accurate' here.}%
+We require to train a model that is an \emph{adequate} representation of the system for the task at hand, 
+meaning that the exploration task solved on the model solves this task for the system as well.
+Therefore SMLP supports a \emph{targeted model refinement} loop to
+enable solving the system exploration tasks by solving these tasks on the model instead.
+The idea is as follows: when a stable solution to model exploration task is found, it is usually the case that there are not 
+many training data points close to the stability region of that solution.
+This implies that there is a high likelihood that the model does not accurately represent the system in the stability region of the solution.
+Therefore the system is sampled in the stability region of the solution, and these data samples are added to the initial training data to 
+retrain the model and make it more adequate in the stability region of interest.
+%Therefore the system is sampled in the stability region of the solution. If the learning is confirmed on the system using these newly 
+% vsampled points, then the model exploration goal has been accomplished and model refinement can stop. Otherwise these data samples 
+%are added to the initial training data to retrain the model and make it more adequate in the stability region of interest.
+Samples in the stability region of interest can also be assigned higher weights compared to other samples to help training to achieve 
+higher accuracy in that region. More generally, higher adequacy of the model can be achieved by sampling distributions biased towards 
+prioritizing the stability region during model refinement.
+
+%\begin{comment}
+\strut\todofb{It is hard to follow the reasoning laid out in these two following paragraphs.}%
+Note that model refinement is required only to be able to learn properties on the system by exploring these properties on the model.
+As a simple scenario, let us consider that we want to check an assertion $\assert(p,x,y)$ on the system.
+If a $\theta$-stable counter example $x^*$ to $\assert(p,x,y)$ for a configuration $p^*$ of knobs exists 
+on the model according to Definition~\ref{def:stable:witness:validity} 
+(which means that  $x^*$ is a $\theta$-stable witness for query $\query(p^*, x, y) \eqdef \neg \assert(p^*,x,y)$), 
+then the system is sampled in the $\theta$--stability region of $p^*$ (possibly with $x^*$ toggled as well in a small region around $x^*$).
+If the failure of assertion $\assert(p,x,y)$ is reproduced on the system using the stable witness $x^*$ and a configuration in the $\theta$-stability region of $p^*$,
+then the model exploration goal has been accomplished (we found a counter-example to $\assert(p,x,y)$ on the system) and model refinement can stop.
+Otherwise the system samples can be used to refine the model in this region.
+For that reason, the wider the $\theta$-stability region, the higher the chances to reproduce failure of assertion $\assert(p,x,y)$ on the system.
+
+On the other hand, if the $\assert(p,x,y)$ does not have a $\theta$-stable counter-example, then it is still possible that $\assert$ is not valid on the system 
+but it cannot be falsified on the model due to discrepancy between the system and model responses in some (unknown to us) input space.
+In this case one can strengthen $\assert(p,x,y)$ to $\assert'(p,x,y)$ (for example, assertion $\assert(p,x,y) \eqdef y \geq 3$ can be 
+strengthened to $\assert'(p,x,y) \eqdef y \geq 3.01$),
+or one can weaken the stability condition $\theta_r$ to  $\theta_{r'}$ by shrinking the stability radii $r$ to $r'$; or do both.
+If the strengthened assertion $\assert'(p,x,y)$ has a $\theta_{r'}$-stable counter-example $x'$ for a configuration $p'$ on the model, 
+then $p', x'$ can be used to find a counter-example to the original assertion $\assert(p, x, y)$ on the system in the same way as with $p^*, x^*$ before.
+If failure of the original assertion $\assert$ is reproduced on the system, the model refinement loop stops, otherwise it can continue using other 
+strengthened versions of the original assertion and or shrinking the  stability radii even further.
+Similar reasoning is applied to other modes of design space exploration. In particular, in the optimization modes, one can confirm 
+or reject on the system an optimization threshold proved on the model, and in the latter case the model refinement loop 
+will be triggered by or providing new data-points 
+that can be used for model refinement  in this region, through re-training or incremental training of a new model. 
+\KK[inline]{Might be move to the end of 1st para: Similar reasoning is applied to other modes of design space exploration. 
+In particular, in the optimization modes, the region around optimal solution can be sampled and simulated by the system, 
+and either confirm the model predictions or provide new data-points that can be used for model refinement in this region.}
+%\end{comment}
+
+\delete{OLD: 
+Usefulness of an ML model is limited by its accuracy with respect to the system that it models.
+A major share of the gap between the system response and the model response on same inputs is due to poor quality of training set that was obtained by sampling the system.
+SMLP support for selecting DOE vectors to sample the system and generate a training set was discussed in Subsection~\ref{sssect:doe}.
+SMLP also supports a \emph{model refinement loop} based on model exploration results in SMLP.
+We are interested in \emph{targeted refinement} of the model, in input regions where it matters for the task at hand.
+We explain how model refinement works, and relevance of stable witnesses for that goal. The idea is as follows:
+Consider a condition of interest, called $query$.
+For example, $query$ can be negation of an assertion validity formula
+$\forall x y (\varphi_M(p,x,y)  \implies \assert(p,x,y))$
+that is expected to be valid on the system, say
+$query_1 \equiv \exists x. y < 3$ where $assert(p,x,y) \equiv y \geq 3$,
+%$query_1 \equiv \neg\operatorname{assert}(x, y)\equiv \neg (y \geq 3)$, 
+or an optimization threshold query
+$\forall x y (\varphi_M(p,x,y)  \implies \assert(p,x,y))$
+for an objective $o$ to optimize,
+say $query_2\equiv o \geq 5$,
+under model constraints $\varphi_M(x,y)$.
+If a stable witness to this query exists on the model,
+one samples the system in the stability region of that witness.
+If one of these data samples is a witness to that query on the system,
+then querying the model helped us to find a witness to the query on the system.
+(If that query was $query_1$, this way we have found a real violation of
+$\operatorname{assert}(x,y)$ on the system;
+and if that query was $query_2$,
+we have confirmed the objective threshold $o \geq 5$ on the system.)
+If on the other hand none of the newly sampled data points (including the witness itself) is a witness of $query$ on the system,
+we have discovered \changed{a} discrepancy between the model and system response in the input region of interest (relevant to that query of interest),
+and the newly sampled data points can be added to the training data and model re-trained,
+to improve its quality in the stability region of interest.
+Note that $query$ can also be negation of a strengthened assertion
+(say assertion $y \geq 3$ can be strengthened to $y \geq 3.001$)
+and thereby weaken the query,
+and even if the original query does not have a stable witness, the modified one might have,
+and a stable witness to the modified query can be used in model refinement or
+finding a bug on the system
+in the same way as a witness to the original query if it existed.
+Thus\changed{, the} model refinement loop also works when all assertions of interest are valid on the model.
+}
 
 
 \delete{
@@ -1417,6 +1614,10 @@ decimal float approximations.
 
 } % end of delete macro
 
+
+\bibliography{bib}
+
+\delete{
 \begin{thebibliography}{99}
 \bibitem{BKK20}
  F. Brauße, Z. Khasidashvili and K. Korovin.
@@ -1435,7 +1636,7 @@ decimal float approximations.
 \newblock{SMLP: Symbolic Machine Learning Prover.}
 \newblock{Report arXiv: 2402.01415 , 2024.}
 \end{thebibliography}
-
+}
 
 \appendix
 \section{Concrete Formats}
