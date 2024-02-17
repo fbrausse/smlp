@@ -80,7 +80,7 @@ class SmlpData:
         # data preprocessing
         # Data preprocessing is applied to raw data immediately after loading, and its aim is to prepare
         # data to confirm to SMLP tool requirements many of which are described below. That is, this
-        # stage of data processing is to make the tool user freindly, and perform some data 
+        # stage of data processing is to make the tool user friendly, and perform some data 
         # transformations instead of the user having to do this. Thus, all the reports and visualization
         # of the results will use preprocessed data, and assume the data was passed to the tool in that
         # form. As an example, if some values in columns were replaced, say 'pass' wwas replaced by 0
@@ -92,7 +92,7 @@ class SmlpData:
         # For now, categorical responses are supported only if they have two values -- it is user 
         # responsibility to encode a categorical response with more than two levels (values) into
         # a number of binary responses (say through the one-hot encoding). 
-        # A categorical response can be specified as a (a) 0/1 feature, (b) catgorical feature with 
+        # A categorical response can be specified as a (a) 0/1 feature, (b) categorical feature with 
         # two levels; or (c) numeric feature with two values. In all cases, parameters specified through
         # options positive_value and negative_value determine which one of these two values in that
         # response define the positive samples and which ones define the negative ones -- both in 
@@ -100,11 +100,11 @@ class SmlpData:
         # Then, as part of data preprocessing (which is only the first stage of data preparation),
         # the positive_value and the negative_value in the response will be replaced by 
         # STAT_POSITIVE_VALUE and STAT_POSITIVE_VALUE, respectively, which are equal to 1 and 0, 
-        # following the convention in statstcs that value integer 1 denotes positive and 0 negative. 
+        # following the convention in statistics that value integer 1 denotes positive and 0 negative. 
         # That is, the intention is that user has to provide categorical responses as 1/0 responses
         # where 1 denotes positive samples and 0 denotes negative samples, and to make the tool user
-        # freandly the user has freedom to specify categorical repsonses in one of the three ways (a)-(c)
-        # described above with the intension that the tool inetrnally will convert such responses into
+        # friendly the user has freedom to specify categorical responses in one of the three ways (a)-(c)
+        # described above with the intention that the tool internally will convert such responses into
         # 1/0 columns and all the results will be reported and visualized using 1/0 values and not the
         # original values used to define positive and negative values in the responses in the raw input data.
         #
@@ -114,7 +114,7 @@ class SmlpData:
         # two values, than it can still be treated as a categorical/binary response, as described in case (c)
         # of specifying binary responses. Otherwise -- that is, when {positive_value, negative_value} is not
         # equal to the set of the two values in the response, the response is treated as numeric. 
-        # Paremeter values specified through options positive_value and negative_value have a different 
+        # Parameter values specified through options positive_value and negative_value have a different 
         # meaning for numeric responses: they are not used to replace values in the response as part of 
         # preprocessing. Instead, positive_value = STAT_POSITIVE_VALUE and negative_value = STAT_NEGATIVE_VALUE
         # (which is the default) specifies that the high values in the response are positive (undesirable) and
@@ -125,14 +125,14 @@ class SmlpData:
         #
         # Multiple responses
         # Multiple responses can be treated in a single analysis only if all of them are identified as 
-        # definng regression analysis or all of them are identifies as defining classification analysis.
+        # defining regression analysis or all of them are identifies as defining classification analysis.
         # if that is not the case, SMLP will abort with an error message clarifying the reason.
         #
         # Optimization problems:
         # If we are dealing with an optimization problem for a response or multiple responses, then combination
         # positive_value = STAT_POSITIVE_VALUE and negative_value = STAT_NEGATIVE_VALUE specifies that 
-        # we want to maximaize the response values (find ragions in input space where the responses are
-        # close to maximum / close to pareto optimal with respsect to maximization; and conversely, combination
+        # we want to maximize the response values (find regions in input space where the responses are
+        # close to maximum / close to pareto optimal with respect to maximization; and conversely, combination
         # positive_value = STAT_NEGATIVE_VALUE and negative_value = STAT_POSITIVE_VALUE specifies that we
         # are looking at (pareto) optimization problem with respect to minimization.
         #
@@ -148,9 +148,9 @@ class SmlpData:
         # scaled features and/or responses).
         #
         # Processing of features
-        # Constant featurues (and responses) are dropped as part of preprocessing. Currenlty SMLP does
-        # not have a need to make a direct usage of boolean type in fetaures (or in responses) 
-        # and they (the boolean faetures) are trated as ctagorical (by converting boolean values to
+        # Constant features (and responses) are dropped as part of preprocessing. Currently SMLP does
+        # not have a need to make a direct usage of boolean type in features (or in responses) 
+        # and they (the boolean features) are treated as categorical (by converting boolean values to
         # strings 'True' and 'False'). Therefore after preprocessing the only supported pandas column types
         # are 'int', 'float', or categorical, where, in turn, categorical features can have types 'object' 
         # (=string type of column values) or 'category'; the category type can be ordered or un-ordered.
@@ -160,10 +160,10 @@ class SmlpData:
         # while others, e.g., Neural Networks, polynomial models, and more, assume all inputs are numeric
         # integer or float). Therefore, depending on the analysis mode (feature selection, model training,
         # model exploration), categorical features might be encoded into integers (and treated as discrete 
-        # domains -- and not continuous domains). Conversly, some algorithms (especially, correlations)
+        # domains -- and not continuous domains). Conversely, some algorithms (especially, correlations)
         # might prefer to discretize numeric features into categorical features, and discretization options
         # in SMLP support discretization of numeric features with target type 'object' and 'category', 
-        # ordered or un-ordered, where the values in the resulting columns can be integrs (as strings or
+        # ordered or un-ordered, where the values in the resulting columns can be integers (as strings or
         # levels, e.g., 5) of other values (like 'bin5').
         self.data_params_dict = {
             'response': {'abbr':'resp', 'default':None, 'type':str,
@@ -177,7 +177,7 @@ class SmlpData:
             'new_data': {'abbr':'new_data', 'default':None, 'type':str,
                 'help':'Path excluding the .csv suffix to new data file [default: None]'},
             'data_scaler': {'abbr':'data_scaler', 'default':self._DEF_SCALER, 'type':str, 
-                'help':'Should features and responses be scaled and with which scaling optionton ?'+
+                'help':'Should features and responses be scaled and with which scaling optionton? '+
                     'Value "none" implies no scaling; the only other supported option in "min_max" scaler ' +
                         '[default: {}]'.format(str(self._DEF_SCALER))},
             'scale_features': {'abbr':'scale_feat', 'default': self._DEF_SCALE_FEATURES, 'type':str_to_bool,

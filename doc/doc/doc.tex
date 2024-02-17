@@ -42,9 +42,10 @@
 \newcommand*\regmax[2]{[[{#1}]]_{#2}}
 %\newcommand*\objv{\operatorname{objv}}
 \newcommand*\objv{o}
-
-
-
+\newcommand*\option[1]{\operatorname{\mathsf{#1}}} % used for formatting names of SMLP command line options
+\newcommand*\suffix[1]{\operatorname{\mathsf{#1}}} % used for formatting names of input data formats like .csv, .json, .pkl, .h5
+\newcommand*\mode[1]{\operatorname{\mathsf{#1}}} % used for formatting names of SMLP model like verify, optimize, ...
+\newcommand*\package[1]{\operatorname{\mathsf{#1}}} % used for formatting names of packages/libraries used by SMLP, e.g., Keras, pycaret, sklearn, ...
 
 \newcommand*\Solver{Symbolic Machine Learning Prover\xspace}
 \newcommand*\SolverAbbrvText{SMLP}
@@ -339,19 +340,251 @@ this variable.
 \end{itemize}
 
 
+\section{SMLP input and output}
+
+Input files to an SMLP command can be located in different directories and have in general different formats.
+The most common input files and how to feed them to SMLP is described in Subsection~\ref{sec:smlp:inputs}. 
+All outputs from an SMLP run, on the other hand, are written into the same output directory, as described in 
+Subsection~\ref{sec:smlp:outputs}.
+
+\subsection{SMLP inputs}\label{sec:smlp:inputs}
+
+\begin{itemize}
+\item[training data] should be a $\suffix{.csv}$ file. Full path to data should be specified using option $\option{-data}$, 
+without the $\suffix{.csv}$ suffix. For modes where a model is trained, data should include one or more responses.
+All responses must be numeric (categorical features as responses will be supported in future). 
+\item [new data] should be a $\suffix{.csv}$ file. Full path to data should be specified using option $\option{-new\_data}$
+without the $\suffix{.csv}$ suffix. May or may not include responses; if yes, the responses should be of the same type as in training data. 
+\item [problem spec] should be  a $\suffix{.spec}$ file, with the content in $\suffix{json}$ format (so it is loaded using json.load() 
+as a Python dictionary). Full path to spec file should be specified using option $\option{-spec}$, without the suffix 
+$\suffix{.spec}$. It is required in model exploration modes ($\mode{query}, \mode{verify}, \mode{optimize}$, etc.).
+\item[doe spec] should be a $\suffix{.csv}$ file. Full path to DOE (design of Experiments) spec file should be specified 
+using option $\option{-doe\_spec}$. Required for DOE generation.
+\end{itemize}
+
+\subsection{SMLP outputs}\label{sec:smlp:outputs}
+
+SMLP communicates its results using files, and it outputs all reports, plots, and collateral files in the same directory.
+A full path to that output directory can be specified using option $\option{-out\_dir}$, and it is recommended to specify it.
+If not specified, the directory of input data file is used as the output directory. 
+If the latter is not specified (say if a saved model is used for performing prediction), the directory of the new data 
+file is used as the output directory. If the new data file is not specified either, say in case of $\mode{doe}$ mode, 
+then the directory of the DOE spec file is used as the output directory. Otherwise an error is issued.
+
+The output files may also include a saved trained model and a collection of other files that together have all the information
+required to rerun the saved model on new data. All files collectively defining a saved model start with the same name prefix.
+This prefix is a concatenation of the SMLP invocation ID/name specified using option $\option{-pref\,\,runname}$, and the saved
+model name specified using option $\option{-model\_name\,\, modelname}$. If saved model name is not specified, the
+prefix for all model related file names is computed by SMLP using the data name that was used for training the model, but
+this might change in future and it is recommended to always use a model name when saving a trained model. 
+
+All the other output file names also have the same prefix, computed by concatenating the SMLP run ID/name 
+specified using option  $\option{-pref}$ and the name of input data (or new data) file in modes where these
+data files are provided, or with the name of the saved mode if the latter is used in analysis, or the DOE spec file
+name in the $\mode{doe}$ mode. Currently any SMLP mode uses at least one of the following: input (training)
+data, new data, or DOE spec file, therefore file name prefixes are well defined both for saved model related files
+as well as SMLP report and collateral files. Assuming a unique ID/name is used for each SMLP run (specified
+using option $\option{-pref}$), all files generated as a result of that run can be identified uniquely.
+
+
+
+\section{Data processing options}\label{sec:data}
+
+\subsection{Data processing options}
+
+Data \emph{preprocessing} is applied to raw data immediately after loading, and its aim is to prepare
+data to confirm to SMLP tool requirements many of which are described below. That is, this
+stage of data processing is to make the tool user friendly, and perform some data 
+transformations instead of the user having to do this. Thus, all the reports and visualization
+of the results will use preprocessed data, and assume the data was passed to the tool in that
+form. As an example, if some values in columns were replaced, say 'pass' was replaced by 0
+and 'fail' was replaced by 1, the reports will use values 0 and 1 in that column. Some of the 
+data preprocessing steps might include dropping some of the columns and/or rows in the loaded
+data, replacing values in some of the columns with other values, casting types of columns, etc.
+
+\subsection{Categorical responses / classification analyses}
+For now, categorical responses are supported only if they have two values -- it is user 
+responsibility to encode a categorical response with more than two levels (values) into
+a number of binary responses (say through the one-hot encoding). 
+A categorical response can be specified as a (a) 0/1 feature, (b) categorical feature with 
+two levels; or (c) numeric feature with two values. In all cases, parameters specified through
+options $\option{positive\_value}$ and $\option{negative\_value}$ determine which one of 
+these two values in that
+response define the positive samples and which ones define the negative ones -- both in 
+training data and in test data if the latter is labeled -- has that response column. 
+Then, as part of data preprocessing (which is only the first stage of data preparation),
+the $positive\_value$ and the $negative\_value$ in the response will be replaced by 
+$STAT\_POSITIVE\_VALUE$ and $STAT\_POSITIVE\_VALUE$, respectively, which are equal to $1$ and $0$, 
+following the convention in statistics that value integer $1$ denotes positive and $0$ negative. 
+That is, the intention is that user has to provide categorical responses as $1/0$ responses
+where $1$ denotes positive samples and $0$ denotes negative samples, and to make the tool user
+friendly the user has freedom to specify categorical responses in one of the three ways (a)-(c)
+described above with the intention that the tool internally will convert such responses into
+$1/0$ columns and all the results will be reported and visualized using $1/$0 values and not the
+original values used to define positive and negative values in the responses in the raw input data.
+
+
+\subsection{Numeric responses / regression analyses}
+
+Float and int columns in input data can define numeric responses. Each such response with more than 
+two values is treated as numeric (and we are dealing with a regression analyses). If a response has 
+two values, than it can still be treated as a categorical/binary response, as described in case (c)
+of specifying binary responses. Otherwise -- that is, when $\{positive\_value, negative\_value\}$ is not
+equal to the set of the two values in the response, the response is treated as numeric. 
+\delete{
+Parameter values specified through options $positive\_value$ and $negative\_value$ have a different 
+meaning for numeric responses: they are not used to replace values in the response as part of 
+preprocessing. Instead, $positive\_value = STAT\_POSITIVE\_VALUE$ and $negative\_value = STAT\_NEGATIVE\_VALUE$
+(which is the default) specifies that the high values in the response are positive (undesirable) and
+the low values are negative (desirable). The opposite assignment $positive\_value$ = $STAT\_NEGATIVE\_VALUE$ 
+and $negative\_value = STAT\_POSITIVE\_VALUE$ specifies that low values in the response are positive and
+high values are negative. Other possibilities for the pair $(positive\_value, negative\_value)$ are 
+considered as incorrect specification and an error message is issued. 
+}
+
+
+\subsection{Multiple responses}
+
+Multiple responses can be treated in a single SMLP run only if all of them are identified as 
+defining regression analysis or all of them are identifies as defining classification analysis.
+if that is not the case, SMLP will abort with an error message clarifying the reason.
+        
+
+\delete{
+\subsection{Optimization problems}
+
+If we are dealing with an optimization problem for a response or multiple responses, then combination
+$positive\_value = STAT\_POSITIVE\_VALUE$ and $negative\_value = STAT\_NEGATIVE\_VALUE$ specifies that 
+we want to maximize the response values (find regions in input space where the responses are
+close to maximum / close to pareto optimal with respect to maximization; and conversely, combination
+$positive\_value = STAT\_NEGATIVE\_VALUE$ and $negative\_value = STAT\_POSITIVE\_VALUE$ 
+specifies that we are looking at (pareto) optimization problem with respect to minimization.
+}
+
+
+\subsection{Data scaling / normalization}
+
+Data scaling is managed separately for the features and the responses. A particular mode of usage
+(model training and prediction, feature selection or range analysis, pareto optimization, etc.)
+can decide to scale features and or scale responses. The reports and visualization should use
+features and responses in the original scale, thus unscaling must be performed. Normalization is 
+done after data preprocessing, and is part of data processing (which is a second stage of data 
+preparation, to which preprocessing is the first stage). SMLP optimization algorithms operate
+with data in original scale (say domain spec describing input feature and response types and
+ranges refer to preprocessed data, in the original scale, even if say models were trained with
+scaled features and/or responses).
+
+\subsection{Processing of features}
+
+Constant features (and responses) are dropped as part of preprocessing. Currently SMLP does
+not have a need to make a direct usage of boolean type in features (or in responses) 
+and they (the boolean features) are treated as categorical (by converting boolean values to
+strings 'True' and 'False'). Therefore after preprocessing the only supported pandas column types
+are 'int', 'float', or categorical, where, in turn, categorical features can have types 'object' 
+(=string type of column values) or 'category'; the category type can be ordered or un-ordered.
+Some of the algorithms prefer to use categorical features as is -- with string values: for example,
+feature selection algorithms can use dedicated correlation measures for categorical features. Also,
+some of the training algorithms, such as tree based, can deal with categorical features directly, 
+while others, e.g., Neural Networks, polynomial models, and more, assume all inputs are numeric
+integer or float). Therefore, depending on the analysis mode (feature selection, model training,
+model exploration), categorical features might be encoded into integers (and treated as discrete 
+domains -- and not continuous domains). Conversely, some algorithms (especially, correlations)
+might prefer to discretize numeric features into categorical features, and discretization options
+in SMLP support discretization of numeric features with target type 'object' and 'category', 
+ordered or un-ordered, where the values in the resulting columns can be integers (as strings or
+levels, e.g., 5) of other values (like 'bin5').
+
+
+\begin{itemize}
+\item missing value imputation is performed with the $\option{most\_frequent}$ strategy of 
+SimpleImputer class from $\package{sklearn}$ package. 
+\item converting categorical features to integers using WHICH METHOD???
+\item dropping rows where at least on response has a missing value
+\item feature subset selection to be used in analysis, with option $\option{-feat\,\, x1,x2,p1,p2}$
+\item responses subset selection to be used in analysis, with option $\option{-resp \,\,y1. y2}$
+\item feature subset selection using MRMR algorithm (for modes that require building models):  
+$\option{-mrmr\_pred \,\,5}$
+\item feature descrtization (not yet used in feature selection algorithms)
+\item Features and/or responses might or might not be scaled, and these are controlled using two options:
+the option $\option{-data\_scaler}$  controls which data scaler should be used: the $\option{MinMaxScaler}$ 
+class of $\package{sklearn}$ package or None (in which case neither features nor responses will be scaled); 
+and Boolean typed options $\option{-scale\_feat}$ and $\option{-scale\_resp}$ for controlling feature and 
+response scaling, respectively.
+The optimization objectives are scaled (always,  in current implementation) to $[0,1]$ based on the min and max 
+values of each individual objective in the training data. If training data is not provided (e,g., if a saved model is 
+used for model exploration) then scaling factor is determined based on sampling the objective's values on the model.
+\ZK{not implemented}
+\end{itemize}
+
 \section{Training ML models with SMLP}\label{sec:models}
 
-SMLP supports training tree-based and polynomial models using the scikit-learn\footnote{\url{https://scikit-learn.org/stable/}} 
-and pycaret\footnote{\url{https://pycaret.org}} packages, 
-and training neural networks using the Keras package with TensorFlow\footnote{\url{https://keras.io}}. 
-For systems with multiple outputs, SMLP supports training one model with multiple outputs as well as training separate models per response 
-(this is controlled by command-line option $model\_per\_response$). Supporting these two options allows a trade-off between the accuracy 
+SMLP supports training tree-based and polynomial models using the $\package{scikit-learn}$\footnote{\url{https://scikit-learn.org/stable/}} 
+and $\package{pycaret}$\footnote{\url{https://pycaret.org}} packages, and training neural networks using the $\package{Keras}$ package 
+with $\package{TensorFlow}$\footnote{\url{https://keras.io}}. For systems with multiple outputs (responses), SMLP supports training 
+one model with multiple responses as well as training separate models per response  (this is controlled by command-line option 
+$\option{-model\_per\_response}$). Supporting these two options allows a trade-off between the accuracy 
 of the models (models trained per response are likely to be more accurate) and with the size of the formulas that represent the model for 
-symbolic analysis (one multi-output model formula will be at least smaller when the same training hyper-parameters are used). 
+symbolic analysis (one multi-response model formula will be smaller at least when the same training hyper-parameters are used). 
 Conversion of models to formulas into SMLP language is done internally in SMLP (no encoding options are exposed to user in current 
 implementation, which will change once alternative encodings will be developed).
 
+Figure~\ref{fig:pred:command} displays an example SMLP command in $\mode{prediction}$ mode.
+The option $\option{-data}$ specifies full path to data $\suffix{csv}$ file (the $\suffix{.csv}$ suffix is not required).
+Similarly, option $\option{-new\_data}$ specifies full path to the new data (usually not available/used during model training and validation).
+Option $\option{-resp}$ defines the names of the responses;
+and option $\option{-feat}$ defines the names of a subset of features from training data to be used in ML model training
+(the same subset of features is selected form new data to perform prediction on new data).
+Option $\option{-model}$ defines the ML model training algorithm. As an example, the command in Figure~\ref{fig:pred:command}
+trains a polynomial model using the $\package{scikit-learn}$ package, and in SMLP model training algorithm naming convention is to
+suffix the algorithm name with the package name, separated by underscore,  to form the full algorithm name.
+For $\package{Keras}$ and $\package{pycaret}$ packages, the package name suffixes used are $\package{keras}$ and 
+$\package{pycaret}$, respectively, while for algorithms from $\package{scikit-learn}$ package we use an 
+abbreviated suffix $\package{sklearn}$.
+\begin{figure}%[tp]
+%\scriptsize
+%\tiny
+%\small
+\begin{verbatim}
+../src/run_smlp.py -data ../smlp_toy_basic -out_dir ../out -pref test_predict \
+-mode predict -resp y1,y2 -feat x1,x2,p1,p2 -model poly_sklearn -save_model t \ 
+-model_name test_predict_model -save_model_config t -mrmr_pred 0 -plots f \
+-seed 10 -log_time f -new_data ../smlp_toy_basic_pred_unlabeled  
 
+\end{verbatim}
+\caption{Example of SMLP's command  to train a polynomial model and perform prediction on new data.}
+\label{fig:pred:command}
+\end{figure}
+
+SMLP supports saving a trained model to reuse it in future on incoming new data. 
+Saving a model is enabled using options $\option{-save\_model\,\, t\,\,-model\_name \,\,modelname}$,
+and rerunning a saved model is enabled using options $\option{-use\_model\,\, t\ \,\,-model\_name \,\,../modelname}$.
+In addition, using options $\option{-save\_model\,\, t\,\,-model\_name \,\,modelname\,\, -save\_config\,\, t}$ 
+one can generate a configuration file that records model training options prior to saving the model and  enables one 
+to easily rerun the saved model. The $\option{nn\_keras}$ models are saved and loaded using the $\suffix{.h5}$
+format, while for models trained using $\package{sklearn}$ and $\package{pycaret}$ packages the  $\option{.pkl}$ format 
+ is used. Figure~\ref{fig:pred:rerun:saved} gives two example commands to rerun a saved model on new data.
+The first one repeats the options of the command that trained and saved the model, and the second
+one uses the configuration file saved during the model training (the configuration file records all the SMLP options
+used during model training; therefore there is no need to repeat the SMLP options used during model training
+when reusing the saved model with the configuration file). 
+
+\begin{figure}%[tp]
+%\scriptsize
+%\tiny
+%\small
+\begin{verbatim}
+../src/run_smlp.py -model_name ../test_predict_model -out_dir ../out \ 
+-pref test_prediction_rerurn -new_data ../smlp_toy_basic_pred_unlabeled \
+-config ../test_predict_model_rerun_model_config 
+
+../src/run_smlp.py -model_name ../test_predict_model -out_dir ../out \ 
+-pref model_rerun -new_data ../smlp_toy_basic_pred_unlabeled -mrmr_pred 0 \
+-plots f -seed 10 -log_time f -use_model t -model_name ../test_predict_model  
+
+\end{verbatim}
+\caption{Examples of SMLP's commands to use a saved mode to perform prediction on new data.}
+\label{fig:pred:rerun:saved}
+\end{figure}
 
 \section{ML model exploration with SMLP}\label{sec:exploration}
 
@@ -366,14 +599,14 @@ multiple assertions in a single run.
 \item[synthesize] Given an ML model $M$,  find a stable configuration of knobs (a value assignment $a$ to knobs) 
 such that required constraints (possibly including assertions),  are valid for all legal value assignments to the inputs.
 \item[optimize]  Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of 
-the optimization objectives (pareto-optimal with respect to the \emph{max-min} optimization problem defined in~\cite{BKK24}).
+the optimization objectives (pareto-optimal with respect to the \emph{max-min} optimization problem defined in~\cite{brausse2024smlp}).
 \item[optsyn] Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of the 
 optimization objectives and all constraints and assertions are valid for all legal values of inputs. This mode is a union 
 of the \emph{optimize} and \emph{synthesize} modes, its full name is \emph{optimized synthesis}. 
 All the previous modes can be seen as a special case of optimized synthesis mode.
 \end{itemize}
 
-A formal definition of the tasks accomplished with these model exploration modes can be found in~\cite{BKK24}. 
+A formal definition of the tasks accomplished with these model exploration modes can be found in~\cite{brausse2024smlp}. 
 Formal descriptions combined with informal clarifications will be provided in this section as well. 
 Running SMLP in these modes reduces to solving formulas of the following structure:
 \begin{equation}\label{form:gear:final}
@@ -428,7 +661,7 @@ $\assert(p^*, x,y)$ is \emph{$\theta$-falsifiable} (that is, it is not $\theta$-
 The idea behind the concept of $\theta$-validity of an assertion $\assert(p, x,y)$ with respect to a knob configuration $p^*$ is as follows. 
 Under the assumption that the system is 
 in one of the points in the $\theta$-stability region of $p^*$,  while the probability for the system of being in one of these points is $1$ 
-(due to the assumption), the probability for the system of being in a particular point $x^*$ in the $\theta$-stability region is $0$.
+(due to the assumption), the probability for the system of being in a particular point $p^*$ in the $\theta$-stability region is $0$.
 \footnote{Here we have the situation that an infinite sun of $0$s is $1$. The number $1$ is selected because we are talking 
 about probability and $1$ is the maximum probability. Here we want to make connection between stability and probability,
 and we need an arithmetic / a calculus where an infinite sum of $0$s is not $0$. More precisely, likely we want $0 \times \aleph_0 = 0;\,\,
@@ -906,10 +1139,10 @@ The optimization problem is specified in the spec file in Figure~\cref{fig:spec}
 %\tiny
 %\small
 \begin{verbatim}
- ../src/run_smlp.py -data smlp_toy_basic -out_dir out -pref abc  -mode optimize -pareto t  \
+ ../src/run_smlp.py -data ../smlp_toy_basic -out_dir ../out -pref abc  -mode optimize -pareto t  \
 -sat_thresh f -resp y1,y2 -feat x1,x2,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 \
 -data_scaler min_max -epsilon 0.05 -delta 0.01 -save_model_config f -mrmr_pred 0 -plots f \
--seed 10 -log_time f -spec smlp_toy_basic -pref try
+-seed 10 -log_time f -spec ../smlp_toy_basic -pref try
 \end{verbatim}
 \caption{Example of SMLP's command to build a decision tree model and find .}
 \label{fig:command}
@@ -955,7 +1188,7 @@ The optimization problem is specified in the spec file in Figure~\cref{fig:spec}
 \end{figure}
 
 
-Optimization progress is reported in  file $try\_smlp\_toy\_basic\_optimization\_progress.csv$, where $try$ is the run ID specified using option '-pref try'; $smlp\_toy\_basic$ is the name of the data file, and $optimization\_progress.csv$ is suffix for that report. More details on input, knob, output and objective values used to prove the upper and lower bounds of the objectives during search for pareto optimum are reported in file $try\_smlp\_toy\_basic\_optimization\_progress.json$. 
+Optimization progress is reported in  file $try\_smlp\_toy\_basic\_optimization\_progress.csv$, where $try$ is the run ID specified using option '-pref try'; $smlp\_toy\_basic$ is the name of the data file, and $\suffix{optimization\_progress.csv}$ is suffix for that report. More details on input, knob, output and objective values used to prove the upper and lower bounds of the objectives during search for pareto optimum are reported in file $try\_smlp\_toy\_basic\_optimization\_progress.json$. 
 
 \subsection{Design of experiments}\label{sssect:doe}
 
