@@ -43,9 +43,18 @@
 %\newcommand*\objv{\operatorname{objv}}
 \newcommand*\objv{o}
 \newcommand*\option[1]{\operatorname{\mathsf{#1}}} % used for formatting names of SMLP command line options
+\newcommand*\optionval[2]{\operatorname{\mathsf{#1}\,\,\mathsf{#2}}} % used for formatting names of SMLP command line options together with option values
 \newcommand*\suffix[1]{\operatorname{\mathsf{#1}}} % used for formatting names of input data formats like .csv, .json, .pkl, .h5
 \newcommand*\mode[1]{\operatorname{\mathsf{#1}}} % used for formatting names of SMLP model like verify, optimize, ...
 \newcommand*\package[1]{\operatorname{\mathsf{#1}}} % used for formatting names of packages/libraries used by SMLP, e.g., Keras, pycaret, sklearn, ...
+\newcommand*\module[1]{\operatorname{\mathsf{#1}}} % used for formatting names of modules/classes used by SMLP, e.g., SimpleImputer, ...
+\newcommand*\dtype[1]{\operatorname{\mathsf{#1}}} % used for formatting names of data types used by SMLP, e.g., int, float, categorical, object, ...
+\newcommand*\precision[1]{\operatorname{\mathsf{#1}}} % used for formatting names of prediction accuracy/precision measures like r2_score, msqe, ... 
+\newcommand*\model[1]{\operatorname{\mathsf{#1}}} % used for formatting names of model training algorithms like dt_sklearn, nn_keras, ... 
+\newcommand*\speckey[1]{\operatorname{\mathsf{"{#1}"}}} % used for formatting names of keys / fields in spec file, such a s version, variables, alpha, ... 
+\newcommand*\specval[1]{\operatorname{\mathsf{{#1}}}} % used for formatting values of keys / fields in spec file, such as assert1, y>5, ...
+\newcommand*\operator[1]{\operatorname{\mathsf{{#1}}}} % used for formatting names of operators that are supported in spec file expressions, ... 
+
 
 \newcommand*\Solver{Symbolic Machine Learning Prover\xspace}
 \newcommand*\SolverAbbrvText{SMLP}
@@ -91,12 +100,12 @@ learning models. \SolverAbbrv is based on SMT solver(s). In this document we
 describe functionality for computing safe and stable regions of neural network
 models satisfying optput specifications. This corresponds to solving
 $\epsilon$-guarded $\exists^*\forall^*$ formulas over NN
-representations~\cite{BKK20}.
+representations~\cite{DBLP:conf/fmcad/BrausseKK20}.
 
 %\Solver (\SolverAbbrv) is a distribution of tools around an SMT-based solver for
 %computing safety thresholds of functions defined by NNs on regions in bounded
 %domains. At its core are the algorithms for solving $\epsilon$-guarded
-%$\exists^*\forall^*$ formulas~\cite{BKK20}.
+%$\exists^*\forall^*$ formulas~\cite{DBLP:conf/fmcad/BrausseKK20}.
 
 \SolverAbbrv has been developed by
 \href{mailto:brausse@informatik.uni-trier.de?subject=\SolverAbbrvText}{Franz Brauße},
@@ -112,6 +121,9 @@ under the terms of the Apache License v2.0.%
 \item 07/07/2020: documentation of \SolverAbbrv v0.1
 \end{itemize}
 
+
+\pagebreak
+
 \section{Introduction}
 
 \emph{Symbolic Machine Learning Prover} (SMLP) offers multiple capabilities for system's \emph{design space exploration}.
@@ -125,21 +137,49 @@ To address these challenges, SMLP offers multiple modes of design space explorat
 The definition of these modes refers to the concept of \emph{stability} of an assignment to system's parameters that satisfies all model constraints 
 (which include the constraints defining the model itself and any constraint on model's interface).
 We will refer to such a value assignment as a \emph{stable witness}, or \emph{(stable) solution} satisfying the model constraints. 
-Informally, stability of a solution means that any eligible assignment in the specified region around the solution also satisfy the required constraints.
-This notion is sometimes referred to as robustness. We work with parameterized systems, where parameters (also called \emph{knobs}) can 
-be tuned to optimize the system's performance under all legitimate inputs.
+Informally, stability of a solution means that any eligible assignment in the specified region around the solution also satisfies the required constraints.
+This notion is sometimes referred to as robustness. SMLP works with parameterized systems, where parameters (also called \emph{knobs}) can 
+be tuned to optimize the system's performance under all legitimate inputs. 
+
+Figure~\ref{fig:system} depicts how SMLP views a system to analyze.
+Variables $x1,x2$ are the system's inputs, variables $p1,p2$ are the system's parameters, and variables $y1,y2$ are the system's outputs.
+The input, knob, and global constraints on the system's interface define the legal input space of the system as well as requirements that
+the system must meet after selecting the knob configuration. The model exploration task might consist of optimizing the system's knobs for 
+a number of objectives, synthesizing the knob values to find a witness to a query (e.g., a desired condition), or verifying that a given 
+configuration satisfies an assertion on the system's outputs.
+
+\begin{figure}[hb!]
+\begin{center}
+\includegraphics[height=11\baselineskip]{smlp_encoding.PNG}
+\caption{Parameterized system, with interface constraints}
+\label{fig:system}
+\end{center}
+\end{figure}
+
+
 For example, in the circuit board design setting, topological layout of circuits, distances, wire thickness, properties of dielectric layers, etc.
 can be such parameters, and the exploration goal would be to optimize the system performance under the system's requirements~\cite{9501615}.
-The difference between knobs and inputs is that knob values are selected during design phase, before the system goes into operation; on the other hand, 
-inputs remain free and get values from the environment during the operation of the system. Knobs and inputs correspond to existentially quantified 
-and universally quantified variables in the formal definition of model exploration tasks. Thus in the usual meaning of verification, optimization and synthesis, 
-respectively, all variables are inputs, all variables are knobs, and some of the variables are knobs and the rest are inputs.
+The difference between knobs and inputs is that knob values are selected during design phase, before the system goes into operation; on the other 
+hand, inputs remain free and get values from the environment during the operation of the system. Knobs and inputs correspond to existentially 
+quantified and universally quantified variables in the formal definition of model exploration tasks. Thus in the usual meaning of verification, optimization 
+and synthesis, respectively, all variables are inputs, all variables are knobs, and some of the variables are knobs and the rest are inputs.
 
 
 Below by a \emph{model} we refer to an ML model that models the system under exploration.
 
+The \emph{model exploration cube} in Figure~\ref{fig:cube} provides a high level and intuitive idea on how the model exploration 
+modes supported in SMLP are related. The three dimensions in this cube represent synthesis ($\searrow$-axis), optimization 
+($\rightarrow$-axis) and stability ($\uparrow$-axis). On the bottom plane of the cube, the edges represent the synthesis and optimization 
+problems in the following sense: synthesis with constraints configures the knob values in a way that guarantees that assertions are valid, 
+but unlike optimization, does not guarantee optimally with respect to optimization objectives. On the other hand, optimization by itself 
+is not aware of assertions on inputs of the system and only guarantees optimality with respect to knobs, and not the validity of assertions 
+in the configured system. We refer to the process that combines synthesis with optimization and results in an optimal design that satisfies 
+assertions as \emph{optimized synthesis}. The upper plane of the cube represents introducing stability requirements into synthesis 
+(and as a special case, into verification), optimization, and optimized synthesis. The formulas that make definition of stable verification,
+optimization, synthesis and optimized synthesis precise are discussed Section~\ref{sec:exploration}.
+
 \ZK{Could not used column sep = {8.5em, between origins} option in the cube.}
-\begin{figure}[bp] %column sep = {8.5em, between origins}
+\begin{figure}[hb!] %column sep = {8.5em, between origins}
 \centering
 \[
     \begin{tikzcd}[row sep=1.5em, column sep = {8.5em}, my label/.style={midway, sloped}]
@@ -179,20 +219,196 @@ Below by a \emph{model} we refer to an ML model that models the system under exp
 \label{fig:cube}
 \end{figure}
 
-The \emph{model exploration cube} in Figure~\ref{fig:cube} provides a high level and intuitive idea on how the model exploration modes supported in SMLP are related.
-The three dimensions in this cube represent synthesis ($\searrow$-axis), optimization ($\rightarrow$-axis) and stability ($\uparrow$-axis).
-On the bottom plane of the cube, the edges represent the synthesis and optimization problems in the following sense:
-synthesis with constraints configures the knob values in a way that guarantees that assertions are valid, but unlike optimization, does not guarantee optimally with respect to optimization objectives.
-%\changed{%
-On the other hand, optimization by itself is not aware of assertions on inputs of the system and only guarantees optimality with respect to knobs, and not the validity of assertions in the configured system.
-%}%
-%\todofb{yet, optimization is not aware of assertions on inputs and thus its results are not guaranteed to be valid in the configured system by itself}%
-%while optimization guarantees near-optimality \todozk{near-optimality...; also drop ''(in a precise sense)''} (in a precise sense) with respect to optimization objectives but is not aware of assertions on inputs thus cannot guarantee their validity in the configured system.
-We refer to the process that combines synthesis with optimization and results in an optimal design that satisfies assertions as \emph{optimized synthesis}.
-The upper plane of the cube represents introducing stability requirements into synthesis (and as a special case, into verification), optimization, and optimized synthesis.
-The formulas that make definition of stable verification, optimization, synthesis and optimized synthesis precise are discussed in \changedto{Section~\ref{sect.exploration}}{Sections~\ref{sect.exploration} to \ref{sec:expl}}.
+
+
+\section{SMLP architecture}
+
+SMLP tool architecture is depicted in Figure~\ref{smlp_system}. 
+It consists of the following components: 1) Design of experiments (DOE),
+2) System that can be \changedto{simulated}{sampled} based on DOE, 3)  
+ML model trained on the \changedto{simulated}{sampled} data, 4) SMLP solver that handles different system 
+exploration modes on a symbolic representation of the ML model, 5) Targeted model refinement loop.
+
+\begin{figure}[tp]
+\center
+\includegraphics[width= 0.7\columnwidth]{smlp_system.PNG}
+\caption{SMLP Tool Architecture} \label{smlp_system}
+\end{figure}
+
+
+SMLP supports multiple ways to generate training data known under the name of \emph{Design Of Experiments (DOE).}
+These methods include: full-factorial, fractional-factorial, Plackett-Burman, Box-Behnken, Box-Wilson, Sukharev-grid, Latin-hypercube, 
+among other methods, which try to achieve a smart sampling of the entire input space with a relatively small number of data samples.
+In Figure~\ref{smlp_system}, the leftmost box-shaped component called \textsc{doe} represents SMLP capabilities to generate test 
+vectors to feed into the system and generate training data; the latter two components are represented with boxes 
+called \textsc{system} and \textsc{data}, respectively. 
+
+The component called \textsc{ml model} represents SMLP capabilities to train models; currently neural network, polynomial 
+and tree-based  regression models are supported. Modeling analog devices using polynomial models was proposed in the 
+seminal work on \emph{Response Surface Methodology (RSM)}~\cite{51647df2-9154-322e-85ba-aa565c9e550a},
+and since then has been widely adopted by the industry. Neural networks and tree-based models are used increasingly due to 
+their wider adoption, and their exceptional accuracy and simplicity, respectively.
+
+The component called \textsc{solver pipeline} represents model exploration engines of SMLP (e.g., connection to SMT solvers), 
+which besides a symbolic representation of the model takes as input several types of constraints and input sampling distributions 
+specified on the model's interface; these are represented by the component called \textsc{constraints \& distributions} 
+located at the low-left corner of  Figure~\ref{smlp_system}, and will be discussed in more detail in Section~\ref{sec:exploration}.
+The remaining components represent the main model exploration capabilities of SMLP. 
+
+Last but not least, the arrow connecting the \textsc{ml model} component back to the \textsc{doe} component represents a
+\emph{model refinement} loop which allows to reduce the gap between the model and system responses in the input regions
+where it matters for the task at hand (there is no need to achieve a perfect match between the model and the system 
+everywhere in the input space). The targeted model refinement loop is discussed in~\Cref{sec:refinement}.
+
+
+
+\section{How to run SMLP: a quick start}\label{sec:example}
+
+Command to run SMLP in \emph{optimize} mode is given in \Cref{fig:command}.
+
+\begin{figure}[hb!]
+%\scriptsize %\tiny %\small -data_scaler min_max 
+\begin{verbatim}
+../src/run_smlp.py -data ../smlp_toy_basic -mode optimize -pareto t \
+-spec ../smlp_toy_basic -resp y1,y2 -feat x1,x2,p1,p2 -model dt_sklearn \
+-dt_sklearn_max_depth 15 -mrmr_pred 0 -epsilon 0.05 -delta 0.01 \
+-save_model t -model_name toy_basic -save_model_config t \
+-plots f -seed 10 -log_time f -out_dir ../out -pref try -pref try
+\end{verbatim}
+\caption{Example of SMLP's command to build a decision tree model and perform an optimization task. 
+Occurrences of $\suffix{../}$ should be replaced with respective full or relative paths.}
+\label{fig:command}
+\end{figure}
+
+The option $\optionval{-data}{../smlp\_toy\_basic}$ defines the labeled datasat to use for model training and test.
+The dataset should be provided as $\option{smlp\_toy\_basic.csv}$ file, and the two dots in $\option{../smlp\_toy\_basic}$ 
+should be replaced with the actual full path to the file;  the $\suffix{.csv}$ suffix itself should be omitted.
+This dataset is displayed in Table~\ref{toy_basic_df}, and it has six columns $x1, x2, p1, p2, y1, y2$.
+
+The option $\optionval{-mode}{optimize}$ defines the analysis mode to run, and option $\optionval{-pareto}{t}$
+instructs SMLP that pareto optimization should be performed (as opposed to performing multiple single-objective 
+optimizations when multiple objectives are specified). 
+
+\begin{table*}[t]
+\centering\small
+\begin{tabular}{lrrrrrr}
+\hline %\toprule
+{} &      x1 &  x2 &    p1 &  p2 &       y1 &       y2 \\
+\hline %\midrule
+0 &  2.9800 &  -1 &   0.1 &   4 &   5.0233 &   8.0000 \\
+1 &  8.5530 &  -1 &   3.9 &   3 &   0.6936 &  12.0200 \\
+2 &  0.5580 &   1 &   2.0 &   4 &   0.6882 &   8.1400 \\
+3 &  3.8670 &   0 &   1.1 &   3 &   0.2400 &   8.0000 \\
+4 & -0.8218 &   0 &   4.0 &   3 &   0.3240 &   8.0000 \\
+5 &  5.2520 &   0 &   4.0 &   5 &   6.0300 &   8.0000 \\
+6 &  0.2998 &   1 &   7.1 &   6 &   0.9100 &  10.1250 \\
+7 &  7.1750 &   1 &   7.0 &   7 &   0.9600 &   1.1200 \\
+8 &  9.5460 &   0 &   7.0 &   6 &  10.7007 &   9.5661 \\
+9 & -0.4540 &   1 &  10.0 &   7 &   8.7932 &   6.4015 \\
+\hline %\bottomrule
+\end{tabular}
+\caption{Toy dataset $\option{smlp\_toy\_basic.csv}$ with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.}
+\label{toy_basic_df}
+\end{table*}
+
+The option $\optionval{-spec}{../smlp\_toy\_basic}$ defines the full path to the specification file that 
+specifies the optimization problem to be solved.  \Cref{fig:spec} depicts the contents of 
+this specification (spec) file. It defines legal ranges of variables $x1, x2, p1, p2, y1, y2$, 
+where appropriate, which ones are inputs, which ones are knobs, which ones are the outputs, defines additional 
+constraints on them, and defines the optimization objectives. Detailed description of the fields of the specification
+(which is loaded as a Python dictionary) is given in Section~\ref{sec:spec}.
+
+\begin{figure}%[tp]
+%\scriptsize
+%\tiny
+\small
+\begin{verbatim}
+{
+  "version": "1.2",
+  "variables": [
+    {"label":"y1", "interface":"output", "type":"real"},
+    {"label":"y2", "interface":"output", "type":"real"},
+    {"label":"x1", "interface":"input", "type":"real", "range":[0,10]},
+    {"label":"x2", "interface":"input", "type":"int", "range":[-1,1]},
+    {"label":"p1", "interface":"knob", "type":"real", "range":[0,10], "rad-rel":0.1, "grid":[2,4,7]},
+    {"label":"p2", "interface":"knob", "type":"int", "range":[3,7], "rad-abs":0.2}
+  ],
+  "alpha": "p2<5 and x1==10 and x2<12",
+  "beta": "y1>=4 and y2>=8",
+  "eta": "p1==4 or (p1==8 and p2 > 3)",
+  "assertions": {
+    "assert1": "(y2**3+p2)/2>6",
+    "assert2": "y1>=0",
+    "assert3": "y2>0"
+  },
+  "objectives": {
+    "objective1": "(y1+y2)/2",
+    "objective2": "y1"
+  }
+}
+\end{verbatim}
+\begin{tikzpicture}[remember picture,overlay,shift={(22em,\baselineskip)}]
+\node[anchor=south west]{\includegraphics[height=14\baselineskip]{smlp_encoding.PNG}};
+\end{tikzpicture}
+\vspace*{-1\baselineskip}
+\caption{Specification $\option{smlp\_toy\_basic.spec}$ used by SMLP command in Figure~\cref{fig:command}.}
+\label{fig:spec}
+\end{figure}
+
+Options $\option{-resp\,\,y1,y2\,\,-feat\,\,x1,x2,p1,p2}$ define the names of the responses and features to be used from 
+the provided dataset. This information is available in the spec file as well, and therefore these options can be omitted
+in our example. In general, option values provided as part of the command line override values of these options
+specified in the spec file, and therefore command line options are convenient to quickly adapt an SMLP command
+without changing the spec file. Also, a spec file is needed mostly for the model exploration modes of SMLP, and 
+command line options make invocation of SMLP in other modes simpler.
+
+Option $\optionval{-model}{dt\_sklearn}$ instructs SMLP to train $\model{dt\_sklearn}$ model, 
+which according to SMLP's naming convention for model training algorithms 
+means to use the decision tree ($\model{dt}$) algorithm supported in $\package{sklearn}$ package.  
+And $\optionval{-dt\_sklearn\_max\_depthl}{15}$ instructs SMLP to use the $\package{sklearn}$'s 
+$\option{max\_depth}$ hyper-parameter value $\option{15}$, based on a similar naming convention
+for hyper-parameters supported in model training packages used in SMLP.
+
+Options $\option{-epsilon \,\, 0.05\,\,-delta\,\,0.01}$ define values for constants $\epsilon$ and $\delta$   
+required for approximating search for optima and guaranteeing that the search will terminate. 
+These optimization algorithms and proofs that usage of constant $\delta > 0$ guarantees the termination can be found
+in~\cite{DBLP:conf/fmcad/BrausseKK20,DBLP:conf/ijcai/BrausseKK22}. Constant $\epsilon$ defines a termination criterion
+for search for optima, and is used to guarantee that the computed optima are not more than $\epsilon$ away 
+(after scaling the objectives) from the real optima (of the function defined by the ML model).
+A formal description of usage of $\epsilon$ can be found in Section~\ref{sec:exploration} as well as 
+in~\cite{DBLP:conf/fmcad/BrausseKK20,DBLP:conf/ijcai/BrausseKK22}
+
+Options $\option{-save\_model\,\,t \,\,-save\_model\_config\,\,t}$ instruct SMLP respectively to save the trained 
+model and to save the option values used in current SMLP run into a SMLP invocation configuration file. 
+Besides saving the model, SMLP saves all required information to enable rerun of the saved model on a new data. 
+More details on saving a trained model and reusing it later on a new data is provided in \Cref{sec:models}. 
+
+Option $\optionval{-mrmr\_predl}{0}$ specifies that all features should be used for training a model, while option
+value greater than $0$ defines how many features selected by the MRMR algorithm should be used for model training 
+(see also \Cref{sec:mrmr:pred}).
+
+After model training (or loading a pre-trained model) SMLP generates plots to visualize model predictions 
+against the actual response values found in labeled data ($\option{training|test|new\,\,data}$). 
+ Option $\optionval{-plots}{f}$ instructs SMLP to not open these plots interactively while SMLP is running;
+these plots are saved for offline inspection. See \Cref{sec:models} for more information regarding prediction plots.
+
+Option $\optionval{-seed}{10}$ is required to ensure determinism in SMLP execution (running the same command 
+should yield the same result). And option $\optionval{-log\_time}{f}$ instructs SMLP to not include time stamp in
+logged messages.
+
+Option $\optionval{-out\_dir}{../out}$ defines the output directory for all SMLP reports and collateral output files.
+See \Cref{sec:smlp:outputs} for more information about SMLP output directory and reports. 
+
+Optimization progress is reported in file $\suffix{try\_smlp\_toy\_basic\_optimization\_progress.csv}$, 
+where $\option{try}$ is the run ID specified using option $\optionval{-prefl}{try}$; $\suffix{smlp\_toy\_basic}$ 
+is the name of the data file, and $\suffix{optimization\_progress.csv}$ is the file name suffix for that report. 
+This report contains details on input, knob, output and the objective's values demonstrating the proven 
+upper and lower bounds of the objectives during search for a pareto optimum. It is available anytime
+after search for optimum has started and first approximations of the optima have been computed.
+
 
 \section{Concepts and Preliminaries}
+
 In this document, syntactical highlights are placed on
 \literal{literal strings}, which are ASCII sequences used to communicate input
 to and output from programs; on \cmd{commands} to be executed;
@@ -218,7 +434,7 @@ whole.
 \item[Domain]
 	A domain $D$ is the cartesian product $\bigtimes_{i=1}^n D_i$ where
 	$D_i$ is a subset of either $\mathbb Z$, $\mathbb R$ or a
-	discrete finite subset of $\mathbb Q$.
+	discrete finite subset of $\mathbb Q$. \ZK{In other places we use sets instead of finite subsets of Q?}
 \item[Feature]
 	Any column of a data set $\mathcal D$ is called a feature.
 \item[Instance]
@@ -279,8 +495,6 @@ whole.
 	$-\infty$ otherwise.
 \end{description}
 
-%\section{Overview}
-
 
 
 \section{Prerequisites}
@@ -339,8 +553,81 @@ this variable.
 	\url{https://github.com/fbrausse/kjson}
 \end{itemize}
 
+\section{SMLP problem specification}\label{sec:spec}
 
-\section{SMLP input and output}
+The specification file defines the problem conditions in a JSON compatible format, whereas SMLP exploration modes 
+can be specified via command line options. \Cref{fig:spec} depicts a toy system with two inputs, two knobs, 
+and two outputs and a matching specification file for model exploration modes in SMLP. This system and the spec file 
+were used in \Cref{sec:example} to give a quick introduction on how to run SMLP in the $\mode{optimize}$ mode.
+
+
+\begin{itemize}
+\item[$\speckey{version}$] specifies the version of the spec file format. Versions are defined for backward compatibility.
+\item[$\speckey{variables}$] defines properties of the system's interface variables. For each variable it specifies its
+\begin{itemize}
+\item[$\speckey{label}$] the name, e.g., $x1$
+\item[$\speckey{interface}$]  function, which can be $\dtype{input}$, $\dtype{knob}$,  or $\dtype{output}$ 
+\item[$\speckey{type}$] which can be $\dtype{real}$, $\dtype{int}$, or $\dtype{set}$ (for categorical features)
+\item[$\speckey{range}$]  for variables of $\dtype{real}$ and $\dtype{int}$ types, e.g., $[2,4]$ (must be a closed interval). 
+\ZK{Implimentation allows plus/minus infinity -- discorage its usage because of performance considerations?}
+The ranges serve as assumptions in model exploration modes of SMLP.
+\item[$\speckey{grid}$] for knobs, which is a list of values that a knob variable is allowed to take on within the
+ respective declared ranges, 
+independently from other knobs. The $\eta$ constraints introduced below further restrict the multi-dimensional grid. 
+Both $\dtype{real}$ and $\dtype{int}$ typed knobs can be restricted to grids (but do not need to).
+Grids serve as assumptions in model exploration modes of SMLP.
+\end{itemize}
+\item[$\speckey{alpha}$] defines extra constraints on inputs and knobs 
+(on top of constraints inferred from input and knob ranges and knob grids).
+These constraints serve as assumptions in model exploration modes of SMLP.
+\item[$\speckey{eta}$] defines extra constraints on knobs
+(on top of constraints inferred from knob ranges and grids).
+\item[$\speckey{beta}$] defines global constraints on inputs, knobs and outputs
+that serve as requirements that need to be met by selected knob configurations.
+\item[$\speckey{assertions}$] defines assertions: a dictionary that maps assertion names to respective expressions. 
+\item[$\speckey{queries}$] defines queries: a dictionary that maps query names to respective expressions.
+\item[$\speckey{objectives}$] defines optimization objectives: a dictionary that maps objective names to respective expressions.
+\end{itemize}
+
+
+The expressions that occur in a spec file, such as $\speckey{alpha}$, $\speckey{beta}$, $\speckey{eta}$ constraints,
+as well as $\speckey{assertions}$, $\speckey{queries}$, and $\speckey{objectives}$, can in principle be any Python expression
+that can be composed using the $\package{operator}$ package\footnote{\url{https://docs.python.org/3/library/operator.html}}.
+In SMLP these expressions are parsed using the 
+$\package{Abstract\,\,Syntax\,\,Trees}$ library\footnote{\url{https://docs.python.org/3/library/ast.html}}.
+Currently only a subset of operations from the $\package{operator}$ package is supported in these expressions 
+(there has not been a need for others so far):
+\begin{itemize}
+\item[binaryop] $\operator{add(a,b)\,\,[a+b]}$, $\operator{sub(a,b)\,\,[a-b]}$, $\operator{mul(a,b)\,\,[a*b]}$, 
+$\operator{truediv(a,b)\,\,[a/b]}$, $\operator{pow(a,b)\,\,[a**b]}$
+\item[unaryop] $\operator{neg(a)\,\,[-a]}$
+\item[bitwiseop] $\operator{and\_(a,b)\,\,[a\&b]}$, $\operator{or\_(a,b)\,\,[a|b]}$, $\operator{inv(a)\,\,[\sim a]}$, 
+$\operator{xor(a,b)\,\,[a\,\,\hat{}\,\,b]}$
+\item[cmpop] $\operator{eq(a,b)\,\,[a == b]}$, 
+$\operator{ne(a,b)\,\,[a != b]}$, $\operator{lt(a,b)\,\,[a<b]}$, $\operator{le(a,b]\,\,[a\leq b]}$, $\operator{gt(a,b)\,\,[a>b]}$, 
+$\operator{ge(a,b)\,\,[a\geq b]}$ 
+\end{itemize}
+
+
+The $\speckey{alpha}$, $\speckey{beta}$, $\speckey{eta}$ constraints can also be defined in SMLP 
+command line using options $\option{-alpha\,\,expression, -beta\,\,expression, -eta\,\,expression}$.
+Assertions can be specified as part of command line, using options $\option{-asrt\_names}$ and $\option{-asrt\_exprs}$.
+For example, assertions from the spec in Figure~\ref{fig:spec}
+can be specified as follows: $\option{-asrt\_names\,\,assert1,assert2,assert3}$ 
+specifies assertion names as a comma-separated list of names, and 
+$\option{-asrt\_expr\,\,"(y2**3+p2)/2>6;y1>=0;y2>0"}$
+defines the respective expressions as a semicolon separated list of expressions.
+Similarly, queries can be specified in command line using options 
+$\option{-quer\_names}$ and $\option{-quer\_exprs}$; and optimization objectives can be
+specified using options $\option{-objv\_names}$ and $\option{-objv\_exprs}$.
+
+Precise handling of constraints $\speckey{alpha}$, $\speckey{beta}$, $\speckey{eta}$, as well as handling of
+ $\speckey{assertions}$,  $\speckey{queries}$,  and $\speckey{objectives}$, depends on the model exploration 
+modes of SMLP and is described in dedicated subsections of Section~\ref{sec:exploration}.
+
+
+
+\section{SMLP input and output}\label{sec:smlp:inputs:outputs}
 
 Input files to an SMLP command can be located in different directories and have in general different formats.
 The most common input files and how to feed them to SMLP is described in Subsection~\ref{sec:smlp:inputs}. 
@@ -353,13 +640,20 @@ Subsection~\ref{sec:smlp:outputs}.
 \item[training data] should be a $\suffix{.csv}$ file. Full path to data should be specified using option $\option{-data}$, 
 without the $\suffix{.csv}$ suffix. For modes where a model is trained, data should include one or more responses.
 All responses must be numeric (categorical features as responses will be supported in future). 
+The data file is relevant for all modes of SMLP except for the $\mode{doe}$ mode.
 \item [new data] should be a $\suffix{.csv}$ file. Full path to data should be specified using option $\option{-new\_data}$
-without the $\suffix{.csv}$ suffix. May or may not include responses; if yes, the responses should be of the same type as in training data. 
+without the $\suffix{.csv}$ suffix. This data usually not available during model training, and usually is also not labeled:
+it may not contain the response columns and should contain all features from the training data that were actually used in model training.
+New data is used to perform prediction with model trained of training data; this model can be generated in the same SMLP
+run or could have been trained and saved earlier. New data is mainly relevant for mode $\mode{predict}$, but new data
+ca be supplied in model exploration modes as well and in this case predictions on new data will be performed as part of
+model exploration analysis. When new data has the responses, they must be of the same type as in the training data, 
+and after predictions the model accuracy will be reported for both training and new data.
 \item [problem spec] should be  a $\suffix{.spec}$ file, with the content in $\suffix{json}$ format (so it is loaded using json.load() 
 as a Python dictionary). Full path to spec file should be specified using option $\option{-spec}$, without the suffix 
 $\suffix{.spec}$. It is required in model exploration modes ($\mode{query}, \mode{verify}, \mode{optimize}$, etc.).
 \item[doe spec] should be a $\suffix{.csv}$ file. Full path to DOE (design of Experiments) spec file should be specified 
-using option $\option{-doe\_spec}$. Required for DOE generation.
+using option $\option{-doe\_spec}$. Required for the $\mode{doe}$ mode only, for DOE generation.
 \end{itemize}
 
 \subsection{SMLP outputs}\label{sec:smlp:outputs}
@@ -373,10 +667,10 @@ then the directory of the DOE spec file is used as the output directory. Otherwi
 
 The output files may also include a saved trained model and a collection of other files that together have all the information
 required to rerun the saved model on new data. All files collectively defining a saved model start with the same name prefix.
-This prefix is a concatenation of the SMLP invocation ID/name specified using option $\option{-pref\,\,runname}$, and the saved
-model name specified using option $\option{-model\_name\,\, modelname}$. If saved model name is not specified, the
-prefix for all model related file names is computed by SMLP using the data name that was used for training the model, but
-this might change in future and it is recommended to always use a model name when saving a trained model. 
+This prefix is a concatenation of the SMLP invocation ID/name specified using option $\option{-pref\,\,runname}$, and the
+saved model name specified using option $\option{-model\_name\,\, modelname}$. If saved model name is not specified,
+the prefix for all model related file names is computed by SMLP using the data name that was used for training the model,
+but this might change in future and it is recommended to always use a model name when saving a trained model. 
 
 All the other output file names also have the same prefix, computed by concatenating the SMLP run ID/name 
 specified using option  $\option{-pref}$ and the name of input data (or new data) file in modes where these
@@ -390,46 +684,81 @@ using option $\option{-pref}$), all files generated as a result of that run can 
 
 \section{Data processing options}\label{sec:data}
 
-\subsection{Data processing options}
+In SMLP we distinguish between two stages of input data processing: a \emph{data preprocessing stage}, 
+followed by a \emph{data preparation stage} for the required type of analysis. 
 
-Data \emph{preprocessing} is applied to raw data immediately after loading, and its aim is to prepare
-data to confirm to SMLP tool requirements many of which are described below. That is, this
-stage of data processing is to make the tool user friendly, and perform some data 
+
+\subsection{Data preprocessing options}
+
+Data \emph{preprocessing} is applied to raw data immediately after loading, and its aim is to process
+data in order to confirm to SMLP data requirements. That is, this
+stage of data processing is to make SMLP tool user friendly, and perform some data 
 transformations instead of the user having to do this. Thus, all the reports and visualization
-of the results will use preprocessed data, and assume the data was passed to the tool in that
-form. As an example, if some values in columns were replaced, say 'pass' was replaced by 0
-and 'fail' was replaced by 1, the reports will use values 0 and 1 in that column. Some of the 
-data preprocessing steps might include dropping some of the columns and/or rows in the loaded
-data, replacing values in some of the columns with other values, casting types of columns, etc.
+of the results will use preprocessed data, and assume the data was passed to SMLP in that
+form. As an example, if some values in columns were replaced in the preprocessing stage, 
+say 'pass' was replaced by $0$ and 'fail' was replaced by $1$, the reports will use values 
+$0$ and $1$ in that column. 
 
-\subsection{Categorical responses / classification analyses}
-For now, categorical responses are supported only if they have two values -- it is user 
+Next we explain the main steps performed as part of preprocessing of training data.
+
+\subsubsection{Selecting features for analysis} 
+
+If SMLP command includes option $\option{-feat\,\, x,y,z}$, then only features $x,y,z$ will be used
+in analysis (besides the responses); the rest of the features will be dropped.
+
+\subsubsection{Missing values in responses}  
+
+Response columns, say $y1, y2$, in training data are defined using option $\option{-resp \,\,y1. y2}$.
+Rows in the training data where at least one response has a missing value will be dropped.
+
+
+\subsubsection{Constant features} 
+
+Constant features (that have exactly on non-NaN value) are dropped.
+
+
+\subsubsection{Missing values in features} 
+
+Missing value imputation is performed with the $\option{most\_frequent}$ strategy of 
+$\module{SimpleImputer}$ class from $\package{sklearn}$ package. The locations of missing values
+prior to imputation is computed as a dictionary and saved as a json file with suffix $\suffix{\_missing\_values\_dict.json}$
+for future reference (say to mark respective locations or samples on plots).
+
+\subsubsection{Boolean typed features} 
+
+Currently SMLP does not have a need to make a direct usage of boolean type in features (or in responses). 
+Therefore Boolean typed features are treated as categorical  features with type $\dtype{object}$, by converting 
+the Boolean values to $\dtype{strings}$ 'True' and 'False'.
+
+
+\subsubsection{Determining types of responses}
+
+\noindent \emph{Categorical responses:} 
+Categorical responses are supported only if they have two values -- it is user 
 responsibility to encode a categorical response with more than two levels (values) into
 a number of binary responses (say through the one-hot encoding). 
 A categorical response can be specified as a (a) 0/1 feature, (b) categorical feature with 
 two levels; or (c) numeric feature with two values. In all cases, parameters specified through
 options $\option{positive\_value}$ and $\option{negative\_value}$ determine which one of 
-these two values in that
-response define the positive samples and which ones define the negative ones -- both in 
-training data and in test data if the latter is labeled -- has that response column. 
-Then, as part of data preprocessing (which is only the first stage of data preparation),
-the $positive\_value$ and the $negative\_value$ in the response will be replaced by 
-$STAT\_POSITIVE\_VALUE$ and $STAT\_POSITIVE\_VALUE$, respectively, which are equal to $1$ and $0$, 
-following the convention in statistics that value integer $1$ denotes positive and $0$ negative. 
+these two values in that response define the positive samples and which ones define the 
+negative ones -- both in training data and in new data if the latter has that response column. 
+Then, as part of data preprocessing, the  $\option{positive\_value}$ and the $\option{negative\_value}$ 
+in the response will be replaced by $1$ and $0$, respectively, following the convention in statistics that 
+integer $1$ denotes positive and $0$ denotes negative. 
+\delete{
 That is, the intention is that user has to provide categorical responses as $1/0$ responses
 where $1$ denotes positive samples and $0$ denotes negative samples, and to make the tool user
 friendly the user has freedom to specify categorical responses in one of the three ways (a)-(c)
 described above with the intention that the tool internally will convert such responses into
-$1/0$ columns and all the results will be reported and visualized using $1/$0 values and not the
+$1/0$ columns and all the results will be reported and visualized using $1/0$ values and not the
 original values used to define positive and negative values in the responses in the raw input data.
+}
 
-
-\subsection{Numeric responses / regression analyses}
-
+\noindent \emph{Numeric response columns:} 
 Float and int columns in input data can define numeric responses. Each such response with more than 
 two values is treated as numeric (and we are dealing with a regression analyses). If a response has 
-two values, than it can still be treated as a categorical/binary response, as described in case (c)
-of specifying binary responses. Otherwise -- that is, when $\{positive\_value, negative\_value\}$ is not
+two values, than it can still be treated as a categorical/binary response, as described in case (c) of specifying
+binary responses. Otherwise -- that is, when $\{\option{positive\_value}, \option{negative\_value}\}$ is not
 equal to the set of the two values in the response, the response is treated as numeric. 
 \delete{
 Parameter values specified through options $positive\_value$ and $negative\_value$ have a different 
@@ -442,11 +771,9 @@ high values are negative. Other possibilities for the pair $(positive\_value, ne
 considered as incorrect specification and an error message is issued. 
 }
 
-
-\subsection{Multiple responses}
-
+\noindent \emph{Multiple responses}: 
 Multiple responses can be treated in a single SMLP run only if all of them are identified as 
-defining regression analysis or all of them are identifies as defining classification analysis.
+defining regression analysis or all of them are identified as defining classification analysis.
 if that is not the case, SMLP will abort with an error message clarifying the reason.
         
 
@@ -462,59 +789,105 @@ specifies that we are looking at (pareto) optimization problem with respect to m
 }
 
 
-\subsection{Data scaling / normalization}
+
+
+\subsection{Data preparation for analysis}\label{sec:data}
+
+We now describe data preparation steps supported in SMLP. 
+
+
+\subsubsection{Processing categorical features}
+
+After preprocessing the only supported (and expected) data column types are $\dtype{int}$,  
+$\dtype{float}$ and $\dtype{categorical}$, where categorical features can have types  $\dtype{object}$
+(with values of type $\dtype{string}$), or $\dtype{category}$; the  $\dtype{category}$ type can be 
+ $\dtype{ordered}$ or  $\dtype{unordered}$.
+
+Some of the ML algorithms prefer to use categorical features as is -- with string values: for example,
+feature selection algorithms can use dedicated correlation measures for categorical features. Also,
+some of the model training algorithms, such as tree based, can deal with categorical features directly, 
+while others, e.g., neural networks and polynomial models, assume all inputs are numeric
+($\dtype{int}$ or $\dtype{float}$). Therefore, depending on the analysis mode (feature selection, model training,
+model exploration), categorical features might be encoded into integers (and be treated as discrete 
+domains), simply by enumerating the levels (the values) seen in categorical
+features and replacing occurrences of each level with the corresponding integer. Currently 
+encoding categorical features as integers is the default in model training and exploration modes in SMLP.
+
+Conversely, some ML algorithms (especially, correlations)
+might prefer to \emph{discretize} numeric features into categorical features, and discretization options
+in SMLP support discretization of numeric features with target types $\dtype{object}$ and $\dtype{category}$, 
+ $\dtype{ordered}$ or  $\dtype{unordered}$, where the values in the resulting columns can represent integers 
+(as strings,  e.g.,  '5', or as levels, e.g., $5$), or other string values (like 'bin5'). Discretization is controlled
+using the following options: 
+\begin{itemize}
+\item $\option{discr\_algo}$: discretization algorithm can be $\option{uniform}$, $\option{quantile}$, 
+$\option{kmeans}$, $\option{jenks}$, $\option{ordinals}$, $\option{ranks}$.
+\item $\option{discr\_bins}$: specifies number of required bins.
+\item $\option{discr\_labels}$: if true, string labels (e.g., 'Bin2') will be used to denote levels of the categorical feature
+resulting from discretization; otherwise integers (e.g., 2) will be used to represent the levels.
+\item $\option{discr\_type}$: the resulting type of the obtained categorical feature; can be specified as 
+$\dtype{object}, \dtype{category}, \dtype{ordered}, \dtype{unordered}$, and $\dtype{integer}$.
+\end{itemize}
+
+
+\subsubsection{Feature selection for model training}\label{sec:mrmr:pred}
+
+SMLP incorporates the MRMR feature selection algorithm~\cite{DBLP:journals/jbcb/DingP05} 
+for selecting a subset of features that will be used for model training, using Python package 
+$\package{mrmr}.$\footnote{\url{https://github.com/nlhepler/mrmr}.}
+SMLP option $\option{-mrmr\_pred\,\,15}$ instructs the MRMR algorithm to select $15$ features, 
+according to the principle of \emph{maximum relevance and minimum redundancy}.
+
+\subsubsection{Data scaling / normalization}
 
 Data scaling is managed separately for the features and the responses. A particular mode of usage
 (model training and prediction, feature selection or range analysis, pareto optimization, etc.)
 can decide to scale features and or scale responses. The reports and visualization should use
-features and responses in the original scale, thus unscaling must be performed. Normalization is 
-done after data preprocessing, and is part of data processing (which is a second stage of data 
-preparation, to which preprocessing is the first stage). SMLP optimization algorithms operate
-with data in original scale (say domain spec describing input feature and response types and
-ranges refer to preprocessed data, in the original scale, even if say models were trained with
-scaled features and/or responses).
+features and responses in the original scale, thus unscaling must be performed. 
 
-\subsection{Processing of features}
-
-Constant features (and responses) are dropped as part of preprocessing. Currently SMLP does
-not have a need to make a direct usage of boolean type in features (or in responses) 
-and they (the boolean features) are treated as categorical (by converting boolean values to
-strings 'True' and 'False'). Therefore after preprocessing the only supported pandas column types
-are 'int', 'float', or categorical, where, in turn, categorical features can have types 'object' 
-(=string type of column values) or 'category'; the category type can be ordered or un-ordered.
-Some of the algorithms prefer to use categorical features as is -- with string values: for example,
-feature selection algorithms can use dedicated correlation measures for categorical features. Also,
-some of the training algorithms, such as tree based, can deal with categorical features directly, 
-while others, e.g., Neural Networks, polynomial models, and more, assume all inputs are numeric
-integer or float). Therefore, depending on the analysis mode (feature selection, model training,
-model exploration), categorical features might be encoded into integers (and treated as discrete 
-domains -- and not continuous domains). Conversely, some algorithms (especially, correlations)
-might prefer to discretize numeric features into categorical features, and discretization options
-in SMLP support discretization of numeric features with target type 'object' and 'category', 
-ordered or un-ordered, where the values in the resulting columns can be integers (as strings or
-levels, e.g., 5) of other values (like 'bin5').
-
-
-\begin{itemize}
-\item missing value imputation is performed with the $\option{most\_frequent}$ strategy of 
-SimpleImputer class from $\package{sklearn}$ package. 
-\item converting categorical features to integers using WHICH METHOD???
-\item dropping rows where at least on response has a missing value
-\item feature subset selection to be used in analysis, with option $\option{-feat\,\, x1,x2,p1,p2}$
-\item responses subset selection to be used in analysis, with option $\option{-resp \,\,y1. y2}$
-\item feature subset selection using MRMR algorithm (for modes that require building models):  
-$\option{-mrmr\_pred \,\,5}$
-\item feature descrtization (not yet used in feature selection algorithms)
-\item Features and/or responses might or might not be scaled, and these are controlled using two options:
+Features and responses might or might not be scaled, and these are controlled using two options:
 the option $\option{-data\_scaler}$  controls which data scaler should be used: the $\option{MinMaxScaler}$ 
-class of $\package{sklearn}$ package or None (in which case neither features nor responses will be scaled); 
+class of $\package{sklearn}$ package or $\option{none}$  (in which case neither features nor responses can be scaled); 
 and Boolean typed options $\option{-scale\_feat}$ and $\option{-scale\_resp}$ for controlling feature and 
 response scaling, respectively.
-The optimization objectives are scaled (always,  in current implementation) to $[0,1]$ based on the min and max 
-values of each individual objective in the training data. If training data is not provided (e,g., if a saved model is 
-used for model exploration) then scaling factor is determined based on sampling the objective's values on the model.
-\ZK{not implemented}
+
+SMLP optimization algorithms operate with data in original scale, while the optimization objectives are scaled 
+(always,  in current implementation) to $[0,1]$ based on the min and max values of each individual objective 
+in the training data. If training data is not provided (e,g., if a saved model is used for model exploration) then
+the scaling factor is determined based on sampling the objective's values on the model. \ZK{not implemented}
+
+\subsection{Processing of new data}
+
+In model training and exploration modes, most of the above described data processing steps are applied to 
+training data. New data for performing predictions, if supplied, requires related feature processing and sanity 
+checks to ensure that it does not contain any features not used in model training, and categorical features
+in new data do not have levels that were not present in the same features in training data.
+Some processing steps, such as missing value imputation in features, are applied to both training and
+new data.
+
+
+\subsection{Output files during data processing}\label{sec:data:outputs}
+
+The following information is computed and saved in output files during data processing stages.
+This information is required for performing predictions based on a saved model as well as in
+model exploration modes.
+
+\begin{itemize}
+\item $\suffix{*\_data\_bounds.json}$: Dictionary, with feature and response names in training data as the dictionary keys; 
+and the min/max info of these features and responses as the dictionary values. 
+\item $\suffix{*\_missing\_values\_dict.json}$: Dictionary, with names of features that have at least one missing value as the 
+dictionary keys; and the list of indices of missing values in these features  as the dictionary values.
+\item $\suffix{*\_model\_levels\_dict.json}$: Dictionary, with names of categorical features in input data as the dictionary 
+keys, and the levels (the values) in these features as the dictionary values.
+\item $\suffix{*\_model\_features\_dict.json}$: Dictionary, with names of responses as the dictionary keys; and the names of
+features used to train model for that response as the dictionary values.
+\item $\suffix{*\_features\_scaler.pkl}$: Object of $\option{MinMaxScaler}$ clas from $\package{sklearn}$ package, 
+used for scaling features, saved as $\suffix{.pkl}$ file.
+\item $\suffix{*\_responses\_scaler.pkl}$:  Object of $\option{MinMaxScaler}$ clas from $\package{sklearn}$ package, 
+used for features scaling the responses, saved as $\suffix{.pkl}$ file. 
 \end{itemize}
+
+
 
 \section{Training ML models with SMLP}\label{sec:models}
 
@@ -574,24 +947,61 @@ when reusing the saved model with the configuration file).
 %\small
 \begin{verbatim}
 ../src/run_smlp.py -model_name ../test_predict_model -out_dir ../out \ 
--pref test_prediction_rerurn -new_data ../smlp_toy_basic_pred_unlabeled \
--config ../test_predict_model_rerun_model_config 
+-pref test_prediction_rerun -new_data ../smlp_toy_basic_pred_unlabeled \
+-config ../test_predict_model_rerun_model_config.json 
 
-../src/run_smlp.py -model_name ../test_predict_model -out_dir ../out \ 
--pref model_rerun -new_data ../smlp_toy_basic_pred_unlabeled -mrmr_pred 0 \
--plots f -seed 10 -log_time f -use_model t -model_name ../test_predict_model  
+../src/run_smlp.py -mode predict -resp y1,y2 -feat x1,x2,p1,p2 -out_dir ../out \ 
+-use_model t -model_name ../test_predict_model -model poly_sklearn \
+-save_model f -pref model_rerun -mrmr_pred 0 -plots f \
+-seed 10 -log_time f -new_data ../smlp_toy_basic_pred_unlabeled
 
 \end{verbatim}
 \caption{Examples of SMLP's commands to use a saved mode to perform prediction on new data.}
 \label{fig:pred:rerun:saved}
 \end{figure}
 
+Here is the list of reports and collateral files generated in SMLP modes that require ML model training or rerunning 
+of a saved ML model.
+
+\begin{itemize}
+\item $\suffix{*\_\{training|test|labeled|new\}\_predictions\_summary.csv}$: prediction results respectively on 
+training data samples, on test data (also called validation data) samples, on the entire labeled data samples
+(which includes both training and test data samples), and on new data samples. It is saved as a $\suffix{.csv}$ 
+file that includes the values of the responses as well.
+\item $\suffix{*\_\{training|test|labeled|new\}\_prediction\_precisions.csv}$: prediction previsions per response, 
+respectively on 
+training data samples, on test data (also called validation data) samples, on the entire labeled data samples
+(which includes both training and test data samples), and on new data samples. It is saved as a $\suffix{.csv}$ 
+file that includes the values of the responses as well. For regression models currently supported in SMLP, 
+ two measures of precision are reported: $\precision{msqe}$, and $\precision{r2\_score}$.
+\item $\suffix{*\_\{training|test|labeled|new\}\_\{dt\_sklearn|poly\_sklearn|nn\_keras|\ldots\}.png}$: prediction plots,
+respectively for training, test, labeled and new data, for the model trained respectively using 
+$\model{dt\_sklearn}$, $\model{poly\_sklearn}$, $\model{nn\_keras}$, 
+or other regression model training algorithms supported in SMLP. These plots can be displayed during SMLP
+execution, for an interactive review, using option $\option{-plots\,\,t}$; otherwise these plots are saved
+for an offline review. 
+\item $\suffix{*\_\{dt\_sklearn|poly\_sklearn|nn\_keras|\ldots\}\_model\_complete.\{h5|pk\}}$: saved mode
+in $\suffix{.h5}$ format for $\model{nn\_keras}$ and in  $\suffix{.pkl}$ format for ML models trained 
+using packages $\package{sklearn}$ and $\package{caret}$.
+\item $\suffix{*\_rerun\_model\_config.json}$: SMLP venation options configuration file created when saving 
+a trained model, and loaded when re-using the saved model. This configuration file records all option values in the 
+SMLP run that trains the model, and it can be used to rerun the model on a new data using option 
+$\option{-config\,\,full\_path\_to\_config\_file}$, as described earlier in this section. During rerun, usually
+options $\option{-pref}$, $\option{-new\_data}$ and $\option{-model\_name}$, with full paths to new data 
+and saved model files (with the model name as prefix), respectively, are specified along with the configuration file, 
+and these option values override the respective option values recorded within the configuration file.
+Besides the saved model itself, rerunning a saved model requires several other files saved during data processing
+steps (preprocessing and data preparation for analysis), which are described in Section~\ref{sec:data:outputs}.  
+\end{itemize}
+
+
 \section{ML model exploration with SMLP}\label{sec:exploration}
 
 SMLP supports the following model exploration modes (we assume that an ML model $M$ has already been trained). 
 \begin{itemize}
 \item[certify] Given an ML model $M$, a value assignment $a$ to knobs, and a query $\query$, check that $a$ is a stable 
-witness for $\query$ on model $M$. Multiple pairs $(a,\query)$ of candidate witness $a$ and query $\query$ can be checked in a single SMLP run.
+witness for $\query$ on model $M$. Multiple pairs $(a,\query)$ of candidate witness $a$ and query $\query$ can be checked 
+in a single SMLP run.
 \item[query] Given an ML model $M$  and a query $\query$, find a stable witness $a$  for $\query$ on $M$.
 \item[verify] Given an ML model $M$,  a value assignment $a$ to knobs,  and an assertion $\assert$, verify whether  
 $\assert$ is valid on model $M$ for any legal inputs (for the given value assignment $a$ to knobs). SMLP supports verifying 
@@ -599,7 +1009,8 @@ multiple assertions in a single run.
 \item[synthesize] Given an ML model $M$,  find a stable configuration of knobs (a value assignment $a$ to knobs) 
 such that required constraints (possibly including assertions),  are valid for all legal value assignments to the inputs.
 \item[optimize]  Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of 
-the optimization objectives (pareto-optimal with respect to the \emph{max-min} optimization problem defined in~\cite{brausse2024smlp}).
+the optimization objectives (pareto-optimal with respect to the \emph{max-min} optimization problem defined 
+in~\cite{brausse2024smlp}).
 \item[optsyn] Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of the 
 optimization objectives and all constraints and assertions are valid for all legal values of inputs. This mode is a union 
 of the \emph{optimize} and \emph{synthesize} modes, its full name is \emph{optimized synthesis}. 
@@ -617,17 +1028,22 @@ Running SMLP in these modes reduces to solving formulas of the following structu
     ]\big]
 \end{equation}
 where $p$ denotes model knobs, $x$ denotes inputs, $y$ denotes the outputs, $\eta(p)$ defines 
-constraints on the knobs,  $\varphi_M(p',x,y)$ defines the ML model constraints, and the 
-condition $\varphi_{\mathit{cond}}(p',x,y)$ depends on the SMLP mode and will discussed in subsections below.
-In~\cref{form:gear:final}, $\theta(p,p')$ is in general a reflexive predicate, and in SMLP it is used as 
+constraints on the knobs,  $\varphi_M(p',x,y)$ defines the ML model constraints, and the condition
+$\varphi_{\mathit{cond}}(p',x,y)$ depends on the SMLP mode and will discussed in subsections below.
+$\eta(p)$ need not be a conjunction of constraints on individual knobs inferred from their range and grid
+specification; it can define more complex relations between allowed knob values of individual knobs.
+$\theta(p,p')$ is in general a reflexive predicate, and in SMLP it is used as 
 $\theta_r(p, p') \eqdef \Vert p - p' \Vert \leq r$, where  $\Vert p - p' \Vert$ is a distance between 
-two configurations $p$ and $p'$, and $r$ is a relative or absolute \emph{radius}.
-
+two configurations $p$ and $p'$, and $r$ is a relative or absolute \emph{radius}; that is, 
+the $\theta_r(p, p')$ region corresponds to a ball (or box) around $p$.
+$\varphi_M(p,x,y)$ is computed by SMLP internally, based on the ML model specification.
+$\varphi_{\mathit{cond}}(p',x,y)$  can represent (1) verification conditions, (2) model querying conditions, 
+(3) parameter optimization conditions, or (4) parameter synthesis conditions.
 
 \begin{defn}\label{def:stable:witness:validity}
 \begin{itemize}
-\item Given a value assignment $p^*$ to knobs $p$, an assignment $x^*$ to inputs $x$ is called a \emph{$\theta$-stable witness} 
-to $\query(p,x,y)$ for configuration $p^*$ if the following formula is valid:
+\item Given a value assignment $p^*$ to knobs $p$, an assignment $x^*$ to inputs $x$ is called a \emph{(concrete) $\theta$-stable witness} 
+to $\query(p,x,y)$ for configuration $p^*$ if the following formula is valid:\ZK{Assume here that x is not an empty vector?}
 \begin{equation}\label{form:gear:certify:knobs:inputs}
 \varphi_{\mathit{witn}}^{px}(p^*,x^*) \eqdef
      \eta(p^*) \wedge ~\big(
@@ -637,10 +1053,10 @@ to $\query(p,x,y)$ for configuration $p^*$ if the following formula is valid:
     ]\big)
 \end{equation}
 where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \query(p,x,y).\]
-In this case the value assignment $p^*, x^*$ to inputs and knobs $p,x$ is called a  \emph{$\theta$-stable witness for $\query(p,x,y)$}, 
-and $x^*$ is called a  \emph{$\theta$-stable witness to $\query(p^*,x,y)$}.
-\item A value assignment $p^*$ to knobs $p$ is called a  \emph{$\theta$-stable witness for $\query(p,x,y)$} if any legal value assignment 
-$x^*$ to inputs $x$ is a $\theta$-stable witness to $\query(p,x,y)$ for $p^*$; that is, when the following formula is valid:
+In this case the value assignment $p^*, x^*$ to inputs and knobs $p,x$ is called a  \emph{(concrete) $\theta$-stable witness for $\query(p,x,y)$}, 
+and $x^*$ is called a  \emph{(concrete) $\theta$-stable witness to $\query(p^*,x,y)$}.
+\item A value assignment $p^*$ to knobs $p$ is called a  \emph{(universal) $\theta$-stable witness for $\query(p,x,y)$} if any legal value assignment 
+$x^*$ to inputs $x$ is a (concrete) $\theta$-stable witness to $\query(p,x,y)$ for $p^*$; that is, when the following formula is valid:
 \begin{equation}\label{form:gear:certify:knobs}
 \varphi_{\mathit{witn}}^{p}(p^*) \eqdef
      \eta(p^*) \wedge ~\big(
@@ -838,12 +1254,12 @@ found in the satisfying assignment to~\cref{form:gear:certify:feasibility} that 
 \end{figure}
 
 
-\subsection{Synthesis for a query}
+\subsection{Querying ML model for a concrete stable witness}
 
 
 The task of stable synthesis of knob values for a query $\query$ consists of solving the following formula:
 
-\begin{equation}\label{form:gear:synthesis:query}
+\begin{equation}\label{form:gear:synthesis:query:exists}
     \exists p, x ~\big[ \eta(p) \wedge
     \forall p'~
     \forall y~[
@@ -851,7 +1267,7 @@ The task of stable synthesis of knob values for a query $\query$ consists of sol
     ]\big]
 \end{equation} 
 
-Let $p^*, x^*$ be a solution to \cref{form:gear:synthesis:query}. Then according to Definition~\ref{def:stable:witness:validity}, 
+Let $p^*, x^*$ be a solution to \cref{form:gear:synthesis:query:exists}. Then according to Definition~\ref{def:stable:witness:validity}, 
 $x^*$ is a stable witness for  $\query(p^*, x, y)$. 
 
 
@@ -876,7 +1292,7 @@ Then check whether the following formula is valid (by checking its negation for 
 If the above formula is valid, then we have shown that $x^*$ is a stable witness for  $\query(p^*, x, y)$, 
 and the task is accomplished -- SMLP reports $p^*, x^*$ is solution to the synthesis task. Otherwise,
 search should continue by searching for a solution different from $p^*, x^*$ (and their neighborhood).
-\ZK{looks like the full algorithm is same as the synthesis algorithm (interleaving od finding a candidate $p^*$
+\ZK{looks like the full algorithm is same as the synthesis algorithm (interleaving of finding a candidate $p^*$
 and searching to its counter-example, except now in search for candidate counter-example the inputs should
 be bound to values in $x^*$ so that only knobs will be free to assign values in candidate counter-example.}
 
@@ -950,62 +1366,66 @@ $\query(p, x, y) \eqdef \beta(p, x, y) \wedge \assert(p,x,y))$ (here $\assert(p,
 
 
 
-\subsection{Optimization mode}
-
-abc
-
-
-\subsection{Optimized synthesis mode}
-
-
+\subsection{Stable optimization mode}\label{sec:stable:opt}
 
 In this subsection we consider the optimization problem for a real-valued function $f$ (in our case, an ML model),
 extended in two ways:
-(1) we consider a $\theta$-stable maximum to ensure that the objective function  does not drop drastically in a close neighborhood of the configuration where its maximum is achieved, and
-(2) we assume that the objective function besides knobs depends also on inputs, and the %\changed{value} of the
+\begin{enumerate}
+\item We consider a $\theta$-stable maximum to ensure that the objective function  does not drop drastically in a 
+close neighborhood of the configuration where its maximum is achieved.
+\item We assume that the objective function besides knobs depends also on inputs, and the %\changed{value} of the
 function is maximized in the stability $\theta$-region of knobs, for any values of inputs in their respective legal ranges.
+\end{enumerate}
 We explain these extensions using two plots in Figure~\ref{smlp_maxmin}.
+The left plot represents optimization problem for $f(p,x)$ when $f$ depends on knobs only (thus $x$ is an empty vector), 
+while the right plot represents the general setting where $x$ is not empty (which is usually not considered in optimization research). 
+In each plot, the blue threshold (in the form of a horizontal bar or a rectangle) denotes the stable maximum around the point 
+where $f$ reaches its (regular) maximum, and the red threshold denotes the stable maximum, which is approximated by our 
+optimization algorithms. In both plots, the regular maximum of $f$ is not stable due to a sharp drop of $f$'s value in the stability region. 
+\delete{The right plot depicts the situation when input $x$ ranges in interval $[a, b]$, thus in \emph{max-min} optimization problem, 
+formalized below in Formulas~\eqref{form:opt1}  and  \eqref{form:opt2}, the minimum of $f$ is calculated in the stability region 
+of knobs $p$, with values of $x$ ranging in $[a,b]$.}
 
 \begin{figure}[tp]
 \center
 \includegraphics[width= 0.7\columnwidth]{smlp_maxmin.PNG}
-\caption{SMLP max-min optimization. On both plots, $p$ denote the knobs. On the right plot we also consider inputs $x$ (which are universally quantified) as part of $f$.} \label{smlp_maxmin}
+\caption{SMLP max-min optimization. On both plots, $p$ denote the knobs. On the right plot we also consider inputs $x$ 
+(which are universally quantified) as part of $f$.} \label{smlp_maxmin}
 \end{figure}
 
+An example of how to run SMLP in mode $\mode{optimize}$ was given in \Cref{sec:example}, which among other
+things describes how the objectives can be defined through the command line and through the specification file.
+When there are multiple objectives, SMLP supports both pareto optimization as well as optimizing for each objective
+separately (independently from requirements of other objectives). This choice is controlled using option 
+$\optionval{-pareto}{t/f}$. SMLP optimization algorithm first performs feasibility check that $\beta$ constraints are 
+feasible under the interface constraints $\alpha$ and $\eta$, and if a solution is found, the latter is used as a first
+estimate of lower bounds to objective's thresholds that can be achieved, and these bounds along with input and knob
+values that demonstrate these bounds are (immediately) reported to optimization report file  with suffix
+$\suffix{*\_optimization\_progress.csv}$.  SMLP then continues search to tighten the objective's upper and lower bounds,
+and at anytime when lower bounds are improved (in case of maximization problem) the optimization progress report
+is updated with improved estimates of the optima. If the minimization search terminates under given time and memory
+requirements, the final results are reported in file with suffix  $\suffix{*\_optimization\_results.csv}$. Reports
+$\suffix{*\_optimization\_progress.json}$ and  $\suffix{*\_optimization\_results.json}$ are also available with 
+more detail compared to the respective $\suffix{*.csv}$ reports.. 
 
-The left plot represents optimization problem for $f(p,x)$ when $f$ depends on knobs only (thus $x$ is an empty vector), while the right plot represents the general setting where $x$ is not empty (which is usually not considered in optimization research). In each plot, the blue threshold (in the form of a horizontal bar or a rectangle) denotes the stable maximum around the point where $f$ reaches its (regular) maximum, and the red threshold denotes the stable maximum, which is approximated by our optimization algorithms. In both plots, the regular maximum of $f$ is not stable due to a sharp drop of $f$'s value in the stability region. 
-\delete{The right plot depicts the situation when input $x$ ranges in interval $[a, b]$, thus in \emph{max-min} optimization problem, formalized below in Formulas~\eqref{form:opt1}  and  \eqref{form:opt2}, the minimum of $f$ is calculated in the stability region of knobs $p$, with values of $x$ ranging in $[a,b]$.}
+The stable optimization problem is a special case of stable optimized synthesis problem which is discussed formally
+in \Cref{sec:stable:opt:synthesis}, and we refer the reader to it  for a formal treatment of stable synthesis problem. 
+More precisely, the problem of stable optimization is defined using \Cref{form:opt2} and the 
+problem of stable optimized synthesis problem is defined using \Cref{form:optsyn}, from which \Cref{form:opt2}
+is obtained as a special case, by assuming that $\assert(p,x,y)$ is constant $\operator{true}$.
 
 
-%\todozk{In the first formula, in phi condition, should z be y? both are legitimate formulations but b usually refers to model's interface while z represents an optimization threshold?}
-%\KK[inline]{ In progress: 
-%
-%Informally, the  optimization problem is the problem of finding parameters such that an objective function connecting outputs and inputs of the system is near-optimal under  all inputs under the required constraints. Further, in the presence of the stability requirement, the whole region around the solution should also satisfy optimality  constraints.
-%
-%In the optimization problem we want to find parameters such that output of our system is near-optimal under all constraints.
-%
-%\[ \regmin{ p}{\theta,\varphi}\coloneqq
-    %\min\{f(\vec x'):\vec x'\in  X,\theta(\vec x,\vec x')\} =
-%    \mathop{\min\nolimits_{ p'\in X}}\limits_{\theta(p, p')}\varphi(p)
-%\text. \]
-%
-%}
+\subsection{Stable optimized synthesis mode}\label{sec:stable:opt:synthesis}
 
-\strut\todozk{remove `near' everywhere}%
-Let us first consider optimization without stability or inputs, i.e., far low corner in the exploration cube Figure~\ref{fig:cube}. %\todozk{edge instead of corner?}
-%
-Given a %binary predicate
-formula
-%\todofb{Do we need the index $M$ on $\varphi_M$?}%
+
+
+Let us first consider optimization without stability or inputs, i.e., far low corner in the exploration cube Figure~\ref{fig:cube}. 
+Given a formula
 $\varphi_M$ encoding the model, and an objective function 
-$\objv:%
+$\objv:
 \mathcal{D}_{\mathit{par}}\times
-%\mathcal{D}_{\mathit{in}}\times
 \mathcal{D}_\mathit{out}\to\mathbb R$, the
-%$\objv:\mathcal{D}_\mathit{out}\to\mathbb R$, 
-%\todofb{better word for `pure'? Can we re-use terminology from the cube or the intro?}%
 standard optimization problem solved by SMLP is stated by Formula~\eqref{form:opt_p}.
-%
  \begin{equation}\label{form:opt_p}
  \regmax{\varphi_M}{\objv}
  \eqdef\mathop{\max\limits_{p}} \{z \mid  
@@ -1013,32 +1433,24 @@ standard optimization problem solved by SMLP is stated by Formula~\eqref{form:op
     \objv(p,y) \geq z
     \changedto])\}
 \end{equation}
-%\todofb{domain of $\objv$ needs changes, they were done in~\ref{note:changes-to-objv}.}%
-A solution to this optimization problem %\eqref{form:opt_p}
-is the pair $(p^*,\regmax{\varphi_M}{\objv})$, where 
-$p^*{}\in\mathcal{D}_{\mathit{par}}$ is a value of parameters $p$ on which the maximum $\regmax{\varphi_M}{\objv}\in\mathbb R$ of the objective function $\objv$ is achieved
+A solution to this optimization problem  is the pair $(p^*,\regmax{\varphi_M}{\objv})$, where 
+$p^*{}\in\mathcal{D}_{\mathit{par}}$ is a value of parameters $p$ on which the maximum 
+$\regmax{\varphi_M}{\objv}\in\mathbb R$ of the objective function $\objv$ is achieved
 for the output $y$ of the model on $p^*$.
 In most cases it is not feasible to exactly compute the maximum.
 To deal with this, SMLP computes maximum with a specified accuracy. 
-Consider $\varepsilon >0$. 
-We refer to %\todofb{$\vec x\in X$?}%
-values $(\tilde p,\tilde z)$ as a
-solution to the optimization problem with
-%\old{\todofb{Consider \emph{not} defining `accuracy' $\leadsto$ strengthened notion}}%
+Consider $\varepsilon >0$.  We refer to  values $(\tilde p,\tilde z)$ as a solution to the optimization problem with
 \emph{accuracy} $\varepsilon$, or \emph{$\varepsilon$-solution},
 if $\tilde z\leq \regmax{ \varphi_M}{\objv}  <\tilde z+\varepsilon$ holds and
-%$z^*=%f(\vec x^*)
- %for a solution $p^*$ to \eqref{eq:max-min},
- %and
-%$\tilde y=\regmax{\tilde{p}}{\theta,o}$.
-%
 $\tilde z$ is a lower bound on the objective, i.e., $\forall y [ \varphi_M(p,y)  \implies  
     \objv(p,y) \geq \tilde z] $ holds.
 
 
 Now, we consider \emph{stable optimized synthesis}, i.e., the top right corner of the exploration cube.
-%The problem can be formulated as the following formula \eqref{form:opt1}, expressing maximization of a lower bound  on the objective function over parameters values under GEAR formula constraints
-The problem can be formulated as the following Formula~\eqref{form:opt1}, expressing maximization of a lower bound  on the objective function $\objv$ over parameter values under stable synthesis constraints.
+%The problem can be formulated as the following formula \eqref{form:opt1}, expressing maximization of a lower bound  
+%on the objective function over parameters values under GEAR formula constraints
+The problem can be formulated as the following Formula~\eqref{form:opt1}, expressing maximization of a lower bound  
+on the objective function $\objv$ over parameter values under stable synthesis constraints.
 %
 \begin{equation}\label{form:opt1}
 \regmax{\varphi_M}{\objv,\theta}
@@ -1057,9 +1469,6 @@ where
 \]
 %
 The stable synthesis constraints are part of a GEAR formula and include usual $\eta, \alpha, \beta$ constraints together with the stability constraints $\theta$.
-%
-%that bounds over parameter values
-%
 Equivalently, stable optimized synthesis can be stated as the \emph{max-min} optimization problem, Formula~\eqref{form:opt2}
 \begin{equation}\label{form:opt2}
 \regmax{\varphi_M}{\objv,\theta}
@@ -1070,8 +1479,7 @@ Equivalently, stable optimized synthesis can be stated as the \emph{max-min} opt
      \theta(p,p') \implies
      (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}^{\leq}(p',x,y,z))]\}
 \end{equation}
-%
-%
+
 %     \begin{equation}\label{form:opt}
 %   \mathop{\max\limits_{p}} \mathop{\min\limits_{x, p'}\nolimits_{y}}  ~\eta(p) \wedge
 %    \forall y'~[
@@ -1081,162 +1489,90 @@ Equivalently, stable optimized synthesis can be stated as the \emph{max-min} opt
 where \[
 \varphi_{\mathit{cond}}^{\leq}(p',x,y,z)
 \eqdef\alpha(p',x) \implies (\beta(p',x,y) \wedge \objv(p',x,y) \leq z)\text.\]
-%\todofb{`The notion of $\varepsilon$-solutions carries over from the standard optimization problem'?}%
 In Formula~\eqref{form:opt2} the minimization predicate in the stability region corresponds to the universally quantified $p'$ ranging over this region in~\eqref{form:opt1}.
 An advantage of this formulation is that this formula can be adapted to define other aggregation functions over the objective's values on stability region.
 For example, that way one can represent the \emph{max-mean} optimization problem, where one wants to maximize the mean value of the function in the stability region rather one the min value (which is maximizing the worst-case value of $f$ in stability region).
-Likewise, Formula~\eqref{form:opt2} can be adapted to other interesting statistical properties of distribution of values of $f$ in the stability region.%\footnote{Solving such optimization problems with SMT solver
+Likewise, Formula~\eqref{form:opt2} can be adapted to other interesting statistical properties of distribution of values of $f$ in the stability region.
 
-We can explicitly incorporate assertions in stable optimized synthesis by defining $\beta(p',x,y)\eqdef \beta'(p',x,y) \wedge \assert(p',x,y)$, where  $\assert(p',x,y)$ are assertions required to be valid in the entire stability region around the selected configuration of knobs $p$.
-%(So even if the configuration is perturbed within the limits of stability guard $\theta$,
-%by the environment or an adversary,
-%the configuration will still be
-%near-optimal and assertions too will still be valid.)
+We explicitly incorporate assertions in stable optimized synthesis by defining $\beta(p',x,y)\eqdef \beta'(p',x,y) \wedge \assert(p',x,y)$ in $\varphi_{\mathit{cond}}^{\geq}(p',x,y,z)$ of \Cref{form:opt2}, where  $\assert(p',x,y)$ are assertions required to be valid in the entire stability region around the selected configuration of knobs $p$:
+
+\begin{equation}\label{form:optsyn}
+\regmax{\varphi_M}{\objv,\theta}
+\eqdef
+\mathop{\max\limits_{p}} \mathop{\min\limits_{x, p'}}
+\{ z \mid \eta(p) \wedge
+    \forall y~[
+     \theta(p,p') \implies
+     (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}^{\leq}(p',x,y,z))]\}
+\end{equation}
+where \[
+\varphi_{\mathit{cond}}^{\leq}(p',x,y,z)
+\eqdef\alpha(p',x) \implies ( \beta(p',x,y) \wedge \assert(p',x,y) \wedge \objv(p',x,y) \leq z)\text.\]
+
+
 The notion of $\varepsilon$-solutions for these problems carries over from the one given above for Formula~\eqref{form:opt_p}.
 
-SMLP implements stable optimized synthesis based on the GearOPT$_\delta$ and GearOPT$_\delta$-BO algorithms~\cite{DBLP:conf/fmcad/BrausseKK20,DBLP:conf/ijcai/BrausseKK22}, which are shown to be complete and terminating 
+SMLP implements stable optimized synthesis based on the GearOPT$_\delta$ and GearOPT$_\delta$-BO 
+algorithms~\cite{DBLP:conf/fmcad/BrausseKK20,DBLP:conf/ijcai/BrausseKK22}, which are shown to be complete and terminating 
 for this problem under mild conditions. 
-%
-%\todofb{Algorithms also complete under mild conditions}%
 These algorithms were further extended in SMLP to Pareto point computations to handle multiple objectives simultaneously.
-%\end{comment}
 
+SMLP invocation in $\mode{optsyn}$ mode is similar to running SMLP in $\mode{optimize}$ mode, with and example of the latter 
+mode discussed in \Cref{sec:example}, with the only difference that the mode is specified as $\optionval{-mode}{optsyn}$, and
+the specification file or the command line for the  $\option{optsyn}$ mode should contain specification for
+both assertions and objectives (while in  $\option{optimize}$ mode assertion specification is not required.)
+Similarly to the $\option{optimize}$ mode, optimization progress and final results are reported in files with suffix
+$\suffix{*\_optimization\_progress.\{json|csv\}}$ and  $\suffix{*\_optimization\_results.\{json|csv\}}$. 
+\ZK{When optsyn is not feasible due to infeasible beta constraints or assertions, no csv/json reports are written ... TODO}
 
+ 
+\section{Design of experiments}\label{sec:doe}
 
-
-
-\section{How to run SMLP}\label{sec:run}
-
-
-Consider a toy dataset in Table~\cref{toy_basic_df} with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.
-Command to run SMLP in \emph{optimize} mode is given in Figure~\cref{fig:command}.
-The optimization problem is specified in the spec file in Figure~\cref{fig:spec}.
-
-\begin{table*}[t]
-\centering\small
-\begin{tabular}{lrrrrrr}
-\hline %\toprule
-{} &      x1 &  x2 &    p1 &  p2 &       y1 &       y2 \\
-\hline %\midrule
-0 &  2.9800 &  -1 &   0.1 &   4 &   5.0233 &   8.0000 \\
-1 &  8.5530 &  -1 &   3.9 &   3 &   0.6936 &  12.0200 \\
-2 &  0.5580 &   1 &   2.0 &   4 &   0.6882 &   8.1400 \\
-3 &  3.8670 &   0 &   1.1 &   3 &   0.2400 &   8.0000 \\
-4 & -0.8218 &   0 &   4.0 &   3 &   0.3240 &   8.0000 \\
-5 &  5.2520 &   0 &   4.0 &   5 &   6.0300 &   8.0000 \\
-6 &  0.2998 &   1 &   7.1 &   6 &   0.9100 &  10.1250 \\
-7 &  7.1750 &   1 &   7.0 &   7 &   0.9600 &   1.1200 \\
-8 &  9.5460 &   0 &   7.0 &   6 &  10.7007 &   9.5661 \\
-9 & -0.4540 &   1 &  10.0 &   7 &   8.7932 &   6.4015 \\
-\hline %\bottomrule
-\end{tabular}
-\caption{Toy dataset $smlp\_toy\_basic.csv$ with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.}
-\label{toy_basic_df}
-\end{table*}
-
-\begin{figure}%[tp]
-%\scriptsize
-%\tiny
-%\small
-\begin{verbatim}
- ../src/run_smlp.py -data ../smlp_toy_basic -out_dir ../out -pref abc  -mode optimize -pareto t  \
--sat_thresh f -resp y1,y2 -feat x1,x2,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 \
--data_scaler min_max -epsilon 0.05 -delta 0.01 -save_model_config f -mrmr_pred 0 -plots f \
--seed 10 -log_time f -spec ../smlp_toy_basic -pref try
-\end{verbatim}
-\caption{Example of SMLP's command to build a decision tree model and find .}
-\label{fig:command}
-\end{figure}
-
-
-
-\begin{figure}%[tp]
-%\scriptsize
-%\tiny
-\small
-\begin{verbatim}
-{
-  "version": "1.2",
-  "variables": [
-    {"label":"y1", "interface":"output", "type":"real"},
-    {"label":"y2", "interface":"output", "type":"real"},
-    {"label":"x1", "interface":"input", "type":"real", "range":[0,10]},
-    {"label":"x2", "interface":"input", "type":"int", "range":[-1,1]},
-    {"label":"p1", "interface":"knob", "type":"real", "range":[0,10], "rad-rel":0.1, "grid":[2,4,7]},
-    {"label":"p2", "interface":"knob", "type":"int", "range":[3,7], "rad-abs":0.2}
-  ],
-  "alpha": "p2<5 and x1==10 and x2<12",
-  "beta": "y1>=4 and y2>=8",
-  "eta": "p1==4 or (p1==8 and p2 > 3)",
-  "assertions": {
-    "assert1": "(y2**3+p2)/2>6",
-    "assert2": "y1>=0",
-    "assert3": "y2>0"
-  },
-  "objectives": {
-    "objective1": "(y1+y2)/2",
-    "objective2": "y1"
-  }
-}
-\end{verbatim}
-\begin{tikzpicture}[remember picture,overlay,shift={(22em,\baselineskip)}]
-\node[anchor=south west]{\includegraphics[height=14\baselineskip]{smlp_encoding.PNG}};
-\end{tikzpicture}
-\vspace*{-1\baselineskip}
-\caption{Specification $smlp\_toy\_basic$ used by SMLP command in Figure~\cref{fig:command}.}
-\label{fig:spec}
-\end{figure}
-
-
-Optimization progress is reported in  file $try\_smlp\_toy\_basic\_optimization\_progress.csv$, where $try$ is the run ID specified using option '-pref try'; $smlp\_toy\_basic$ is the name of the data file, and $\suffix{optimization\_progress.csv}$ is suffix for that report. More details on input, knob, output and objective values used to prove the upper and lower bounds of the objectives during search for pareto optimum are reported in file $try\_smlp\_toy\_basic\_optimization\_progress.json$. 
-
-\subsection{Design of experiments}\label{sssect:doe}
-
-Most DOE methods
-are %mainly
-based on understanding multivariate distribution of legal value combinations
-of inputs and knobs %, possibly combined with random sampling
-in order to sample the system.
-\pagebreak[3]
-When the number of system inputs and/or knobs is large (say hundreds or more), the DOE may not  generate a high-quality coverage of the system’s behavior to enable training models with high accuracy.
-%When the number of system inputs and/or knobs is large (say hundreds or more),
-%the DOE methods that are mainly based on understanding multivariate distribution of legal value combinations of inputs and knobs,
-%possibly combined with random sampling,
-%cannot generate a high-quality coverage of the system's behavior to enable training models with high accuracy.
+Most DOE methods are based on understanding multivariate distribution of legal value combinations
+of inputs and knobs in order to sample the system.
+When the number of system inputs and/or knobs is large (say hundreds or more), the DOE may not  generate  
+a high-quality coverage of the system’s behavior to enable training models with high accuracy.
 Model training process itself becomes less manageable when number of input variables grows,
 and models are not explainable and thus cannot be trusted.
 One way to curb this problem is to select a subset of input features for DOE and for model training.
 The problem of combining feature selection with DOE generation and model training
-is an important research topic of practical interest,
-and SMLP supports multiple practically proven ways
-to select subsets of features and feature combinations as inputs to DOE and training,
-including the \emph{MRMR} feature selection algorithm~\cite{DBLP:journals/jbcb/DingP05},
-and a \emph{Subgroup Discovery (SD)} algorithm~\cite{DBLP:books/mit/fayyadPSU96/Klosgen96,DBLP:conf/pkdd/Wrobel97,DBLP:journals/widm/Atzmueller15}.
-The MRMR algorithm selects a subset of features according to the principle of \emph{maximum relevance and minimum redundancy}.
-It is widely used for the purpose of selecting a subset of features for building accurate models,
-and is therefore useful for selecting a subset of features to be used in DOE;
-it is a default choice in SMLP for that usage.
-The SD algorithm selects regions in the input space relevant to the response,
-using heuristic statistical methods,
+is an important research topic of practical interest, and SMLP supports multiple practically proven ways
+to select subsets of features and feature combinations as inputs to DOE and training, including the \emph{MRMR}
+feature selection algorithm~\cite{DBLP:journals/jbcb/DingP05}, and a \emph{Subgroup Discovery (SD)}
+algorithm~\cite{DBLP:books/mit/fayyadPSU96/Klosgen96,DBLP:conf/pkdd/Wrobel97,DBLP:journals/widm/Atzmueller15}.
+The MRMR algorithm selects a subset of features according to the principle of \emph{maximum relevance and 
+minimum redundancy}. It is widely used for the purpose of selecting a subset of features for building accurate models,
+and is therefore useful for selecting a subset of features to be used in DOE; it is a default choice in SMLP for that usage.
+The SD algorithm selects regions in the input space relevant to the response, using heuristic statistical methods,
 and such regions can be prioritized for sampling in DOE algorithms.
 
 
 
-\subsection{Root cause analysis}
+\section{Root cause analysis}\label{sec:rca}
 
-We view the problem of root cause analysis as dual to the stable optimized synthesis problem: while during optimization with stability we are searching for regions in the input space (or in other words, characterizing those regions) where the system response is good or excellent, the task of root-causing can be seen as searching for regions in the input space where the system response is not good (is unacceptable). Thus simply by swapping the definition of excellent vs unacceptable, we can apply SMLP to explore weaknesses and failing behaviors of the system.
+We view the problem of root cause analysis as dual to the stable optimized synthesis problem: while during optimization with 
+stability we are searching for regions in the input space (or in other words, characterizing those regions) where the system response 
+is good or excellent, the task of root-causing can be seen as searching for regions in the input space where the system response is 
+not good (is unacceptable). Thus simply by swapping the definition of excellent vs unacceptable, we can apply SMLP to explore 
+weaknesses and failing behaviors of the system.
 
-Even if a number of witnesses (counter-examples to an assertion) are available, they represent discrete points in the input space and it is not immediately clear which value assignments to which variables in these witnesses are critical to explain the failures. Root causing capability in SMLP is currently supported through two independent approaches:
-a \emph{Subgroup Discovery (SD)} algorithm that searches through the data for the input regions where there is a higher ratio (thus, higher probability) of failure; to be precise, SD algorithms support a variety of \emph{quality functions} which play the role of optimization objectives in the context of optimization.
+Even if a number of witnesses (counter-examples to an assertion) are available, they represent discrete points in the input space 
+and it is not immediately clear which value assignments to which variables in these witnesses are critical to explain the failures. 
+Root causing capability in SMLP is currently supported through two independent approaches:
+a \emph{Subgroup Discovery (SD)} algorithm that searches through the data for the input regions where there is a higher ratio 
+(thus, higher probability) of failure; to be precise, SD algorithms support a variety of \emph{quality functions} which play the role of 
+optimization objectives in the context of optimization.
 %\delete{SD and Rule Learning algorithms have been used successfully for root-causing in a number of EDA domains (and beyond).}
-To find input regions with high probability of failure, SMLP searches for stable witnesses to failures. These capabilities, together with feature selection algorithms supported in SMLP, enable researchers to develop new root causing capabilities that combine formal methods with statistical methods for root cause analysis. 
+To find input regions with high probability of failure, SMLP searches for stable witnesses to failures. These capabilities, together with 
+feature selection algorithms supported in SMLP, enable researchers to develop new root causing capabilities that combine formal 
+methods with statistical methods for root cause analysis. 
 
 
-\subsection{Model refinement loop}\label{s.refinement}
+\section{Model refinement loop}\label{sec:refinement}
 
-Support in SMLP for selecting DOE vectors to sample the system and generate a training set was discussed in Subsection~\ref{sssect:doe}.
-Initially, when selecting sampling points for the system, it is unknown which regions in the input space are really relevant for the exploration task at hand.
-Therefore some DOE algorithms also incorporate random sampling and
+Support in SMLP for selecting DOE vectors to sample the system and generate a training set was discussed in Subsection~\ref{sec:doe}.
+Initially, when selecting sampling points for the system, it is unknown which regions in the input space are really relevant for the exploration 
+task at hand. Therefore some DOE algorithms also incorporate random sampling and
 sampling based on previous experience and familiarity with the design, such as sampling nominal cases and corner cases, when these are known.
 For model exploration tasks supported by SMLP, it is not required to train a model that will be an accurate match to the system everywhere in 
 the legal search space of inputs and knobs.
@@ -1257,41 +1593,41 @@ Samples in the stability region of interest can also be assigned higher weights 
 higher accuracy in that region. More generally, higher adequacy of the model can be achieved by sampling distributions biased towards 
 prioritizing the stability region during model refinement.
 
-%\begin{comment}
-\strut\todofb{It is hard to follow the reasoning laid out in these two following paragraphs.}%
+
 Note that model refinement is required only to be able to learn properties on the system by exploring these properties on the model.
 As a simple scenario, let us consider that we want to check an assertion $\assert(p,x,y)$ on the system.
 If a $\theta$-stable counter example $x^*$ to $\assert(p,x,y)$ for a configuration $p^*$ of knobs exists 
 on the model according to Definition~\ref{def:stable:witness:validity} 
 (which means that  $x^*$ is a $\theta$-stable witness for query $\query(p^*, x, y) \eqdef \neg \assert(p^*,x,y)$), 
-then the system is sampled in the $\theta$--stability region of $p^*$ (possibly with $x^*$ toggled as well in a small region around $x^*$).
-If the failure of assertion $\assert(p,x,y)$ is reproduced on the system using the stable witness $x^*$ and a configuration in the $\theta$-stability region of $p^*$,
-then the model exploration goal has been accomplished (we found a counter-example to $\assert(p,x,y)$ on the system) and model refinement can stop.
-Otherwise the system samples can be used to refine the model in this region.
-For that reason, the wider the $\theta$-stability region, the higher the chances to reproduce failure of assertion $\assert(p,x,y)$ on the system.
+then the system is sampled in the $\theta$--stability region of $p^*$ (possibly with $x^*$ toggled as well in a small 
+region around $x^*$). If the failure of assertion $\assert(p,x,y)$ is reproduced on the system using the stable witness 
+$x^*$ and a configuration in the $\theta$-stability region of $p^*$, then the model exploration goal has been 
+accomplished (we found a counter-example to $\assert(p,x,y)$ on the system) and model refinement can stop.
+Otherwise the system samples can be used to refine the model in this region. For that reason, the wider the 
+$\theta$-stability region, the higher the chances to reproduce failure of assertion $\assert(p,x,y)$ on the system.
 
-On the other hand, if the $\assert(p,x,y)$ does not have a $\theta$-stable counter-example, then it is still possible that $\assert$ is not valid on the system 
-but it cannot be falsified on the model due to discrepancy between the system and model responses in some (unknown to us) input space.
-In this case one can strengthen $\assert(p,x,y)$ to $\assert'(p,x,y)$ (for example, assertion $\assert(p,x,y) \eqdef y \geq 3$ can be 
-strengthened to $\assert'(p,x,y) \eqdef y \geq 3.01$),
+On the other hand, if the $\assert(p,x,y)$ does not have a $\theta$-stable counter-example, then it is still possible 
+that $\assert$ is not valid on the system but it cannot be falsified on the model due to discrepancy between the system 
+and model responses in some (unknown to us) input space. In this case one can strengthen $\assert(p,x,y)$ to $\assert'(p,x,y)$
+(for example, assertion $\assert(p,x,y) \eqdef y \geq 3$ can be  strengthened to $\assert'(p,x,y) \eqdef y \geq 3.01$),
 or one can weaken the stability condition $\theta_r$ to  $\theta_{r'}$ by shrinking the stability radii $r$ to $r'$; or do both.
-If the strengthened assertion $\assert'(p,x,y)$ has a $\theta_{r'}$-stable counter-example $x'$ for a configuration $p'$ on the model, 
-then $p', x'$ can be used to find a counter-example to the original assertion $\assert(p, x, y)$ on the system in the same way as with $p^*, x^*$ before.
-If failure of the original assertion $\assert$ is reproduced on the system, the model refinement loop stops, otherwise it can continue using other 
-strengthened versions of the original assertion and or shrinking the  stability radii even further.
-Similar reasoning is applied to other modes of design space exploration. In particular, in the optimization modes, one can confirm 
-or reject on the system an optimization threshold proved on the model, and in the latter case the model refinement loop 
-will be triggered by or providing new data-points 
+If the strengthened assertion $\assert'(p,x,y)$ has a $\theta_{r'}$-stable counter-example $x'$ for a configuration $p'$ on the 
+model, then $p', x'$ can be used to find a counter-example to the original assertion $\assert(p, x, y)$ on the system in the same 
+way as with $p^*, x^*$ before. If failure of the original assertion $\assert$ is reproduced on the system, the model 
+refinement loop stops, otherwise it can continue using other strengthened versions of the original assertion and or shrinking the  
+stability radii even further. Similar reasoning is applied to other modes of design space exploration. In particular, in the 
+optimization modes, one can confirm or reject on the system an optimization threshold proved on the model, and in the latter 
+case the model refinement loop will be triggered by or providing new data-points 
 that can be used for model refinement  in this region, through re-training or incremental training of a new model. 
 \KK[inline]{Might be move to the end of 1st para: Similar reasoning is applied to other modes of design space exploration. 
 In particular, in the optimization modes, the region around optimal solution can be sampled and simulated by the system, 
 and either confirm the model predictions or provide new data-points that can be used for model refinement in this region.}
-%\end{comment}
 
 \delete{OLD: 
 Usefulness of an ML model is limited by its accuracy with respect to the system that it models.
-A major share of the gap between the system response and the model response on same inputs is due to poor quality of training set that was obtained by sampling the system.
-SMLP support for selecting DOE vectors to sample the system and generate a training set was discussed in Subsection~\ref{sssect:doe}.
+A major share of the gap between the system response and the model response on same inputs is due to poor 
+quality of training set that was obtained by sampling the system. SMLP support for selecting DOE vectors to 
+sample the system and generate a training set was discussed in Subsection~\ref{sec:doe}.
 SMLP also supports a \emph{model refinement loop} based on model exploration results in SMLP.
 We are interested in \emph{targeted refinement} of the model, in input regions where it matters for the task at hand.
 We explain how model refinement works, and relevance of stable witnesses for that goal. The idea is as follows:
@@ -1315,7 +1651,8 @@ $\operatorname{assert}(x,y)$ on the system;
 and if that query was $query_2$,
 we have confirmed the objective threshold $o \geq 5$ on the system.)
 If on the other hand none of the newly sampled data points (including the witness itself) is a witness of $query$ on the system,
-we have discovered \changed{a} discrepancy between the model and system response in the input region of interest (relevant to that query of interest),
+we have discovered \changed{a} discrepancy between the model and system response in the input region of interest 
+(relevant to that query of interest),
 and the newly sampled data points can be added to the training data and model re-trained,
 to improve its quality in the stability region of interest.
 Note that $query$ can also be negation of a strengthened assertion
@@ -1340,7 +1677,8 @@ Quick command template for solving the MRC problem on a single machine:
 \end{equation}
 Here, \file{\emph{data.csv}} is the data set containing training samples,
 \file{\emph{data.spec}} is the specification file detailed in \cref{sec:.spec}\todo{add example in release or documentation},
-\cmdstyle{-t \emph{target/dir}} is an optional working directory for the prover and \cmdstyle{-j 112} is the maximum number of parallel jobs to run.
+\cmdstyle{-t \emph{target/dir}} is an optional working directory for the prover and \cmdstyle{-j 112} 
+is the maximum number of parallel jobs to run.
 
 For each combination of categorical parameters \literal{CH} and \literal{Byte}s the tool: 
 \begin{enumerate}
@@ -1365,7 +1703,7 @@ the categorical input features \literal{Byte},
 $\{\literal0,\literal1,\literal2,\literal3,\literal4,\literal5,\literal6,\literal7\}$,
 $\{\literal0,\literal1\}$ and $\{\literal0\}$, respectively,
 is described in the CSV file \file{data.csv}. Furthermore, assume the codomain
-is labelled \literal{delta}.
+is labeled \literal{delta}.
 
 The goal is to find, for each \literal{Byte} and \literal{CH},
 \begin{enumerate}
