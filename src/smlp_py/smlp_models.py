@@ -222,7 +222,7 @@ class SmlpModels:
         self._instSklearn.set_logger(logger)
     
     # generate out_dir/prefix_data_{train/test/labeled/new/}_prediction_precision.csv and 
-    # out_dir/prefix_data_{train/test/labeled/new/}_prediction_summary.csv files with
+    # out_dir/prefix_data_{training/test/labeled/new/}_prediction_summary.csv files with
     # msqe and R2_score (for now) precision columns and prediction results in the original
     # scale of training data, respectively. The argument data_version indicates the data origin:
     # training (train), test/validation, full labeled data (labeled) and new/unseen data (new).

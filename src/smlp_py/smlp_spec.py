@@ -9,20 +9,24 @@ from smlp_py.smlp_utils import get_expression_variables, list_unique_unordered, 
 # optimization objectives specified through command line or through other files.
 class SmlpSpec:
     def __init__(self):
-        self._spec_logger = None    # logger
-        self.spec = None            # the full spec including version, interface spec, as well as global constraints
-                                    #     alpha, beta, assertions, queries, optimization/tuning objectives
-        self.version = None         # version of spec format, to support backward compatibility when changing the format
-        self._alpha_ranges_dict = None     # variable ranges defined using the self._SPEC_INPUTS_BOUNDS field in spec file
-        self._eta_dict = None       # control (knob) input variable grid of allowed values (centre point values)
-        self._eta_ranges_dict = None# 
-        self._theta_dict = None     # stability radii for knob input variables
-        self._domain_dict = None    # type and range of the interface variables (mainly free inputs and knobs), defined
-                                    #     using spec field self._SPEC_INPUTS_BOUNDS and supporting integer and real types
-                                    #     self._SPEC_RANGE_INTEGER, self._SPEC_RANGE_REAL
+        self._spec_logger = None       # logger
+        self.spec = None               # the full spec including version, interface spec, as well as global constraints
+                                       #     alpha, beta, assertions, queries, optimization/tuning objectives
+        self.version = None            # version of spec format, to support backward compatibility when changing the format
+        self._alpha_ranges_dict = None # variable ranges defined using the self._SPEC_INPUTS_BOUNDS field in spec file
+        self._eta_dict = None          # control (knob) input variable grid of allowed values (centre point values)
+        self._eta_ranges_dict = None   # 
+        self._theta_dict = None        # stability radii for knob input variables
+        self._domain_dict = None       # type and range of the interface variables (mainly free inputs and knobs), defined
+                                       #     using spec field self._SPEC_INPUTS_BOUNDS and supporting integer and real types
+                                       #     self._SPEC_RANGE_INTEGER, self._SPEC_RANGE_REAL
+        self.radius_absolute = None
         self.radius_relative = None
+        self.delta_absolute = None
+        self.delta_relative = None
         
-        self._DEF_DELTA = 0.01 
+        self._DEF_DELTA_RELATIVE = 0.01 
+        self._DEF_DELTA_ABSOLUTE = 0.0 
         self._DEF_ALPHA = None
         self._DEF_BETA = None
         self._DEF_ETA = None 
@@ -32,9 +36,12 @@ class SmlpSpec:
         self.spec_params_dict = {
             'spec': {'abbr':'spec', 'default':None, 'type':str,
                 'help':'Name of spec file including full path, must be provided [default None]'}, 
-            'delta': {'abbr':'delta', 'default':self._DEF_DELTA, 'type':float, 
+            'delta_relative': {'abbr':'delta_rel', 'default':self._DEF_DELTA_RELATIVE, 'type':float, 
                 'help':'exclude (1+DELTA)*radius region for non-grid components ' +
-                    '[default: {}]'.format(str(self._DEF_DELTA))},
+                    '[default: {}]'.format(str(self._DEF_DELTA_RELATIVE))},
+            'delta_absolute': {'abbr':'delta_abs', 'default':self._DEF_DELTA_ABSOLUTE, 'type':float, 
+                'help':'exclude (1+DELTA)*radius region for non-grid components ' +
+                    '[default: {}]'.format(str(self._DEF_DELTA_ABSOLUTE))},
             'radius_relative': {'abbr':'rad_rel', 'default':self._DEF_RADIUS_RELATIVE, 'type':float, 
                 'help':'Relative radius, in terms of percentage of the value of the knob to which it applies ' +
                     'to compute the absolute radius to be used in theta (stability) constraint. Overrides relative ' +
@@ -88,12 +95,19 @@ class SmlpSpec:
         self._beta_cmdl_expr = None
         self._beta_spec_expr = None
         
+        # eta -- global constraints on knobs (in addition to eta constraints derived from knob ranges and grids).
+        self._eta_global_expr = None
+        
+        # witnesses to queries, for certify mode; supposed to include assignements to inputs, not only and knobs
+        self._witn_dict = None
+        
         # feilds in spec file defining specification of each variable
         self._SPEC_DICTIONARY_VERSION = 'version'
         self._SPEC_DICTIONARY_SPEC = 'spec'
         self._SPEC_DICTIONARY_ASSERTIONS = 'assertions'
         self._SPEC_DICTIONARY_QUERIES = 'queries'
         self._SPEC_DICTIONARY_OBJECTIVES = 'objectives'
+        self._SPEC_DICTIONARY_WITNESSES = 'witnesses'
         self._SPEC_DICTIONARY_ALPHA = 'alpha' # global constraints on inputs -- knobs and free inputs
         self._SPEC_DICTIONARY_BETA = 'beta' # global interface costraints to be valid during optimization and tuning
         self._SPEC_DICTIONARY_ETA = 'eta' # global constraints on knobs (during candidate search)
@@ -144,6 +158,8 @@ class SmlpSpec:
             self._SPEC_KNOBS_GRID = 'grid'
             self._SPEC_KNOBS_ABSOLUTE_RADIUS = 'rad-abs'
             self._SPEC_KNOBS_RELATIVE_RADIUS = 'rad-rel'
+            self._SPEC_KNOBS_ABSOLUTE_DELTA = 'delta-abs'
+            self._SPEC_KNOBS_RELATIVE_DELTA = 'delta-rel'
             self._SPEC_VARIABLE_RANGE = 'type'
             self._SPEC_RANGE_REAL = 'real'
             self._SPEC_DICTIONARY_SPEC = 'variables'
@@ -193,12 +209,19 @@ class SmlpSpec:
                     self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
                     raise Exception('THETA radius can only be defined for knobs')
                 if eta_expr is not None:
-                    print('eta expr', eta_expr, 'curr var', var_spec[self._SPEC_VARIABLE_LABEL])
                     if var_spec[self._SPEC_VARIABLE_LABEL] in get_expression_variables(eta_expr):
                         self._spec_logger.error('ETA constraint ' + str(eta_expr) + 
                             ' contains a non-knob variable ' + str() + '; aborting...')
                         raise Exception('ETA global constraint can only contain knobs')
         
+        # sanity check witnesses: query names in witnesses specification must be some of the query names
+        if self.get_spec_witn_dict is not None and self.get_spec_quer_exprs_dict is not None:
+            witn_queries = set(self.get_spec_witn_dict.keys())
+            queries = set(self.get_spec_quer_exprs_dict)
+            if not witn_queries.issubset(queries):
+                raise Exception('Query names ' + str(witn_queries.difference(queries)) + 
+                    ' used for specifying witnesses are not specified among the queries ' + str(queries))
+    
     def set_spec_file(self, spec_file):
         if spec_file is None:
             return
@@ -207,7 +230,7 @@ class SmlpSpec:
                 raise Exception('Spec file ' + str(spec_file) + '.spec' + ' does not exist')
             with open(spec_file+'.spec', 'r') as sf:
                 spec_dict = json.load(sf, parse_float=Fraction)
-            print('spec_dict loaded\n', spec_dict)
+            #print('spec_dict loaded\n', spec_dict)
             assert isinstance(spec_dict, dict)
             self.set_spec_version(spec_dict[self._SPEC_DICTIONARY_VERSION])
             self.set_spec_tokens()
@@ -215,7 +238,8 @@ class SmlpSpec:
             assert self._SPEC_DICTIONARY_SPEC in spec_dict.keys()
             assert (set(spec_dict.keys())).issubset({self._SPEC_DICTIONARY_VERSION, self._SPEC_DICTIONARY_SPEC,
                 self._SPEC_DICTIONARY_ASSERTIONS, self._SPEC_DICTIONARY_OBJECTIVES, self._SPEC_DICTIONARY_QUERIES,
-                self._SPEC_DICTIONARY_ALPHA, self._SPEC_DICTIONARY_BETA, self._SPEC_DICTIONARY_ETA, self._SPEC_DICTIONARY_SYSTEM_TAG})
+                self._SPEC_DICTIONARY_ALPHA, self._SPEC_DICTIONARY_BETA, self._SPEC_DICTIONARY_ETA, 
+                self._SPEC_DICTIONARY_SYSTEM_TAG, self._SPEC_DICTIONARY_WITNESSES})
             self.spec_dict = spec_dict
             self.spec = spec_dict[self._SPEC_DICTIONARY_SPEC]; 
             self.version = spec_dict[self._SPEC_DICTIONARY_VERSION]
@@ -228,6 +252,15 @@ class SmlpSpec:
     def set_radii(self, rad_abs, rad_rel):
         self.radius_relative = rad_rel
         self.radius_absolute = rad_abs
+    
+    # Override relative and absolute radii values supplied in the spec file
+    def set_deltas(self, rad_abs, rad_rel):
+        self.delta_relative = rad_rel
+        self.delta_absolute = rad_abs
+        
+    # file specifying a witness per query
+    #def set_spec_witness_file(self, witness_file):
+    #    self._witness_file = witness_file
     
     # API to compute from spec tha list of responses in spec
     @property
@@ -261,19 +294,8 @@ class SmlpSpec:
     def get_spec_system(self):
         if self._SPEC_DICTIONARY_SYSTEM_TAG not in self.spec_dict.keys():
             return None
-        system_dict = {}
         assert isinstance(self.spec_dict[self._SPEC_DICTIONARY_SYSTEM_TAG], dict)
         self._SPEC_DICTIONARY_SYSTEM = self.spec_dict[self._SPEC_DICTIONARY_SYSTEM_TAG]
-        return self.spec_dict[self._SPEC_DICTIONARY_SYSTEM_TAG]
-        
-        '''
-        for var_spec in self.spec:
-            if var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_OUTPUT_TAG:
-                syst_resp = var_spec[self._SPEC_DICTIONARY_SYSTEM_TAG] \
-                    if self._SPEC_DICTIONARY_SYSTEM_TAG in var_spec.keys() else None
-                system_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = syst_resp
-        self._SPEC_DICTIONARY_SYSTEM = system_dict
-        '''
         return self._SPEC_DICTIONARY_SYSTEM
     
     # Sanity check of spec in verification mode - all knobs must be asigned fixed value,
@@ -284,7 +306,7 @@ class SmlpSpec:
     # constant assignement to knobs to be defined through singletom grid or through range
     # that only contains one value (that is, max and min bounds must equeal, e.g., [5,5]).
     # it is possible to assign fixed values to knobs using global eta expressions, say using
-    # firmula knob1 = 5 and knob2=3, which assigns values 5 and 3 to knobs knob1 and knob2,
+    # firmula knob1=5 and knob2=3, which assigns values 5 and 3 to knobs knob1 and knob2,
     # but we want to avoid extra check for global eta constrainst required to understand 
     # whether all knobs are forced to exacly one value, thus the above methodology convention.
     def sanity_check_verification_spec(self):
@@ -451,7 +473,16 @@ class SmlpSpec:
         else:
             return None
     
-    def get_spec_component_exprs(self, alph_cmdl, beta_cmdl, asrt_names_cmdl, asrt_exprs_cmdl,
+    @property
+    def get_spec_witn_dict(self):
+        #print('self.spec_dict.keys()', self.spec_dict.keys(), self._SPEC_DICTIONARY_WITNESSES)
+        if self._SPEC_DICTIONARY_WITNESSES in self.spec_dict.keys():
+            self._witn_dict = self.spec_dict[self._SPEC_DICTIONARY_WITNESSES]
+        else:
+            self._witn_dict = None  
+        return self._witn_dict
+        
+    def get_spec_component_exprs(self, alph_cmdl, beta_cmdl, delta_abs_cmdl, delta_rel_cmdl, asrt_names_cmdl, asrt_exprs_cmdl,
              quer_names_cmdl, quer_exprs_cmdl, objv_names_cmdl, objv_exprs_cmdl, resp_names, cmdl_cond_sep):
         assert self.spec is not None
         # alpha
@@ -468,6 +499,9 @@ class SmlpSpec:
 
         # theta radii
         theta_radii_dict = self.get_spec_theta_radii_dict
+        
+        # delta for theta applied for lemma generation 
+        delta_dict = self.get_spec_delta_dict(delta_abs_cmdl, delta_rel_cmdl)
         
         # assertions
         asrt_expr_dict, asrt_names, asrt_exprs = self.get_cmdl_assertions(asrt_names_cmdl, asrt_exprs_cmdl, cmdl_cond_sep)
@@ -488,24 +522,35 @@ class SmlpSpec:
         objv_names = list(objv_expr_dict.keys()) if objv_expr_dict is not None else None
         objv_exprs = list(objv_expr_dict.values()) if objv_expr_dict is not None else None
         
+        # witnesses
+        witn_dict = self.get_spec_witn_dict
+        
         self._spec_logger.info('Computed spec global constraint expressions:')
         self._spec_logger.info('Global alpha : ' + str(alph_expr))
         self._spec_logger.info('Global beta  : ' + str(beta_expr))
         self._spec_logger.info('Radii  theta : ' + str(theta_radii_dict))
+        self._spec_logger.info('Delta  const : ' + str(delta_dict))
         if asrt_expr_dict is not None:
             for n, e in asrt_expr_dict.items():
                 self._spec_logger.info('Assertion ' + str(n) + ': ' + str(e))
         if quer_expr_dict is not None:
             for n, e in quer_expr_dict.items():
                 self._spec_logger.info('Query ' + str(n) + ': ' + str(e))
+        if witn_dict is not None:
+            for n, w in quer_expr_dict.items():
+                self._spec_logger.info('Witness to ' + str(n) + ': ' + str(w))
         if objv_expr_dict is not None:
             for n, e in objv_expr_dict.items():
                 self._spec_logger.info('Objective ' + str(n) + ': ' + str(e))
-        if self._SPEC_DICTIONARY_SYSTEM is not None:
-            self._spec_logger.info('Original system : ' + str(self.get_spec_system))
         
-        return (alph_expr, beta_expr, theta_radii_dict, asrt_names, asrt_exprs, quer_names, quer_exprs, 
-            objv_names, objv_exprs, self.get_spec_system)
+        system = self.get_spec_system
+        assert system == self._SPEC_DICTIONARY_SYSTEM
+        if self._SPEC_DICTIONARY_SYSTEM is not None:
+            self._spec_logger.info('Original system : ' + str(system))
+        
+        self.sanity_check_spec()
+        return (alph_expr, beta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs, 
+            quer_names, quer_exprs, witn_dict, objv_names, objv_exprs, system)
     
         
         
@@ -578,6 +623,10 @@ class SmlpSpec:
         self._theta_dict = theta_dict
         return theta_dict   
     
+    # relative and absolute delta constant used for lemma generation in optimization procedures
+    def get_spec_delta_dict(self, delta_abs, delta_rel):
+        return {'delta_abs': delta_abs, 'delta_rel': delta_rel}
+        
     # Compute dictionary that maps variables to their domains (lower and upper bounds and grids).
     # Variable domains are used by SMLP C++ backand to define variable types and ranges (bounds).
     # Currently we only use variable types (real/float, int, set) to declare to solvers, and ranges
@@ -625,7 +674,7 @@ class SmlpSpec:
                 assert var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_INPUT_TAG or \
                     var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_KNOB_TAG
                 if  var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_KNOB_TAG:
-                    continue ##########################################################
+                    continue #########
                 mn = var_spec[self._SPEC_INPUTS_BOUNDS][0]
                 mx = var_spec[self._SPEC_INPUTS_BOUNDS][1]
                 if mn is not None and mx is not None:
@@ -684,7 +733,8 @@ class SmlpSpec:
     @property
     def get_spec_global_eta_expr(self):
         if self._SPEC_DICTIONARY_ETA in self.spec_dict.keys():
-            return self.spec_dict[self._SPEC_DICTIONARY_ETA]
+            self._eta_global_expr = self.spec_dict[self._SPEC_DICTIONARY_ETA]
+            return self._eta_global_expr
         else:
             return None
     
@@ -703,6 +753,9 @@ class SmlpSpec:
         if self._beta_global_expr is not None:
             beta_vars = get_expression_variables(self._beta_global_expr); #print('beta_vars', beta_vars)
             constraints_vars = constraints_vars + beta_vars
+        if self._eta_global_expr is not None:
+            eta_vars = get_expression_variables(self._eta_global_expr); #print('eta_vars', beta_vars)
+            constraints_vars = constraints_vars + eta_vars
         if self._objv_dict is not None:
             for objv_expr in self._objv_dict.values():
                 objv_vars = get_expression_variables(objv_expr); #print('objv_expr', objv_expr)
@@ -715,5 +768,9 @@ class SmlpSpec:
             for quer_expr in self._quer_dict.values():
                 quer_vars = get_expression_variables(quer_expr); #print('quer_expr', quer_expr)
                 constraints_vars = constraints_vars + quer_vars
-        
+
+        if self._witn_dict is not None:
+            for witn in self._witn_dict.values():
+                #print('witn.keys()', witn.keys())
+                constraints_vars = constraints_vars + list(witn.keys())
         return list_unique_unordered(constraints_vars)

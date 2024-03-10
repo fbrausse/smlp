@@ -95,7 +95,7 @@ class SmlpVerify:
         with open(self.assertions_results_file, 'w') as f: #json.dump(asrt_res_dict, f)
             json.dump(asrt_res_dict, f, indent='\t', cls=np_JSONEncoder) #cls= , use_decimal=True
             
-    def smlp_verify(self, algo, model, model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs,
+    def smlp_verify(self, syst_expr_dict:dict, algo, model, model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs,
             alph_expr:str, solver_logic:str, vacuity:bool, data_scaler, scale_feat, scale_resp, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         # sanity checking of knob values and assertions in the specification
@@ -104,8 +104,8 @@ class SmlpVerify:
             self._query_logger.error('Assertions were not specified in the "verify" mode: aborting...')
             return
         
-        domain, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
-            algo, model, model_features_dict, feat_names, resp_names, None, None, 
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, None, None, 
             alph_expr, None, None, data_scaler, scale_feat, scale_resp, None, 
             float_approx, float_precision, data_bounds_json_path)
         #print('eta', eta); print('alpha', alpha); print('beta',  beta)

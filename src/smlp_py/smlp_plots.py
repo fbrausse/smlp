@@ -71,7 +71,7 @@ def plot_data_columns(data):
         sns.distplot(data[c], hist=True, kde=False, bins=50)
         #print(c)
 
-# see this link to understand why impty plots are created sometimes 
+# see this link to understand why empty plots are created sometimes 
 # https://stackoverflow.com/questions/28269157/plotting-in-a-non-blocking-way-with-matplotlib
 # for us it happens when {'block': False} is passed for show_kws; unclear where / how show_kws
 # gets this value {'block': False} as plot() is not called with any extra arguments

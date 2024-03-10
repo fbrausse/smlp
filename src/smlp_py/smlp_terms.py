@@ -56,7 +56,7 @@ class SmlpTerms:
         # https://docs.python.org/3/library/ast.html -- AST (Abstract Syntax Trees)
         # OD version of AST documentation: https://docs.python.org/2/library/ast.html
         # Python operators: https://www.w3schools.com/python/python_operators.asp
-        # https://docs.python.org/3/library/operator.html -- pythn operators documentation
+        # https://docs.python.org/3/library/operator.html -- python operators documentation
         '''
         boolop = And | Or 
         operator = Add | Sub | Mult | Div | Mod | Pow | LShift 
@@ -78,14 +78,16 @@ class SmlpTerms:
             ast.BitXor: op.xor,
             ast.USub: op.neg,
             ast.Eq: op.eq, ast.NotEq: op.ne, ast.Lt: op.lt, ast.LtE: op.le, ast.Gt: op.gt, ast.GtE: op.ge, 
-            ast.And: op.and_, ast.Or: op.or_, ast.Not: op.inv} 
+            ast.And: op.and_, ast.Or: op.or_, ast.Not: op.inv,
+            ast.IfExp: smlp.Ite
+        } 
 
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
 
     def smlp_not(self, form:smlp.form2):
-        res1 = ~form
+        #res1 = ~form
         res2 = op.inv(form)
         #assert res1 == res2
         return res2 #~form
@@ -111,7 +113,7 @@ class SmlpTerms:
     
     def smlp_or(self, form1:smlp.form2, form2:smlp.form2):
         res1 = op.or_(form1, form2)
-        res2 = form1 | form2
+        #res2 = form1 | form2
         #assert res1 == res2
         return res1 #form1 | form2
     
@@ -126,6 +128,15 @@ class SmlpTerms:
 
     def smlp_mult(self, term1:smlp.term2, term2:smlp.term2):
         return term1 * term2    
+    
+    # https://stackoverflow.com/questions/68390248/ast-get-the-list-of-only-the-variable-names-in-an-expression
+    def get_expression_variables(self, expression):
+        tree = ast.parse(expression)
+        variables = []
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name):
+                variables.append(node.id)
+        return tuple(v for v in set(variables) if v not in vars(builtins))
     
     # compute smlp term for strings that represent python expressions, based on code from
     # https://stackoverflow.com/questions/2371436/evaluating-a-mathematical-expression-in-a-string
@@ -221,6 +232,14 @@ class SmlpTerms:
                 if node.n == False:
                     return smlp.false
                 raise Exception('Unsupported comstant ' + str(node.n) + ' in funtion ast_expr_to_term')
+            elif isinstance(node, ast.IfExp):
+                res_test = eval_(node.test)
+                res_body = eval_(node.body)
+                res_orelse = eval_(node.orelse)
+                #res_ifexp = smlp.Ite(res_test, res_body, res_orelse)
+                res_ifexp = self._ast_operators_map[ast.IfExp](res_test, res_body, res_orelse)
+                #print('res_ifexp',res_ifexp)
+                return res_ifexp
             else:
                 self._smlp_terms_logger.error('Unexpected node type ' + str(type(node)))
                 #print('node type', type(node))
@@ -277,6 +296,14 @@ class SmlpTerms:
         for k,t in witness.items():
             witness_vals_dict[k] = smlp.Cnst(t)
         return witness_vals_dict
+    
+    # Converts values assugnments in sat assignmenet (witness) from to smlp formula
+    # equal to conjucnction of equalities smlp.Var(k) = smlp.Cnst(t)
+    def witness_to_formula(self, witness):
+        witness_formula = []
+        for k,t in witness.items():
+            witness_formula.append(self.smlp_eq(smlp.Var(k), smlp.Cnst(t)))
+        return self.smlp_and_multi(witness_formula)
     
 # Methods to generate smlp term and formula from rules associated to branches of an sklearn
 # (or caret) regression tree model (should work for classification trees as well, not tested)
@@ -961,6 +988,7 @@ class ModelTerms(SmlpTerms):
     def _compute_model_terms_dict(self, algo, model, feat_names, resp_names, data_bounds, data_scaler,
             scale_features, scale_responses):
         assert not isinstance(model, dict)
+
         # were features and / or responses scaled prior building the model?
         feat_were_scaled = scale_features and data_scaler != 'none'
         resp_were_scaled = scale_responses and data_scaler != 'none'
@@ -1025,7 +1053,7 @@ class ModelTerms(SmlpTerms):
             data_bounds, data_scaler,scale_features, scale_responses):
         #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names)
         assert lists_union_order_preserving_without_duplicates(list(model_features_dict.values())) == feat_names
-         
+        
         if isinstance(model_or_model_dict, dict):
             models_full_terms_dict = {}
             for i, resp_name in enumerate(model_or_model_dict.keys()):
@@ -1081,45 +1109,78 @@ class ModelTerms(SmlpTerms):
         #print('objv_terms_dict', objv_terms_dict)
         return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict
     
-    # Compute stability range theta; used also in generating lemmas during search for a stable solution. 
+    # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
     # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
     # are ignored as only variables which occur as keys in theta_radii_dict are used for building theta.
-    def compute_stability_formula_theta(self, cex, delta, theta_radii_dict): 
+
+    
+    # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
+    # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
+    # are ignored as only variables which occur as keys in radii_dict are used for building theta.
+    def compute_stability_formula_theta(self, cex, delta_dict:dict, radii_dict, universal=True): 
         #print('generate stability constraint theta')
-        if delta is not None:
-            assert delta >= 0
+        if delta_dict is not None:
+            delta_abs = delta_dict['delta_abs']
+            delta_rel = delta_dict['delta_rel']
+            if delta_abs is not None:
+                assert delta_abs >= 0 
+            if delta_rel is not None:
+                assert delta_rel >= 0
+        else:
+            delta_rel = delta_abs = None
+            
         theta_form = smlp.true
-        #print('theta_radii_dict', theta_radii_dict)
-        for var,radii in theta_radii_dict.items():
+        #print('radii_dict', radii_dict)
+        radii_dict_local = radii_dict.copy() 
+        knobs = radii_dict_local.keys(); print('knobs', knobs); print('cex', cex); print('delta', delta_dict)
+        
+        # use inputs in theta computation, by setting radii to 0, and use delta if specified (not None)
+        if not universal and delta_rel is not None:
+            for cex_var in cex.keys():
+                if cex_var not in knobs:
+                    radii_dict_local[cex_var] = {'rad-abs':0, 'rad-rel': None} # delta
+        
+        for var,radii in radii_dict_local.items():
             var_term = smlp.Var(var)
+            # either rad-abs or rad-rel must be None -- for each var wr declare only one of these
             if radii['rad-abs'] is not None:
                 rad = radii['rad-abs']; #print('rad', rad); 
-                if delta is not None:
-                    rad = rad * (1 + delta)
+                if delta_rel is not None: # we are generating a lemma
+                    rad = rad * (1 + delta_rel) + delta_abs 
                 rad_term = smlp.Cnst(rad)
             elif radii['rad-rel'] is not None:
                 rad = radii['rad-rel']; #print('rad', rad)
-                if delta is not None:
-                    rad = rad * (1 + delta)
+                if delta_rel is not None: # we are generating a lemma
+                    rad = rad * (1 + delta_rel) + delta_abs
                 rad_term = smlp.Cnst(rad)
                 
-                # abs(!delta ? e : nm); !delta means the argument cex is sat-model for candidate, we use constant from the 
-                # model; delta means we want lemma to exclude region around cex to candidate, we want lemma to restrict 
-                # the next candidate; the circle to rule out from search is around cex to counter-example, but the 
-                # radius is calculated based on candidate values, not the values in the counter-example to candidate.
+                # TODO !!!  issue a warning when candidates become closer and closer
+                # TODO !!!!!!! warning when distance between previous and current candidate
+                # TODO !!!!!! warning when FINAL rad + delta is 0, as part of sanity checking options
+                # when rad and delta are both 0, then exclude at least this candidate  
+                # global control on warning messages
+                # abs(!delta_dict ? e : nm); !delta_dict means the argument cex is sat-model for candidate, we use constant from  
+                # the model; delta_dict means we want lemma to exclude region around cex to candidate, we want lemma to restrict 
+                # the next candidate; the circle to rule out from search is around cex to counter-example, but the radius is 
+                # calculated based on candidate values, not the values in the counter-example to candidate.
                 #
-                # Condition "delta is None" (= !delta) means the argument cex is a sat-model defining a candidate, and in this case
-                # we use constants from the cex as the factors to compute absolute radius from relative radius, for each cex variable. 
-                # Condition "delata is not None" means the argument cex is a counter-example to candidate, and we want a lemma to 
-                # exclude a circle-shaped region around cex to candidate, while we want the radious of this circle to be computed 
-                # based on the values in the candidate and not values in the counter-example to the candidate; this is a matter of
-                # definition of relative radius, and seems cleaner than computing actual radius from relative radius based on 
-                # variable values in the counter-exaples to candidate rather than variable values in the candidate itself.
-                rad_term = rad_term * abs(cex[var])
+                # Condition "delta_dict is None" (= !delta_dict) means the argument cex is a sat-model defining a candidate, 
+                # and in this case we use constants from the cex as the factors to compute absolute radius from relative radius, 
+                # for each cex variable. Condition "delata is not None" means the argument cex is a counter-example to candidate, 
+                # and we want a lemma to exclude a circle-shaped region around cex to candidate, while we want the radious of 
+                # this circle to be computed based on the values in the candidate and not values in the counter-example to the 
+                # candidate; this is a matter of definition of relative radius, and seems cleaner than computing actual radius 
+                # from relative radius based on variable values in the counter-exaples to candidate rather than variable values 
+                # in the candidate itself.
+                if delta_rel is not None: # radius for a lemma -- cex holds values of candidate counter-example
+                    rad_term = rad_term * abs(var_term)
+                else: # radius for excluding a candidate -- cex holds values of the candidate 
+                    rad_term = rad_term * abs(cex[var])
+            elif delta_dict is not None: 
+                raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified') 
             theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
-        #print('theta_form', theta_form)
+        print('theta_form', theta_form)
         return theta_form
-
     
     # Creates eta constraints on control inputs (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
@@ -1259,12 +1320,12 @@ class ModelTerms(SmlpTerms):
         
     # TODO !!! arguments  data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None are not used;
     # they are taken forn previous implementations; need to check whether they are needed
-    def create_model_exploration_base_components(self, algo, model, model_features_dict, feat_names, resp_names, 
-            delta, epsilon, #objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, 
+    def create_model_exploration_base_components(self, syst_expr_dict:dict, algo, model, model_features_dict:dict, feat_names:list, resp_names:list, 
+            delta:float, epsilon, #objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, 
             alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self._smlp_terms_logger.info('Creating model exploration base components: Start')
-        
+        print('data_bounds_json_path', data_bounds_json_path)
         self._smlp_terms_logger.info('Parsing the SPEC: Start')
         #print('spec from SmlpSpec', self._specInst.spec);
         if data_bounds_json_path is not None:
@@ -1276,8 +1337,7 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Parsing the SPEC: End') 
         self._smlp_terms_logger.info('Building model terms: Start')
         
-        spec_domain_dict = self._specInst.get_spec_domain_dict
-        #print('spec_domain_dict', spec_domain_dict)
+        spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
         domain_dict = {}
         
         #print('model_features_dict', model_features_dict, 'feat_names', feat_names)
@@ -1312,10 +1372,30 @@ class ModelTerms(SmlpTerms):
         #print('domain_dict', domain_dict)
         domain = smlp.domain(domain_dict)
 
+        if syst_expr_dict is not None:
+            self._smlp_terms_logger.info('Building system terms: Start')
+            for resp, syst_expr in syst_expr_dict.items():
+                feat = self.get_expression_variables(syst_expr)
+                if set(feat) != set(model_features_dict[resp]):
+                    print('resp', resp, 'syst_feat', feat, 'model_feat', model_features_dict[resp])
+                    raise Exception('System and model features do not match for response ' + str(resp))
+            #print('syst_expr_dict', syst_expr_dict)
+            system_term_dict = dict([(resp_name, self._smlpTermsInst.ast_expr_to_term(resp_expr)) \
+                for resp_name, resp_expr in syst_expr_dict.items()]); print('system_term_dict', system_term_dict); 
+            self._smlp_terms_logger.info('System terms dictionary: ' + str(system_term_dict))
+            self._smlp_terms_logger.info('Building system terms: End')
+        else:
+            system_term_dict = None
+        
         # model terms with terms for scaling inputs and / or unscaling responses are all composed to 
         # build model terms with inputs and outputs in the original scale. 
-        model_full_term_dict = self.compute_models_terms_dict(algo, model, 
-            model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
+        if algo == 'system':
+            if syst_expr_dict is None:
+                raise Exception('System must be specified when model training algorithm is "system"')
+            model_full_term_dict = system_term_dict
+        else:
+            model_full_term_dict = self.compute_models_terms_dict(algo, model, 
+                model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
         self._smlp_terms_logger.info('Building model terms: End')
         
         # contraints on features used as control variables and on the responses
@@ -1339,7 +1419,7 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Eta   global   constraints: ' + str(eta_global))
         self._smlp_terms_logger.info('Eta   combined constraints: ' + str(eta))
         self._smlp_terms_logger.info('Creating model exploration base components: End')
-        return domain, model_full_term_dict, eta, alpha, beta
+        return domain, system_term_dict, model_full_term_dict, eta, alpha, beta
     
     # create base solver instance with model constraints, declare logic and (non/)incremental mode
     def create_model_exploration_instance_from_smlp_components(self, domain, model_full_term_dict, incremental, logic):
@@ -1353,7 +1433,9 @@ class ModelTerms(SmlpTerms):
         base_solver.declare(domain)
         
         # let solver know definition of responses (the model's function)
-        for resp_name, resp_term in model_full_term_dict.items():
-            base_solver.add(smlp.Var(resp_name) == resp_term)
+        if model_full_term_dict is not None:
+            for resp_name, resp_term in model_full_term_dict.items():
+                #base_solver.add(smlp.Var(resp_name) == resp_term)
+                base_solver.add(op.eq(smlp.Var(resp_name), resp_term))
         return base_solver
 

@@ -1,3 +1,6 @@
+import os
+#os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0" # edded because of warning: 
+os.unsetenv("TF_ENABLE_ONEDNN_OPTS")
 import tensorflow as tf
 from tensorflow import keras
 import matplotlib.pyplot as plt
@@ -208,7 +211,6 @@ class ModelKeras:
     # train keras NN model
     def _nn_train(self, model, epochs, batch_size, model_checkpoint_path,
                  X_train, X_test, y_train, y_test, sample_weights_dict):
-
         checkpointer = None
         if model_checkpoint_path:
             checkpointer = keras.callbacks.ModelCheckpoint(
@@ -385,6 +387,10 @@ class ModelKeras:
             seed, weights_coef, model_per_response:bool):
         self._keras_logger.info('keras_main: start')
         #print('feat_names', feat_names, 'resp_names', resp_names)
+        #print('X_train', X_train.shape, 'X_test', X_test.shape, 'y_train', y_train.shape, 'y_test', y_test.shape)
+        #for rn in resp_names:
+        #    print('response', rn, y_train[[rn]].shape, y_train[[rn]].isna().sum()); #value_counts(dropna=False)
+        #assert False
         if model_per_response:
             model = {}
             for rn in resp_names:

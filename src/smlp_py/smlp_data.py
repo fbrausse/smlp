@@ -47,6 +47,7 @@ class SmlpData:
         self._CONDITION_SEPARATOR = ';' # separator used in self._RESPONSE_TO_BOOL to seperate conditions 
         self._DEF_SCALE_FEATURES = True
         self._DEF_SCALE_RESPONSES = True
+        self._DEF_IMPUTE_RESPONSES = False
         
         # SMLP default values of positive and negative samples in banary responses 
         self.SMLP_NEGATIVE_VALUE = int(0)
@@ -186,6 +187,11 @@ class SmlpData:
             'scale_responses': {'abbr':'scale_resp', 'default': self._DEF_SCALE_RESPONSES, 'type':str_to_bool,
                 'help': 'Should responses be scaled using scaler specified through option "data_scaler"? ' +
                     '[default: ' + str(self._DEF_SCALE_RESPONSES) + ']'},
+            'impute_responses': {'abbr':'impute_resp', 'default': self._DEF_IMPUTE_RESPONSES, 'type':str_to_bool,
+                'help': 'Should missing values in responses be imputed? Might make sense when there are ' +
+                    'multiple responses and different responses have missing values in different samples: ' +
+                    'this might be a better alternative compared to dropping rows where at least one response '
+                    'has a missing value [default: ' + str(self._DEF_IMPUTE_RESPONSES) + ']'},
             'split_test': {'abbr':'split', 'default':self._DEF_SPLIT_TEST, 'type':float,
                 'help':'Fraction in (0,1] of data samples to split from training data' +
                     ' for testing; when the option value is 1,the dataset will be used ' +
@@ -264,7 +270,7 @@ class SmlpData:
         assert self.model_file_prefix is not None
         return self.model_file_prefix + '_data_bounds.json'
 
-    # input/training data file name (including the directory path)
+    # file to save/load missing values information of features in input data
     @property
     def missing_values_fname(self):
         assert self.report_file_prefix is not None
@@ -554,17 +560,6 @@ class SmlpData:
             self.data_bounds_dict = data_bounds_dict
             with open(data_bounds_file, 'w') as f:
                 json.dump(data_bounds_dict, f, indent='\t', cls=np_JSONEncoder)
-        '''
-        data_bounds_dict = {
-                col: { 'min': mm_scaler_feat.data_min_[i], 'max': mm_scaler_feat.data_max_[i] }
-                for i,col in enumerate(feat_names) } | \
-                {col: { 'min': mm_scaler_resp.data_min_[i], 'max': mm_scaler_resp.data_max_[i] }
-                for i,col in enumerate(resp_names)
-            }
-        self.data_bounds_dict = data_bounds_dict
-        with open(data_bounds_file, 'w') as f:
-            json.dump(data_bounds_dict, f, indent='\t', cls=np_JSONEncoder)
-        '''
         
     def _save_data_scaler(self, scale_feat:bool, scale_resp:bool, mm_scaler_feat, mm_scaler_resp, 
             features_scaler_file:str, responses_scaler_file:str):
@@ -651,10 +646,10 @@ class SmlpData:
         self._data_logger.info('Sampling from training data: end')
         return X, y
 
-    # compute locations (indices) of missing values in each column and create a 
-    # dictionary with features that have at least one missing as keys and the list
-    # of the respective missing value indices as the values. Write out this dictionary
-    # as a json file
+    # Compute locations (indices) of missing values in each column and create a 
+    # dictionary with features that have at least one missing value as keys and 
+    # the list of the respective missing value indices as the values. 
+    # Write out this dictionary as a json file.
     def _compute_missing_values_dict(self, df):
         missing_vals_rows_array,  missing_vals_cols_array = np.where(df.isna()); 
         #print(missing_vals_rows_array); print(missing_vals_cols_array)
@@ -674,18 +669,16 @@ class SmlpData:
         for ind, col in zip(missing_vals_rows_array, missing_vals_cols_array):
             missing_vals_dict[col].append(ind)
         #print('missing_values_dict', missing_vals_dict)
-        missing_values_dict_file = self.missing_values_fname; 
-        #print(missing_values_dict_file); assert False
         
         # write out missing_vals_dict as json file
-        with open(missing_values_dict_file, 'w') as f:
+        with open(self.missing_values_fname, 'w') as f:
             json.dump(missing_vals_dict, f, indent='\t', cls=np_JSONEncoder)
         # save missing_vals_dict in self. TODOD !!! this is not required in all analyis modes
         self._missing_vals_dict = missing_vals_dict
         
         return
         
-    def preprocess_data(self, data_file, feat_names, resp_names, feat_names_dict, data_version_str,
+    def preprocess_data(self, data_file, feat_names, resp_names, feat_names_dict, impute_resp, data_version_str,
             pos_value, neg_value, resp_to_bool):
         self._data_logger.info('loading ' + data_version_str + ' data')
         data = pd.read_csv(data_file)
@@ -721,7 +714,8 @@ class SmlpData:
         
         # in training data, drop all rows where at least one response has a missing value
         if is_training:
-            data = self._drop_rows_with_na_in_responses(data, resp_names, 'training'); #print('data 1\n', data)
+            if not impute_resp:
+                data = self._drop_rows_with_na_in_responses(data, resp_names, 'training'); #print('data 1\n', data)
             data, constant_feat = self._drop_constant_features(data, 'training'); #print('data 2\n', data)
             resp_names = [rn for rn in resp_names if not rn in constant_feat]
             feat_names = [fn for fn in feat_names if not rn in constant_feat]
@@ -850,7 +844,8 @@ class SmlpData:
     def _prepare_data_for_modeling(self, data_file, is_training, split_test, feat_names, resp_names, keep_feat,
             out_prefix, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots:bool, 
             mrmr_features_n:int, pos_value, neg_value, resp_to_bool, scaler_type:str, scale_features:bool, 
-            scale_responses:bool, mm_scaler_feat=None, mm_scaler_resp=None, levels_dict=None, model_features_dict=None):
+            scale_responses:bool, impute_responses:bool, 
+            mm_scaler_feat=None, mm_scaler_resp=None, levels_dict=None, model_features_dict=None):
         data_version_str = 'training' if is_training else 'new'
         self._data_logger.info('Preparing ' + data_version_str + ' data for modeling: start')
 
@@ -863,7 +858,7 @@ class SmlpData:
         # basic pre-processing, including inferring feature and response names, dropping rows 
         # where a response value is missing; imputing missing values in features.
         X, y, feat_names, resp_names, model_features_dict = self.preprocess_data(data_file, 
-            feat_names, resp_names, model_features_dict, data_version_str, pos_value, neg_value, resp_to_bool)
+            feat_names, resp_names, model_features_dict, impute_responses, data_version_str, pos_value, neg_value, resp_to_bool)
         if not y is None:
             assert set(resp_names) == set(y.columns.tolist())
         
@@ -881,7 +876,7 @@ class SmlpData:
         
         # Feature selection / MRMR go here, will refine model_features_dict
         if is_training:
-            keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); print('keep_feat', keep_feat)
+            keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); #print('keep_feat', keep_feat)
             #print('features before mrmr', feat_names)
             for rn in resp_names:
                 mrmr_feat = self._mrmrInst.mrmr_regres(X, y[rn], rn, mrmr_features_n); #print('mrmr_feat', mrmr_feat)
@@ -890,7 +885,7 @@ class SmlpData:
             feat_names = [ft for ft in feat_names if ft in 
                 lists_union_order_preserving_without_duplicates(list(model_features_dict.values()))]
             X = X[feat_names]
-            #print('features after mrmr', feat_names); print('model_features_dict after MRMR', model_features_dict);
+            #print('features after mrmr', feat_names); print('model_features_dict after MRMR', model_features_dict)
         
         # encode levels of categorical features as integers for model training (in feature selection tasks 
         # it is best to use the original categorical features). 
@@ -927,8 +922,8 @@ class SmlpData:
     # original scale. Supports also prediction and results reporting in origibal scale from saved model
     def process_data(self, report_file_prefix, data_file, new_data_file, is_training, split_test, feat_names, 
             resp_names, keep_feat, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots, 
-            scaler_type:str, scale_features:bool, scale_responses:bool, mrmr_features_n:int, pos_value, neg_value, 
-            resp_to_bool, save_model:bool, use_model:bool):
+            scaler_type:str, scale_features:bool, scale_responses:bool, impute_responses:bool, mrmr_features_n:int, 
+            pos_value, neg_value, resp_to_bool, save_model:bool, use_model:bool):
 
         #scale = not self._get_data_scaler(scaler_type) is None
         if data_file is not None:
@@ -938,7 +933,7 @@ class SmlpData:
                 data_file, True, split_test, feat_names, resp_names, keep_feat, report_file_prefix, 
                 train_first_n, train_random_n, train_uniform_n, interactive_plots, 
                 mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type, 
-                scale_features, scale_responses, None, None, None, None)
+                scale_features, scale_responses, impute_responses, None, None, None, None)
 
             assert scaler_type == 'none' or (not mm_scaler_feat is None)
             assert scaler_type == 'none' or (not mm_scaler_resp is None)
@@ -964,7 +959,7 @@ class SmlpData:
             X_new, y_new = self._prepare_data_for_modeling(
                 new_data_file, False, None, feat_names, resp_names, keep_feat, report_file_prefix,  None, None, None, 
                 interactive_plots, mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type,
-                scale_features, scale_responses, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict)
+                scale_features, scale_responses, impute_responses, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict)
         else:
             X_new, y_new = None, None
 

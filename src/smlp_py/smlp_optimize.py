@@ -147,14 +147,7 @@ class SmlpOptimize:
     def optimization_results_file(self):
         assert self.report_file_prefix is not None
         return self.report_file_prefix + '_optimization_results'
-    
-    # record vacuity and best achieved objectives' thresholds while pareto optimization
-    # is still in progress
-    @property
-    def synthesis_results_file(self):
-        assert self.report_file_prefix is not None
-        return self.report_file_prefix + '_synthesis_results'
-    
+
     def print_result(self, res):
         if isinstance(res, smlp.sat):
             print('SAT with model')
@@ -262,7 +255,7 @@ class SmlpOptimize:
             quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
             #print('quer_and_beta', quer_and_beta)
             quer_res = self._queryInst.query_condition(
-                model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
+                True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision); #print('quer_res', quer_res) 
             stable_witness_status = quer_res['status']
             stable_witness_terms = quer_res['witness']
@@ -538,7 +531,7 @@ class SmlpOptimize:
                 # objective's value in SAT model/assignment must be greater or equal to the objective's 
                 # threshold in s_origin (values of objectives in the SAT model are in original scale, 
                 # just like values of moel interface variables -- inputs, knobs, responses).
-                print(s_origin[i],  objv_vals_dict[objv_names[i]])
+                #print(s_origin[i],  objv_vals_dict[objv_names[i]])
                 #assert objv_vals_dict[objv_names[i]] >= s_origin[i]
                 self.best_config_dict[key_label][objv_names[i]] = {
                     'value_in_config': objv_vals_dict[objv_names[i]],
@@ -552,9 +545,9 @@ class SmlpOptimize:
                 self.best_config_dict[key_label][key] = {'value_in_config': val}
                 if key in self.resp_names and self.syst_expr_dict is not None:
                     if key in self.syst_expr_dict.keys():
-                        print('key', key, 'self.syst_expr_dict[key]', self.syst_expr_dict[key])
+                        #print('key', key, 'self.syst_expr_dict[key]', self.syst_expr_dict[key])
                         # compute value of the original system function on input and knob values for witness_vals_dict
-                        system_val = eval(self.syst_expr_dict[key], {},  witness_vals_dict); print('system_val', system_val)
+                        system_val = eval(self.syst_expr_dict[key], {},  witness_vals_dict); #print('system_val', system_val)
                         self.best_config_dict[key_label][key]['value_in_system'] = system_val
             self.best_config_df = self.prog_dict_to_df()
         else:
@@ -697,7 +690,7 @@ class SmlpOptimize:
                     #print('queryform', quer_form)
                     quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
                     opt_quer_name = 'thresholds_' + '_'.join(str(x) for x in t) + '_check'
-                    quer_res = self._queryInst.query_condition(model_full_term_dict, opt_quer_name, 'True', quer_and_beta, 
+                    quer_res = self._queryInst.query_condition(True, model_full_term_dict, opt_quer_name, 'True', quer_and_beta, 
                         smlp_domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, sat_approx, sat_precision)
                 #print('quer_res', quer_res)
                 if quer_res['status'] != 'STABLE_SAT':
@@ -746,7 +739,7 @@ class SmlpOptimize:
             float_approx:bool, float_precision:int):
         if vacuity:
             self._opt_logger.info('Pareto optimization vacuity check: Start')
-            quer_res = self._queryInst.query_condition(model_full_term_dict, 'consistency_check', 'True', beta, 
+            quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'consistency_check', 'True', beta, 
                 domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
             #print('quer_res', quer_res)
             if quer_res['status'] == 'UNSAT':
@@ -771,79 +764,17 @@ class SmlpOptimize:
             self._opt_logger.info('Skipping pareto optimization vacuity check')
             return False, None
     
-    
-    
-    # SMLP synthesis mode: configure knobs with stability to meet beta constraints under alpha, eta, theta and constraints
-    def smlp_synthesize(self, algo:str, model:dict, #X:pd.DataFrame, y:pd.DataFrame, 
-            model_features_dict:dict, feat_names:list[str], resp_names:list[str], asrt_names, asrt_exprs, 
-            syst_expr_dict:dict, delta:float, 
-            alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, #scale_objv:bool, 
-            sat_thresholds:bool,
-            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
-
-        self.feat_names = feat_names
-        self.resp_names = resp_names
-        self.syst_expr_dict = syst_expr_dict
-        self._sat_thresholds = sat_thresholds
         
-        '''
-        algo, model, model_features_dict, feat_names, resp_names, 
-            objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, delta, epsilon, 
-            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
-            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None)
-        '''
-        print('eta_expr', eta_expr); print('alph_expr', alph_expr); print('beta_expr', beta_expr); #assert False
-        domain, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
-            algo, model, model_features_dict, feat_names, resp_names, 
-            delta, None, #None, None, None, None, None, None, 
-            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, None, 
-            float_approx, float_precision, data_bounds_json_path)
-        
-        if asrt_exprs is not None:
-            assert asrt_names is not None
-            asrt_forms_dict = dict([(asrt_name, self._smlpTermsInst.ast_expr_to_term(asrt_expr)) \
-                    for asrt_name, asrt_expr in zip(asrt_names, asrt_exprs)])
-            asrt_conj = self._smlpTermsInst.smlp_and_multi(list(asrt_forms_dict.values()))
-        else:
-            asrt_conj = smlp.true
-        beta = self._smlpTermsInst.smlp_and(beta, asrt_conj) if beta != smlp.true else asrt_conj
-        
-        # synthesis feasibility check
-        quer_res = self._queryInst.query_condition(model_full_term_dict, 'synthesis_feasibility', 'True', beta, 
-            domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
-        print('quer_res', quer_res)
-        if quer_res['status'] == 'UNSAT':
-            self._opt_logger.info('Model configuration synthesis is infeasible under given constraints')
-            return True, None
-        elif quer_res['status'] == 'STABLE_SAT':
-            witness_vals_dict = quer_res['witness']
-            self._opt_logger.info('Model configuration synthesis completed successfully')
-            print('witness_vals_dict', witness_vals_dict)
-            config_dict = {}
-            # TODO: need cleaner code, avoid accessing internal field ._specInst.get_spec_knobs of self._modelTermsInst
-            knobs = self._modelTermsInst._specInst.get_spec_knobs
-            for key, val in witness_vals_dict.items():
-                print('key', key, 'val', val)
-                if key in knobs:
-                    config_dict[key] = val
-            synthesis_config_dict = {'synthesis':config_dict}
-            print('synthesis_config_dict', synthesis_config_dict)
-            with open(self.synthesis_results_file+'.json', 'w') as f:
-                json.dump(synthesis_config_dict, f, indent='\t', cls=np_JSONEncoder)
-            return False, witness_vals_dict
-        
-    
     # SMLP optimization of multiple objectives -- pareto optimization or optimization per objective
     # TODO !!!: X and y are used to estimate bounds on objectives from training data, and the latter is not
     #     available in model re-run mode. Need to estimate objectove bounds in a different way and pass to this
     #     function (and to smlp_optsyn() instead of passing X,y; The bounds on objectives are nt strictly necessary,
     #     any approximation may be used, but accurate approximation might reduce iterations count needed for
     #     computing optimal confoguurations (in optimize and optsyn modes)
-    def smlp_optimize(self, algo:str, model:dict, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, 
+    def smlp_optimize(self, syst_expr_dict:dict, algo:str, model:dict, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, 
             feat_names:list[str], resp_names:list[str], 
             objv_names:list[str], objv_exprs, pareto:bool, #asrt_names:list[str], asrt_exprs, 
-            quer_names:list[str], quer_exprs, syst_expr_dict:dict, delta:float, epsilon:float, 
+            quer_names:list[str], quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, sat_thresholds:bool,
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
@@ -854,8 +785,8 @@ class SmlpOptimize:
         self.syst_expr_dict = syst_expr_dict
         self._sat_thresholds = sat_thresholds
         
-        domain, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
-            algo, model, model_features_dict, feat_names, resp_names, 
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
             delta, epsilon, #objv_names, objv_exprs, None, None, None, None, 
             alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
@@ -890,8 +821,8 @@ class SmlpOptimize:
     # SMLP optsyn mode that performs multi-objective optimization (pareto or per-objective) and insures
     # that with the selected configuration of knobs all assertions are also satisfied (in addition to
     # any other model interface constraints or configuration stability constraints)
-    def smlp_optsyn(self, algo, model, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
-            objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, syst_expr_dict:dict, delta:float, epsilon:float, 
+    def smlp_optsyn(self, syst_expr_dict:dict, algo, model, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
+            objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, sat_thresholds:bool,
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
@@ -902,8 +833,8 @@ class SmlpOptimize:
         self.syst_expr_dict = syst_expr_dict
         self._sat_thresholds = sat_thresholds
         
-        domain, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
-            algo, model, model_features_dict, feat_names, resp_names, 
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
             delta, epsilon, #objv_names, objv_exprs, asrt_names, asrt_exprs, None, None, 
             alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
             float_approx, float_precision, data_bounds_json_path)

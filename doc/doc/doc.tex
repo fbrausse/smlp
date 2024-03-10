@@ -6,8 +6,9 @@
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,mathtools,amssymb,listingsutf8,xspace}
 \usepackage{geometry,hyperref,cleveref,xcolor}
-\usepackage[disable]{todonotes}
+\usepackage[textsize=scriptsize, disable]{todonotes}
 \usepackage{tikz-cd}
+\usepackage{booktabs}
 
 \usetikzlibrary{positioning}
 
@@ -36,6 +37,7 @@
 \newcommand*\range{\operatorname{range}}
 \newcommand*\query{\operatorname{\mathsf{query}}}
 \newcommand*\assert{\operatorname{\mathsf{assert}}}
+\newcommand*\formula{\operatorname{\mathsf{formula}}}
 \newcommand*\rad{\operatorname{rad}}
 \newcommand*\regmin[2]{\llfloor{#1}\rrfloor_{#2}}
 %\newcommand*\regmax[2]{\llceil{#1}\rrceil_{#2}}
@@ -292,9 +294,9 @@ optimizations when multiple objectives are specified).
 \begin{table*}[t]
 \centering\small
 \begin{tabular}{lrrrrrr}
-\hline %\toprule
+\toprule %\hline 
 {} &      x1 &  x2 &    p1 &  p2 &       y1 &       y2 \\
-\hline %\midrule
+\midrule
 0 &  2.9800 &  -1 &   0.1 &   4 &   5.0233 &   8.0000 \\
 1 &  8.5530 &  -1 &   3.9 &   3 &   0.6936 &  12.0200 \\
 2 &  0.5580 &   1 &   2.0 &   4 &   0.6882 &   8.1400 \\
@@ -305,7 +307,7 @@ optimizations when multiple objectives are specified).
 7 &  7.1750 &   1 &   7.0 &   7 &   0.9600 &   1.1200 \\
 8 &  9.5460 &   0 &   7.0 &   6 &  10.7007 &   9.5661 \\
 9 & -0.4540 &   1 &  10.0 &   7 &   8.7932 &   6.4015 \\
-\hline %\bottomrule
+\bottomrule
 \end{tabular}
 \caption{Toy dataset $\option{smlp\_toy\_basic.csv}$ with two inputs $x_1, x_2$, two knobs $i_1, i_2$, and two outputs $y_1, y_2$.}
 \label{toy_basic_df}
@@ -407,93 +409,7 @@ upper and lower bounds of the objectives during search for a pareto optimum. It 
 after search for optimum has started and first approximations of the optima have been computed.
 
 
-\section{Concepts and Preliminaries}
 
-In this document, syntactical highlights are placed on
-\literal{literal strings}, which are ASCII sequences used to communicate input
-to and output from programs; on \cmd{commands} to be executed;
-and on \api{API references} which correspond to
-either concrete symbols or abstract concepts defined in the corresponding API.
-
-We assume familiarity with JSON, \cmd{make} and CSV files. Since the CSV format
-is not unambiguously defined, we give the concrete requirements in
-\cref{sec:csv}.
-
-The glossary in this section defines concepts which are used throughout this
-document when describing in detail the problems solved by \SolverAbbrv and is
-meant to be referred to on an per-instance basis instead of reading it as a
-whole.
-\begin{description}
-\item[Center Threshold]
-	A rational value in $[0,1]$ larger or equal to Threshold.
-\item[Codomain]
-	A real vector space.
-\item[Data set]
-	A list of points in $D\times C$ where $D$ is the domain and $C$ is the
-	codomain.
-\item[Domain]
-	A domain $D$ is the cartesian product $\bigtimes_{i=1}^n D_i$ where
-	$D_i$ is a subset of either $\mathbb Z$, $\mathbb R$ or a
-	discrete finite subset of $\mathbb Q$. \ZK{In other places we use sets instead of finite subsets of Q?}
-\item[Feature]
-	Any column of a data set $\mathcal D$ is called a feature.
-\item[Instance]
-	A tuple
-	$(N,\mathcal N_D,o,\mathcal N_o)$ is called an instance if
-	$N$ is an NN over domain $D$, $\mathcal N_D$ is a data normalization,
-	$o$ is an objective function and
-	$\mathcal N_O$ is an objective normalization.
-	If -- in addition to an instance $I$ -- a data set $\mathcal D$ over $D$
-	is given, $(I,\mathcal D)$ is called a data instance.
-\item[NN]
-	Neural network as understood by the Keras API of Tensorflow in HDF5
-	format.
-	In particular, the \Solver only handles \api{Dense} layers with either
-	\api{relu} or \api{linear} activation function.
-	The input layer must be defined on domain $D$ and the output layer
-	must map to the codomain $C$.
-\item[Region]
-	Given a domain $D=\bigtimes_{i=1}^d D_i$, a region (in $D$) is a
-	product $\bigtimes_{i=1}^d C_i$ where
-	each $C_i\subseteq D_i$ is a finite union of compact intervals for
-	$i=1,\ldots,n$.
-	For discrete $D_i$, e.g., a subset of $\mathbb Z$,
-	$C_i$ is the finite union of point intervals.
-	Otherwise, $D_i$ is a bounded subset of $\mathbb R$ and $C_i$
-	corresponds to just one interval $[c_i\pm r_i]$ with center $c_i\in D_i$
-	and rational radius $r_i>0$.
-\item[Safe]
-	A region $R$ is considered safe (wrt.\ a given target function $f$) for a
-	constant $t\in\mathbb Q$ if $f$ satisfies $f(x)\geq t$
-	for all $x\in R$.
-\item[.spec]
-	Specification file describing the domain, codomain and regions in the
-	domain. Its format is a JSON list where the $i$-th entry corresponds to
-	the $i$-th column in the CSV describing the data set.
-
-	Given a data set and a .spec file, the components $D_i$ of the domain
-	are defined as $D_i=E_i(F_i)$ where
-	$E_i$ is called the embedding of $F_i$ into $D_i$ where $F_i$ is the
-	$i$-th input feature.
-%\item[Stable]
-\item[Target function]
-	The target function $f_I$ of an instance
-	$I=(N,\mathcal N_D,o,\mathcal N_o)$ is defined as the composition
-	$\mathcal N_o\circ o\circ\mathcal N_{D,\mathrm o}\circ
-	N\circ\mathcal N_{D,\mathrm i}$.
-	The target function $f_{I,\mathcal D}$ of a data instance
-	$(I,\mathcal D)$ is
-	$x\mapsto\min(\{f_I(x)\}\cup\{\mathcal N_o(o(y)):(x,y)\in\mathcal D\})$.
-\item[Threshold]
-	The threshold for a region $R$ and target function $f$ is defined
-	as the maximal $t\in\{t_1,\ldots,t_n\}\subset[0,1]\cap\mathbb Q$ for
-	which $R$ is safe wrt.\ $f$ for $t$ if it exists, and $-\infty$ otherwise.
-
-	The threshold for a domain $D$ and target function $f$ is defined
-	as the maximal $t\in\{t_1,\ldots,t_n\}\subset[0,1]\cap\mathbb Q$ for
-	which there is a region that is safe wrt.\ $f$ for $t$ if it exists, and
-	$-\infty$ otherwise.
-\end{description}
 
 
 
@@ -568,9 +484,12 @@ were used in \Cref{sec:example} to give a quick introduction on how to run SMLP 
 \item[$\speckey{label}$] the name, e.g., $x1$
 \item[$\speckey{interface}$]  function, which can be $\dtype{input}$, $\dtype{knob}$,  or $\dtype{output}$ 
 \item[$\speckey{type}$] which can be $\dtype{real}$, $\dtype{int}$, or $\dtype{set}$ (for categorical features)
-\item[$\speckey{range}$]  for variables of $\dtype{real}$ and $\dtype{int}$ types, e.g., $[2,4]$ (must be a closed interval). 
-\ZK{Implimentation allows plus/minus infinity -- discorage its usage because of performance considerations?}
-The ranges serve as assumptions in model exploration modes of SMLP.
+\item[$\speckey{range}$]  for variables of $\dtype{real}$ and $\dtype{int}$ types, e.g., $\specval{[2,4]}$  
+(must be a closed interval). Values $\specval{-\inf}$ and $\specval{\inf}$ are allowed as the min and max of the 
+range, and can be specified using $\specval{null}$. e.g. $\specval{[-2, null]}$.
+\ZK{Implementation allows plus/minus infinity -- discourage its usage because of performance considerations?}
+The input and knob ranges serve as assumptions in model exploration modes of SMLP.
+\ZK{Need to be clear about ranges of outputs -- what is their meaning and usage, if specified?}
 \item[$\speckey{grid}$] for knobs, which is a list of values that a knob variable is allowed to take on within the
  respective declared ranges, 
 independently from other knobs. The $\eta$ constraints introduced below further restrict the multi-dimensional grid. 
@@ -593,6 +512,8 @@ that serve as requirements that need to be met by selected knob configurations.
 The expressions that occur in a spec file, such as $\speckey{alpha}$, $\speckey{beta}$, $\speckey{eta}$ constraints,
 as well as $\speckey{assertions}$, $\speckey{queries}$, and $\speckey{objectives}$, can in principle be any Python expression
 that can be composed using the $\package{operator}$ package\footnote{\url{https://docs.python.org/3/library/operator.html}}.
+\ZK{This statement is not correct? Operators that are supported in SMLP C++ interface are python operators as well as 
+say smlp.Ite and there is no ite oprator in operator package}
 In SMLP these expressions are parsed using the 
 $\package{Abstract\,\,Syntax\,\,Trees}$ library\footnote{\url{https://docs.python.org/3/library/ast.html}}.
 Currently only a subset of operations from the $\package{operator}$ package is supported in these expressions 
@@ -606,6 +527,7 @@ $\operator{xor(a,b)\,\,[a\,\,\hat{}\,\,b]}$
 \item[cmpop] $\operator{eq(a,b)\,\,[a == b]}$, 
 $\operator{ne(a,b)\,\,[a != b]}$, $\operator{lt(a,b)\,\,[a<b]}$, $\operator{le(a,b]\,\,[a\leq b]}$, $\operator{gt(a,b)\,\,[a>b]}$, 
 $\operator{ge(a,b)\,\,[a\geq b]}$ 
+\item[if-then-else] $\operator{x\,\, if\,\,cond\,\,else\,\, y\,\,[Ite(cond, x, y)]}$
 \end{itemize}
 
 
@@ -889,7 +811,15 @@ used for features scaling the responses, saved as $\suffix{.pkl}$ file.
 
 
 
-\section{Training ML models with SMLP}\label{sec:models}
+\section{ML model training and prediction}\label{sec:models}
+
+In this section we describe SMLP modes $\mode{train}$ and $\mode{predict}$: 
+how to train ML models with SMLP, how to save them, and how to rerun saved models on new data are decried 
+in \Cref{sec:models:train}, \Cref{sec:models:save}, and \Cref{sec:models:rerun}, respectively. Reports and other 
+collateral files generated in $\mode{train}$ and $\mode{predict}$ modes is discussed in~\Cref{sec:models:reports}.
+
+
+\subsection{Training ML models}\label{sec:models:train}
 
 SMLP supports training tree-based and polynomial models using the $\package{scikit-learn}$\footnote{\url{https://scikit-learn.org/stable/}} 
 and $\package{pycaret}$\footnote{\url{https://pycaret.org}} packages, and training neural networks using the $\package{Keras}$ package 
@@ -928,6 +858,11 @@ abbreviated suffix $\package{sklearn}$.
 \label{fig:pred:command}
 \end{figure}
 
+SMLP command for mode $\mode{train}$ is similar: the mode is specified using $\optionval{-mode}{train}$;
+and specifying new data with option $\option{-new\_data}$ is not required.
+
+\subsection{Saving ML models}\label{sec:models:save}
+
 SMLP supports saving a trained model to reuse it in future on incoming new data. 
 Saving a model is enabled using options $\option{-save\_model\,\, t\,\,-model\_name \,\,modelname}$,
 and rerunning a saved model is enabled using options $\option{-use\_model\,\, t\ \,\,-model\_name \,\,../modelname}$.
@@ -935,7 +870,12 @@ In addition, using options $\option{-save\_model\,\, t\,\,-model\_name \,\,model
 one can generate a configuration file that records model training options prior to saving the model and  enables one 
 to easily rerun the saved model. The $\option{nn\_keras}$ models are saved and loaded using the $\suffix{.h5}$
 format, while for models trained using $\package{sklearn}$ and $\package{pycaret}$ packages the  $\option{.pkl}$ format 
- is used. Figure~\ref{fig:pred:rerun:saved} gives two example commands to rerun a saved model on new data.
+ is used. 
+
+
+\subsection{Rerunning ML models}\label{sec:models:rerun}
+
+Figure~\ref{fig:pred:rerun:saved} gives two example commands to rerun a saved model on new data.
 The first one repeats the options of the command that trained and saved the model, and the second
 one uses the configuration file saved during the model training (the configuration file records all the SMLP options
 used during model training; therefore there is no need to repeat the SMLP options used during model training
@@ -960,22 +900,26 @@ when reusing the saved model with the configuration file).
 \label{fig:pred:rerun:saved}
 \end{figure}
 
+
+\subsection{ML model training and prediction reports}\label{sec:models:reports}
+
+
 Here is the list of reports and collateral files generated in SMLP modes that require ML model training or rerunning 
-of a saved ML model.
+of a saved ML model. Recall that new data is available in mode $\mode{predict}$ and is not available in mode 
+$\mode{train}$, and may or may not be available in model exploration modes.
 
 \begin{itemize}
 \item $\suffix{*\_\{training|test|labeled|new\}\_predictions\_summary.csv}$: prediction results respectively on 
 training data samples, on test data (also called validation data) samples, on the entire labeled data samples
-(which includes both training and test data samples), and on new data samples. It is saved as a $\suffix{.csv}$ 
-file that includes the values of the responses as well.
+(which includes both training and test data samples), and on new data samples (when available). It is saved as 
+a $\suffix{.csv}$ file that includes the values of the responses as well.
 \item $\suffix{*\_\{training|test|labeled|new\}\_prediction\_precisions.csv}$: prediction previsions per response, 
-respectively on 
-training data samples, on test data (also called validation data) samples, on the entire labeled data samples
-(which includes both training and test data samples), and on new data samples. It is saved as a $\suffix{.csv}$ 
-file that includes the values of the responses as well. For regression models currently supported in SMLP, 
- two measures of precision are reported: $\precision{msqe}$, and $\precision{r2\_score}$.
+respectively on training data samples, on test data (also called validation data) samples, on the entire labeled data 
+samples (which includes both training and test data samples), and on new data samples (when available). It is saved 
+as a $\suffix{.csv}$ file that includes the values of the responses as well. For regression models currently supported 
+in SMLP, two measures of precision are reported: $\precision{msqe}$, and $\precision{r2\_score}$.
 \item $\suffix{*\_\{training|test|labeled|new\}\_\{dt\_sklearn|poly\_sklearn|nn\_keras|\ldots\}.png}$: prediction plots,
-respectively for training, test, labeled and new data, for the model trained respectively using 
+respectively for training, test, labeled and new data (when available), for the model trained respectively using 
 $\model{dt\_sklearn}$, $\model{poly\_sklearn}$, $\model{nn\_keras}$, 
 or other regression model training algorithms supported in SMLP. These plots can be displayed during SMLP
 execution, for an interactive review, using option $\option{-plots\,\,t}$; otherwise these plots are saved
@@ -999,23 +943,73 @@ steps (preprocessing and data preparation for analysis), which are described in 
 
 SMLP supports the following model exploration modes (we assume that an ML model $M$ has already been trained). 
 \begin{itemize}
-\item[certify] Given an ML model $M$, a value assignment $a$ to knobs, and a query $\query$, check that $a$ is a stable 
-witness for $\query$ on model $M$. Multiple pairs $(a,\query)$ of candidate witness $a$ and query $\query$ can be checked 
-in a single SMLP run.
-\item[query] Given an ML model $M$  and a query $\query$, find a stable witness $a$  for $\query$ on $M$.
-\item[verify] Given an ML model $M$,  a value assignment $a$ to knobs,  and an assertion $\assert$, verify whether  
-$\assert$ is valid on model $M$ for any legal inputs (for the given value assignment $a$ to knobs). SMLP supports verifying 
-multiple assertions in a single run.
-\item[synthesize] Given an ML model $M$,  find a stable configuration of knobs (a value assignment $a$ to knobs) 
-such that required constraints (possibly including assertions),  are valid for all legal value assignments to the inputs.
+\item[certify] Given an ML model $M$, a value assignment $p^*,x^*$ to inputs $x$ and knobs $x$, and a query $\query(p,x,y)$,
+check that $p^*,x^*$ is a stable witness to $\query(p,x,y)$ on model $M$. Multiple pairs $(\specval{witness},\query)$ 
+of candidate witness $\specval{witness}$ and query $\query$ can be checked in a single SMLP run.
+\item[query] Given an ML model $M$  and a query $\query(p,x,y)$, find a stable witness for $\query(p,x,y)$ on $M$.
+Multiple queries can be evaluated in a single SMLP run.
+\item[verify] Given an ML model $M$,  a value assignment $p^*$ to knobs $p$,  and an assertion $\assert(p,x,y)$, verify whether  
+$\assert(p',x,y)$ is valid on model $M$ for any assignment $p'$ to knobs in the stability region of $p^*$ and any
+legal values of inputs $x$.  SMLP supports verifying multiple assertions in a single run.
+\item[synthesize] Given an ML model $M$,  find a configuration of knobs (a value assignment to knobs) $p^*$
+such that required constraints (possibly including assertions),  are valid for any configuration $p'$ of knobs in the 
+stability region of $p^*$ any and legal values of inputs $x$.
 \item[optimize]  Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of 
 the optimization objectives (pareto-optimal with respect to the \emph{max-min} optimization problem defined 
 in~\cite{brausse2024smlp}).
-\item[optsyn] Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of the 
-optimization objectives and all constraints and assertions are valid for all legal values of inputs. This mode is a union 
+\item[optsyn] Given an ML model $M$,  find a configuration $p^*$ of knobs that yields a pareto-optimal values of the 
+optimization objectives and all constraints and assertions are valid for any configuration $p'$ of knobs in the 
+stability region of $p^*$  and legal values of inputs $x$. This mode is a union 
 of the \emph{optimize} and \emph{synthesize} modes, its full name is \emph{optimized synthesis}. 
-All the previous modes can be seen as a special case of optimized synthesis mode.
+
 \end{itemize}
+
+
+Table~\ref{smlp:modes:features} summarizes components relevant to verification, synthesis and optimization
+in their regular meaning,  and the above listed model exploration modes in SMLP. These features include
+relevance of inputs, knobs, stability, constraints, as well as  queries, assertions and objectives,
+to particular model exploration modes in SMLP. 
+Algorithms for all other modes can be seen as a sub-procedures of optimized synthesis algorithm.
+
+
+\begin{table}
+ \begin{tabular}{lllllllllll}
+\toprule
+           mode / feature & inputs & knobs & $\alpha$ & $\beta$ & $\eta$ & $\theta$ & $\delta/\epsilon$ & queries & assertions & objectives \\
+\midrule
+   verification &    yes &    no &   yes &   no &  no &    no &            no &      no &        yes &         no \\
+      synthesis &    yes &   yes &   yes &  yes & yes &    no &            no &     yes &        yes &         no \\
+   optimization &     no &   yes &   yes &  yes & yes &    no &            no &      no &         no &        yes \\
+   SMLP-certify &    yes &   yes &   yes &   no & yes &   yes &            no &     yes &         no &         no \\
+     SMLP-query &    yes &   yes &   yes &   no & yes &   yes &            no &     yes &         no &         no \\
+    SMLP-verify &    yes &   yes &   yes &   no & yes &   yes &            no &     yes &        yes &         no \\
+SMLP-synthesize &    yes &   yes &   yes &  yes & yes &   yes &            no &      no &         yes &         no \\
+  SMLP-optimize &    yes &   yes &   yes &  yes & yes &   yes &           yes &      no &         no &        yes \\
+    SMLP-optsyn &    yes &   yes &   yes &  yes & yes &   yes &           yes &      no &        yes &        yes \\
+\bottomrule
+\end{tabular}
+\delete{
+ \begin{tabular}{llllllllll}
+\toprule
+          mode & inputs & knobs & $\alpha$ & $\beta$ & $\eta$ & $\theta$ & queries & assertions & objectives \\
+\midrule
+  verification &    yes &    no &   yes &   no &  no &    no &      no &        yes &         no \\
+  optimization &     no &   yes &   yes &  yes & yes &    no &      no &         no &        yes \\
+     synthesis &    yes &   yes &   yes &  yes & yes &    no &     yes &        yes &         no \\
+SMLP-$\exists$\_certify &    yes &   yes &   yes &   no & yes &   yes &     yes &         no &         no \\
+SMLP-$\forall$\_certify &    yes &   yes &   yes &   no & yes &   yes &     yes &         no &         no \\
+  SMLP-$\exists$\_query &    yes &   yes &   yes &   no & yes &   yes &     yes &         no &         no \\
+  SMLP-$\forall$\_query &    yes &   yes &   yes &   no & yes &   yes &     yes &         no &         no \\
+   SMLP-verify &    yes &   yes &   yes &  yes & yes &   yes &      no &        yes &         no \\
+ SMLP-optimize &    yes &   yes &   yes &  yes & yes &   yes &      no &         yes &         no \\
+   SMLP-optsyn &    yes &   yes &   yes &  yes & yes &   yes &      no &        yes &        yes \\
+\bottomrule
+\end{tabular}
+}
+\label{smlp:modes:features}
+\caption{Mapping SMLP modes to relevant features}
+\end{table}
+
 
 A formal definition of the tasks accomplished with these model exploration modes can be found in~\cite{brausse2024smlp}. 
 Formal descriptions combined with informal clarifications will be provided in this section as well. 
@@ -1042,8 +1036,9 @@ $\varphi_{\mathit{cond}}(p',x,y)$  can represent (1) verification conditions, (2
 
 \begin{defn}\label{def:stable:witness:validity}
 \begin{itemize}
-\item Given a value assignment $p^*$ to knobs $p$, an assignment $x^*$ to inputs $x$ is called a \emph{(concrete) $\theta$-stable witness} 
-to $\query(p,x,y)$ for configuration $p^*$ if the following formula is valid:\ZK{Assume here that x is not an empty vector?}
+\item 
+Given a value assignment $p^*$ to knobs $p$, an assignment $x^*$ to inputs $x$ is called a \emph{(concrete) $\theta$-stable witness} 
+to $\formula(p,x,y)$ for configuration $p^*$ if the following formula is valid:\ZK{Assume here that x is not an empty vector?}
 \begin{equation}\label{form:gear:certify:knobs:inputs}
 \varphi_{\mathit{witn}}^{px}(p^*,x^*) \eqdef
      \eta(p^*) \wedge ~\big(
@@ -1052,11 +1047,12 @@ to $\query(p,x,y)$ for configuration $p^*$ if the following formula is valid:\ZK
    \theta(p^*, p') \implies (\varphi_M(p',x^*,y)  \implies  \varphi_{\mathit{cond}}(p',x^*,y))
     ]\big)
 \end{equation}
-where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \query(p,x,y).\]
-In this case the value assignment $p^*, x^*$ to inputs and knobs $p,x$ is called a  \emph{(concrete) $\theta$-stable witness for $\query(p,x,y)$}, 
-and $x^*$ is called a  \emph{(concrete) $\theta$-stable witness to $\query(p^*,x,y)$}.
-\item A value assignment $p^*$ to knobs $p$ is called a  \emph{(universal) $\theta$-stable witness for $\query(p,x,y)$} if any legal value assignment 
-$x^*$ to inputs $x$ is a (concrete) $\theta$-stable witness to $\query(p,x,y)$ for $p^*$; that is, when the following formula is valid:
+where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \formula(p,x,y).\]
+In this case the value assignment $p^*, x^*$ to inputs and knobs $p,x$ is called a  \emph{(concrete) $\theta$-stable witness for $\formula(p,x,y)$}, 
+and $x^*$ is called a  \emph{(concrete) $\theta$-stable witness to $\formula(p^*,x,y)$}.
+\item 
+A value assignment $p^*$ to knobs $p$ is called a  \emph{(universal) $\theta$-stable witness for $\formula(p,x,y)$} if any legal value assignment 
+$x^*$ to inputs $x$ is a (concrete) $\theta$-stable witness to $\formula(p,x,y)$ for $p^*$; that is, when the following formula is valid:
 \begin{equation}\label{form:gear:certify:knobs}
 \varphi_{\mathit{witn}}^{p}(p^*) \eqdef
      \eta(p^*) \wedge ~\big(
@@ -1065,15 +1061,25 @@ $x^*$ to inputs $x$ is a (concrete) $\theta$-stable witness to $\query(p,x,y)$ f
    \theta(p^*, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
     ]\big)
 \end{equation}
-\item An assertion $\assert(p, x,y)$ is called \emph{$\theta$-valid with respect to knob configuration $p^*$} if its negation 
+\item 
+If $x^*$ is a  $\theta$-stable witness for $\formula(p^*, x,y)$, then we call $x^*$  a \emph{$\theta$-stable counter-example to  
+assertion $\assert(p^*, x,y)  \eqdef \neg \formula(p^*, x,y)$}.
+\delete{
+An assertion $\assert(p, x,y)$ is called \emph{$\theta$-valid with respect to knob configuration $p^*$} if its negation 
 $\query(p, x,y) \eqdef \neg \assert(p, x,y)$ does not have a $\theta$-stable witness $x^*$ for $p^*$.  In the latter case  
 assertion $\assert(p^*, x,y)$ is called \emph{$\theta$-valid}. Otherwise, if $x^*$ is a  $\theta$-stable witness for 
 $\query(p^*, x,y)$, then we call $x^*$  a \emph{$\theta$-stable counter-example to  $\assert(p^*, x,y)$}, and 
 $\assert(p^*, x,y)$ is \emph{$\theta$-falsifiable} (that is, it is not $\theta$-valid).
+}
 \end{itemize}
 \end{defn}
 
+\Cref{form:gear:certify:knobs:inputs} corresponds to mode $\mode{certify}$ in SMLP, and  \Cref{form:gear:certify:knobs} 
+corresponds to mode $\mode{verify}$, and will be discussed in detail in Subsections~\ref{sect:certify} and \ref{sect:verify}, 
+respectively. The concept of \emph{$\theta$-stable counter-example} to  an assertion is relevant for targeted model refinement
+loop for verifying assertions, and is discussed in Section~\ref{sec:refinement}.
 
+\delete{
 The idea behind the concept of $\theta$-validity of an assertion $\assert(p, x,y)$ with respect to a knob configuration $p^*$ is as follows. 
 Under the assumption that the system is 
 in one of the points in the $\theta$-stability region of $p^*$,  while the probability for the system of being in one of these points is $1$ 
@@ -1090,95 +1096,93 @@ a  $\theta$-stable witness to $\query(p^*,x,y)$. Then $x^*$ is a counter-example
 %is not a  $\theta$-stable witness to $\query$ for $p^*$,  $x^*$ is a counter-example  to $\assert$ but can happen with probability $0$; 
 as a consequence, $\assert(p^*, x, y)$ does not have a counter-example with probability greater than $0$ and is therefore defined 
 as $\theta$-valid in the above definition.
+}
 
 
+\ZK{The next definition for now for discussion only. It will be required once SMLP will have partial SAT assignments from 
+solvers -- some of the knobs or some of the inputs might not be assigned; and also for generalized lemmas, some of the knobs 
+will have ranges or sets of values assigned rather than just one concrete value. } 
 
+A \emph{value range assignment} to variables $x = x_1,\ldots x_n$ is a mapping from $x$ to closed ranges $[a_1, b_1], \ldots, [a_n, b_n]$.
+A values assignment (where each variable in $x$ is mapped to a concrete value in its full range) is special case where 
+$a_i = b_i$ for all $i \in 1,\ldots, n$. And an assignment  of a \emph{dont't-care} value is encoded as the assignment 
+of the full range (e.g., range $[-\inf, \inf]$ in case of real-typed variables).  
+Definition~\ref{def:stable:witness:validity} can be generalized to range assignments as follows:
 
-\subsection{Certification of candidate stable witness}\label{sect:certify}
+\begin{defn}\label{def:stable:witness:validity:ranges}
+\begin{itemize}
+\item
+Given a value range assignment $p^*$ to knobs $p$, a value range assignment $x^*$ to inputs $x$ is called a \emph{$\theta$-stable witness}
+to $\formula(p,x,y)$ for configurations in $p^*$ if the following formula is valid:
 
+\begin{equation}\label{form:gear:certify:knobs:inputs:ranges}
+\varphi_{\mathit{witn}}^{px} \eqdef
+    \forall px \big[ \vartheta_{p^*x^*}(p,x) \implies
+     \eta(p) \wedge ~\big(
+    \forall p'~
+    \forall y~[ \theta(p, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y)) ]
+   \big)  \big]
+\end{equation}
+where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \formula(p,x,y)\]
+\noindent and $\vartheta_{p^*,x^*}(p,x)$ is the formula inferred by the value range assignments 
+to $p^*$ and $x^*$.
 
-
-Certification is defined both for a candidate stable configuration $p^*$ as well as for an assignment $p^*, x^*$ to both inputs and knobs.
-\ZK{Still for now perturbation is defined for knobs only, not for inputs. Extension of perturbation to inputs requires more discussion (is this really needed?)}
-Let's first consider the former case.
-We are given a candidate configuration of knobs $p^*$ (which is a value assignment to knobs $p$), and a query $\query$ on an 
-ML model $M$, and we want to check whether $p^*$ is a stable witness for $\query$. Intuitively, the latter means that $p^*$
-satisfies $\query$ on model $M$ for any legal values of inputs $x$, even if the knob values in configuration $p^*$ are perturbed 
-within a predefined radius. Formally, SMLP checks the validity of formula $\varphi_{\mathit{cert}}(p^*)$: 
-
-
-
-\begin{equation}\label{form:gear:certify}
-\varphi_{\mathit{cert}}(p^*) \eqdef
+\item
+A value range assignment $p^*$ to knobs $p$ is called a  \emph{$\theta$-stable witness for $\formula(p,x,y)$} if any legal value range assignment 
+$x^*$ to inputs $x$ is a $\theta$-stable witness to $\formula(p,x,y)$ for $p^*$; that is, when the following formula is valid (TODO: CHECK THE FORMULA):
+\begin{equation}\label{form:gear:certify:knobs:ranges}
+\varphi_{\mathit{witn}}^{p}(p^*) \eqdef
+  \forall px \big[ \vartheta_{p^*x^*}(p,x) \implies
      \eta(p^*) \wedge ~\big(
     \forall p'~
-    \forall x y~[
+    \forall y~[
    \theta(p^*, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
-    ]\big)
+    ]\big)  \big]
 \end{equation}
-
-where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \query(p,x,y).\]
-\noindent and  $\alpha(p,x)$ defines user-given constraints on knobs and inputs. 
-
-
-For the above formula to be valid and not be valid vacuously, we need to check that $\eta(p^*)$ evaluates to constant true 
-and  $\alpha(p^*,x)$ is satisfiable. This means that $p^*$ witnesses that $\alpha(p,x) \wedge \eta(p)$ is \emph{consistent}, 
-that is, there exist values of inputs that satisfy  $\alpha(p^*,x) \wedge \eta(p^*)$. Formally, consistency check for stable 
-witness certification requires the following formula to be valid: 
-
-\begin{equation}\label{form:gear:certify:consistency}
-\exists x~ [\alpha(p^*, x) \wedge \eta(p^*)])
-\end{equation}
-
-
-Syntactic checks in SMLP imposed on the specification file ensure that all knobs are assigned fixed values in $p^*$.  
-If the consistency check fails, SMLP reports the status of $p^*$ as \emph{not a witness}; otherwise SMLP checks satisfiability 
-of the following formula, which we refer to as \emph{feasibility} part of stable witness certification:
-
-\begin{equation}\label{form:gear:certify:feasibility}
-       \varphi_M(p^*,x,y)  \wedge  \alpha(p^*,x) \wedge   \query(p^*,x,y))
-\end{equation}
-
-If the above formula is not satisfiable, then $p^*$ cannot be a stable witness to $\query$, and SMLP reports its status as \emph{not a witness}. 
-Otherwise stability of the candidate witness $p^*$ for $\query$ is checked by proving validity of formula \cref{form:gear:certify},
-and this is done by checking satisfiability of formula~\cref{form:gear:certify:candidate}, which is the negation of the right conjunct of \cref{form:gear:certify}:
-\begin{equation}\label{form:gear:certify:candidate}
-     \theta(p^*, p')  \wedge  \varphi_M(p^*,x,y)  \wedge  \alpha(p^*,x) \wedge   \neg \query(p^*,x,y))
-\end{equation}
-
-
-SMLP supports checking multiple witness-query pairs in a single run. The status of each witness is reported in file 
- $prefix\_dataname\_certify\_results.json$, and each witness has one of these three status options:   
-\begin{itemize}
-\item \emph{not a witness} --formula ~\cref{form:gear:certify:consistency} is not valid or formula~\cref{form:gear:certify:feasibility} is not satisfiable.  
-\item \emph{witness, not stable} -- formula~\cref{form:gear:certify} is not valid 
-(formula~\cref{form:gear:certify:consistency} might still be valid and  formula~\cref{form:gear:certify:feasibility} satisfiable).
-\item \emph{stable witness} -- formula~\cref{form:gear:certify} is valid (formula~\cref{form:gear:certify:candidate} is not satisfiable).
+\item 
+If $x^*$ is a  $\theta$-stable witness for $\formula(p^*, x,y)$, then we call $x^*$  a \emph{$\theta$-stable counter-example to  
+assertion $\assert(p^*, x,y)  \eqdef \neg \formula(p^*, x,y)$}.
 \end{itemize}
-
-A results file might look like one on figure~\cref{fig:certify:result}:
-
-\begin{figure}
-\small
-\begin{verbatim}
-{
-        "query1": "not a witness",
-        "query2": "stable witness"
-}
-\end{verbatim}
-\caption{SMLP result in mode ``certify''.}
-\label{fig:certify:result}
-\end{figure}
+\end{defn}
 
 
-Now let's consider that we are given an assignment $p^*,x^*$,  a query $\query$ on an 
-ML model $M$, and we want to check whether $x^*$ is a stable witness to $\query$ for $p^*$.
-This requires checking validity of  formula	\cref{form:gear:certify:knobs:inputs}. The consistency check for this task 
-is simply checking validity of $\alpha(p^*, x^*) \wedge \eta(p^*)$, and the feasibility part for this task is checking 
-satisfiability of 
+\subsection{Mode $\mode{certify}$: certification of a stable witness}\label{sect:certify}
+
+
+
+In the $\mode{certify}$ mode, SMLP is given an assignment $p^*,x^*$ to knobs $p$ and inputs $x$, 
+ a query $\query(p,x,y)$ on an ML model $M$, and we want to check whether $x^*$ is a stable witness to
+ $\query(p,x,y)$ for $p^*$, as defined in Definition~\ref{def:stable:witness:validity}.
+Currently SMLP assumes that all knobs in $p$ and all inputs in $x$ are assigned concrete values in $p^*, x^*$.
+A sanity check is implemented to impose this. This requirement can be relaxed.
+Certification requires checking validity of  formula \cref{form:gear:certify:knobs:inputs}. 
+
+
+The $\alpha \wedge \beta$-consistency check for this task 
+is simply checking satisfiability  of $\alpha(p, x) \wedge \eta(p)$. 
+This check is common for all model exploration modes.
+
+The witness consistency check (with  $\alpha \wedge \beta$) is checking the validity of 
+$\alpha(p^*, x^*) \wedge \eta(p^*) $, or more formally, the validity of:
 \begin{equation}\label{form:gear:certify:feasibility:inputs}
-       \varphi_M(p^*,x,^*y)  \wedge  \alpha(p^*,x^*) \wedge   \query(p^*,x^*,y))
+      \forall p \forall x ( \vartheta_{p^*x^*}(p,x) \implies   \alpha(p, x) \wedge \eta(p))
 \end{equation}
+
+
+When $p^*,x^*$ is a full assignment of concrete (finite) values to knobs $p$ and inputs $x$, then 
+the validity of the above formulas is the same as their satisfiability.
+
+
+The feasibility part for this task is checking  the validity of 
+
+\begin{equation}\label{form:gear:certify:feasibility:inputs}
+      \forall p \forall x ( \vartheta_{p^*x^*}(p,x) \implies  \varphi_M(p,x,y)  \wedge  \alpha(p, x) \wedge \eta(p)  \wedge   \query(p,x,y))
+\end{equation}
+
+Again, when $p^*,x^*$ is a full assignment of concrete (finite) values to knobs $p$ and inputs $x$, then 
+the validity of the above formula is the same as its satisfiability.
+
+
 If the above formula is not satisfiable, then $x^*$ cannot be a stable witness to $\query$ for $p^*$, 
 and SMLP reports its status as \emph{not a witness}. 
 Otherwise stability of the candidate witness $p^*, x^*$ to $\query$ is checked by proving validity of 
@@ -1190,74 +1194,13 @@ and this is done by checking satisfiability of formula~\cref{form:gear:certify:f
 The result file format is the same as for checking stability of configuration $p^*$.
 
 
-\subsection{Querying ML model for a stable witness}
-
-Given an ML model $M$  and a query $\query(p, x, y)$, the task is to find a stable witness $p^*$  for $\query(p, x, y)$ on $M$. 
-That is, the task is to find $p^*$ such that $\varphi_{\mathit{cert}}(p)$ (defined in \cref{form:gear:certify}) holds;  
-and hence $p^*$ will be a solution for 
-
-\begin{equation}\label{form:gear:query:candidate}
-\varphi_{\mathit{\query}} \eqdef \exists p~\varphi_{\mathit{cert}}(p)  \eqdef \exists p~ \big[ \eta(p) \wedge \big(
-    \forall p'~
-    \forall x y~[
-   \theta(p, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
-    ]\big)\big]
-\end{equation}
-where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \query(p,x,y).\]
 
 
-For a solution $p^*$ to exist, and for it not to be vacuous, it is necessary $\alpha(p, x) \wedge \eta(p)$ to be consistent, 
-meaning that the following formula must be valid:
-\begin{equation}\label{form:gear:query:consistency}
-\exists p,x~ [\alpha(p, x) \wedge \eta(p)])
-\end{equation}
-
-Furthermore, for a solution to exist, the following formula must be satisfiable, and we refer to this as a \emph{feasibility} 
-check for the task of searching for a stable witness for $\query(p,x,y)$. 
-
-\begin{equation}\label{form:gear:query:feasibility}
-       \eta(p) \wedge \varphi_M(p,x,y)  \wedge  \alpha(p,x) \wedge  \query(p,x,y))
-\end{equation}
-
-When both the consistency check and the feasibility check succeed, SMLP enters an iterative algorithm for
-searching for a stable witness $p^*$, and can terminate also by concluding that such a witness does not exist 
-(under some additional assumptions).
+\subsection{Mode $\mode{query}$: querying for a stable witness}
 
 
-SMLP supports querying multiple conditions in one SMLP run. 
-The status of each query is reported in file $prefix\_dataname\_query\_results.json$, 
-and the result might look like the one displayed in Figure~\cref{fig:query:result}, where the ``witness'' field 
-specifies the values of knobs, as well as values of inputs and values of outputs
-found in the satisfying assignment to~\cref{form:gear:certify:feasibility} that identified the stable witness.
-
-\begin{figure}
-\small
-\begin{verbatim}
-{
-        "query1": {
-                "status": "UNSAT",
-                "witness": null
-        },
-        "query2": {
-                "status": "STABLE_SAT",
-                "witness": {
-                        "p1": 2.0,
-                        "y1": 9.0,
-                        "y2": 5.0,
-                        "x1": 0.0,
-                        "p2": 7.0
-                }
-        }
-}
-\end{verbatim}
-\caption{SMLP result in mode ``query''.}\label{fig:query:result}
-\end{figure}
-
-
-\subsection{Querying ML model for a concrete stable witness}
-
-
-The task of stable synthesis of knob values for a query $\query$ consists of solving the following formula:
+The task of querying ML model for a stable witness to query $\query(p, x, y)$ consists in finding value assignments  
+$p^*,x^*$  for knobs $p$ and inputs $x$ in $\query(p, x, y)$ that represent a solution for the following formula:
 
 \begin{equation}\label{form:gear:synthesis:query:exists}
     \exists p, x ~\big[ \eta(p) \wedge
@@ -1266,6 +1209,19 @@ The task of stable synthesis of knob values for a query $\query$ consists of sol
     \theta(p,p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
     ]\big]
 \end{equation} 
+
+For a solution $p^*,x^*$ to exist, and for it not to be vacuous, it is necessary $\alpha(p, x) \wedge \eta(p)$ to be consistent, 
+meaning that the following formula must be valid:
+\begin{equation}\label{form:gear:query:consistency}
+\exists p,x~ [\alpha(p, x) \wedge \eta(p)])
+\end{equation}
+
+Furthermore, for a solution to exist, the following formula must be satisfiable, and we refer to this as a \emph{feasibility} 
+check for the task of searching for a concrete stable witness for $\query(p,x,y)$. 
+
+\begin{equation}\label{form:gear:query:feasibility}
+       \eta(p) \wedge \varphi_M(p,x,y)  \wedge  \alpha(p,x))
+\end{equation}
 
 Let $p^*, x^*$ be a solution to \cref{form:gear:synthesis:query:exists}. Then according to Definition~\ref{def:stable:witness:validity}, 
 $x^*$ is a stable witness for  $\query(p^*, x, y)$. 
@@ -1297,7 +1253,7 @@ and searching to its counter-example, except now in search for candidate counter
 be bound to values in $x^*$ so that only knobs will be free to assign values in candidate counter-example.}
 
 
-\subsection{Assertion verification}
+\subsection{Mode $\mode{verify}$: assertion verification with stability}\label{sect:verify}
 
 
 In assertion verification usually one assumes that the knobs have already been fixed to legal values, and their impact has been propagated 
@@ -1305,11 +1261,88 @@ through the constraints, therefore usually in the context of assertion verificat
 to formalize stability also in the context of verification, SMLP assumes that the values of knobs $p$ are assigned constant values $p^*$, 
 but can be perturbed (by environmental effects or by an adversary), therefore treatment of $p^*$ is explicit. Then the problem of 
 verifying an assertion $\assert(p^*,x,y)$ under allowed perturbations $p'$ of knob values $p^*$ controlled by $\theta_r(p^*, p')$, 
-as defined in Definition~\ref{def:stable:witness:validity}, is exactly the problem of certification of stability 
-of witness $p^*$ for query $\assert(p^*,x,y)$, as formalized in~\cref{form:gear:certify}, 
-where now  \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \assert(p,x,y).\] Therefore, in current implementation, 
-in mode ``verify'', SMLP supports verification without stability considerations, that is, assumes the stability predicate $\theta(p,p')$ on 
-knobs $p,p'$ is the identity relation (which means, all stability radii are assumed to be $0$ and therefore $\theta(p.p') \eqdef p == p'$).
+is exactly the problem of certification of stability 
+of witness $p^*$ for assertion $\assert(p^*,x,y)$, as defined in Definition~\ref{def:stable:witness:validity}. To reiterate, the problem of verification with stability is formalized in SMLP as~\cref{form:gear:certify}:
+
+
+\begin{equation}\label{form:gear:certify}
+\varphi_{\mathit{verify}}(p^*) \eqdef
+     \eta(p^*) \wedge ~\big(
+    \forall p'~
+    \forall x y~[
+   \theta(p^*, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
+    ]\big)
+\end{equation}
+
+where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \assert(p,x,y).\]
+\noindent and  $\alpha(p,x)$ defines user-given constraints on knobs and inputs. 
+
+
+For the above formula to be valid and not be valid vacuously, we need to check that $\eta(p^*)$ evaluates to constant true 
+and  $\alpha(p^*,x)$ is satisfiable. This means that $p^*$ witnesses that $\alpha(p,x) \wedge \eta(p)$ is \emph{consistent}, 
+that is, there exist values of inputs that satisfy  $\alpha(p^*,x) \wedge \eta(p^*)$. Formally, consistency check for stable 
+witness certification requires the following formula to be valid: 
+
+\begin{equation}\label{form:gear:certify:consistency}
+\exists x~ [\alpha(p^*, x) \wedge \eta(p^*)])
+\end{equation}
+
+
+Syntactic checks in SMLP imposed on the specification file ensure that all knobs are assigned fixed values in $p^*$.  
+If the consistency check fails, SMLP reports the status of $p^*$ as \emph{not a witness}; otherwise SMLP checks satisfiability 
+of the following formula, which we refer to as \emph{feasibility} part of stable witness certification:
+
+\begin{equation}\label{form:gear:certify:feasibility}
+       \varphi_M(p^*,x,y)  \wedge  \alpha(p^*,x) \wedge   \query(p^*,x,y))
+\end{equation}
+
+If the above formula is not satisfiable, then $p^*$ cannot be a stable witness to $\query$, and SMLP reports its status as \emph{not a witness}. 
+Otherwise stability of the candidate witness $p^*$ for $\query$ is checked by proving validity of formula \cref{form:gear:certify},
+and this is done by checking satisfiability of formula~\cref{form:gear:certify:candidate}, which is the negation of the right conjunct of \cref{form:gear:certify}:
+\begin{equation}\label{form:gear:certify:candidate}
+     \theta(p^*, p')  \wedge  \varphi_M(p^*,x,y)  \wedge  \alpha(p^*,x) \wedge   \neg \query(p^*,x,y))
+\end{equation}
+
+
+SMLP supports checking multiple witness-query pairs in a single run. The status of each witness is reported in file 
+ $\suffix{prefix\_dataname\_certify\_results.json}$, and each witness has one of these three status options:   
+\begin{itemize}
+\item \emph{not a witness} --formula ~\cref{form:gear:certify:consistency} is not valid or formula~\cref{form:gear:certify:feasibility} is not satisfiable.  
+\item \emph{witness, not stable} -- formula~\cref{form:gear:certify} is not valid 
+(formula~\cref{form:gear:certify:consistency} might still be valid and  formula~\cref{form:gear:certify:feasibility} satisfiable).
+\item \emph{stable witness} -- formula~\cref{form:gear:certify} is valid (formula~\cref{form:gear:certify:candidate} is not satisfiable).
+\end{itemize}
+
+A results file might look like one on figure~\cref{fig:certify:result}:
+
+\begin{figure}[tp]%[hb!]
+\small
+\begin{verbatim}
+{
+        "query1": {
+                "witness_consistent": "true",
+                "witness_to_query": "false",
+                "witness_stable": "false"
+        },
+        "query2": {
+                "witness_consistent": "true",
+                "witness_to_query": "true",
+                "witness_stable": "false"
+        },
+        "query3": {
+                "witness_consistent": "true",
+                "witness_to_query": "true",
+                "witness_stable": "true"
+        },
+        "smlp_execution": "completed",
+        "interface_consistent": "true"
+}
+\end{verbatim}
+\caption{SMLP result in mode $\mode{certify}$.}
+\label{fig:certify:result}
+\end{figure}
+
+
 
 Note that the consistency check~\cref{form:gear:certify:consistency} and feasibility check~\cref{form:gear:certify:feasibility} 
 for mode ``certify'' in \cref{sect:certify} do not refer to stability predicate $\theta$, and are applicable in mode ``verify'' in a similar way:
@@ -1326,7 +1359,8 @@ If~\cref{form:gear:verify} is satsfiable, SMLP reports the assertion as ``FAIL''
 An example verification results file might look like the one in Figure~\cref{fig:verify:result},  where the field ''asrt'' in the result reports 
 the value of the assertion in the SAT assignment to the negated assertion in formula~\cref{form:gear:verify}, and is displayed 
 as part of the results as a sanity check for the correctness of the counter-example to $\assert(p^*,x,y)$. 
-Assertion verification result is reported in file $prefix\_dataname\_assertions\_results.json$.\ZK{rename the report file assertions --> verify, to be uniform}
+Assertion verification result is reported in file $\suffix{prefix\_dataname\_assertions\_results.json}$.
+\ZK{rename the report file assertions --> verify, to be uniform}
 
 
 \begin{figure}
@@ -1352,21 +1386,99 @@ Assertion verification result is reported in file $prefix\_dataname\_assertions\
 }
 
 \end{verbatim}
-\caption{SMLP result in mode ``verify''.}\label{fig:verify:result}
+\caption{SMLP result in mode $\mode{verify.}$}\label{fig:verify:result}
 \end{figure}
 
 
-\subsection{Stable synthesis mode}
+\subsection{Mode $\mode{synthesize}$: parameter synthesis with stability}
 
 
 The task of $\theta$-stable synthesis consists of finding a solution to formula~\cref{form:gear:final}, where
-\[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies (\beta(p, x, y) \wedge \assert(p,x,y)).\].
-That is,  $\theta$-stable synthesis reduces to the task of searching for a $\theta$-stable witness $p^*$ for
-$\query(p, x, y) \eqdef \beta(p, x, y) \wedge \assert(p,x,y))$ (here $\assert(p, x, y)$ might represent a conjunction of multiple assertions).
+\[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies (\beta(p, x, y) \wedge \assert(p,x,y))\]
+and  $\assert(p, x, y)$ might represent a conjunction of multiple assertions.
+%That is,  $\theta$-stable synthesis reduces to the task of searching for a $\theta$-stable witness $p^*$ for
+%$\query(p, x, y) \eqdef \beta(p, x, y) \wedge \assert(p,x,y))$ (here $\assert(p, x, y)$ might represent a conjunction of multiple assertions).
 
 
 
-\subsection{Stable optimization mode}\label{sec:stable:opt}
+More precisely, given an ML model $M$  and a query $\query(p, x, y)\eqdef \beta(p, x, y) \wedge \assert(p,x,y)$ 
+that expresses the constraints that synthesized
+design should satisfy,  the task is to find a stable witness $p^*$  for $\query(p, x, y)$ on $M$, as defined in 
+Definition~\ref{def:stable:witness:validity}. 
+That is, the task is to find $p^*$ such that $\varphi_{\mathit{verify}}(p)$ (defined in \cref{form:gear:certify}) holds;  
+and hence $p^*$ will be a solution for 
+
+\begin{equation}\label{form:gear:query:candidate}
+\varphi_{\mathit{synth}} \eqdef \exists p~\varphi_{\mathit{verify}}(p)  \eqdef \exists p~ \big[ \eta(p) \wedge \big(
+    \forall p'~
+    \forall x y~[
+   \theta(p, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
+    ]\big)\big]
+\end{equation}
+where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \query(p,x,y).\]
+
+
+For a solution $p^*$ to exist, and for it not to be vacuous, it is necessary $\alpha(p, x) \wedge \eta(p)$ to be consistent, 
+meaning that the following formula must be valid:
+\begin{equation}\label{form:gear:query:consistency}
+\exists p,x~ [\alpha(p, x) \wedge \eta(p)])
+\end{equation}
+
+Furthermore, for a solution to exist, the following formula must be satisfiable, and we refer to this as a \emph{feasibility} 
+check for the task of searching for a stable witness for $\query(p,x,y)$. 
+
+\begin{equation}\label{form:gear:query:feasibility}
+       \eta(p) \wedge \varphi_M(p,x,y)  \wedge  \alpha(p,x))
+\end{equation}
+
+When both the consistency check and the feasibility check succeed, SMLP enters an iterative algorithm for
+searching for a stable witness $p^*$, and can terminate also by concluding that such a witness does not exist 
+(under some additional assumptions).
+
+
+SMLP supports querying multiple conditions in one SMLP run. 
+The status of each query is reported in file $\suffix{prefix\_dataname\_query\_results.json}$, 
+and the result might look like the one displayed in Figure~\cref{fig:query:result}, where the ``witness'' field 
+specifies the values of knobs, as well as values of inputs and values of outputs
+found in the satisfying assignment to~\cref{form:gear:certify:feasibility} that identified the stable witness.
+
+\begin{figure}
+\small
+\begin{verbatim}
+{
+        "smlp_execution": "completed",
+        "interface_consistent": "true",
+        "query1": {
+                "witness_exists": "false",
+                "stable_witness": "false",
+                "query_status": "UNSAT",
+                "query_witness": null
+        },
+        "query2": {
+                "witness_exists": "true",
+                "stable_witness": "true",
+                "query_status": "STABLE_SAT",
+                "query_witness": {
+                        "num2": 9.0,
+                        "num1": 9.0,
+                        "p3": 6.750000044703484,
+                        "FMAX_abc": 7.0
+                }
+        },
+        "query3": {
+                "witness_exists": "false",
+                "stable_witness": "false",
+                "query_status": "UNSAT",
+                "query_witness": null
+        },
+        "model_consistent": "true"
+}
+\end{verbatim}
+\caption{SMLP result in mode $\mode{query}$.}\label{fig:query:result}
+\end{figure}
+
+
+\subsection{Mode $\mode{optimize}$: multi-objective optimization with stability}\label{sec:stable:opt}
 
 In this subsection we consider the optimization problem for a real-valued function $f$ (in our case, an ML model),
 extended in two ways:
@@ -1415,7 +1527,7 @@ problem of stable optimized synthesis problem is defined using \Cref{form:optsyn
 is obtained as a special case, by assuming that $\assert(p,x,y)$ is constant $\operator{true}$.
 
 
-\subsection{Stable optimized synthesis mode}\label{sec:stable:opt:synthesis}
+\subsection{Mode $\mode{optsyn}$: optimized synthesis with stability}\label{sec:stable:opt:synthesis}
 
 
 
@@ -1596,9 +1708,9 @@ prioritizing the stability region during model refinement.
 
 Note that model refinement is required only to be able to learn properties on the system by exploring these properties on the model.
 As a simple scenario, let us consider that we want to check an assertion $\assert(p,x,y)$ on the system.
-If a $\theta$-stable counter example $x^*$ to $\assert(p,x,y)$ for a configuration $p^*$ of knobs exists 
+If a $\theta$-stable concrete counter example $x^*$ to $\assert(p,x,y)$ for a configuration $p^*$ of knobs exists 
 on the model according to Definition~\ref{def:stable:witness:validity} 
-(which means that  $x^*$ is a $\theta$-stable witness for query $\query(p^*, x, y) \eqdef \neg \assert(p^*,x,y)$), 
+(which means that  $x^*$ is a  concrete $\theta$-stable witness for query $\query(p^*, x, y) \eqdef \neg \assert(p^*,x,y)$), 
 then the system is sampled in the $\theta$--stability region of $p^*$ (possibly with $x^*$ toggled as well in a small 
 region around $x^*$). If the failure of assertion $\assert(p,x,y)$ is reproduced on the system using the stable witness 
 $x^*$ and a configuration in the $\theta$-stability region of $p^*$, then the model exploration goal has been 
@@ -1606,13 +1718,13 @@ accomplished (we found a counter-example to $\assert(p,x,y)$ on the system) and 
 Otherwise the system samples can be used to refine the model in this region. For that reason, the wider the 
 $\theta$-stability region, the higher the chances to reproduce failure of assertion $\assert(p,x,y)$ on the system.
 
-On the other hand, if the $\assert(p,x,y)$ does not have a $\theta$-stable counter-example, then it is still possible 
+On the other hand, if  $\assert(p,x,y)$ does not have a concrete $\theta$-stable counter-example, then it is still possible 
 that $\assert$ is not valid on the system but it cannot be falsified on the model due to discrepancy between the system 
 and model responses in some (unknown to us) input space. In this case one can strengthen $\assert(p,x,y)$ to $\assert'(p,x,y)$
 (for example, assertion $\assert(p,x,y) \eqdef y \geq 3$ can be  strengthened to $\assert'(p,x,y) \eqdef y \geq 3.01$),
 or one can weaken the stability condition $\theta_r$ to  $\theta_{r'}$ by shrinking the stability radii $r$ to $r'$; or do both.
-If the strengthened assertion $\assert'(p,x,y)$ has a $\theta_{r'}$-stable counter-example $x'$ for a configuration $p'$ on the 
-model, then $p', x'$ can be used to find a counter-example to the original assertion $\assert(p, x, y)$ on the system in the same 
+If the strengthened assertion $\assert'(p,x,y)$ has a concrete $\theta_{r'}$-stable counter-example $x'$ for a configuration $p'$ on 
+the model, then $p', x'$ can be used to find a counter-example to the original assertion $\assert(p, x, y)$ on the system in the same 
 way as with $p^*, x^*$ before. If failure of the original assertion $\assert$ is reproduced on the system, the model 
 refinement loop stops, otherwise it can continue using other strengthened versions of the original assertion and or shrinking the  
 stability radii even further. Similar reasoning is applied to other modes of design space exploration. In particular, in the 
@@ -2229,6 +2341,92 @@ part. Rational numbers $\frac pq$ are represented by $s(p)\literal/s(q)$
 where $s(z)$ is the decimal encoding of $|z|$ prefixed by ``\literal-''
 if $z\in\mathbb Z$ is negative.
 
+\section{Concepts and Preliminaries}
 
+In this document, syntactical highlights are placed on
+\literal{literal strings}, which are ASCII sequences used to communicate input
+to and output from programs; on \cmd{commands} to be executed;
+and on \api{API references} which correspond to
+either concrete symbols or abstract concepts defined in the corresponding API.
+
+We assume familiarity with JSON, \cmd{make} and CSV files. Since the CSV format
+is not unambiguously defined, we give the concrete requirements in
+\cref{sec:csv}.
+
+The glossary in this section defines concepts which are used throughout this
+document when describing in detail the problems solved by \SolverAbbrv and is
+meant to be referred to on an per-instance basis instead of reading it as a
+whole.
+\begin{description}
+\item[Center Threshold]
+	A rational value in $[0,1]$ larger or equal to Threshold.
+\item[Codomain]
+	A real vector space.
+\item[Data set]
+	A list of points in $D\times C$ where $D$ is the domain and $C$ is the
+	codomain.
+\item[Domain]
+	A domain $D$ is the cartesian product $\bigtimes_{i=1}^n D_i$ where
+	$D_i$ is a subset of either $\mathbb Z$, $\mathbb R$ or a
+	discrete finite subset of $\mathbb Q$. \ZK{In other places we use sets instead of finite subsets of Q?}
+\item[Feature]
+	Any column of a data set $\mathcal D$ is called a feature.
+\item[Instance]
+	A tuple
+	$(N,\mathcal N_D,o,\mathcal N_o)$ is called an instance if
+	$N$ is an NN over domain $D$, $\mathcal N_D$ is a data normalization,
+	$o$ is an objective function and
+	$\mathcal N_O$ is an objective normalization.
+	If -- in addition to an instance $I$ -- a data set $\mathcal D$ over $D$
+	is given, $(I,\mathcal D)$ is called a data instance.
+\item[NN]
+	Neural network as understood by the Keras API of Tensorflow in HDF5
+	format.
+	In particular, the \Solver only handles \api{Dense} layers with either
+	\api{relu} or \api{linear} activation function.
+	The input layer must be defined on domain $D$ and the output layer
+	must map to the codomain $C$.
+\item[Region]
+	Given a domain $D=\bigtimes_{i=1}^d D_i$, a region (in $D$) is a
+	product $\bigtimes_{i=1}^d C_i$ where
+	each $C_i\subseteq D_i$ is a finite union of compact intervals for
+	$i=1,\ldots,n$.
+	For discrete $D_i$, e.g., a subset of $\mathbb Z$,
+	$C_i$ is the finite union of point intervals.
+	Otherwise, $D_i$ is a bounded subset of $\mathbb R$ and $C_i$
+	corresponds to just one interval $[c_i\pm r_i]$ with center $c_i\in D_i$
+	and rational radius $r_i>0$.
+\item[Safe]
+	A region $R$ is considered safe (wrt.\ a given target function $f$) for a
+	constant $t\in\mathbb Q$ if $f$ satisfies $f(x)\geq t$
+	for all $x\in R$.
+\item[.spec]
+	Specification file describing the domain, codomain and regions in the
+	domain. Its format is a JSON list where the $i$-th entry corresponds to
+	the $i$-th column in the CSV describing the data set.
+
+	Given a data set and a .spec file, the components $D_i$ of the domain
+	are defined as $D_i=E_i(F_i)$ where
+	$E_i$ is called the embedding of $F_i$ into $D_i$ where $F_i$ is the
+	$i$-th input feature.
+%\item[Stable]
+\item[Target function]
+	The target function $f_I$ of an instance
+	$I=(N,\mathcal N_D,o,\mathcal N_o)$ is defined as the composition
+	$\mathcal N_o\circ o\circ\mathcal N_{D,\mathrm o}\circ
+	N\circ\mathcal N_{D,\mathrm i}$.
+	The target function $f_{I,\mathcal D}$ of a data instance
+	$(I,\mathcal D)$ is
+	$x\mapsto\min(\{f_I(x)\}\cup\{\mathcal N_o(o(y)):(x,y)\in\mathcal D\})$.
+\item[Threshold]
+	The threshold for a region $R$ and target function $f$ is defined
+	as the maximal $t\in\{t_1,\ldots,t_n\}\subset[0,1]\cap\mathbb Q$ for
+	which $R$ is safe wrt.\ $f$ for $t$ if it exists, and $-\infty$ otherwise.
+
+	The threshold for a domain $D$ and target function $f$ is defined
+	as the maximal $t\in\{t_1,\ldots,t_n\}\subset[0,1]\cap\mathbb Q$ for
+	which there is a region that is safe wrt.\ $f$ for $t$ if it exists, and
+	$-\infty$ otherwise.
+\end{description}
 
 \end{document}
