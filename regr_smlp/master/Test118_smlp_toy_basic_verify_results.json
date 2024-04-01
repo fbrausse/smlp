@@ -1,0 +1,22 @@
+{
+	"assert1": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"p1": 0.2,
+			"y2": 0.0,
+			"y1": 0.2,
+			"p2": 0.0
+		},
+		"assertion_feasible": true
+	},
+	"assert2": {
+		"configuration_consistent": "true",
+		"assertion_status": "PASS",
+		"counter_example": null,
+		"assertion_feasible": true
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}

@@ -1,0 +1,30 @@
+{
+	"objv1": {
+		"p1": 0.0,
+		"y2": 0.0,
+		"p2": 0.0,
+		"y1": 0.0,
+		"objv1_scaled": -0.022943015285783935,
+		"objv1": 0.0,
+		"threshold_lo_scaled": -0.022943015285783935,
+		"threshold_lo": -3.446522354111044e-18,
+		"threshold_up_scaled": 0.0,
+		"threshold_up": 0.24,
+		"max_in_data": 10.7007,
+		"min_in_data": 0.24
+	},
+	"objv2": {
+		"y2": 0.0,
+		"p1": 0.0,
+		"y1": 0.0,
+		"p2": 0.0,
+		"objv2_scaled": -0.010615194948015235,
+		"objv2": 0.0,
+		"threshold_lo_scaled": -0.010615194948015235,
+		"threshold_lo": 6.075535502916379e-17,
+		"threshold_up_scaled": 0.0,
+		"threshold_up": 1.0752000000000002,
+		"max_in_data": 102.36396627,
+		"min_in_data": 1.0752000000000002
+	}
+}

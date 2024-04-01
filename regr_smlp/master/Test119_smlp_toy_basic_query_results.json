@@ -1,0 +1,22 @@
+{
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"query1": {
+		"witness_exists": "false",
+		"stable_witness": "false",
+		"query_status": "UNSAT",
+		"query_witness": null
+	},
+	"query2": {
+		"witness_exists": "true",
+		"stable_witness": "true",
+		"query_status": "STABLE_SAT",
+		"query_witness": {
+			"p1": 0.0,
+			"y2": 0.0,
+			"p2": 0.0,
+			"y1": 0.0
+		}
+	},
+	"model_consistent": "true"
+}

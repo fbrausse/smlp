@@ -1,0 +1,29 @@
+{
+	"stable_witness": {
+		"witness_consistent": "true",
+		"witness_feasible": "true",
+		"witness_stable": "true",
+		"witness_status": "PASS"
+	},
+	"grid_conflict": {
+		"witness_consistent": "false",
+		"witness_feasible": "false",
+		"witness_stable": "false",
+		"witness_status": "ERROR"
+	},
+	"unstable_witness": {
+		"witness_consistent": "true",
+		"witness_feasible": "true",
+		"witness_stable": "false",
+		"witness_status": "FAIL"
+	},
+	"infeasible_witness": {
+		"witness_consistent": "true",
+		"witness_feasible": "false",
+		"witness_stable": "false",
+		"witness_status": "FAIL"
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}

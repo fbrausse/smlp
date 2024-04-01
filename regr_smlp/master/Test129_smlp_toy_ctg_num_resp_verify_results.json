@@ -1,0 +1,41 @@
+{
+	"stable_config": {
+		"configuration_consistent": "true",
+		"assertion_status": "PASS",
+		"counter_example": null,
+		"assertion_feasible": true
+	},
+	"grid_conflict": {
+		"configuration_consistent": "false",
+		"assertion_status": "ERROR",
+		"counter_example": null,
+		"assertion_feasible": "false"
+	},
+	"unstable_config": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"y2": 55.69463654220261,
+			"y1": -58.38640996591811,
+			"p2": 6.125,
+			"p1": 7.5,
+			"x": 1.0
+		},
+		"assertion_feasible": true
+	},
+	"not_feasible": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"y2": 55.69463654220261,
+			"y1": -58.38640996591811,
+			"p2": 6.125,
+			"p1": 7.5,
+			"x": 1.0
+		},
+		"assertion_feasible": false
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}
