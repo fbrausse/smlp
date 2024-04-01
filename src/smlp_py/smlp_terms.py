@@ -14,7 +14,7 @@ from fractions import Fraction
 import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables)
-from smlp_py.smlp_spec import SmlpSpec
+#from smlp_py.smlp_spec import SmlpSpec
 
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
@@ -106,9 +106,9 @@ class SmlpTerms:
         return res1 # form1 & form2
     
     def smlp_and_multi(self, form_list:list[smlp.form2]):
-        res = None
+        res = smlp.true
         for form in form_list:
-            res = form if res is None else self.smlp_and(res, form)
+            res = form if res is smlp.true else self.smlp_and(res, form)
         return res
     
     def smlp_or(self, form1:smlp.form2, form2:smlp.form2):
@@ -1132,7 +1132,7 @@ class ModelTerms(SmlpTerms):
         theta_form = smlp.true
         #print('radii_dict', radii_dict)
         radii_dict_local = radii_dict.copy() 
-        knobs = radii_dict_local.keys(); print('knobs', knobs); print('cex', cex); print('delta', delta_dict)
+        knobs = radii_dict_local.keys(); #print('knobs', knobs); print('cex', cex); print('delta', delta_dict)
         
         # use inputs in theta computation, by setting radii to 0, and use delta if specified (not None)
         if not universal and delta_rel is not None:
@@ -1179,10 +1179,10 @@ class ModelTerms(SmlpTerms):
             elif delta_dict is not None: 
                 raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified') 
             theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
-        print('theta_form', theta_form)
+        #print('theta_form', theta_form)
         return theta_form
     
-    # Creates eta constraints on control inputs (knobs) from the spec.
+    # Creates eta constraints on control parameters (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
     def compute_grid_range_formulae_eta(self):
         #print('generate eta constraint')
@@ -1205,13 +1205,6 @@ class ModelTerms(SmlpTerms):
                 
 
     # Compute formulae alpha, beta, eta from respective expression string.
-    # Their usage for single and pareto optimization tasks is as follows:
-    # /* optimize T in obj_range such that (assuming direction is >=):
-    # *
-    # * Ex. eta x /\ Ay. theta x y -> alpha y -> (beta y /\ obj y >= T)
-    # *
-    # * domain constraints from 'dom' have to hold for x and y.
-    # */
     def compute_input_ranges_formula_alpha(self, model_inputs):
         alpha_form = smlp.true
         alpha_dict = self._specInst.get_spec_alpha_bounds_dict; #print('alpha_dict', alpha_dict)
@@ -1317,93 +1310,53 @@ class ModelTerms(SmlpTerms):
                 raise Exception('Variables ' + str(dont_care_vars) + 
                     ' in knob constraints (eta) are not part of the model')
             return self._smlpTermsInst.ast_expr_to_term(eta_expr)
-        
-    # TODO !!! arguments  data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None are not used;
-    # they are taken forn previous implementations; need to check whether they are needed
+
+    def var_domain(self, var, spec_domain_dict):
+        interval = spec_domain_dict[var][self._specInst.get_spec_interval_tag];
+        if interval is None:
+            interval_has_none = True
+        elif interval[0] is None or interval[1] is None:
+            interval_has_none = True
+        else:
+            interval_has_none = False
+        if spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_integer_tag:
+            if self._declare_integer_as_real_with_grid and not interval_has_none:
+                var_component = smlp.component(smlp.Real, grid=list(range(interval[0], interval[1]+1)))
+                assert False
+            if self._declare_domain_interface_only or interval_has_none:
+                var_component = smlp.component(smlp.Integer)
+            else:
+                var_component = smlp.component(smlp.Integer, 
+                    interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
+        elif spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_real_tag:
+            if self._declare_domain_interface_only or interval_has_none:
+                var_component = smlp.component(smlp.Real)
+            else:
+                var_component = smlp.component(smlp.Real, 
+                    interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
+        return var_component
+    
+    # this function builds terms and formulas for constraints, system description and the models
     def create_model_exploration_base_components(self, syst_expr_dict:dict, algo, model, model_features_dict:dict, feat_names:list, resp_names:list, 
-            delta:float, epsilon, #objv_names, objv_exprs, asrt_names, asrt_exprs, quer_names, quer_exprs, 
-            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, scale_objv, 
-            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, 
+            float_approx=True, float_precision=64, data_bounds_json_path=None):
         self._smlp_terms_logger.info('Creating model exploration base components: Start')
-        print('data_bounds_json_path', data_bounds_json_path)
+        #print('data_bounds_json_path', data_bounds_json_path)
         self._smlp_terms_logger.info('Parsing the SPEC: Start')
-        #print('spec from SmlpSpec', self._specInst.spec);
         if data_bounds_json_path is not None:
             with open(data_bounds_json_path, 'r') as f:
                 data_bounds = json.load(f, parse_float=Fraction)
         else:
             raise Exception('Data bounds file cannot be loaded')
-        
         self._smlp_terms_logger.info('Parsing the SPEC: End') 
-        self._smlp_terms_logger.info('Building model terms: Start')
         
+        # get variable domains dictionary; certain sanity checks are performrd within this function.
         spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
-        domain_dict = {}
-        
-        #print('model_features_dict', model_features_dict, 'feat_names', feat_names)
-        interface_vars = feat_names + resp_names
-        for var,val_dict in spec_domain_dict.items():
-            if var not in interface_vars:
-                continue
-            interval = spec_domain_dict[var][self._specInst.get_spec_interval_tag];
-            if interval is None:
-                interval_has_none = True
-            elif interval[0] is None or interval[1] is None:
-                interval_has_none = True
-            else:
-                interval_has_none = False
-            if spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_integer_tag:
-                if self._declare_integer_as_real_with_grid and not interval_has_none:
-                    domain_dict[var] = smlp.component(smlp.Real, grid=list(range(interval[0], interval[1]+1)))
-                    assert False
-                    continue
-                if self._declare_domain_interface_only or interval_has_none:
-                    domain_dict[var] = smlp.component(smlp.Integer)
-                else:
-                    domain_dict[var] = smlp.component(smlp.Integer, 
-                        interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
-            elif spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_real_tag:
-                if self._declare_domain_interface_only or interval_has_none:
-                    domain_dict[var] = smlp.component(smlp.Real)
-                else:
-                    domain_dict[var] = smlp.component(smlp.Real, 
-                        interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
-
-        #print('domain_dict', domain_dict)
-        domain = smlp.domain(domain_dict)
-
-        if syst_expr_dict is not None:
-            self._smlp_terms_logger.info('Building system terms: Start')
-            for resp, syst_expr in syst_expr_dict.items():
-                feat = self.get_expression_variables(syst_expr)
-                if set(feat) != set(model_features_dict[resp]):
-                    print('resp', resp, 'syst_feat', feat, 'model_feat', model_features_dict[resp])
-                    raise Exception('System and model features do not match for response ' + str(resp))
-            #print('syst_expr_dict', syst_expr_dict)
-            system_term_dict = dict([(resp_name, self._smlpTermsInst.ast_expr_to_term(resp_expr)) \
-                for resp_name, resp_expr in syst_expr_dict.items()]); print('system_term_dict', system_term_dict); 
-            self._smlp_terms_logger.info('System terms dictionary: ' + str(system_term_dict))
-            self._smlp_terms_logger.info('Building system terms: End')
-        else:
-            system_term_dict = None
-        
-        # model terms with terms for scaling inputs and / or unscaling responses are all composed to 
-        # build model terms with inputs and outputs in the original scale. 
-        if algo == 'system':
-            if syst_expr_dict is None:
-                raise Exception('System must be specified when model training algorithm is "system"')
-            model_full_term_dict = system_term_dict
-        else:
-            model_full_term_dict = self.compute_models_terms_dict(algo, model, 
-                model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
-        self._smlp_terms_logger.info('Building model terms: End')
         
         # contraints on features used as control variables and on the responses
-        #alph_ranges = self.compute_input_ranges_formula_alpha(feat_names) 
         alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names) 
         alph_global = self.compute_global_alpha_formula(alph_expr, feat_names)
         alpha = self._smlpTermsInst.smlp_and(alph_ranges, alph_global)
-        #alpha = self.compute_global_alpha_formula(alph_expr, feat_names) 
         beta = self.compute_beta_formula(beta_expr, feat_names+resp_names)
         eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names)
         eta_grids = self.compute_grid_range_formulae_eta()
@@ -1419,7 +1372,62 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Eta   global   constraints: ' + str(eta_global))
         self._smlp_terms_logger.info('Eta   combined constraints: ' + str(eta))
         self._smlp_terms_logger.info('Creating model exploration base components: End')
-        return domain, system_term_dict, model_full_term_dict, eta, alpha, beta
+
+        # Create solver domain from the dictionary of varibale types, range and grid specificaton.
+        # First we create solver domain that includes declarations of inputs and knobs only, 
+        # in order to check consistency of alpha and eta constraints (without model constraints). 
+        # Then we create solver domain that includes declarations od inputs, knobs and outputs,
+        # and check consistency of alapha, eta and together with constraints that define the model.
+        domain_dict = {}
+        #print('model_features_dict', model_features_dict, 'feat_names', feat_names)
+        
+        # define domain from inputs and knobs only and check alpha and eta constraints are consistent
+        for var in feat_names:
+            domain_dict[var] = self.var_domain(var, spec_domain_dict)
+        domain_features = smlp.domain(domain_dict)
+        interface_consistent = self.check_alpha_eta_consistency(domain_features, None, alpha, eta, 'ALL')
+        if not interface_consistent:
+            return None, None, None, eta, alpha, beta, False, False
+        
+        # now define solver donain that includes input, knob and output dec;arations from spec file.
+        for var in resp_names:
+            domain_dict[var] = self.var_domain(var, spec_domain_dict)
+
+        #print('domain_dict', domain_dict)
+        domain = smlp.domain(domain_dict)
+
+        if syst_expr_dict is not None:
+            self._smlp_terms_logger.info('Building system terms: Start')
+            for resp, syst_expr in syst_expr_dict.items():
+                feat = self.get_expression_variables(syst_expr)
+                if set(feat) != set(model_features_dict[resp]):
+                    #print('resp', resp, 'syst_feat', feat, 'model_feat', model_features_dict[resp])
+                    raise Exception('System and model features do not match for response ' + str(resp))
+            #print('syst_expr_dict', syst_expr_dict)
+            system_term_dict = dict([(resp_name, self._smlpTermsInst.ast_expr_to_term(resp_expr)) \
+                for resp_name, resp_expr in syst_expr_dict.items()]); #print('system_term_dict', system_term_dict); 
+            self._smlp_terms_logger.info('System terms dictionary: ' + str(system_term_dict))
+            self._smlp_terms_logger.info('Building system terms: End')
+        else:
+            system_term_dict = None
+        
+        self._smlp_terms_logger.info('Building model terms: Start')
+        # model terms with terms for scaling inputs and / or unscaling responses are all composed to 
+        # build model terms with inputs and outputs in the original scale. 
+        if algo == 'system':
+            if syst_expr_dict is None:
+                raise Exception('System must be specified when model training algorithm is "system"')
+            model_full_term_dict = system_term_dict
+        else:
+            model_full_term_dict = self.compute_models_terms_dict(algo, model, 
+                model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
+        self._smlp_terms_logger.info('Building model terms: End')
+        
+        model_consistent = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, 'ALL')
+        if not model_consistent:
+            return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, True, False
+
+        return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent
     
     # create base solver instance with model constraints, declare logic and (non/)incremental mode
     def create_model_exploration_instance_from_smlp_components(self, domain, model_full_term_dict, incremental, logic):
@@ -1438,4 +1446,30 @@ class ModelTerms(SmlpTerms):
                 #base_solver.add(smlp.Var(resp_name) == resp_term)
                 base_solver.add(op.eq(smlp.Var(resp_name), resp_term))
         return base_solver
+    
+    # function to check that alpha and eta constraints on inputs and knobs are consistent.
+    # TODO: model_full_term_dict is not required here but omiting it causes z3 error 
+    # result smlp::z3_solver::check(): Assertion `m.num_consts() == size(symbols)' failed.
+    # This is likely because the domain declares model outputs as well and without 
+    # model_full_term_dict these outputs have no logic (no definition). This function is
+    # not a performance bottleneck, but if one wants to speed it up one solution could be
+    # to create alpha_eta domain without declaring the outputs and feed it to this function 
+    # instead of the domain that contains output declarations as well (the argument 'domain').
+    def check_alpha_eta_consistency(self, domain:smlp.domain, model_full_term_dict:dict, 
+            alpha:smlp.form2, eta:smlp.form2, solver_logic:str):
+        solver = self.create_model_exploration_instance_from_smlp_components(
+            domain, model_full_term_dict, False, solver_logic)
+        solver.add(alpha); #print('alpha', alpha)
+        solver.add(eta); #print('eta', eta)
+        res = solver.check(); #print('res', res)
+        consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'
+        if isinstance(res, smlp.sat):
+            self._smlp_terms_logger.info(consistency_type + ' interface constraints are consistent')
+            interface_consistent = True
+        elif isinstance(res, smlp.unsat):
+            self._smlp_terms_logger.info(consistency_type + ' interface constraints are inconsistent')
+            interface_consistent = False
+        else:
+            raise Exception('alpha and eta cosnsistency check failed to complete')
+        return interface_consistent
 

@@ -416,7 +416,9 @@ class SmlpData:
     # both to features and to responses, in training data only (not new data)
     def _drop_constant_features(self, df, data_name):
         constant_cols = []
+        #print('df\n', df)
         for col in df.columns.tolist():
+            #print('df[col]', df[col]); print('df[col].dropna()', df[col].dropna())
             unique_vals = df[col].dropna().unique()
             if len(unique_vals) == 0:
                 constant_cols.append(col)
@@ -685,7 +687,7 @@ class SmlpData:
         self._data_logger.info('data summary\n' + str(data.describe()))
         #plot_data_columns(data)
         self._data_logger.info(data_version_str + ' data\n' + str(data))
-        
+         
         # sanity-check the response names aginst input data
         is_training = data_version_str == 'training'
         new_labeled = self._sanity_check_responses(data, resp_names, is_training)
@@ -698,7 +700,7 @@ class SmlpData:
             assert feat_names_dict is not None
             #print('feat_names_dict', feat_names_dict)
             feat_names = lists_union_order_preserving_without_duplicates(list(feat_names_dict.values()))
-            
+          
         if is_training:
             feat_names_dict = {}
             for rn in resp_names:
@@ -710,7 +712,7 @@ class SmlpData:
             data = data[feat_names + resp_names]
         else:
             data = data[feat_names]
-        #print('data 0\n', data)
+        #print('data 0\n', data); assert False
         
         # in training data, drop all rows where at least one response has a missing value
         if is_training:

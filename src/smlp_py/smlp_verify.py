@@ -104,11 +104,17 @@ class SmlpVerify:
             self._query_logger.error('Assertions were not specified in the "verify" mode: aborting...')
             return
         
-        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
-            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, None, None, 
-            alph_expr, None, None, data_scaler, scale_feat, scale_resp, None, 
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = self._modelTermsInst.create_model_exploration_base_components(
+            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
+            alph_expr, None, None, data_scaler, scale_feat, scale_resp,  
             float_approx, float_precision, data_bounds_json_path)
         #print('eta', eta); print('alpha', alpha); print('beta',  beta)
+        '''
+        certify_witness(self, universal:bool, model_full_term_dict:dict, quer_name:str, quer_expr:str, quer:smlp.form2, witn_dict:dict,
+            domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict, #beta:smlp.form2, 
+            delta:float, solver_logic:str, witn:bool, sat_approx:bool, sat_precision:int)
+        '''
+
         asrt_forms_dict = dict([(asrt_name, self._smlpTermsInst.ast_expr_to_term(asrt_expr)) \
                 for asrt_name, asrt_expr in zip(asrt_names, asrt_exprs)])
         for i, form in enumerate(asrt_forms_dict.values()):

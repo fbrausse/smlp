@@ -98,8 +98,11 @@ class SmlpSpec:
         # eta -- global constraints on knobs (in addition to eta constraints derived from knob ranges and grids).
         self._eta_global_expr = None
         
-        # witnesses to queries, for certify mode; supposed to include assignements to inputs, not only and knobs
+        # witnesses to queries, for certify mode; supposed to include assignements to inputs and knobs
         self._witn_dict = None
+        
+        # configurations to assertions, for verify mode; supposed to include assignements to knobs only (not inputs)
+        self._config_dict = None
         
         # feilds in spec file defining specification of each variable
         self._SPEC_DICTIONARY_VERSION = 'version'
@@ -108,6 +111,7 @@ class SmlpSpec:
         self._SPEC_DICTIONARY_QUERIES = 'queries'
         self._SPEC_DICTIONARY_OBJECTIVES = 'objectives'
         self._SPEC_DICTIONARY_WITNESSES = 'witnesses'
+        self._SPEC_DICTIONARY_CONFIGS = 'configurations'
         self._SPEC_DICTIONARY_ALPHA = 'alpha' # global constraints on inputs -- knobs and free inputs
         self._SPEC_DICTIONARY_BETA = 'beta' # global interface costraints to be valid during optimization and tuning
         self._SPEC_DICTIONARY_ETA = 'eta' # global constraints on knobs (during candidate search)
@@ -129,9 +133,26 @@ class SmlpSpec:
         self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
         self._SPEC_DICTIONARY_SYSTEM = None
         
+        # tracks changes ib spec file token names per spec version
+        self._spec_tokens_dict = {
+            self._SPEC_VARIABLE_LABEL : {'1.1': 'label', '1.2': 'label'},
+            self._SPEC_VARIABLE_TYPE : {'1.1': 'type', '1.2': 'interface'},
+            self._SPEC_INPUT_TAG : {'1.1': 'input', '1.2': 'input'},
+            self._SPEC_KNOB_TAG : {'1.1': 'knob', '1.2': 'knob'},
+            self._SPEC_OUTPUT_TAG : {'1.1': 'response', '1.2': 'output'},
+            self._SPEC_INPUTS_BOUNDS : {'1.1': 'bounds', '1.2': 'range'},
+            self._SPEC_KNOBS_GRID : {'1.1': 'grid', '1.2': 'grid'},
+            self._SPEC_KNOBS_ABSOLUTE_RADIUS : {'1.1': 'rad-abs', '1.2': 'rad-abs'},
+            self._SPEC_KNOBS_RELATIVE_RADIUS : {'1.1': 'rad-rel', '1.2': 'rad-rel'},
+            self._SPEC_VARIABLE_RANGE : {'1.1': 'range', '1.2': 'type'},
+            self._SPEC_RANGE_REAL : {'1.1': 'float', '1.2': 'real'},
+            self._SPEC_DICTIONARY_SPEC : {'1.1': 'spec', '1.2': 'variables'}
+        }
+        
     # used by external scripts to set spec version while generating a spec file
     def set_spec_version(self, version:str):
         self.version = version
+    
         
     # tokens used in spec file per version -- might change from version to version, required for backward compatibility.
     def set_spec_tokens(self):
@@ -214,14 +235,71 @@ class SmlpSpec:
                             ' contains a non-knob variable ' + str() + '; aborting...')
                         raise Exception('ETA global constraint can only contain knobs')
         
-        # sanity check witnesses: query names in witnesses specification must be some of the query names
+        # sanity check witnesses: query names in witnesses specification must be among query names
         if self.get_spec_witn_dict is not None and self.get_spec_quer_exprs_dict is not None:
             witn_queries = set(self.get_spec_witn_dict.keys())
             queries = set(self.get_spec_quer_exprs_dict)
             if not witn_queries.issubset(queries):
                 raise Exception('Query names ' + str(witn_queries.difference(queries)) + 
                     ' used for specifying witnesses are not specified among the queries ' + str(queries))
+                
+        # sanity check knob cinfigs: assertion names in knob config specification must be among  assertion names
+        if self.get_spec_config_dict is not None and self.get_spec_asrt_exprs_dict is not None:
+            config_asserts = set(self.get_spec_config_dict.keys())
+            asserts = set(self.get_spec_asrt_exprs_dict)
+            if not config_asserts.issubset(asserts):
+                raise Exception('Assertion names ' + str(config_asserts.difference(asserts)) + 
+                    ' used for specifying knob configurations are not specified among the assertions ' + str(asserts))
     
+    def upgrade_spec(self, spec_dict, source_version, target_version):
+        spec_new_dict = {}
+        print('varoiables ?', self._SPEC_DICTIONARY_SPEC)
+        print('spec tokens dict vals', self._spec_tokens_dict.values())
+        def upgrade_token(token):
+            for version_vals in self._spec_tokens_dict.values():
+                print('version_vals', version_vals)
+                token_val_source = version_vals[source_version]; print('token_val_source', token_val_source)
+                token_val_target = version_vals[target_version]; print('token_val_target', token_val_target)
+                if token_val_source == token:
+                    print('match', token)
+                    assert False
+                    return token_val_target
+        for k,v in spec_dict.items():
+            print('k', k, 'v', v)
+            if k == self._SPEC_DICTIONARY_VERSION:
+                print('processing version')
+                spec_new_dict[self._SPEC_DICTIONARY_VERSION] = target_version
+            elif k == self._SPEC_DICTIONARY_SPEC:
+                print('processing variables')
+                vars = []
+                for var_spec in spec_dict[self._SPEC_DICTIONARY_SPEC]:
+                    var_spec_new = {}
+                    '''
+                    for token, version_vals in self._spec_tokens_dict.items():
+                        print('token', token, 'version_vals', version_vals)
+                        #token_source = 
+                        token_val_source = version_vals[source_version]; print('token_val_source', token_val_source)
+                        token_val_target = version_vals[target_version]; print('token_val_target', token_val_target)
+                    '''
+                    for var_spec_token, var_spec_val in var_spec.items():
+                        print('var_spec_token', var_spec_token, 'var_spec_val', var_spec_val)
+                        var_spec_token_target = upgrade_token(var_spec_token)
+                        var_spec_val_target = upgrade_token(var_spec_val)
+                        print('replace', var_spec_token, 'with', var_spec_token_target)
+                        print('replace', var_spec_val, 'with', var_spec_val_target)
+                        var_spec_new[var_spec_token_target] = var_spec_val_target
+                        #if token_val_source == var_spec_token:
+                        #    print('match')
+                        #    var_spec_new[self._spec_tokens_dict[token][target_version]] = val
+                    print('var_spec_new', var_spec_new)
+                    vars.append(var_spec_new)
+                spec_new_dict[ self._spec_tokens_dict[self._SPEC_DICTIONARY_SPEC]] = vars
+            else:
+                spec_new_dict[k] = v
+        print('spec_new_dict', spec_new_dict); assert False
+        return spec_new_dict
+                    
+        
     def set_spec_file(self, spec_file):
         if spec_file is None:
             return
@@ -236,10 +314,11 @@ class SmlpSpec:
             self.set_spec_tokens()
             assert self._SPEC_DICTIONARY_VERSION in spec_dict.keys()
             assert self._SPEC_DICTIONARY_SPEC in spec_dict.keys()
+            print(set(spec_dict.keys()))
             assert (set(spec_dict.keys())).issubset({self._SPEC_DICTIONARY_VERSION, self._SPEC_DICTIONARY_SPEC,
                 self._SPEC_DICTIONARY_ASSERTIONS, self._SPEC_DICTIONARY_OBJECTIVES, self._SPEC_DICTIONARY_QUERIES,
                 self._SPEC_DICTIONARY_ALPHA, self._SPEC_DICTIONARY_BETA, self._SPEC_DICTIONARY_ETA, 
-                self._SPEC_DICTIONARY_SYSTEM_TAG, self._SPEC_DICTIONARY_WITNESSES})
+                self._SPEC_DICTIONARY_SYSTEM_TAG, self._SPEC_DICTIONARY_WITNESSES, self._SPEC_DICTIONARY_CONFIGS})
             self.spec_dict = spec_dict
             self.spec = spec_dict[self._SPEC_DICTIONARY_SPEC]; 
             self.version = spec_dict[self._SPEC_DICTIONARY_VERSION]
@@ -247,6 +326,8 @@ class SmlpSpec:
             #self._spec_logger.info(json.stringif(self.spec_dict, ensure_ascii=False, indent='\t', cls=np_JSONEncoder)) #parse_float=Fraction
             #self.set_spec_tokens()
             self.sanity_check_spec()
+            print(self._SPEC_DICTIONARY_SPEC); 
+            #self.upgrade_spec(spec_dict, '1.1', '1.2')
 
     # Override relative and absolute radii values supplied in the spec file
     def set_radii(self, rad_abs, rad_rel):
@@ -309,6 +390,9 @@ class SmlpSpec:
     # firmula knob1=5 and knob2=3, which assigns values 5 and 3 to knobs knob1 and knob2,
     # but we want to avoid extra check for global eta constrainst required to understand 
     # whether all knobs are forced to exacly one value, thus the above methodology convention.
+    # TODO !!!!!!!!! add argument 'witness_dict'; the first two checks must be performed anyway
+    # raise Exception() checks, while the rest only when witness_dict is None/not provided
+    # in spec with "witnesses" feild. Same fpr sanity check foe certification mode.
     def sanity_check_verification_spec(self):
         if self.get_spec_asrt_exprs_dict is None:
             raise Exception('Assertions are not specified in "verify" mode: aborting...')
@@ -317,6 +401,7 @@ class SmlpSpec:
         spec_knobs = self.get_spec_knobs
         non_constant_knobs = []
         knobs_without_range_and_grid = []
+        witness = {}
         for var_spec in self.spec:
             if not var_spec[self._SPEC_VARIABLE_LABEL] in spec_knobs:
                 continue
@@ -326,19 +411,59 @@ class SmlpSpec:
                     raise Exception('Knob' + str(self._SPEC_VARIABLE_LABEL) + ' has an empty grid')
                 if len(var_spec[self._SPEC_KNOBS_GRID]) > 1:
                     non_constant_knobs.append(var_spec[self._SPEC_VARIABLE_LABEL])
+                else:
+                    witness[var_spec[self._SPEC_VARIABLE_LABEL]] = var_spec[self._SPEC_KNOBS_GRID][0]
                 continue
             elif self._SPEC_INPUTS_BOUNDS in var_spec.keys():
                 if var_spec[self._SPEC_INPUTS_BOUNDS][0] != var_spec[self._SPEC_INPUTS_BOUNDS][1]:
                     non_constant_knobs.append(var_spec[self._SPEC_VARIABLE_LABEL])
+                else:
+                    #var_spec[self._SPEC_KNOBS_GRID] = [var_spec[self._SPEC_INPUTS_BOUNDS][0]]
+                    witness[var_spec[self._SPEC_VARIABLE_LABEL]] = var_spec[self._SPEC_INPUTS_BOUNDS][0]
                 continue
             else:
                 knobs_without_range_and_grid.append(var_spec[self._SPEC_VARIABLE_LABEL])
         
         if len(non_constant_knobs) > 0:
-            raise Exception('Knobs ' + str(non_constant_knobs) + ' are not assigned constant values as part of specification, in "verify" mode: aborting...')
+                raise Exception('Knobs ' + str(non_constant_knobs) + ' are not assigned constant values as part of specification, in "verify" mode: aborting...')
         if len(knobs_without_range_and_grid) > 0:
             raise Exception('Knobs ' + str(knobs_without_range_and_grid) + ' have neither ranges nor grids specified, in "varify" mode: aborting...')
+        return witness
             
+    def sanity_check_certification_spec(self):
+        print(self.get_spec_witn_dict)
+        if self.get_spec_witn_dict is not None:
+            return self.get_spec_witn_dict
+        non_constant_knobs_inputs = []
+        knobs_without_range_and_grid = []
+        witness = {}
+        for var_spec in self.spec:
+            if not var_spec[self._SPEC_VARIABLE_LABEL] in self.get_spec_knobs +  self.get_spec_inputs:
+                continue
+            #print('knob spec', var_spec)
+            if self._SPEC_KNOBS_GRID in var_spec.keys():
+                if len(var_spec[self._SPEC_KNOBS_GRID]) == 0:
+                    raise Exception('Knob' + str(self._SPEC_VARIABLE_LABEL) + ' has an empty grid')
+                if len(var_spec[self._SPEC_KNOBS_GRID]) > 1:
+                    non_constant_knobs_inputs.append(var_spec[self._SPEC_VARIABLE_LABEL])
+                else:
+                    witness[var_spec[self._SPEC_VARIABLE_LABEL]] = var_spec[self._SPEC_KNOBS_GRID][0]
+                continue
+            elif self._SPEC_INPUTS_BOUNDS in var_spec.keys():
+                if var_spec[self._SPEC_INPUTS_BOUNDS][0] != var_spec[self._SPEC_INPUTS_BOUNDS][1]:
+                    non_constant_knobs_inputs.append(var_spec[self._SPEC_VARIABLE_LABEL])
+                else:
+                    #var_spec[self._SPEC_KNOBS_GRID] = [var_spec[self._SPEC_INPUTS_BOUNDS][0]]
+                    witness[var_spec[self._SPEC_VARIABLE_LABEL]] = var_spec[self._SPEC_INPUTS_BOUNDS][0]
+                continue
+            else:
+                knobs_without_range_and_grid.append(var_spec[self._SPEC_VARIABLE_LABEL])
+        
+        if len(non_constant_knobs_inputs) > 0:
+            raise Exception('Knobs/Inputs ' + str(non_constant_knobs_inputs) + ' are not assigned constant values as part of specification, in "certify" mode: aborting...')
+        if len(knobs_without_range_and_grid) > 0:
+            raise Exception('Knobs ' + str(knobs_without_range_and_grid) + ' have neither ranges nor grids specified, in "certify" mode: aborting...')
+        return witness
     
     # API to extract from spec a global alpha constraint defined using feild "alpha"
     @property
@@ -482,6 +607,15 @@ class SmlpSpec:
             self._witn_dict = None  
         return self._witn_dict
         
+    @property
+    def get_spec_config_dict(self):
+        #print('self.spec_dict.keys()', self.spec_dict.keys(), self._SPEC_DICTIONARY_WITNESSES)
+        if self._SPEC_DICTIONARY_CONFIGS in self.spec_dict.keys():
+            self._config_dict = self.spec_dict[self._SPEC_DICTIONARY_CONFIGS]
+        else:
+            self._config_dict = None  
+        return self._config_dict
+    
     def get_spec_component_exprs(self, alph_cmdl, beta_cmdl, delta_abs_cmdl, delta_rel_cmdl, asrt_names_cmdl, asrt_exprs_cmdl,
              quer_names_cmdl, quer_exprs_cmdl, objv_names_cmdl, objv_exprs_cmdl, resp_names, cmdl_cond_sep):
         assert self.spec is not None
@@ -525,6 +659,9 @@ class SmlpSpec:
         # witnesses
         witn_dict = self.get_spec_witn_dict
         
+        # knob configurations
+        config_dict = self.get_spec_config_dict
+        
         self._spec_logger.info('Computed spec global constraint expressions:')
         self._spec_logger.info('Global alpha : ' + str(alph_expr))
         self._spec_logger.info('Global beta  : ' + str(beta_expr))
@@ -537,8 +674,15 @@ class SmlpSpec:
             for n, e in quer_expr_dict.items():
                 self._spec_logger.info('Query ' + str(n) + ': ' + str(e))
         if witn_dict is not None:
-            for n, w in quer_expr_dict.items():
-                self._spec_logger.info('Witness to ' + str(n) + ': ' + str(w))
+            if quer_expr_dict is not None:
+                for n, w in quer_expr_dict.items():
+                    if n in witn_dict.keys():
+                        self._spec_logger.info('Witness to query ' + str(n) + '\n' + str(witn_dict[n]))
+        if config_dict is not None:
+            if asrt_expr_dict is not None:
+                for n, w in asrt_expr_dict.items():
+                    if n in config_dict.keys():
+                        self._spec_logger.info('Configuration for assertion ' + str(n) + ':\n' + str(config_dict[n]))
         if objv_expr_dict is not None:
             for n, e in objv_expr_dict.items():
                 self._spec_logger.info('Objective ' + str(n) + ': ' + str(e))
@@ -550,7 +694,7 @@ class SmlpSpec:
         
         self.sanity_check_spec()
         return (alph_expr, beta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs, 
-            quer_names, quer_exprs, witn_dict, objv_names, objv_exprs, system)
+            quer_names, quer_exprs, config_dict, witn_dict, objv_names, objv_exprs, system)
     
         
         
@@ -658,9 +802,8 @@ class SmlpSpec:
         self._spec_logger.info('Variable domains (alpha): ' + str(self._domain_dict))
         return self._domain_dict
     
-    # Create dictionary that maps input variables (free inputs and knobs) to respective
-    # domains specified as a closed interval. Other constraints on domains of inputs can
-    # be specified using command line option -alpha
+    # Create dictionary that maps inputs and knobs to respective domains specified as a closed interval.
+    # Other constraints on domains of inputs can be specified using command line option -alpha.
     @property
     def get_spec_alpha_bounds_dict(self):
         if self._alpha_ranges_dict is not None:
@@ -674,7 +817,7 @@ class SmlpSpec:
                 assert var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_INPUT_TAG or \
                     var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_KNOB_TAG
                 if  var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_KNOB_TAG:
-                    continue #########
+                    continue 
                 mn = var_spec[self._SPEC_INPUTS_BOUNDS][0]
                 mx = var_spec[self._SPEC_INPUTS_BOUNDS][1]
                 if mn is not None and mx is not None:
@@ -773,4 +916,10 @@ class SmlpSpec:
             for witn in self._witn_dict.values():
                 #print('witn.keys()', witn.keys())
                 constraints_vars = constraints_vars + list(witn.keys())
+                
+        if self._config_dict is not None:
+            for config in self._config_dict.values():
+                #print('config.keys()', config.keys())
+                constraints_vars = constraints_vars + list(config.keys())
+        
         return list_unique_unordered(constraints_vars)

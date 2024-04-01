@@ -257,7 +257,7 @@ class SmlpOptimize:
             quer_res = self._queryInst.query_condition(
                 True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision); #print('quer_res', quer_res) 
-            stable_witness_status = quer_res['status']
+            stable_witness_status = quer_res['query_status']
             stable_witness_terms = quer_res['witness']
             #print('quer_res', quer_res)
             if stable_witness_status == 'UNSAT':
@@ -679,7 +679,7 @@ class SmlpOptimize:
                 #print('objv_bounds_in_search', objv_bounds_in_search)
                 if raised_count == len(K) - 1:
                     quer_res = {}
-                    quer_res['status'] = 'UNSAT'
+                    quer_res['query_status'] = 'UNSAT'
                 else:    
                     self._opt_logger.info('Checking whether to fix objective {} at threshold {}...\n'.format(str(j), str(s[j])))
                     #print('objv_terms_dict', objv_terms_dict)
@@ -693,7 +693,7 @@ class SmlpOptimize:
                     quer_res = self._queryInst.query_condition(True, model_full_term_dict, opt_quer_name, 'True', quer_and_beta, 
                         smlp_domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, sat_approx, sat_precision)
                 #print('quer_res', quer_res)
-                if quer_res['status'] != 'STABLE_SAT':
+                if quer_res['query_status'] != 'STABLE_SAT':
                     self._opt_logger.info('Fixing objective {} at threshold {}...\n'.format(str(j), str(s[j])))
                     assert j not in fixed_onjv_dict.keys()
                     fixed_onjv_dict[j] = s[j]
@@ -730,8 +730,8 @@ class SmlpOptimize:
         self._opt_logger.info('Pareto optimization: End')
         return s
     
-    # vacuity check of the constraints on solver instance in optimization and tuning modes; these constraints 
-    # do not include constraints imposed on the optimization / tuning objectives as part of optimization algo
+    # vacuity check of the constraints on solver instance in optimization and optsyn modes; these constraints 
+    # do not include constraints imposed on the optimization / optsyn objectives as part of optimization algo
     # in these two modes.
     def check_vacuity(self, vacuity:bool, objv_names:list[str], objv_exprs:list[str], objv_bounds_dict:dict, 
             scale_objv:bool, feat_names:list[str], resp_names:list[str], model_full_term_dict:dict, beta:smlp.form2, 
@@ -741,11 +741,11 @@ class SmlpOptimize:
             self._opt_logger.info('Pareto optimization vacuity check: Start')
             quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'consistency_check', 'True', beta, 
                 domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
-            #print('quer_res', quer_res)
-            if quer_res['status'] == 'UNSAT':
+            print('quer_res', quer_res)
+            if quer_res['query_status'] == 'UNSAT':
                 self._opt_logger.info('Pareto optimization vacuity check: End')
                 return True, None
-            elif quer_res['status'] == 'STABLE_SAT':
+            elif quer_res['query_status'] == 'STABLE_SAT':
                 witness_vals_dict = quer_res['witness']; #print('witness_vals_dict', witness_vals_dict)
                 s = []
                 for objv_name, objv_expr in zip(objv_names, objv_exprs):
@@ -785,17 +785,16 @@ class SmlpOptimize:
         self.syst_expr_dict = syst_expr_dict
         self._sat_thresholds = sat_thresholds
         
-        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = self._modelTermsInst.create_model_exploration_base_components(
             syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
-            delta, epsilon, #objv_names, objv_exprs, None, None, None, None, 
-            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
+            #delta, epsilon, #objv_names, objv_exprs, None, None, None, None, 
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
         
         # TODO !!!: when re-using a saved model, X and y are not available, need to adapt computation of 
         # objv_bounds_dict for that case -- say simulate the model, then compute objectives' values
         # for these simulation vectors, them compute the bounds on the objectives from simulation data
         objv_bounds_dict = self.compute_objectives_bounds(X, y, objv_names, objv_exprs); #print('objv_bounds_dict', objv_bounds_dict)
-        
         self.objv_bounds_dict = objv_bounds_dict
         
         # instance consistency check (are the assumptions contradictory?)
@@ -833,10 +832,10 @@ class SmlpOptimize:
         self.syst_expr_dict = syst_expr_dict
         self._sat_thresholds = sat_thresholds
         
-        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = self._modelTermsInst.create_model_exploration_base_components(
             syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
-            delta, epsilon, #objv_names, objv_exprs, asrt_names, asrt_exprs, None, None, 
-            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
+            #delta, epsilon, #objv_names, objv_exprs, asrt_names, asrt_exprs, None, None, 
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
 
         # TODO !!!: when re-using a saved model, X and y are not available, need to adapt computation of 

@@ -54,9 +54,14 @@ class SmlpQuery:
         return self.report_file_prefix + '_certify_results.json'
     
     @property
+    def verify_results_file(self):
+        assert self.report_file_prefix is not None
+        return self.report_file_prefix + '_verify_results.json'
+    
+    @property
     def synthesis_results_file(self):
         assert self.report_file_prefix is not None
-        return self.report_file_prefix + '_synthesis_results.json'
+        return self.report_file_prefix + '_synthesize_results.json'
     
     def find_candidate(self, solver):
         cand_found = solver.check()
@@ -65,13 +70,36 @@ class SmlpQuery:
         else:
             return cand_found
     
+    
+    def get_model_exploration_base_components(self, mode_status_dict, results_file,
+            syst_expr_dict:dict, algo, model, model_features_dict:dict, feat_names:list, resp_names:list, 
+            alph_expr:str, beta_expr:str, eta_expr:str, data_scaler, scale_feat, scale_resp, 
+            float_approx=True, float_precision=64, data_bounds_json_path=None):
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = \
+        self._modelTermsInst.create_model_exploration_base_components(
+                syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
+                alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, 
+                float_approx, float_precision, data_bounds_json_path)
+        
+        mode_status_dict['interface_consistent'] = str(interface_consistent).lower()
+        mode_status_dict['model_consistent'] = str(model_consistent).lower()
+        if not interface_consistent or not model_consistent:
+            mode_status_dict['smlp_execution'] = 'aborted'
+            with open(results_file, 'w') as f:
+                json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+            self._query_logger.info('Input and knob interface constraints are inconsistent; aborting...')
+            return domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent
+        with open(results_file, 'w') as f:
+            json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+        return domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent
+        
     # function to check that alpha and eta constraints on inputs and knobs are consistent.
     # TODO: model_full_term_dict is not required here but omiting it causes z3 error 
     # result smlp::z3_solver::check(): Assertion `m.num_consts() == size(symbols)' failed.
-    # This is likely because the domain declares mosel outputs as well and without 
+    # This is likely because the domain declares model outputs as well and without 
     # model_full_term_dict these outputs have no logic (no definition). This function is
     # not a performance bottleneck, but if one wants to speed it up one solution could be
-    # to create alpha_eta domain without declaring the outputs and feed it to thos function 
+    # to create alpha_eta domain without declaring the outputs and feed it to this function 
     # instead of the domain that contains output declarations as well (the argument 'domain').
     def check_alpha_eta_consistency(self, domain:smlp.domain, model_full_term_dict:dict, 
             alpha:smlp.form2, eta:smlp.form2, solver_logic:str, mode_status_dict:dict=None):
@@ -93,7 +121,27 @@ class SmlpQuery:
             #with open(self.certify_results_file, 'w') as f:
             #    json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
         return mode_status_dict
-    
+
+
+    # consistenct check of alpha, eta constraints and model terms defining model outputs
+    def check_interface_constraints_consistency(self, syst_expr_dict, algo, model, model_features_dict, 
+            feat_names, resp_names, alph_expr, beta_expr, eta_expr, solver_logic, data_scaler, 
+            scale_feat, scale_resp, mode_status_dict, 
+            float_approx, float_precision, data_bounds_json_path):
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = self.create_model_exploration_base_components(
+            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, 
+            float_approx, float_precision, data_bounds_json_path)
+        mode_status_dict = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, solver_logic, mode_status_dict)
+        #with open(results_file, 'w') as f:
+        #    json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+
+        if mode_status_dict['interface_consistent'] == 'false':
+            mode_status_dict['smlp_execution'] = 'aborted'
+            #with open(results_file, 'w') as f:
+            #    json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+            self._query_logger.info('Input and knob interface constraints are inconsistent; aborting...')
+            return            
     
     # TODO !!! instead of using witn_form, bind inputs and knobs to their values by directly 
     # applying solver.add(var == val) or directly substituting these values in other formulas --
@@ -122,82 +170,128 @@ class SmlpQuery:
         solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
             domain, model_full_term_dict, False, solver_logic)
         theta = self._modelTermsInst.compute_stability_formula_theta(cand, None, theta_radii_dict, universal) 
-        solver.add(theta)
-        solver.add(alpha)
-        solver.add(self._smlpTermsInst.smlp_not(query))
+        solver.add(theta); #print('adding theta', theta)
+        solver.add(alpha); #print('adding alpha', alpha)
+        solver.add(self._smlpTermsInst.smlp_not(query)); #print('adding negated quert', query)
         return solver.check() # returns UNSAT or a single SAT model
 
     # TODO !!!: at least add here the delta condition
     def generalize_counter_example(self, coex):
         return coex
-    # TODO !!! extend to concrete witness
-    def certify_witness(self, universal:bool, model_full_term_dict:dict, quer_name:str, quer_expr:str, quer:smlp.form2, witn_dict:dict,
+    
+    # This function is called from validate_witness() on already built model terms and formulas for constraints.
+    # It check stability of witness given as witn_dict, which in case universal == True is a value assignements to knobs,
+    # and in case universal = False is a value assignement to both knobs as well as inputs. 
+    def validate_witness_smt(self, universal:bool, model_full_term_dict:dict, quer_name:str, quer_expr:str, quer:smlp.form2, witn_dict:dict,
             domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict, #beta:smlp.form2, 
             delta:float, solver_logic:str, witn:bool, sat_approx:bool, sat_precision:int):
-        self._query_logger.info('Certifying stability of witness for query ' + str(quer_name) + ':\n   ' + str(witn_dict))
+        if universal:
+            self._query_logger.info('Verifying assertion {} <-> {}'.format(str(quer_name), str(quer_expr)))
+        else:
+            self._query_logger.info('Certifying stability of witness for query ' + str(quer_name) + ':\n   ' + str(witn_dict))
         candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
             domain, model_full_term_dict, True, solver_logic)
         
+        cond_feasible = None
         # add the remaining user constraints and the query
-        candidate_solver.add(eta); #print('eta', eta)
-        candidate_solver.add(alpha); #print('alpha', alpha)
+        candidate_solver.add(eta); #print('adding eta', eta)
+        candidate_solver.add(alpha); #print('adding alpha', alpha)
         #candidate_solver.add(beta)
-        candidate_solver.add(quer); #print('quer', quer)
+        candidate_solver.add(quer); #print('adding quer', quer)
+        #print('adding witn_dict', witn_dict)
         for var,val in witn_dict.items():
             #candidate_solver.add(smlp.Var(var) == smlp.Cnst(val))
             candidate_solver.add(self._smlpTermsInst.smlp_eq(smlp.Var(var), smlp.Cnst(val)))
         
         candidate_check_res = candidate_solver.check() 
         if isinstance(candidate_check_res, smlp.sat):
-            self._query_logger.info('Witness to query ' + str(quer_name) + ' is a valid witness; checking its stability')
+            cond_feasible = True
+            if universal:
+                self._query_logger.info('The configuration is consistent with assertion ' + str(quer_name))
+            else:
+                self._query_logger.info('Witness to query ' + str(quer_name) + ' is a valid witness; checking its stability')
         elif isinstance(candidate_check_res, smlp.unsat):
-            self._query_logger.info('Witness to query ' + str(quer_name) + ' is not a valid witness (even without stability requirements)')
-            return 'not a witness'
+            cond_feasible = False
+            if universal:
+                # Assertion cannot be satisfied (is constant False) given the knob configuration and the constraints.
+                # Its negation will be true for any legal inputs, which means that the assertion fails everywhere in the
+                # legal input space. This is useful info because in such a case maybe the problem instance (assertion or 
+                # constraints) were not specified correctly. Also, if such a case is found as part of an optimization 
+                # procedure (where assertion is of the form objective >= threshold), the get a "general" counter-example
+                # and the entire legal input space can be ruled out from the consequtive search.
+                # In this implementation, we do not exist here and continue in order to generate a counter-example.
+                # We could also use a sat assignement found in feasibility check for that purpose.
+                # When used in optimization context, one could return here the generalized counter-example that rules
+                # out the entire legal spece (while dealing with that assertion / that objective and threshold).
+                self._query_logger.info('The configuration is inconsistent with assertion ' + str(quer_name))
+                #self._query_logger.info('Completed with result: VACUOUS PASS')
+                #return {'assertion_status':'VACUOUS PASS', 'asrt': None, 'model':None} 
+            else:
+                # concrete witness does not satisfy the querym this witness cannot be stable witness fro that query,
+                # no further checks need to be performed (thus esiting the function under this condition, here)
+                self._query_logger.info('Witness to query ' + str(quer_name) + ' is not a valid witness (even without stability requirements)')
+                return 'not a witness'
         else:
-            raise Exception('Unexpected counter-example ststus ' + str(ce) + ' in function certify_witness')
-        
+            raise Exception('Unexpected counter-example status ' + str(ce) + ' in function validate_witness_smt')
+
         # checking stability of a valid witness to the query
         witn_term_dict = self._smlpTermsInst.witness_const_to_term(witn_dict)
         ce = self.find_candidate_counter_example(universal, domain, witn_term_dict, quer, model_full_term_dict, alpha, 
             theta_radii_dict, solver_logic)
         if isinstance(ce, smlp.sat):
-            self._query_logger.info('Witness to query ' + str(quer_name) + ' is not stable for radii ' + str(theta_radii_dict))
-            return 'witness, not stable'
+            if universal:
+                self._query_logger.info('Completed with result: FAIL')
+                #self._query_logger.info('Assertion ' +  str(quer_name) + ' fails (for stability radii ' + str(theta_radii_dict))
+                #status = 'FAIL' if cond_feasible else 'FAIL VACUOUSLY'
+                return {'assertion_status':'FAIL', 'asrt': False, 'assertion_feasible': cond_feasible, 
+                        'counter_example':self._smlpTermsInst.witness_term_to_const(ce.model, approximate=sat_approx, precision=sat_precision)}
+            else:
+                self._query_logger.info('Witness to query ' + str(quer_name) + ' is not stable for radii ' + str(theta_radii_dict))
+                return 'witness, not stable'
         elif isinstance(ce, smlp.unsat):
-            self._query_logger.info('Witness to query ' + str(quer_name) + ' is stable for radii ' + str(theta_radii_dict))
-            return 'stable witness'
+            if universal:
+                self._query_logger.info('Completed with result: PASS')
+                #self._query_logger.info('Assertion ' +  str(quer_name) + ' passes (for stability radii ' + str(theta_radii_dict))
+                return {'assertion_status':'PASS', 'asrt':None, 'assertion_feasible': cond_feasible,  'counter_example':None}
+            else:
+                assert cond_feasible
+                self._query_logger.info('Witness to query ' + str(quer_name) + ' is stable for radii ' + str(theta_radii_dict))
+                return 'stable witness'
         else:
-            raise Exception('Unexpected counter-example ststus ' + str(ce) + ' in function certify_witness')
+            raise Exception('Unexpected counter-example ststus ' + str(ce) + ' in function validate_witness_smt')
     
-    '''            
-    def certify_witnesses(self, universal:bool, model_full_term_dict:dict, quer_names:list[str], quer_exprs:list[str], quer_forms_dict:dict, witn_dict:dict,
-            domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict,
-            delta:dict, solver_logic, witn:bool, sat_approx:bool, sat_precision:int): 
-        print('quer_forms_dict', quer_forms_dict.keys(), 'quer_names', quer_names)
-        assert list(quer_forms_dict.keys()) == quer_names
-        quer_res_dict = {}
-        for i, (quer_name, quer_form) in enumerate(quer_forms_dict.items()):
-            witn_i_dict = witn_dict[quer_name]
-            witness_status_str = self.certify_witness(universal, model_full_term_dict, quer_name, quer_exprs[i], 
-                quer_form, witn_i_dict, domain, eta, alpha, theta_radii_dict, delta, solver_logic, witn, sat_approx, sat_precision)
-            quer_res_dict[quer_name] = witness_status_str
-            
-        #print('quer_res_dict', quer_res_dict)
-        with open(self.certify_results_file, 'w') as f:
-            json.dump(quer_res_dict, f, indent='\t', cls=np_JSONEncoder)
-    '''
-    def smlp_certify(self, syst_expr_dict:dict, algo:str, model:dict, #universal:bool, 
+    
+    def validate_witness(self, universal:bool, syst_expr_dict:dict, algo:str, model:dict, #universal:bool, 
             model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
             quer_names:list[str], quer_exprs:list[str], witn_dict:dict, delta:dict,
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, float_approx=True, float_precision=64, 
+            data_scaler:str, scale_feat:bool, scale_resp:bool, float_approx=True, float_precision=64, 
             data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
-        
-        query_status_dict = {
-            'witness_consistent': 'unknown',
-            'witness_to_query': 'unknown',
-            'witness_stable': 'unknown'
-        }
+         
+        if universal:
+            CONSISTENCY = 'configuration_consistent'
+            query_status_dict = {
+                CONSISTENCY: 'unknown',
+                'assertion_status': 'unknown',
+                'counter_example': 'unknown'
+            }
+            results_file = self.verify_results_file
+        else:
+            CONSISTENCY = 'witness_consistent'
+            query_status_dict = {
+                CONSISTENCY: 'unknown',
+                'witness_feasible': 'unknown',
+                'witness_stable': 'unknown'
+            }
+            results_file = self.certify_results_file
+
+        # TODO: implement this check in sanity_check_certification_spec
+        if quer_names is None or quer_exprs is None:
+            query_status_dict['amlp_execution'] = 'aborted'
+            with open(results_file, 'w') as f:
+                json.dump(query_status_dict, f, indent='\t', cls=np_JSONEncoder)
+            self._query_logger.info('Queries are not specified in mode "certify"; aborting...')
+            return
         
         # initialize the fields in the ststus dictionary mode_status_dict as unknown/running
         mode_status_dict = {}
@@ -208,22 +302,32 @@ class SmlpQuery:
         mode_status_dict['interface_consistent'] = 'unknown'
         
         # compute model exploration base componensts (models, constraints, etc.)
-        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = \
+        self.get_model_exploration_base_components(mode_status_dict, results_file, 
             syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
-            delta, None, #None, None, None, None, quer_names, quer_exprs, 
-            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
+            #delta, None, #None, None, None, None, quer_names, quer_exprs, 
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
-        #print('syst_expr_dict', syst_expr_dict); print('model_full_term_dict', model_full_term_dict);
-        #print('smlp_certify: beta_expr', beta_expr, 'quer_exprs', quer_exprs)
-        #with open(witn_file+'.json', 'r') as wf:
-        #    witn_dict = json.load(wf, parse_float=Fraction); 
+        if not interface_consistent or not model_consistent:
+            for quer_name in quer_names:
+                if universal:
+                    mode_status_dict[quer_name]['assertion_status'] = 'ERROR'
+                else:
+                    mode_status_dict[quer_name]['witness_status'] = 'ERROR'
+                with open(results_file, 'w') as f:
+                    json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+            return
         
+        knobs = list(theta_radii_dict.keys()); #print('knobs', knobs)
+        if witn_dict is None and len(knobs) == 0:
+            witn_dict = dict(zip(quer_names, [{}]*len(quer_names)))
+        #print('witn_dict 2', witn_dict)
         witn_count = len(witn_dict.keys()); #print('witn_count', witn_count)
         #print('quer_names', quer_names, 'quer_exprs', quer_exprs)
         if witn_count != len(quer_exprs):
             raise Exception('The number of queries does not match the number of witnesses')
         # TODO !!!! do we need this way of defining queries as smlp.true?
-              
+        
         # drop fron witn_dict assignments to variables that do not occur in the model
         witn_dict_filtered = {}
         witn_form_dict = {}
@@ -233,15 +337,40 @@ class SmlpQuery:
             witn_dict_filtered[q] = {}
             
             for var,val in w.items():
-                if var in feat_names: # TODO: it is enough to only add knob values (and ignore input values)
-                    witn_dict_filtered[q][var] = val
+                if universal: # univeral witness, verification, synthesis and optimized synthesis modes
+                    if var in knobs:
+                        assert var in feat_names
+                        witn_dict_filtered[q][var] = val
+                else: # certification mode
+                    if var in feat_names:
+                        witn_dict_filtered[q][var] = val
             witn_form_dict[q] = self._smlpTermsInst.witness_to_formula(witn_dict_filtered[q])
                                               
-            # assert every input and know is assigned in w:
+            # assert every input and knob is assigned in w when universal is false, and that every knob
+            # is assigned in w when universal is true. This condition will be redundant (and wrong) when
+            # SMLP will support range assignements to knobs and inputs (including don't care knobs/inputs).
             w_keys = w.keys()
-            for feat in feat_names:
-                if feat not in w_keys:
-                    raise Exception ('Wirness to query ' + str(q) + ' + has variable ' + str(feat) + ' unassigned a value')
+            
+            if universal:
+                # sanity check is already domne in sanity_check_verification_spec
+                pass
+                '''
+                unassigned = []
+                for feat in knobs:
+                    if feat not in w_keys:
+                        unassigned.append(feat)
+                if len(unassigned) > 0:
+                    self._query_logger.info('The knob configuration has variable(s) ' + str(unassigned) + ' unassigned a value')
+                    query_status_dict['assertion_status'] = 'unassigned_knobs'
+                with open(results_file, 'w') as f:
+                    json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)        
+                return
+                #raise Exception ('The knob configuration has variable ' + str(feat) + ' unassigned a value')
+                '''
+            else:
+                for feat in feat_names:
+                    if feat not in w_keys:
+                        raise Exception ('Wirness to query ' + str(q) + ' + has variable ' + str(feat) + ' unassigned a value')
 
         if quer_names is None and quer_exprs is None:
             #print('updating quer_exprs')
@@ -252,25 +381,27 @@ class SmlpQuery:
             quer_exprs = [quer_exprs[i] + ' and ' + beta_expr for i in range(witn_count)]; #print('quer_exprs', quer_exprs)
         quer_forms_dict = dict([(quer_name, self._smlpTermsInst.ast_expr_to_term(quer_expr)) \
             for quer_name, quer_expr in zip(quer_names, quer_exprs)])
-        
         # sanity check -- queries must be formulas (not terms)
         for i, form in enumerate(quer_forms_dict.values()):
             if not isinstance(form, smlp.libsmlp.form2):
                 raise Exception('Quesry ' + str(quer_exprs[i]) + ' must be a formula (not a term)')
-        
+
         # instance consistency and feasibility checks (are the assumptions contradictory?)
         if vacuity:
+            '''
             #print('before consistency', mode_status_dict)
             # input and knob constraints consistency check
             mode_status_dict = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, solver_logic, mode_status_dict)
-            with open(self.certify_results_file, 'w') as f:
+            with open(results_file, 'w') as f:
                 json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
                 
             if mode_status_dict['interface_consistent'] == 'false':
-                with open(self.certify_results_file, 'w') as f:
+                mode_status_dict['smlp_execution'] = 'aborted'
+                with open(results_file, 'w') as f:
                     json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
                 self._query_logger.info('Input and knob interface constraints are inconsistent; aborting...')
                 return
+            '''
             #print('after consistency', mode_status_dict)
             #print('quer_forms_dict', quer_forms_dict.keys(), 'quer_names', quer_names)
             assert list(quer_forms_dict.keys()) == quer_names
@@ -280,51 +411,116 @@ class SmlpQuery:
                 #print('quer_name', quer_name, 'quer_form', quer_form)
                 witn_form = witn_form_dict[quer_name]; #print('witn_form', witn_form)
                 # checking concrete witneses consistency alpha and beta (w/o looking at respective queries)
-                self._query_logger.info('Certifying consistency of witness for query ' + str(quer_name) + ':\n   ' + str(witn_form))
+                if universal:
+                    #self._query_logger.info('Verifying assertion {} <-> {}'.format(str(quer_name), str(quer_expr_dict[quer_name])))
+                    self._query_logger.info('Verifying consistency of configuration for assertion ' + str(quer_name) + ':\n   ' + str(witn_form))
+                else:
+                    self._query_logger.info('Certifying consistency of witness for query ' + str(quer_name) + ':\n   ' + str(witn_form))
                 witn_status = self.check_concrete_witness_consistency(domain, model_full_term_dict, 
                     alpha, eta, None, witn_form, solver_logic)
                 if isinstance(witn_status, smlp.sat):
-                    self._query_logger.info('Input, knob and concrete witness constraints are consistent')
-                    mode_status_dict[quer_name]['witness_consistent'] = 'true'
+                    if universal:
+                        self._query_logger.info('Input, knob and configuration constraints are consistent')
+                    else:
+                        self._query_logger.info('Input, knob and concrete witness constraints are consistent')
+                    mode_status_dict[quer_name][CONSISTENCY] = 'true'
                 elif isinstance(witn_status, smlp.unsat):
-                    self._query_logger.info('Input, knob and concrete witness constraints are inconsistent')
-                    mode_status_dict[quer_name]['witness_consistent'] = 'false'
-                    mode_status_dict[quer_name]['witness_to_query'] = 'false'
-                    mode_status_dict[quer_name]['witness_stable'] = 'false'
-                    continue
+                    if universal:
+                        self._query_logger.info('Input, knob and configuration constraints are inconsistent')
+                    else:
+                        self._query_logger.info('Input, knob and concrete witness constraints are inconsistent')
+                    mode_status_dict[quer_name][CONSISTENCY] = 'false'
+                    
                 else:
                     raise Exception('Input, knob and concrete witness cosnsistency check failed to complete')
                 #print('after witness_consistence', mode_status_dict)
-                with open(self.certify_results_file, 'w') as f:
+                with open(results_file, 'w') as f:
                     json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
-                
-                # concrete witneses consistency check, including checking that the query is valid too
+        else:
+            mode_status_dict['interface_consistent'] = 'skipped'
+            for quer_name, quer_form in quer_forms_dict.items():
+                mode_status_dict[quer_name][CONSISTENCY] = 'skipped'
+            with open(results_file, 'w') as f:
+                json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)    
+        
+        for quer_name, quer_form in quer_forms_dict.items():
+            #print('quer_name', quer_name, 'quer_form', quer_form)
+            witn_form = witn_form_dict[quer_name]; #print('witn_form', witn_form) 
+            if mode_status_dict[quer_name][CONSISTENCY] != 'false':    
                 witn_i_dict = witn_dict[quer_name]
-                witness_status_str = self.certify_witness(False, model_full_term_dict, quer_name, quer_expr_dict[quer_name], quer_form,
+                witness_status_str = self.validate_witness_smt(universal, model_full_term_dict, quer_name, quer_expr_dict[quer_name], quer_form,
                     witn_i_dict, domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
-                quer_res_dict[quer_name] = witness_status_str
-                if witness_status_str == 'not a witness':
-                    #print(quer_name, 'case not a witness')
-                    mode_status_dict[quer_name]['witness_to_query'] = 'false'
-                    mode_status_dict[quer_name]['witness_stable'] = 'false'
-                elif witness_status_str == 'witness, not stable':
-                    #print(quer_name, 'case witness, not stable')
-                    mode_status_dict[quer_name]['witness_to_query'] = 'true'
-                    mode_status_dict[quer_name]['witness_stable'] = 'false'
-                elif witness_status_str == 'stable witness':
-                    #print(quer_name, 'case stable witness')
-                    mode_status_dict[quer_name]['witness_to_query'] = 'true'
-                    mode_status_dict[quer_name]['witness_stable'] = 'true'
+                #print('witness_status_str', witness_status_str)
+                if universal:
+                    for k,v in witness_status_str.items():
+                        #print('k', k, 'v', v)
+                        if k in ['assertion_feasible', 'assertion_status', 'counter_example']:
+                            mode_status_dict[quer_name][k] = v
                 else:
-                    raise Exception('Unexpected status ' + str() + ' in function ' + certify_witness)
-                with open(self.certify_results_file, 'w') as f:
-                    json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)                
-                
-            mode_status_dict['smlp_execution'] = 'completed'
-            with open(self.certify_results_file, 'w') as f:
-                json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
-            #print('quer_res_dict', quer_res_dict)
-            #print('mode_status_dict', mode_status_dict)
+                    quer_res_dict[quer_name] = witness_status_str
+                    if witness_status_str == 'not a witness':
+                        #print(quer_name, 'case not a witness')
+                        mode_status_dict[quer_name]['witness_feasible'] = 'false'
+                        mode_status_dict[quer_name]['witness_stable'] = 'false'
+                        mode_status_dict[quer_name]['witness_status'] = 'FAIL'
+                    elif witness_status_str == 'witness, not stable':
+                        #print(quer_name, 'case witness, not stable')
+                        mode_status_dict[quer_name]['witness_feasible'] = 'true'
+                        mode_status_dict[quer_name]['witness_stable'] = 'false'
+                        mode_status_dict[quer_name]['witness_status'] = 'FAIL'
+                    elif witness_status_str == 'stable witness':
+                        #print(quer_name, 'case stable witness')
+                        mode_status_dict[quer_name]['witness_feasible'] = 'true'
+                        mode_status_dict[quer_name]['witness_stable'] = 'true'
+                        mode_status_dict[quer_name]['witness_status'] = 'PASS'
+                    else:
+                        raise Exception('Unexpected status ' + str() + ' in function validate_witness')
+            else:
+                if universal:
+                    self._query_logger.info('Skipping verification of assertion {} <-> {}'.format(str(quer_name), str(quer_form)))
+                    self._query_logger.info('Reporting result: ERROR')
+                    mode_status_dict[quer_name]['assertion_feasible'] = 'false'
+                    mode_status_dict[quer_name]['assertion_status'] = 'ERROR' #VACUOUS PASS
+                    mode_status_dict[quer_name]['counter_example'] = None
+                else:
+                    mode_status_dict[quer_name]['witness_feasible'] = 'false'
+                    mode_status_dict[quer_name]['witness_stable'] = 'false'
+                    mode_status_dict[quer_name]['witness_status'] = 'ERROR' #FAIL
+
+            with open(results_file, 'w') as f:
+                json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)                
+
+        mode_status_dict['smlp_execution'] = 'completed'
+        with open(results_file, 'w') as f:
+            json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+
+    
+    def smlp_verify(self, syst_expr_dict:dict, algo:str, model:dict, 
+            model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
+            asrt_names:list[str], asrt_exprs:list[str], witn_dict:dict, delta:dict,
+            alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
+            data_scaler:str, scale_feat:bool, scale_resp:bool, 
+            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+        self.validate_witness(True, syst_expr_dict, algo, model,
+            model_features_dict, feat_names, resp_names, 
+            asrt_names, asrt_exprs, witn_dict, delta,
+            alph_expr, beta_expr, eta_expr, theta_radii_dict, solver_logic, vacuity, 
+            data_scaler, scale_feat, scale_resp, float_approx, float_precision, 
+            data_bounds_json_path, bounds_factor, T_resp_bounds_csv_path)
+        
+    def smlp_certify(self, syst_expr_dict:dict, algo:str, model:dict, 
+            model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
+            quer_names:list[str], quer_exprs:list[str], witn_dict:dict, delta:dict,
+            alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
+            data_scaler:str, scale_feat:bool, scale_resp:bool, float_approx=True, float_precision=64, 
+            data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+        self.validate_witness(False, syst_expr_dict, algo, model,
+            model_features_dict, feat_names, resp_names, 
+            quer_names, quer_exprs, witn_dict, delta,
+            alph_expr, beta_expr, eta_expr, theta_radii_dict, solver_logic, vacuity, 
+            data_scaler, scale_feat, scale_resp, float_approx, float_precision, 
+            data_bounds_json_path, bounds_factor, T_resp_bounds_csv_path)
+        
 
     # TODO !!!: implement timeout ? UNKNOWN return value
     # x -- inputs/features (theta will know which ones are knobs vs free)
@@ -380,7 +576,8 @@ class SmlpQuery:
                     candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
                     continue
                 elif isinstance(ce, smlp.unsat):
-                    print('candidate stable -- return candidate')
+                    #print('candidate stable -- return candidate')
+                    self._query_logger.info('Query completed with result: STABLE_SAT (satisfiable)')
                     if witn: # export witness (use numbers as values, not terms)
                         witness_vals_dict = self._smlpTermsInst.witness_term_to_const(ca.model, sat_approx,  
                             sat_precision)
@@ -394,7 +591,7 @@ class SmlpQuery:
                             mode_status_dict[quer_name]['query_status'] = 'STABLE_SAT'
                             mode_status_dict[quer_name]['query_witness'] = witness_vals_dict
                             #print('mode_status_dict', mode_status_dict)
-                        return {'status':'STABLE_SAT', 'witness':witness_vals_dict}
+                        return {'query_status':'STABLE_SAT', 'witness':witness_vals_dict}
                     else:
                         #print('mode_status_dict', mode_status_dict)
                         if mode_status_dict is not None:
@@ -402,8 +599,10 @@ class SmlpQuery:
                             mode_status_dict[quer_name]['query_status'] = 'STABLE_SAT'
                             mode_status_dict[quer_name]['query_witness'] = ca.model
                             #print('mode_status_dict', mode_status_dict)
-                        return {'status':'STABLE_SAT', 'witness':ca.model}
+                        return {'query_status':'STABLE_SAT', 'witness':ca.model}
             elif isinstance(ca, smlp.unsat):
+                self._query_logger.info('Query completed with result: UNSAT (unsatisfiable)')
+                #print('candidate does not exist -- query unsuccessful')
                 #print('query unsuccessful: witness does not exist (query is unsat)')
                 if mode_status_dict is not None:
                     mode_status_dict[quer_name]['witness_exists'] = 'false'
@@ -411,7 +610,7 @@ class SmlpQuery:
                     mode_status_dict[quer_name]['query_status'] = 'UNSAT'
                     mode_status_dict[quer_name]['query_witness'] = None
                     #print('mode_status_dict', mode_status_dict)
-                return {'status':'UNSAT', 'witness':None}
+                return {'query_status':'UNSAT', 'witness':None}
             elif isinstance(ca, smlp.unknown):
                 self._opt_logger.info('Completed with result: {}'.format('UNKNOWN'))
                 if mode_status_dict is not None:
@@ -420,7 +619,7 @@ class SmlpQuery:
                     mode_status_dict[quer_name]['query_status'] = 'UNSAT'
                     mode_status_dict[quer_name]['query_witness'] = None
                     #print('mode_status_dict', mode_status_dict)
-                return {'status':'UNKNOWN', 'witness':None}
+                return {'query_status':'UNKNOWN', 'witness':None}
                 #raise Exception('UNKNOWN return value in candidate search is currently not supported for queries')
             else:
                 raise Exception('Unexpected return value ' + str(type(ca)) + ' in candidate search for queries')
@@ -440,7 +639,7 @@ class SmlpQuery:
 
     # querying conditions on a model to find a stable witness satisfying this condition in entire stability region
     # (defined by stability/theta radii) around that witness (which is a SAT assignment to model interface variables)
-    def smlp_query(self, syst_expr_dict:dict, algo:str, model:dict, universal:bool, model_features_dict:dict,  
+    def smlp_query(self, syst_expr_dict:dict, algo:str, model:dict, model_features_dict:dict,
             feat_names:list[str], resp_names:list[str], quer_names:list[str], quer_exprs:list[str], delta:float,
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, float_approx=True, float_precision=64, 
@@ -465,11 +664,29 @@ class SmlpQuery:
             return
         
         # compute model exploration componenets (domain, terms, formulas)
-        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components( 
-            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, delta, None,
-            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, scale_objv, 
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = \
+        self.get_model_exploration_base_components(mode_status_dict, self.query_results_file,
+            syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, #delta, None,
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
-        
+        if not interface_consistent or not model_consistent:
+            for quer_name in quer_names:
+                mode_status_dict[quer_name]['query_status'] = 'ERROR'
+            with open(self.query_results_file, 'w') as f:
+                json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+            return
+        '''
+        mode_status_dict['interface_consistent'] == str(interface_consistent).lower()
+        mode_status_dict['model_consistent'] == str(model_consistent).lower()
+        if interface_consistent or model_consistent:
+            mode_status_dict['smlp_execution'] = 'aborted'
+            with open(self.query_results_file, 'w') as f:
+                json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+            self._query_logger.info('Input and knob interface constraints are inconsistent; aborting...')
+            return
+        with open(self.query_results_file, 'w') as f:
+            json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+        '''
         quer_forms_dict = dict([(quer_name, self._smlpTermsInst.ast_expr_to_term(quer_expr)) \
                 for quer_name, quer_expr in zip(quer_names, quer_exprs)])
         
@@ -480,6 +697,7 @@ class SmlpQuery:
         
         # instance consistency check (are the assumptions contradictory?)
         if vacuity:
+            '''
             # alpha-eta consistency check
             mode_status_dict = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, solver_logic, mode_status_dict)
             if mode_status_dict['interface_consistent'] == 'false':
@@ -490,12 +708,12 @@ class SmlpQuery:
                 return
             with open(self.query_results_file, 'w') as f:
                 json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
-                
+            '''    
             # alpha, eta and model consistency check    
-            quer_res = self.query_condition( # universal
+            quer_res = self.query_condition(
                 False, model_full_term_dict, 'consistency_check', 'True', smlp.true, domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, float_approx, float_precision, None) 
-            if quer_res['status'] == 'UNSAT':
+            if quer_res['query_status'] == 'UNSAT':
                 mode_status_dict['model_consistent'] = 'false'
                 mode_status_dict['smlp_execution'] = 'aborted'
             else:
@@ -508,7 +726,7 @@ class SmlpQuery:
                 self._query_logger.info('Model querying instance is inconsistent; aborting...')
                 return
                 
-        self.query_conditions( # universal
+        self.query_conditions(
             False, model_full_term_dict, quer_names, quer_exprs, quer_forms_dict, domain, 
             eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision, mode_status_dict)
         
@@ -542,20 +760,23 @@ class SmlpQuery:
         
         #print('eta_expr', eta_expr); print('alph_expr', alph_expr); print('beta_expr', beta_expr); #assert False
         # compute model exploration componenets (domain, terms, formulas)
-        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta = self._modelTermsInst.create_model_exploration_base_components(
+        domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = \
+        self.get_model_exploration_base_components(mode_status_dict, self.synthesis_results_file,
             syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 
-            delta, None, #None, None, None, None, None, None, 
-            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, None, 
+            #delta, None, #None, None, None, None, None, None, 
+            alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #None, 
             float_approx, float_precision, data_bounds_json_path)
+        if not interface_consistent or not model_consistent:
+            mode_status_dict['query_status'] = 'ERROR'
+            return
         
         if asrt_exprs is not None:
             assert asrt_names is not None
             asrt_forms_dict = dict([(asrt_name, self._smlpTermsInst.ast_expr_to_term(asrt_expr)) \
                     for asrt_name, asrt_expr in zip(asrt_names, asrt_exprs)])
             asrt_conj = self._smlpTermsInst.smlp_and_multi(list(asrt_forms_dict.values()))
-            synthesis_expr = beta_expr
-            for asrt_expr in asrt_exprs:
-                synthesis_expr = '{} and {}'.format(synthesis_expr, asrt_expr)
+            synth_cond_list = asrt_exprs if beta_expr is None else [beta_expr] + asrt_exprs
+            synthesis_expr = ' and '.join(synth_cond_list)
         else:
             asrt_conj = smlp.true
             synthesis_cond = beta_expr
@@ -563,6 +784,7 @@ class SmlpQuery:
         beta = self._smlpTermsInst.smlp_and(beta, asrt_conj) if beta != smlp.true else asrt_conj
          
         if vacuity:
+            '''
             # alpha-eta consistency check
             mode_status_dict = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, solver_logic, mode_status_dict)
             if mode_status_dict['interface_consistent'] == 'false':
@@ -573,12 +795,12 @@ class SmlpQuery:
                 return
             with open(self.synthesis_results_file, 'w') as f:
                 json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
-
+            '''
             # alpha, eta and model consistency check    
-            quer_res = self.query_condition( # universal
+            quer_res = self.query_condition(
                 True, model_full_term_dict, 'consistency_check', 'True', smlp.true, domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, float_approx, float_precision, None) 
-            if quer_res['status'] == 'UNSAT':
+            if quer_res['query_status'] == 'UNSAT':
                 mode_status_dict['model_consistent'] = 'false'
                 mode_status_dict['smlp_execution'] = 'aborted'
             else:
@@ -595,10 +817,10 @@ class SmlpQuery:
         quer_res = self.query_condition(True, model_full_term_dict, 'synthesis_feasibility', synthesis_expr, beta, 
             domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
         #print('quer_res', quer_res)
-        if quer_res['status'] == 'UNSAT':
+        if quer_res['query_status'] == 'UNSAT':
             self._query_logger.info('Model configuration synthesis is infeasible under given constraints')
             return True, None
-        elif quer_res['status'] == 'STABLE_SAT':
+        elif quer_res['query_status'] == 'STABLE_SAT':
             witness_vals_dict = quer_res['witness']
             self._query_logger.info('Model configuration synthesis completed successfully')
             #print('witness_vals_dict', witness_vals_dict)
