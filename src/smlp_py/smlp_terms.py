@@ -891,6 +891,10 @@ class ModelTerms(SmlpTerms):
         # variables as reals and add an integer grid constraint to make it range on integers.
         self._declare_integer_as_real_with_grid = False
         
+        self._SPEC_DOMAIN_RANGE_TAG = 'range'
+        self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
+        
+        
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
@@ -1312,14 +1316,14 @@ class ModelTerms(SmlpTerms):
             return self._smlpTermsInst.ast_expr_to_term(eta_expr)
 
     def var_domain(self, var, spec_domain_dict):
-        interval = spec_domain_dict[var][self._specInst.get_spec_interval_tag];
+        interval = spec_domain_dict[var][self._SPEC_DOMAIN_INTERVAL_TAG]; #self._specInst.get_spec_interval_tag
         if interval is None:
             interval_has_none = True
         elif interval[0] is None or interval[1] is None:
             interval_has_none = True
         else:
             interval_has_none = False
-        if spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_integer_tag:
+        if spec_domain_dict[var][self._SPEC_DOMAIN_RANGE_TAG] == self._specInst.get_spec_integer_tag: # self._specInst.get_spec_range_tag
             if self._declare_integer_as_real_with_grid and not interval_has_none:
                 var_component = smlp.component(smlp.Real, grid=list(range(interval[0], interval[1]+1)))
                 assert False
@@ -1327,13 +1331,13 @@ class ModelTerms(SmlpTerms):
                 var_component = smlp.component(smlp.Integer)
             else:
                 var_component = smlp.component(smlp.Integer, 
-                    interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
-        elif spec_domain_dict[var][self._specInst.get_spec_range_tag] == self._specInst.get_spec_real_tag:
+                    interval=spec_domain_dict[var][self._SPEC_DOMAIN_INTERVAL_TAG]) #self._specInst.get_spec_interval_tag
+        elif spec_domain_dict[var][self._SPEC_DOMAIN_RANGE_TAG] == self._specInst.get_spec_real_tag: #self._specInst.get_spec_range_tag
             if self._declare_domain_interface_only or interval_has_none:
                 var_component = smlp.component(smlp.Real)
             else:
                 var_component = smlp.component(smlp.Real, 
-                    interval=spec_domain_dict[var][self._specInst.get_spec_interval_tag])
+                    interval=spec_domain_dict[var][self._SPEC_DOMAIN_INTERVAL_TAG]) #self._specInst.get_spec_interval_tag
         return var_component
     
     # this function builds terms and formulas for constraints, system description and the models

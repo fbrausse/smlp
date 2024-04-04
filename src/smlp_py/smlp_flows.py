@@ -250,24 +250,11 @@ class SmlpFlows:
         model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
         
         if args.analytics_mode in self.model_exploration_modes:
-            '''
-            mode_status_dict = {
-                'interface_consistent': 'unknown',
-                'status': 'unknown',
-                'smlp_execution': 'unknown'
-            }
-            self.queryInst.check_interface_constraints_consistency(syst_expr_dict,  args.model, model, 
-                model_features_dict, feat_names, resp_names, 
-                alpha_global_expr, beta_expr, args.eta,  args.solver_logic,
-                args.data_scaler, args.scale_features, args.scale_responses, mode_status_dict,
-                args.approximate_fractions, args.fraction_precision, self.dataInst.data_bounds_file)
-            '''
-            # TODO !!!: check X and y are processed, and that X = concat(X_train, X_test) and y = concat(y_train, y_test)
             if args.analytics_mode == 'verify':
                 if True or len(self.specInst.get_spec_knobs)> 0:
                     if config_dict is None:
-                        configuration = self.specInst.sanity_check_verification_spec(); print('configuration', configuration)
-                        config_dict = dict([(asrt_name, configuration) for asrt_name in asrt_names]); print('config_dict', config_dict)
+                        configuration = self.specInst.sanity_check_verification_spec(); #print('configuration', configuration)
+                        config_dict = dict([(asrt_name, configuration) for asrt_name in asrt_names]); #print('config_dict', config_dict)
                     self.queryInst.smlp_verify(syst_expr_dict, args.model, model, 
                         model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, config_dict,
                         delta_dict, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
@@ -306,15 +293,12 @@ class SmlpFlows:
                     args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'synthesize':
-                #print('eta_expr', args.eta); print('alpha_global_expr', alpha_global_expr); print('beta_expr', beta_expr)
                 self.queryInst.smlp_synthesize(syst_expr_dict, args.model, model,
                     #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
-                    model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, #objv_names, objv_exprs, args.optimize_pareto, 
-                    #quer_names, quer_exprs, 
-                    delta_dict, #args.epsilon, 
-                    alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs,
+                    delta_dict, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, #args.scale_objectives, 
+                    args.data_scaler, args.scale_features, args.scale_responses, 
                     args.sat_thresholds, args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'optimize':

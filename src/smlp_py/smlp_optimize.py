@@ -654,8 +654,8 @@ class SmlpOptimize:
 
             K_pr = []
             t_for_loop = t.copy(); # using copy() here to insure changes in t do not affect t_for_loop
-            # TODO !!! when j becomes the last element in K and none of the objectives fron K got fixed
-            # when we conclude that the last obkective in K needs to be fixed (and skip this check in SAT)
+            # Enhancement !!! when j becomes the last element in K and none of the objectives fron K got fixed
+            # when we conclude that the last objective in K needs to be fixed (and skip this check in SAT)
             # this fix will affect Test 94 -- there will be one less call to SAT
             assert len(K) == len(set(K)) # K should not contain duplicates
             raised_count = 0  # count of objectives whose lower bounds have been raised so far within the 

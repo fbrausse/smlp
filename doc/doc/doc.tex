@@ -6,6 +6,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{amsmath,mathtools,amssymb,listingsutf8,xspace}
 \usepackage{geometry,hyperref,cleveref,xcolor}
+%\usepackage{subfig}
 \usepackage[textsize=scriptsize, disable]{todonotes}
 \usepackage{tikz-cd}
 \usepackage{booktabs}
@@ -288,7 +289,7 @@ should be replaced with the actual full path to the file;  the $\suffix{.csv}$ s
 This dataset is displayed in Table~\ref{toy_basic_df}, and it has six columns $x1, x2, p1, p2, y1, y2$.
 
 The option $\optionval{-mode}{optimize}$ defines the analysis mode to run, and option $\optionval{-pareto}{t}$
-instructs SMLP that pareto optimization should be performed (as opposed to performing multiple single-objective 
+instructs SMLP that Pareto optimization should be performed (as opposed to performing multiple single-objective 
 optimizations when multiple objectives are specified). 
 
 \begin{table*}[t]
@@ -405,7 +406,7 @@ Optimization progress is reported in file $\suffix{try\_smlp\_toy\_basic\_optimi
 where $\option{try}$ is the run ID specified using option $\optionval{-prefl}{try}$; $\suffix{smlp\_toy\_basic}$ 
 is the name of the data file, and $\suffix{optimization\_progress.csv}$ is the file name suffix for that report. 
 This report contains details on input, knob, output and the objective's values demonstrating the proven 
-upper and lower bounds of the objectives during search for a pareto optimum. It is available anytime
+upper and lower bounds of the objectives during search for a Pareto optimum. It is available anytime
 after search for optimum has started and first approximations of the optima have been computed.
 
 
@@ -705,9 +706,9 @@ if that is not the case, SMLP will abort with an error message clarifying the re
 If we are dealing with an optimization problem for a response or multiple responses, then combination
 $positive\_value = STAT\_POSITIVE\_VALUE$ and $negative\_value = STAT\_NEGATIVE\_VALUE$ specifies that 
 we want to maximize the response values (find regions in input space where the responses are
-close to maximum / close to pareto optimal with respect to maximization; and conversely, combination
+close to maximum / close to Pareto optimal with respect to maximization; and conversely, combination
 $positive\_value = STAT\_NEGATIVE\_VALUE$ and $negative\_value = STAT\_POSITIVE\_VALUE$ 
-specifies that we are looking at (pareto) optimization problem with respect to minimization.
+specifies that we are looking at (Pareto) optimization problem with respect to minimization.
 }
 
 
@@ -763,7 +764,7 @@ according to the principle of \emph{maximum relevance and minimum redundancy}.
 \subsubsection{Data scaling / normalization}
 
 Data scaling is managed separately for the features and the responses. A particular mode of usage
-(model training and prediction, feature selection or range analysis, pareto optimization, etc.)
+(model training and prediction, feature selection or range analysis, Pareto optimization, etc.)
 can decide to scale features and or scale responses. The reports and visualization should use
 features and responses in the original scale, thus unscaling must be performed. 
 
@@ -942,23 +943,26 @@ steps (preprocessing and data preparation for analysis), which are described in 
 \section{ML model exploration with SMLP}\label{sec:exploration}
 
 SMLP supports the following model exploration modes (we assume that an ML model $M$ has already been trained). 
+Precise descriptions of these modes are given in the subsequent subsections.
+
 \begin{itemize}
-\item[certify] Given an ML model $M$, a value assignment $p^*,x^*$ to inputs $x$ and knobs $x$, and a query $\query(p,x,y)$,
+\item[certify] Given an ML model $M$, a value assignment $p^*,x^*$ to knobs $p$ and to inputs $x$, and a query $\query(p,x,y)$,
 check that $p^*,x^*$ is a stable witness to $\query(p,x,y)$ on model $M$. Multiple pairs $(\specval{witness},\query)$ 
 of candidate witness $\specval{witness}$ and query $\query$ can be checked in a single SMLP run.
-\item[query] Given an ML model $M$  and a query $\query(p,x,y)$, find a stable witness for $\query(p,x,y)$ on $M$.
-Multiple queries can be evaluated in a single SMLP run.
-\item[verify] Given an ML model $M$,  a value assignment $p^*$ to knobs $p$,  and an assertion $\assert(p,x,y)$, verify whether  
-$\assert(p',x,y)$ is valid on model $M$ for any assignment $p'$ to knobs in the stability region of $p^*$ and any
+\item[query] Given an ML model $M$  and a query $\query(p,x,y)$, find a value assignment $p^*,x^*$ to knobs $p$ and to inputs $x$
+that serves as a stable witness for $\query(p,x,y)$ on $M$. Multiple queries can be evaluated in a single SMLP run.
+\item[verify] Given an ML model $M$,  a configuration $p^*$ of knobs $p$ (that is, a value assignment $p^*$ to knobs $p$),  
+and an assertion $\assert(p,x,y)$, verify whether  
+$\assert(p',x,y)$ is valid on model $M$ for any assignment $p'$ to knobs in the stability region of $p^*$ and all
 legal values of inputs $x$.  SMLP supports verifying multiple assertions in a single run.
-\item[synthesize] Given an ML model $M$,  find a configuration of knobs (a value assignment to knobs) $p^*$
-such that required constraints (possibly including assertions),  are valid for any configuration $p'$ of knobs in the 
-stability region of $p^*$ any and legal values of inputs $x$.
-\item[optimize]  Given an ML model $M$,  find a stable configuration of knobs that yields a pareto-optimal values of 
-the optimization objectives (pareto-optimal with respect to the \emph{max-min} optimization problem defined 
+\item[synthesize] Given an ML model $M$,  find a configuration $p^*$ of knobs $p$
+such that all required constraints (possibly including assertions)  are valid for any configuration $p'$ of knobs in the 
+stability region of $p^*$  and any legal values of inputs $x$.
+\item[optimize]  Given an ML model $M$,  find a stable configuration $p^*$ of knobs $p$ that yields a Pareto-optimal values of 
+the optimization objectives (Pareto-optimal with respect to the \emph{max-min} optimization problem defined 
 in~\cite{brausse2024smlp}).
-\item[optsyn] Given an ML model $M$,  find a configuration $p^*$ of knobs that yields a pareto-optimal values of the 
-optimization objectives and all constraints and assertions are valid for any configuration $p'$ of knobs in the 
+\item[optsyn] Given an ML model $M$,  find a configuration $p^*$ of knobs $p$ that yields a Pareto-optimal values of the 
+optimization objectives and such that all constraints and assertions are valid for any configuration $p'$ of knobs in the 
 stability region of $p^*$  and legal values of inputs $x$. This mode is a union 
 of the \emph{optimize} and \emph{synthesize} modes, its full name is \emph{optimized synthesis}. 
 
@@ -1011,6 +1015,10 @@ SMLP-$\forall$\_certify &    yes &   yes &   yes &   no & yes &   yes &     yes 
 \end{table}
 
 
+
+\subsection{Exploration basic concepts}\label{sub:exploration:concepts}
+
+
 A formal definition of the tasks accomplished with these model exploration modes can be found in~\cite{brausse2024smlp}. 
 Formal descriptions combined with informal clarifications will be provided in this section as well. 
 Running SMLP in these modes reduces to solving formulas of the following structure:
@@ -1023,9 +1031,8 @@ Running SMLP in these modes reduces to solving formulas of the following structu
 \end{equation}
 where $p$ denotes model knobs, $x$ denotes inputs, $y$ denotes the outputs, $\eta(p)$ defines 
 constraints on the knobs,  $\varphi_M(p',x,y)$ defines the ML model constraints, and the condition
-$\varphi_{\mathit{cond}}(p',x,y)$ depends on the SMLP mode and will discussed in subsections below.
-$\eta(p)$ need not be a conjunction of constraints on individual knobs inferred from their range and grid
-specification; it can define more complex relations between allowed knob values of individual knobs.
+$\varphi_{\mathit{cond}}(p',x,y)$ depends on the SMLP mode and will be discussed in subsections below.
+$\eta(p)$ can be constraints on individual knobs or more complex constraints defining relationships between knobs.
 $\theta(p,p')$ is in general a reflexive predicate, and in SMLP it is used as 
 $\theta_r(p, p') \eqdef \Vert p - p' \Vert \leq r$, where  $\Vert p - p' \Vert$ is a distance between 
 two configurations $p$ and $p'$, and $r$ is a relative or absolute \emph{radius}; that is, 
@@ -1037,10 +1044,10 @@ $\varphi_{\mathit{cond}}(p',x,y)$  can represent (1) verification conditions, (2
 \begin{defn}\label{def:stable:witness:validity}
 \begin{itemize}
 \item 
-Given a value assignment $p^*$ to knobs $p$, an assignment $x^*$ to inputs $x$ is called a \emph{(concrete) $\theta$-stable witness} 
-to $\formula(p,x,y)$ for configuration $p^*$ if the following formula is valid:\ZK{Assume here that x is not an empty vector?}
-\begin{equation}\label{form:gear:certify:knobs:inputs}
-\varphi_{\mathit{witn}}^{px}(p^*,x^*) \eqdef
+Given a value assignment $p^*$ to knobs $p$, an assignment $x^*$ to inputs $x$ is called a \emph{$\theta$-stable witness} 
+to $\formula(p,x,y)$ for configuration $p^*$ if the following formula is valid:
+\begin{equation}\label{form:gear:certify}
+\varphi_{\mathit{certify}}^{px}(p^*,x^*) \eqdef
      \eta(p^*) \wedge ~\big(
     \forall p'~
     \forall y~[
@@ -1048,13 +1055,11 @@ to $\formula(p,x,y)$ for configuration $p^*$ if the following formula is valid:\
     ]\big)
 \end{equation}
 where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \formula(p,x,y).\]
-In this case the value assignment $p^*, x^*$ to inputs and knobs $p,x$ is called a  \emph{(concrete) $\theta$-stable witness for $\formula(p,x,y)$}, 
-and $x^*$ is called a  \emph{(concrete) $\theta$-stable witness to $\formula(p^*,x,y)$}.
 \item 
-A value assignment $p^*$ to knobs $p$ is called a  \emph{(universal) $\theta$-stable witness for $\formula(p,x,y)$} if any legal value assignment 
-$x^*$ to inputs $x$ is a (concrete) $\theta$-stable witness to $\formula(p,x,y)$ for $p^*$; that is, when the following formula is valid:
-\begin{equation}\label{form:gear:certify:knobs}
-\varphi_{\mathit{witn}}^{p}(p^*) \eqdef
+A value assignment $p^*$ to knobs $p$ is called a  \emph{$\theta$-stable configuration for $\formula(p,x,y)$} if any legal value assignment 
+$x^*$ to inputs $x$ is a $\theta$-stable witness to $\formula(p,x,y)$ for configuration $p^*$; that is, when the following formula is valid:
+\begin{equation}\label{form:gear:verify}
+\varphi_{\mathit{verify}}^{p}(p^*) \eqdef
      \eta(p^*) \wedge ~\big(
     \forall p'~
     \forall xy~[
@@ -1062,8 +1067,8 @@ $x^*$ to inputs $x$ is a (concrete) $\theta$-stable witness to $\formula(p,x,y)$
     ]\big)
 \end{equation}
 \item 
-If $x^*$ is a  $\theta$-stable witness for $\formula(p^*, x,y)$, then we call $x^*$  a \emph{$\theta$-stable counter-example to  
-assertion $\assert(p^*, x,y)  \eqdef \neg \formula(p^*, x,y)$}.
+If $x^*$ is a  $\theta$-stable witness for $\formula(p x,y)$ for configuration $p^*$, then we call $x^*$  a \emph{$\theta$-stable counter-example to  
+assertion $\assert(p^*, x,y)  \eqdef \neg \formula(p^*, x,y)$, for configuration $p^*$}.
 \delete{
 An assertion $\assert(p, x,y)$ is called \emph{$\theta$-valid with respect to knob configuration $p^*$} if its negation 
 $\query(p, x,y) \eqdef \neg \assert(p, x,y)$ does not have a $\theta$-stable witness $x^*$ for $p^*$.  In the latter case  
@@ -1074,7 +1079,7 @@ $\assert(p^*, x,y)$ is \emph{$\theta$-falsifiable} (that is, it is not $\theta$-
 \end{itemize}
 \end{defn}
 
-\Cref{form:gear:certify:knobs:inputs} corresponds to mode $\mode{certify}$ in SMLP, and  \Cref{form:gear:certify:knobs} 
+\Cref{form:gear:certify} corresponds to mode $\mode{certify}$ in SMLP, and  \Cref{form:gear:verify} 
 corresponds to mode $\mode{verify}$, and will be discussed in detail in Subsections~\ref{sect:certify} and \ref{sect:verify}, 
 respectively. The concept of \emph{$\theta$-stable counter-example} to  an assertion is relevant for targeted model refinement
 loop for verifying assertions, and is discussed in Section~\ref{sec:refinement}.
@@ -1116,91 +1121,234 @@ Given a value range assignment $p^*$ to knobs $p$, a value range assignment $x^*
 to $\formula(p,x,y)$ for configurations in $p^*$ if the following formula is valid:
 
 \begin{equation}\label{form:gear:certify:knobs:inputs:ranges}
-\varphi_{\mathit{witn}}^{px} \eqdef
-    \forall px \big[ \vartheta_{p^*x^*}(p,x) \implies
+\varphi_{\mathit{certify}}^{\vartheta_{px}}(p^*, x^*) \eqdef  
+    \forall px \big[ \vartheta_{p^*x^*}(p,x) \implies \big(
      \eta(p) \wedge ~\big(
     \forall p'~
     \forall y~[ \theta(p, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y)) ]
-   \big)  \big]
+   \big) \big) \big]
 \end{equation}
 where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \formula(p,x,y)\]
 \noindent and $\vartheta_{p^*,x^*}(p,x)$ is the formula inferred by the value range assignments 
-to $p^*$ and $x^*$.
+to $p^*$ and $x^*$. 
+%In this case the value range assignment $p^*, x^*$ to inputs and knobs $p,x$ 
+%is called a  \emph{$\theta$-stable witness for $\formula(p,x,y)$}.
 
 \item
 A value range assignment $p^*$ to knobs $p$ is called a  \emph{$\theta$-stable witness for $\formula(p,x,y)$} if any legal value range assignment 
-$x^*$ to inputs $x$ is a $\theta$-stable witness to $\formula(p,x,y)$ for $p^*$; that is, when the following formula is valid (TODO: CHECK THE FORMULA):
+$x^*$ to inputs $x$ is a $\theta$-stable witness to $\formula(p,x,y)$ for $p^*$; that is, when the following formula is valid:
 \begin{equation}\label{form:gear:certify:knobs:ranges}
-\varphi_{\mathit{witn}}^{p}(p^*) \eqdef
-  \forall px \big[ \vartheta_{p^*x^*}(p,x) \implies
-     \eta(p^*) \wedge ~\big(
+\varphi_{\mathit{verify}}^{\vartheta_p}(p^*) \eqdef
+  \forall p \big[ \vartheta_{p^*}(p) \implies \big(
+     \eta(p) \wedge ~\big(
     \forall p'~
-    \forall y~[
-   \theta(p^*, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
-    ]\big)  \big]
+    \forall xy~[
+   \theta(p, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
+    ]\big) \big) \big]
 \end{equation}
 \item 
-If $x^*$ is a  $\theta$-stable witness for $\formula(p^*, x,y)$, then we call $x^*$  a \emph{$\theta$-stable counter-example to  
-assertion $\assert(p^*, x,y)  \eqdef \neg \formula(p^*, x,y)$}.
+If $x^*$ is a  $\theta$-stable witness for $\formula(p, x,y)$ for configuration $p^*$, then we call $x^*$  a \emph{$\theta$-stable
+counter-example to  assertion $\assert(p, x,y)  \eqdef \neg \formula(p, x,y)$, for configuration $p^*$}.
 \end{itemize}
 \end{defn}
 
 
+\ZK{it would be useful to define sufficient and necessary condition for vacuity of the formulas describing model exploration modes.}
+The \emph{interface consistency check} is defined as simply checking satisfiability  of: 
+\begin{equation}\label{form:interface:consistency}
+\alpha(p, x) \wedge \eta(p). 
+\end{equation}
+
+The \emph{model consistency} check augments the interface consistency check with consistency of the constraints $\varphi_M(p,x,y)$ 
+defining the ML model $M$ in conjunction with $\alpha$ and $\eta$ constraints: model consistency check is defined as checking satisfiability of:
+\begin{equation}\label{form:model:consistency}
+\alpha(p, x) \wedge \eta(p) \wedge \varphi_M(p,x,y). 
+\end{equation}
+
+These two consistency checks are common for all model exploration modes, because when one of these checks fails, 
+then model exploration task is not well defined. 
+
+\delete{
+One other vacuity related check which is common to all model exploration modes is the \emph{configuration consistency check}.
+It is defined as checking the satisfiability of:  
+
+\begin{equation}\label{form:configuration:consistency}
+\alpha(p, x) \wedge \eta(p) \wedge \vartheta(p,x)  \wedge \varphi_M(p,x,y) \wedge \beta(p,x,y),
+\end{equation}
+\noindent where $\vartheta(p,x)$ is the formula inferred form value assignments to $p,x$ in the witness for a query in 
+$\mode{certify}$ mode, value assignments to $p$ in the configuration for an assertion in the $\mode{verify}$ mode, 
+and is true in other modes; and $\beta(p,x,y)$ is true in $\mode{certify}$ and $\mode{verify}$ modes.
+\ZK{In fact, $ \vartheta_{witn}(p,x)$ plays the role of $\beta(p,x,y)$ when the latter does not actually depend on $y$..
+Better concept might be (1) to use $\vartheta_{conf}$ instead of $\vartheta_{witn}$, that is, evan in certification mode only 
+knobs are assigned in the witness while inputs are not assigned, and (2) to not refer to  $\vartheta_{witn}$ in the formula and instead 
+say $\beta$ is  $\vartheta_{conf}$ when the mode is certify or verify.}
+}
+
+
 \subsection{Mode $\mode{certify}$: certification of a stable witness}\label{sect:certify}
-
-
 
 In the $\mode{certify}$ mode, SMLP is given an assignment $p^*,x^*$ to knobs $p$ and inputs $x$, 
  a query $\query(p,x,y)$ on an ML model $M$, and we want to check whether $x^*$ is a stable witness to
- $\query(p,x,y)$ for $p^*$, as defined in Definition~\ref{def:stable:witness:validity}.
+ $\query(p,x,y)$ for $p^*$, as defined in Definition~\ref{def:stable:witness:validity}:
+certification requires checking validity of \cref{form:gear:certify}, with $\formula(p,x,y) \eqdef \query(p,x,y)$ in
+$\varphi_{\mathit{cond}}(p,x,y)$. 
 Currently SMLP assumes that all knobs in $p$ and all inputs in $x$ are assigned concrete values in $p^*, x^*$.
-A sanity check is implemented to impose this. This requirement can be relaxed.
-Certification requires checking validity of  formula \cref{form:gear:certify:knobs:inputs}. 
+This requirement can be relaxed. 
+
+SMLP supports certification of multiple queries in a single run, and each query is certified with respect to its corresponding
+witness (different queries might refer to different witnesses). The general (and the recommended) way of
+defining a witness per query is using the $\speckey{witnesses}$ field in SMLP spec file. The  $\speckey{witnesses}$
+field is a dictionary with query names as keys and the respective values are dictionaries assigning a concrete value to 
+each knob and each input. An example is displayed in Figure~\ref{fig:certify:witnesses:spec} where say  
+$\speckey{query\_stable\_witness}$ is the name of a query and $\speckey{p1}$ and $\speckey{p2}$ are names of knobs.
+
+\begin{figure}[tp]%[hb!]
+\small
+\begin{verbatim}
+        "witnesses": {
+                "query_stable_witness": {
+                        "x": 7,
+                        "p1": 7.0,
+                        "p2": 6.000000067055225
+                },
+                "query_grid_conflict": {
+                        "x": 6.2,
+                        "p1": 3.0,
+                        "p2": 6.000000067055225
+                },
+                "query_unstable_witness": {
+                        "x": 7,
+                        "p1": 7.0,
+                        "p2": 6.0
+                },
+                "query_infeasible_witness": {
+                        "x": 7,
+                        "p1": 7.0,
+                        "p2": 6.0
+                }
+        }
+\end{verbatim}
+\caption{SMLP example of specifying witnesses in mode $\mode{certify}$.}
+\label{fig:certify:witnesses:spec}
+\end{figure}
 
 
-The $\alpha \wedge \beta$-consistency check for this task 
-is simply checking satisfiability  of $\alpha(p, x) \wedge \eta(p)$. 
-This check is common for all model exploration modes.
+When the same witness is certified against all queries, and witnesses per query are not defined using the  $\speckey{witnesses}$ field,
+SMLP applies a sanity check to see whether unique values $p^*$ to knobs $p$ and unique values $x^*$ to inputs $x$ can be inferred 
+from knob and input ranges and knob grids specified in the spec file using the $\speckey{variables}$ field. 
+When values $p^*, x^*$ cannot be inferred this way, SMLP aborts certification. \ZK{with what certification status ???}
 
-The witness consistency check (with  $\alpha \wedge \beta$) is checking the validity of 
-$\alpha(p^*, x^*) \wedge \eta(p^*) $, or more formally, the validity of:
-\begin{equation}\label{form:gear:certify:feasibility:inputs}
-      \forall p \forall x ( \vartheta_{p^*x^*}(p,x) \implies   \alpha(p, x) \wedge \eta(p))
+Below $\vartheta_{p^*x^*}(p,x)$ denotes the formula inferred form value 
+assignments to $p,x$ in a given witness to a query when the witness is specified using the
+$\speckey{witnesses}$ field in the spec file, and is constant true otherwise. 
+For example, if $p$ and $x$ are single variable vectors, $p^* == 3$ and $x^* == 2$, then 
+$\vartheta_{p^*x^*}(p,x) \eqdef p == p^* \wedge x == x^* \eqdef p == 3 \wedge x == 2$.
+
+
+As discussed in Section~\ref{sub:exploration:concepts}, interface consistency \cref{form:interface:consistency} and
+model consistency \cref{form:model:consistency} 
+checks are performed before starting actual certification of witnesses for stability with respect to the corresponding queries. 
+In addition to these, for the certification problem in \cref{form:gear:certify} to be well defined, 
+we need to check that $\eta(p^*) \wedge \alpha(p^*,x^*)$ evaluates to constant true: 
+this means that $p^*, x^*$ witnesses that $\alpha(p,x) \wedge \eta(p)$ is \emph{consistent}.
+To re-iterate, the \emph{witness consistency check} for the certification task consists in checking satisfiability of:
+\begin{equation}\label{form:gear:certify:witness:consistency}
+   \vartheta_{p^*x^*}(p,x) \wedge  \alpha(p, x) \wedge \eta(p)
 \end{equation}
 
 
-When $p^*,x^*$ is a full assignment of concrete (finite) values to knobs $p$ and inputs $x$, then 
-the validity of the above formulas is the same as their satisfiability.
-
-
-The feasibility part for this task is checking  the validity of 
-
-\begin{equation}\label{form:gear:certify:feasibility:inputs}
-      \forall p \forall x ( \vartheta_{p^*x^*}(p,x) \implies  \varphi_M(p,x,y)  \wedge  \alpha(p, x) \wedge \eta(p)  \wedge   \query(p,x,y))
+In the implementation, we are using a stronger version of the witness consistency check  \cref{form:gear:certify:witness:consistency}, 
+which in addition takes into account the ML model constraints, and consists in checking satisfiability of:
+\begin{equation}\label{form:certify:witness:model:consistency}
+\vartheta_{p^*x^*}(p,x) \wedge  \alpha(p, x) \wedge \eta(p) \wedge \varphi_M(p,x,y)
 \end{equation}
 
-Again, when $p^*,x^*$ is a full assignment of concrete (finite) values to knobs $p$ and inputs $x$, then 
-the validity of the above formula is the same as its satisfiability.
+Note that none of the above consistency checks refers to an actual query $\query(p,x,y)$ for which certification is performed.
+The \emph{feasibility} part for this task is checking satisfiability of 
 
-
-If the above formula is not satisfiable, then $x^*$ cannot be a stable witness to $\query$ for $p^*$, 
-and SMLP reports its status as \emph{not a witness}. 
-Otherwise stability of the candidate witness $p^*, x^*$ to $\query$ is checked by proving validity of 
-formula \cref{form:gear:certify:knobs:inputs},
-and this is done by checking satisfiability of formula~\cref{form:gear:certify:feasibility:inputs}
-\begin{equation}\label{form:gear:certify:feasibility:inputs} %{form:gear:certify:candidate}
-     \theta(p^*, p')  \wedge  \varphi_M(p^*,x^*,y)  \wedge  \alpha(p^*,x^*) \wedge   \neg \query(p^*,x^*,y))
+\begin{equation}\label{form:gear:certify:feasibility}
+      \vartheta_{p^*x^*}(p,x) \wedge  \alpha(p, x) \wedge \eta(p)  \wedge  \varphi_M(p,x,y) \wedge  \query(p,x,y))
 \end{equation}
-The result file format is the same as for checking stability of configuration $p^*$.
+
+If the above formula is not satisfiable, then $x^*$ cannot be a stable witness to $\query(p,x,y)$ for $p^*$. 
+Otherwise stability of the candidate witness $p^*, x^*$ to 
+$\query(p,x,y)$ is checked by proving validity of \cref{form:gear:certify},
+and this is done by checking satisfiability of \cref{form:gear:certify:feasibility:sat}:
+\begin{equation}\label{form:gear:certify:feasibility:sat}
+       \vartheta_{p^*x^*}(p,x) \wedge  \alpha(p, x) \wedge \eta(p)  \wedge  \varphi_M(p,x,y) \wedge \neg \query(p,x,y))
+\end{equation}
+\ZK{TODO: check or get rid of formula \cref{form:gear:certify:feasibility:sat}.}
 
 
+% regression test 128
+\begin{figure}[tp]%[hb!]
+\small
+\begin{verbatim}
+{
+        "query_stable_witness": {
+                "witness_consistent": "true",
+                "witness_feasible": "true",
+                "witness_stable": "true",
+                "witness_status": "PASS"
+        },
+        "query_grid_conflict": {
+                "witness_consistent": "false",
+                "witness_feasible": "false",
+                "witness_stable": "false",
+                "witness_status": "ERROR"
+        },
+        "query_unstable_witness": {
+                "witness_consistent": "true",
+                "witness_feasible": "true",
+                "witness_stable": "false",
+                "witness_status": "FAIL"
+        },
+        "query_infeasible_witness": {
+                "witness_consistent": "true",
+                "witness_feasible": "false",
+                "witness_stable": "false",
+                "witness_status": "FAIL"
+        },
+        "smlp_execution": "completed",
+        "interface_consistent": "true",
+        "model_consistent": "true"
+}
+\end{verbatim}
+\caption{SMLP result in mode $\mode{certify}$.}
+\label{fig:certify:result}
+\end{figure}
 
+Certification results are reported in file $\suffix{prefix\_dataname\_certify\_results.json}$.
+Figure~\ref{fig:certify:result} displays an example results file in $\mode{certify}$ mode.
+\ZK{TODO: Update the results file.}
+
+\begin{enumerate}
+\item Fields $\speckey{smlp\_execution}$,  $\speckey{interface\_consistent}$ and $\speckey{model\_consistent}$
+are common for each (witness, query) pair, and they provide status of the entire execution of SMLP.
+\item The field  $\speckey{witness\_consistent}$ specifies result of feasibility check \cref{form:certify:witness:model:consistency}
+\item The field  $\speckey{witness\_feasible}$ specifies result of feasibility check \cref{form:gear:certify:feasibility}
+\item The field  $\speckey{witness\_status}$ specifies the witness certification status, and can be one of:
+\begin{itemize}
+\item[$\specval{''ERROR''}$]  when interface consistency \cref{form:interface:consistency},
+model consistency \cref{form:model:consistency}, or witness consistency \cref{form:certify:witness:model:consistency} check fails.
+\item[$\specval{''PASS''}$]  when interface consistency \cref{form:interface:consistency}, 
+model consistency \cref{form:model:consistency},  configuration consistency \cref{form:certify:witness:model:consistency} 
+and  witness validity \cref{form:gear:certify}  are all valid.
+\item[$\specval{"FAIL"}$]  when interface consistency \cref{form:interface:consistency}, 
+model consistency \cref{form:model:consistency},  witness consistency \cref{form:certify:witness:model:consistency} 
+are all valid and  witness validity \cref{form:gear:certify}  is not valid. 
+Query feasibility \cref{form:gear:certify:feasibility} may or may not be satisfiable, and this info is reported
+using field $\speckey{witness\_feasible}$.
+\item[$\specval{"UNKNOWN"}$] otherwise. This can happen when SMLP run terminates before one of the above 
+results can be concluded.
+\end{itemize}
+\end{enumerate}
 
 \subsection{Mode $\mode{query}$: querying for a stable witness}
 
 
 The task of querying ML model for a stable witness to query $\query(p, x, y)$ consists in finding value assignments  
-$p^*,x^*$  for knobs $p$ and inputs $x$ in $\query(p, x, y)$ that represent a solution for the following formula:
+$p^*,x^*$  for knobs $p$ and inputs $x$ that represent a solution for \cref{form:gear:synthesis:query:exists}:
 
 \begin{equation}\label{form:gear:synthesis:query:exists}
     \exists p, x ~\big[ \eta(p) \wedge
@@ -1209,26 +1357,24 @@ $p^*,x^*$  for knobs $p$ and inputs $x$ in $\query(p, x, y)$ that represent a so
     \theta(p,p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
     ]\big]
 \end{equation} 
+where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \query(p,x,y).\]
+According to Definition~\ref{def:stable:witness:validity}, for any solution $p^*,x^*$ of \cref{form:gear:synthesis:query:exists},
+$x^*$ is a stable witness for  $\query(p, x, y)$, for configuration $p^*$.
 
-For a solution $p^*,x^*$ to exist, and for it not to be vacuous, it is necessary $\alpha(p, x) \wedge \eta(p)$ to be consistent, 
-meaning that the following formula must be valid:
-\begin{equation}\label{form:gear:query:consistency}
-\exists p,x~ [\alpha(p, x) \wedge \eta(p)])
-\end{equation}
-
-Furthermore, for a solution to exist, the following formula must be satisfiable, and we refer to this as a \emph{feasibility} 
-check for the task of searching for a concrete stable witness for $\query(p,x,y)$. 
-
-\begin{equation}\label{form:gear:query:feasibility}
-       \eta(p) \wedge \varphi_M(p,x,y)  \wedge  \alpha(p,x))
-\end{equation}
-
-Let $p^*, x^*$ be a solution to \cref{form:gear:synthesis:query:exists}. Then according to Definition~\ref{def:stable:witness:validity}, 
-$x^*$ is a stable witness for  $\query(p^*, x, y)$. 
+As already stated in Section~\ref{sub:exploration:concepts}, interface consistency \cref{form:interface:consistency} and
+model consistency \cref{form:model:consistency} checks are performed before starting actual querying for a stable witnesses.
+This ensures that querying is well defined, and cannot fail  vacuously in case one of the above checks fail.
 
 
+Query results are reported in file $\suffix{prefix\_dataname\_query\_results.json}$.
+SMLP supports querying multiple conditions in one SMLP run. 
+Figure~\ref{fig:query:result} displays an example results file in $\mode{query}$ mode.
+where the  $\speckey{query\_result}$ field 
+specifies the values of knobs, as well as values of inputs and values of outputs
+found in the satisfying assignment to~\cref{form:gear:certify:feasibility} that identified the stable witness.
 
-First, we find a candidate $p^*, x^*$ by solving
+
+\ZK{Check these two formulas or get rid of them.} First, we find a candidate $p^*, x^*$ by solving
 \begin{equation}\label{form:gear:synthesis:query}
     \exists p, x ~\big[ \eta(p) \wedge
     \forall y~[
@@ -1236,7 +1382,8 @@ First, we find a candidate $p^*, x^*$ by solving
     ]\big]
 \end{equation} 
 
-Then check whether the following formula is valid (by checking its negation for satisfiability): 
+If such $p^*, x^*$  exist, SMLP reports this in the results file using field  $\speckey{query\_result}$.
+Then SMLP checks whether the following formula is valid (by checking its negation for satisfiability): 
 \begin{equation}\label{form:gear:synthesis:query}
     \eta(p^*) \wedge
     \forall p'~
@@ -1248,146 +1395,228 @@ Then check whether the following formula is valid (by checking its negation for 
 If the above formula is valid, then we have shown that $x^*$ is a stable witness for  $\query(p^*, x, y)$, 
 and the task is accomplished -- SMLP reports $p^*, x^*$ is solution to the synthesis task. Otherwise,
 search should continue by searching for a solution different from $p^*, x^*$ (and their neighborhood).
-\ZK{looks like the full algorithm is same as the synthesis algorithm (interleaving of finding a candidate $p^*$
+\ZK{The full algorithm is same as the synthesis algorithm (interleaving of finding a candidate $p^*$
 and searching to its counter-example, except now in search for candidate counter-example the inputs should
 be bound to values in $x^*$ so that only knobs will be free to assign values in candidate counter-example.}
 
+% TODO: add command example; will require to explain the system option if test 119 will be used.
+% regression test 119
+\begin{figure}[tp]%[hb!]
+\small
+\begin{verbatim}
+{
+        "smlp_execution": "completed",
+        "interface_consistent": "true",
+        "query_feasible_unstable": {
+                "query_feasible": "true",
+                "query_stable": "false",
+                "query_status": "FAIL",
+                "query_result": null
+        },
+        "query_feasible_stable": {
+                "query_feasible": "true",
+                "query_stable": "true",
+                "query_status": "PASS",
+                "query_result": {
+                        "p1": 0.0,
+                        "y2": 0.0,
+                        "p2": 0.0,
+                        "y1": 0.0
+                }
+        },
+        "query_infeasible": {
+                "query_feasible": "false",
+                "query_stable": "false",
+                "query_status": "FAIL",
+                "query_result": null
+        },
+        "model_consistent": "true"
+}
+\end{verbatim}
+\caption{SMLP result in mode $\mode{query}$.}
+\label{fig:query:result}
+\end{figure}
 
 \subsection{Mode $\mode{verify}$: assertion verification with stability}\label{sect:verify}
 
 
-In assertion verification usually one assumes that the knobs have already been fixed to legal values, and their impact has been propagated 
-through the constraints, therefore usually in the context of assertion verification knobs are not considered explicitly. However, in order 
-to formalize stability also in the context of verification, SMLP assumes that the values of knobs $p$ are assigned constant values $p^*$, 
-but can be perturbed (by environmental effects or by an adversary), therefore treatment of $p^*$ is explicit. Then the problem of 
-verifying an assertion $\assert(p^*,x,y)$ under allowed perturbations $p'$ of knob values $p^*$ controlled by $\theta_r(p^*, p')$, 
-is exactly the problem of certification of stability 
-of witness $p^*$ for assertion $\assert(p^*,x,y)$, as defined in Definition~\ref{def:stable:witness:validity}. To reiterate, the problem of verification with stability is formalized in SMLP as~\cref{form:gear:certify}:
+In assertion verification usually one assumes that the knobs have already been fixed to legal values, 
+and their impact has been propagated through the constraints, therefore usually in the context of assertion 
+verification knobs are not considered explicitly. However, in order to formalize stability also in the context of 
+verification, SMLP assumes that the values of knobs $p$ are assigned constant values $p^*$, but can be 
+perturbed (by environmental effects or by an adversary), therefore treatment of $p^*$ is explicit. Then the problem of 
+verifying an assertion $\assert(p,x,y)$ for configuration $p^*$ under allowed perturbations $p'$ of knob values $p^*$ 
+controlled by $\theta(p^*, p')$, is exactly the problem of checking stability of configuration $p^*$ for assertion 
+$\assert(p,x,y)$, as defined in Definition~\ref{def:stable:witness:validity}. To re-iterate, the problem of 
+\emph{verification with stability} is formalized in SMLP as validity of~\cref{form:gear:verify}.
+
+SMLP supports verification of multiple assertions in a single run, and each assertion is verified with respect to its corresponding
+configuration (different assertions might refer to different configurations). The general (and the recommended) way of
+defining a configuration per assertion is using the $\speckey{configuration}$ field in SMLP spec file. The  $\speckey{configuration}$
+field is a dictionary with assertion names as keys and the respective values are dictionaries assigning a concrete value to each knob.
+An example is displayed in Figure~\ref{fig:verify:witness:spec}, where say  $\speckey{stable\_configuration}$ is the name of an assertion
+and $\speckey{p1}$ and $\speckey{p2}$ are names of knobs.
+
+\begin{figure}[tp]%[hb!]
+\small
+\begin{verbatim}
+       "configurations": {
+                "stable_config": {
+                        "p1": 7.0,
+                        "p2": 6.000000067055225
+                },
+                "grid_conflict": {
+                        "p1": 3.0,
+                        "p2": 6.000000067055225
+                },
+                "unstable_config": {
+                        "p1": 7.0,
+                        "p2": 6.0
+                },
+                "not_feasible": {
+                        "p1": 7.0,
+                        "p2": 6.0
+                }
+        }
+\end{verbatim}
+\caption{SMLP specification example to specify $\speckey{configurations}$ per assertion, in mode $\mode{verify}$.}
+\label{fig:verify:witness:spec}
+\end{figure}
+
+When each assertion is verified with respect to the same configuration, and configurations per assertions are not defined using 
+the  $\speckey{configurations}$ field, SMLP applies a sanity check to see whether unique values $p^*$ to knobs $p$ can be inferred 
+from knob ranges and grids specified in the spec file using the $\speckey{variables}$ field. When values $p^*$ cannot be inferred 
+this way, SMLP aborts verification. \ZK{with what assertion status ???}
 
 
-\begin{equation}\label{form:gear:certify}
-\varphi_{\mathit{verify}}(p^*) \eqdef
-     \eta(p^*) \wedge ~\big(
-    \forall p'~
-    \forall x y~[
-   \theta(p^*, p') \implies (\varphi_M(p',x,y)  \implies  \varphi_{\mathit{cond}}(p',x,y))
-    ]\big)
-\end{equation}
-
-where \[\varphi_{\mathit{cond}}(p,x,y) \eqdef \alpha(p,x) \implies \assert(p,x,y).\]
-\noindent and  $\alpha(p,x)$ defines user-given constraints on knobs and inputs. 
+Below $\vartheta_{p^*}(p)$ denotes the formula inferred form value assignments to $p$ in 
+the configuration for the corresponding assertion when the latter is specified in the spec file using field
+$\speckey{configurations}$, and is constant true otherwise. For example, if $p$ is a variable vector $p1,p2$,  
+then $\vartheta_{p^*}(p)$ might look like  $\vartheta_{p^*}(p1,p2)\eqdef p1 == 3 \wedge p2 == 5$.
 
 
-For the above formula to be valid and not be valid vacuously, we need to check that $\eta(p^*)$ evaluates to constant true 
+As discussed in Section~\ref{sub:exploration:concepts}, interface consistency \cref{form:interface:consistency} and
+model consistency \cref{form:model:consistency} 
+checks are performed before starting actual assertion verification. In addition to these,
+for the verification problem \cref{form:gear:verify} to be well defined, we need to check that $\eta(p^*)$ evaluates to constant true 
 and  $\alpha(p^*,x)$ is satisfiable. This means that $p^*$ witnesses that $\alpha(p,x) \wedge \eta(p)$ is \emph{consistent}, 
-that is, there exist values of inputs that satisfy  $\alpha(p^*,x) \wedge \eta(p^*)$. Formally, consistency check for stable 
-witness certification requires the following formula to be valid: 
+that is, there exist values of inputs that satisfy  $\alpha(p^*,x) \wedge \eta(p^*)$.  Formally, \emph{configuration consistency} 
+check for verification requires, as a necessary condition (but not a sufficient condition), the following formula to be valid: 
 
-\begin{equation}\label{form:gear:certify:consistency}
-\exists x~ [\alpha(p^*, x) \wedge \eta(p^*)])
+\begin{equation}\label{form:gear:verify:consistency:interface}
+\exists x~ [\vartheta_{p^*}(p) \wedge \alpha(p^*, x) \wedge \eta(p^*)]
 \end{equation}
 
 
-Syntactic checks in SMLP imposed on the specification file ensure that all knobs are assigned fixed values in $p^*$.  
-If the consistency check fails, SMLP reports the status of $p^*$ as \emph{not a witness}; otherwise SMLP checks satisfiability 
-of the following formula, which we refer to as \emph{feasibility} part of stable witness certification:
-
-\begin{equation}\label{form:gear:certify:feasibility}
-       \varphi_M(p^*,x,y)  \wedge  \alpha(p^*,x) \wedge   \query(p^*,x,y))
-\end{equation}
-
-If the above formula is not satisfiable, then $p^*$ cannot be a stable witness to $\query$, and SMLP reports its status as \emph{not a witness}. 
-Otherwise stability of the candidate witness $p^*$ for $\query$ is checked by proving validity of formula \cref{form:gear:certify},
-and this is done by checking satisfiability of formula~\cref{form:gear:certify:candidate}, which is the negation of the right conjunct of \cref{form:gear:certify}:
-\begin{equation}\label{form:gear:certify:candidate}
-     \theta(p^*, p')  \wedge  \varphi_M(p^*,x,y)  \wedge  \alpha(p^*,x) \wedge   \neg \query(p^*,x,y))
+In the implementation, we are using a stronger version of the configuration interface consistency check, 
+called \emph{configuration consistency} check, which in 
+addition takes into account the ML model constraints when checking consistency of the witness;
+this check subsumes satisfiability check for \cref{form:gear:verify:consistency:interface}:
+\begin{equation}\label{form:verify:witness:model:consistency}
+%\exists p \exists x [  \alpha(p^*, x) \wedge \eta(p^*) \wedge \varphi_M(p^*,x,y)]
+\exists x~ [\vartheta_{p^*}(p) \wedge \alpha(p, x) \wedge \eta(p)  \wedge \varphi_M(p,x,y)]
 \end{equation}
 
 
-SMLP supports checking multiple witness-query pairs in a single run. The status of each witness is reported in file 
- $\suffix{prefix\_dataname\_certify\_results.json}$, and each witness has one of these three status options:   
+Before performing verification according to \cref{form:gear:verify}, SMLP checks satisfiability 
+of the following formula, which we refer to as \emph{feasibility} part of verification with stability:
+\begin{equation}\label{form:gear:verify:feasibility}
+%       \eta(p^*) \wedge  \alpha(p^*,x) \wedge  \varphi_M(p^*,x,y)  \wedge  \assert(p^*,x,y))
+\exists x~ [\vartheta_{p^*}(p) \wedge \alpha(p, x) \wedge \eta(p)  \wedge \varphi_M(p,x,y) \wedge  \assert(p,x,y)]
+\end{equation}
+
+\noindent If the above formula is not satisfiable, then the negated assertion will be true for any legal inputs, which means that the assertion 
+fails everywhere in the legal input space. This is useful info because in such a case maybe the components of the problem instance 
+(for example, the assertion or the constraints) were not specified correctly.
+
+ \ZK{Should the above formula be written without the $\exists x$? Just for the sake of uniformity.}
+
+
+Next, stability of the configuration $p^*$ for $\assert(p,x,y)$ is checked by proving validity of formula \cref{form:gear:verify},
+and this is done by checking satisfiability of formula~\cref{form:gear:verify:negated}, which is the negation of \cref{form:gear:verify}:
+\begin{equation}\label{form:gear:verify:negated}
+%     \theta(p^*, p')  \wedge  \varphi_M(p',x,y)  \wedge  \alpha(p',x) \wedge   \neg \assert(p',x,y))
+\vartheta_{p^*}(p) \wedge \theta(p, p')  \wedge  \varphi_M(p',x,y)  \wedge  \alpha(p',x) \wedge   \neg \assert(p',x,y))
+\end{equation}
+\ZK{check he above formula or get rid of it.}
+Verification results are reported in file $\suffix{prefix\_dataname\_verify\_results.json}$.
+Figure~\ref{fig:verify:result} displays an example results file of SMLP in $\mode{verify}$ mode.
+
+\begin{enumerate}
+\item Fields $\speckey{smlp\_execution}$,  $\speckey{interface\_consistent}$ and $\speckey{model\_consistent}$
+are common for each assertion, and they provide status of the entire execution of SMLP.
+\item The field  $\speckey{configuration\_consistent}$ specifies result of \cref{form:verify:witness:model:consistency}
+\item The field  $\speckey{configuration\_feasible}$ specifies result of \cref{form:gear:verify:feasibility}
+\item The field  $\speckey{assertion\_status}$ specifies the assertion verification status, and can be one of:
 \begin{itemize}
-\item \emph{not a witness} --formula ~\cref{form:gear:certify:consistency} is not valid or formula~\cref{form:gear:certify:feasibility} is not satisfiable.  
-\item \emph{witness, not stable} -- formula~\cref{form:gear:certify} is not valid 
-(formula~\cref{form:gear:certify:consistency} might still be valid and  formula~\cref{form:gear:certify:feasibility} satisfiable).
-\item \emph{stable witness} -- formula~\cref{form:gear:certify} is valid (formula~\cref{form:gear:certify:candidate} is not satisfiable).
+\item[$\specval{''ERROR''}$]  when interface consistency \cref{form:interface:consistency} or
+model consistency \cref{form:model:consistency} or configuration consistency \cref{form:verify:witness:model:consistency} s not valid.
+\item[$\specval{''PASS''}$]  when interface consistency \cref{form:interface:consistency}, 
+model consistency \cref{form:model:consistency},  configuration consistency \cref{form:verify:witness:model:consistency} 
+and  assertion validity \cref{form:gear:verify}  are all valid.
+\item[$\specval{"FAIL"}$]  when interface consistency \cref{form:interface:consistency}, 
+model consistency \cref{form:model:consistency},  configuration consistency \cref{form:verify:witness:model:consistency} 
+are all valid and  assertion validity \cref{form:gear:verify}  is not valid.
+Assertion feasibility \cref{form:gear:verify:feasibility} may or may not be satisfiable, and this is reported using
+field $\speckey{assertion\_feasible}$.
+\item[$\specval{"UNKNOWN"}$] otherwise.  This can happen when SMLP run terminates before one of the above 
+results can be concluded.
 \end{itemize}
+\end{enumerate}
 
-A results file might look like one on figure~\cref{fig:certify:result}:
+
 
 \begin{figure}[tp]%[hb!]
 \small
 \begin{verbatim}
 {
-        "query1": {
-                "witness_consistent": "true",
-                "witness_to_query": "false",
-                "witness_stable": "false"
+        "assert_stable_config": {
+                "configuration_consistent": "true",
+                "assertion_status": "PASS",
+                "counter_example": null,
+                "assertion_feasible": true
         },
-        "query2": {
-                "witness_consistent": "true",
-                "witness_to_query": "true",
-                "witness_stable": "false"
+        "assert_grid_conflict": {
+                "configuration_consistent": "false",
+                "assertion_status": "ERROR",
+                "counter_example": null,
+                "assertion_feasible": "false"
         },
-        "query3": {
-                "witness_consistent": "true",
-                "witness_to_query": "true",
-                "witness_stable": "true"
+        "assert_unstable_config": {
+                "configuration_consistent": "true",
+                "assertion_status": "FAIL",
+                "counter_example": {
+                        "y2": 55.69463654220261,
+                        "y1": -58.38640996591811,
+                        "p2": 6.125,
+                        "p1": 7.5,
+                        "x": 1.0
+                },
+                "assertion_feasible": true
+        },
+        "assert_infeasible": {
+                "configuration_consistent": "true",
+                "assertion_status": "FAIL",
+                "counter_example": {
+                        "y2": 55.69463654220261,
+                        "y1": -58.38640996591811,
+                        "p2": 6.125,
+                        "p1": 7.5,
+                        "x": 1.0
+                },
+                "assertion_feasible": false
         },
         "smlp_execution": "completed",
-        "interface_consistent": "true"
+        "interface_consistent": "true",
+        "model_consistent": "true"
 }
 \end{verbatim}
-\caption{SMLP result in mode $\mode{certify}$.}
-\label{fig:certify:result}
+\caption{SMLP result in mode $\mode{verify}$.}
+\label{fig:verify:result}
 \end{figure}
 
 
 
-Note that the consistency check~\cref{form:gear:certify:consistency} and feasibility check~\cref{form:gear:certify:feasibility} 
-for mode ``certify'' in \cref{sect:certify} do not refer to stability predicate $\theta$, and are applicable in mode ``verify'' in a similar way:
-If the consistency check fails, this is reported to user, with an expectation that the specification file needs to be fixed 
-(this might have been caused by a type).\ZK{not implemented.}  Otherwise, if the feasibility check fails 
-(that is, \cref{form:gear:certify:feasibility} with $\assert$ in place of $\query$, is unsatisfiable), then either $\assert$ is not valid 
-or it is still possible that the specification is not what was intended. \ZK{not implemented.} 
-Otherwise,  formula~\cref{form:gear:verify} is checked for satisfiability 
-(recall that $\theta_r(p^*, p'$ is identity in mode ``verify'' and therefore it does not occur in \cref{form:gear:verify}): 
-\begin{equation}\label{form:gear:verify}
-       \varphi_M(p^*,x,y)  \wedge  \alpha(p^*,x) \wedge  \neg  \assert(p^*,x,y))
-\end{equation}
-If~\cref{form:gear:verify} is satsfiable, SMLP reports the assertion as ``FAIL'',  and otherwise SMLP reports it as '``PASS''. 
-An example verification results file might look like the one in Figure~\cref{fig:verify:result},  where the field ''asrt'' in the result reports 
-the value of the assertion in the SAT assignment to the negated assertion in formula~\cref{form:gear:verify}, and is displayed 
-as part of the results as a sanity check for the correctness of the counter-example to $\assert(p^*,x,y)$. 
-Assertion verification result is reported in file $\suffix{prefix\_dataname\_assertions\_results.json}$.
-\ZK{rename the report file assertions --> verify, to be uniform}
-
-
-\begin{figure}
-\small
-\begin{verbatim}
-{
-        "asrt1": {
-                "status": "FAIL",
-                "asrt": false,
-                "model": {
-                        "y1": 9.0,
-                        "y2": 5.0,
-                        "x3": 7.0,
-                        "x1": 0.0,
-                        "x2": 2.5
-                }
-        },
-        "asrt2": {
-                "status": "PASS",
-                "asrt": null,
-                "model": null
-        }
-}
-
-\end{verbatim}
-\caption{SMLP result in mode $\mode{verify.}$}\label{fig:verify:result}
-\end{figure}
 
 
 \subsection{Mode $\mode{synthesize}$: parameter synthesis with stability}
@@ -1398,9 +1627,48 @@ The task of $\theta$-stable synthesis consists of finding a solution to formula~
 and  $\assert(p, x, y)$ might represent a conjunction of multiple assertions.
 %That is,  $\theta$-stable synthesis reduces to the task of searching for a $\theta$-stable witness $p^*$ for
 %$\query(p, x, y) \eqdef \beta(p, x, y) \wedge \assert(p,x,y))$ (here $\assert(p, x, y)$ might represent a conjunction of multiple assertions).
+According to Definition~\ref{def:stable:witness:validity}, any solution $p^*$ to the synthesis problem,  
+$p^*$  is a stable witness for $\formula(p, x, y) \eqdef \beta(p, x, y) \wedge \assert(p,x,y)$; the latter
+expresses the constraints that synthesized design should satisfy (in legal input space).
 
+Just like for any other mode of exploration, interface consistency \cref{form:interface:consistency} and
+model consistency \cref{form:model:consistency} checks are performed before starting actual synthesis procedure.
+This ensures that synthesis task is well defined, and cannot fail vacuously in case one of the above checks fail.
 
+Synthesis result is reported in file $\suffix{prefix\_dataname\_synthesize\_results.json}$.
+Figure~\ref{fig:synthesize:result} displays an example results file in $\mode{synthesize}$ mode.
+The field $\speckey{configuration\_feasible}$ reports the validity of \ZK{check this formula}
+\begin{equation}\label{form:gear:query:candidate}
+\varphi_{\mathit{feasible}} \eqdef  \exists p,x~ \big[ \eta(p) \wedge \big(
+    \forall y~[
+   (\varphi_M(p,x,y)  \implies  \varphi_{\mathit{cond}}(p,x,y))
+    ]\big)\big]
+\end{equation}
+The field  $\speckey{synthesis\_result}$ reports reports the synthesis results (the synthesized configuration of knob values).
+The field  $\speckey{configuration\_stable}$ reports that a stable configuration satisfying the synthesis requirements
+have been found, which is the same as reporting $\speckey{synthesis\_status}$ as  $\specval{PASS}$.
 
+\begin{figure}[tp]%[hb!]
+\small
+\begin{verbatim}
+{
+        "smlp_execution": "completed",
+        "interface_consistent": "true",
+        "model_consistent": "true",
+        "configuration_feasible": "true",
+        "configuration_stable": "true",
+        "synthesis_status": "PASS",
+        "synthesis_result": {
+                "p1": 0.0,
+                "p2": 0.0
+        }
+}
+\end{verbatim}
+\caption{SMLP result in mode $\mode{synthesize}$.}
+\label{fig:synthesize:result}
+\end{figure}
+
+\delete{
 More precisely, given an ML model $M$  and a query $\query(p, x, y)\eqdef \beta(p, x, y) \wedge \assert(p,x,y)$ 
 that expresses the constraints that synthesized
 design should satisfy,  the task is to find a stable witness $p^*$  for $\query(p, x, y)$ on $M$, as defined in 
@@ -1434,48 +1702,8 @@ check for the task of searching for a stable witness for $\query(p,x,y)$.
 When both the consistency check and the feasibility check succeed, SMLP enters an iterative algorithm for
 searching for a stable witness $p^*$, and can terminate also by concluding that such a witness does not exist 
 (under some additional assumptions).
-
-
-SMLP supports querying multiple conditions in one SMLP run. 
-The status of each query is reported in file $\suffix{prefix\_dataname\_query\_results.json}$, 
-and the result might look like the one displayed in Figure~\cref{fig:query:result}, where the ``witness'' field 
-specifies the values of knobs, as well as values of inputs and values of outputs
-found in the satisfying assignment to~\cref{form:gear:certify:feasibility} that identified the stable witness.
-
-\begin{figure}
-\small
-\begin{verbatim}
-{
-        "smlp_execution": "completed",
-        "interface_consistent": "true",
-        "query1": {
-                "witness_exists": "false",
-                "stable_witness": "false",
-                "query_status": "UNSAT",
-                "query_witness": null
-        },
-        "query2": {
-                "witness_exists": "true",
-                "stable_witness": "true",
-                "query_status": "STABLE_SAT",
-                "query_witness": {
-                        "num2": 9.0,
-                        "num1": 9.0,
-                        "p3": 6.750000044703484,
-                        "FMAX_abc": 7.0
-                }
-        },
-        "query3": {
-                "witness_exists": "false",
-                "stable_witness": "false",
-                "query_status": "UNSAT",
-                "query_witness": null
-        },
-        "model_consistent": "true"
 }
-\end{verbatim}
-\caption{SMLP result in mode $\mode{query}$.}\label{fig:query:result}
-\end{figure}
+
 
 
 \subsection{Mode $\mode{optimize}$: multi-objective optimization with stability}\label{sec:stable:opt}
@@ -1507,7 +1735,7 @@ of knobs $p$, with values of $x$ ranging in $[a,b]$.}
 
 An example of how to run SMLP in mode $\mode{optimize}$ was given in \Cref{sec:example}, which among other
 things describes how the objectives can be defined through the command line and through the specification file.
-When there are multiple objectives, SMLP supports both pareto optimization as well as optimizing for each objective
+When there are multiple objectives, SMLP supports both Pareto optimization as well as optimizing for each objective
 separately (independently from requirements of other objectives). This choice is controlled using option 
 $\optionval{-pareto}{t/f}$. SMLP optimization algorithm first performs feasibility check that $\beta$ constraints are 
 feasible under the interface constraints $\alpha$ and $\eta$, and if a solution is found, the latter is used as a first
@@ -1659,7 +1887,55 @@ The SD algorithm selects regions in the input space relevant to the response, us
 and such regions can be prioritized for sampling in DOE algorithms.
 
 
+In the context of DOE, \emph{experiments} are lists of $\specval{(feature,value)}$ (also called  $\specval{(factor,level)}$) pairs
+$$[(\specval{feature_1}, \specval{value_1}),\ldots,(\specval{feature_n}, \specval{value_n})],$$
+\noindent and they are rows of the matrix of experiments returned by the supported DOE algorithms.
+SMLP options that are required to invoke any of the supported DOE heuristics are:
+\begin{itemize}
+\item $\speckey{doe\_factor\_level\_ranges}$ A dictionary of levels per feature for building experiments for all supported DOE algorithms. 
+The features are integer features (thus the values are integers). 
+The keys in that dictionary are names of  features and the associated values are lists $\specval{[val_1, .., val_k]}$
+from which value for that feature are selected to build an experiment. We refer to these lists of values as the \emph{grids} associated to 
+each feature. DOE algorithms that work with two levels only treat these levels as the min and max of the grid range of a numeric variable.
 
+Example: $\{\speckey{Pressure}:[50,60,70], \speckey{Temperature}:[290, 320, 350], \speckey{Flow rate}:[0.9,1.0]\}$. 
+
+\item $\speckey{doe\_algo}$ Allows to specify the folloving DOE algorithms supported in SMLP: 
+\begin{itemize}
+\item $\speckey{full\_factorial}$ Builds a full factorial design dataframe from a dictionary of feature value grids,  $\specval{doe\_factor\_level\_ranges}$.
+Here the attribute \emph{full} means that all combinations of $\specval{(feature,value)}$ pairs are used to build experiments, which is not feasible
+with a large number of features, and with possibly more than two values (levels) in the corresponding grid of values.
+\item $\speckey{fractional\_factorial}$ Builds a $2$-level fractional factorial design dataframe from a dictionary $\specval{doe\_factor\_level\_ranges}$ of 
+feature value grids and given \emph{resolution}. Here the attribute \emph{$2$-level} means that every feature is represented with (or ranges over) two values only, 
+and the attribute \emph{factorial} means that, unlike in $\speckey{full\_factorial}$ design, only a subset of all possible  $\specval{(feature,value)}$ pairs
+are used to build experiments. A resolution is a way to specify how to group $\specval{(feature,value)}$ pairs to specify the subset of experiments to build.
+\item $\speckey{plackett\_burman}$ Builds a Plackett-Burman design dataframe from a dictionary of feature value grids. Only min and max values of 
+the range are required. Builds a Plackett-Burman design dataframe from a dictionary of feature value grids. Only min and max values of the range are required.
+\item $\speckey{sukharev\_grid}$ Builds a Sukharev-grid hypercube design dataframe from a dictionary of feature value grids.
+\item $\speckey{box\_behnken}$ Builds a Box-Behnken design dataframe from a dictionary of feature value grids.
+\item $\speckey{box\_wilson}$ Builds a Box-Wilson central-composite design dataframe from a dictionary of feature value grids.
+\item $\speckey{latin\_hypercube}$ Builds simple Latin Hypercube from a dictionary of feature value grids.
+Latin Hypercube  sampling selects required number of sampling points so that no two samples use the same grid value, for any
+of the features (so selection is history dependent). 
+ Latin Hypercube sampling forces the samples drawn to correspond more closely with the input distribution, and it converges faster
+than the Monte Carlo sampling which also uses random sampling from feature value distributions.
+\item $\speckey{latin\_hypercube\_sf}$ Builds a space-filling Latin Hypercube design dataframe from a dictionary of feature value grids.
+The attribute \emph{space filling} indicates that sampling is done after dividing feature ranges into a predefined number of
+equal intervals,  which are then randomly sampled. 
+\item $\speckey{random\_k\_means}$ Builds designs with $\specval{random\_k-means\_ clusters}$ from a dictionary of feature value grids.
+\item $\speckey{maximin\_reconstruction}$ Builds maximin reconstruction matrix from a dictionary of feature value grids. 
+\item $\speckey{halton\_sequence}$ Builds Halton matrix based design from a dictionary of  feature value grids.
+\item $\speckey{uniform\_random\_matrix}$ Builds uniform random design matrix from a dictionary of feature value grids.
+\end{itemize}
+\item $\speckey{doe\_num\_samples}$ Number of samples (experiments) to generate.
+\end{itemize}
+\ZK{Add description of  $\speckey{doe\_design\_resolution}$? depends whether it is common for all or most DOE options.}
+
+\ZK{Add command to run DOE; discuss MRMR command line options? }
+
+SMLP $\option{--help}$ provides detailed information on all DOE options. 
+SMLP uses the pyDOE package \url{https://pythonhosted.org/pyDOE/} to implement DOE, and any missing details 
+on DOE options and further references can be found there.
 \section{Root cause analysis}\label{sec:rca}
 
 We view the problem of root cause analysis as dual to the stable optimized synthesis problem: while during optimization with 

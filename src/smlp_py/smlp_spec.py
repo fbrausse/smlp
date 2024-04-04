@@ -129,24 +129,22 @@ class SmlpSpec:
         self._SPEC_KNOBS_ABSOLUTE_RADIUS = None
         self._SPEC_KNOBS_RELATIVE_RADIUS = None
         self._SPEC_VARIABLE_RANGE = None
-        self._SPEC_DOMAIN_RANGE_TAG = 'range'
-        self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
         self._SPEC_DICTIONARY_SYSTEM = None
         
         # tracks changes ib spec file token names per spec version
         self._spec_tokens_dict = {
-            self._SPEC_VARIABLE_LABEL : {'1.1': 'label', '1.2': 'label'},
-            self._SPEC_VARIABLE_TYPE : {'1.1': 'type', '1.2': 'interface'},
-            self._SPEC_INPUT_TAG : {'1.1': 'input', '1.2': 'input'},
-            self._SPEC_KNOB_TAG : {'1.1': 'knob', '1.2': 'knob'},
-            self._SPEC_OUTPUT_TAG : {'1.1': 'response', '1.2': 'output'},
-            self._SPEC_INPUTS_BOUNDS : {'1.1': 'bounds', '1.2': 'range'},
-            self._SPEC_KNOBS_GRID : {'1.1': 'grid', '1.2': 'grid'},
-            self._SPEC_KNOBS_ABSOLUTE_RADIUS : {'1.1': 'rad-abs', '1.2': 'rad-abs'},
-            self._SPEC_KNOBS_RELATIVE_RADIUS : {'1.1': 'rad-rel', '1.2': 'rad-rel'},
-            self._SPEC_VARIABLE_RANGE : {'1.1': 'range', '1.2': 'type'},
-            self._SPEC_RANGE_REAL : {'1.1': 'float', '1.2': 'real'},
-            self._SPEC_DICTIONARY_SPEC : {'1.1': 'spec', '1.2': 'variables'}
+            'SPEC_VARIABLE_LABEL' : {'1.1': 'label', '1.2': 'label'},
+            'SPEC_VARIABLE_TYPE' : {'1.1': 'type', '1.2': 'interface'},
+            'SPEC_INPUT_TAG' : {'1.1': 'input', '1.2': 'input'},
+            'SPEC_KNOB_TAG' : {'1.1': 'knob', '1.2': 'knob'},
+            'SPEC_OUTPUT_TAG' : {'1.1': 'response', '1.2': 'output'},
+            'SPEC_INPUTS_BOUNDS' : {'1.1': 'bounds', '1.2': 'range'},
+            'SPEC_KNOBS_GRID' : {'1.1': 'grid', '1.2': 'grid'},
+            'SPEC_KNOBS_ABSOLUTE_RADIUS' : {'1.1': 'rad-abs', '1.2': 'rad-abs'},
+            'SPEC_KNOBS_RELATIVE_RADIUS' : {'1.1': 'rad-rel', '1.2': 'rad-rel'},
+            'SPEC_VARIABLE_RANGE' : {'1.1': 'range', '1.2': 'type'},
+            'SPEC_RANGE_REAL' : {'1.1': 'float', '1.2': 'real'},
+            'SPEC_DICTIONARY_SPEC' : {'1.1': 'spec', '1.2': 'variables'}
         }
         
     # used by external scripts to set spec version while generating a spec file
@@ -197,15 +195,7 @@ class SmlpSpec:
     @property
     def get_spec_real_tag(self):
         return self._SPEC_RANGE_REAL
-    
-    @property
-    def get_spec_range_tag(self):
-        return self._SPEC_DOMAIN_RANGE_TAG
-    
-    @property
-    def get_spec_interval_tag(self):
-        return self._SPEC_DOMAIN_INTERVAL_TAG
-    
+        
     # sanity checks on declarations in the spec file
     def sanity_check_spec(self):
         # eta global and grid constraints can only be defined on knobs
@@ -251,52 +241,50 @@ class SmlpSpec:
                 raise Exception('Assertion names ' + str(config_asserts.difference(asserts)) + 
                     ' used for specifying knob configurations are not specified among the assertions ' + str(asserts))
     
-    def upgrade_spec(self, spec_dict, source_version, target_version):
+    # upgrade spec file to a new version: from version source_version to version target_version.
+    # write the new spec file in the same directory where the spec_file was located.
+    def upgrade_spec(self, spec_file, source_version, target_version):
+        if not os.path.isfile(spec_file+'.spec'):
+            raise Exception('Spec file ' + str(spec_file) + '.spec' + ' does not exist')
+        with open(spec_file+'.spec', 'r') as sf:
+            spec_dict = json.load(sf) #, parse_float=Fraction
         spec_new_dict = {}
         print('varoiables ?', self._SPEC_DICTIONARY_SPEC)
         print('spec tokens dict vals', self._spec_tokens_dict.values())
         def upgrade_token(token):
             for version_vals in self._spec_tokens_dict.values():
-                print('version_vals', version_vals)
-                token_val_source = version_vals[source_version]; print('token_val_source', token_val_source)
-                token_val_target = version_vals[target_version]; print('token_val_target', token_val_target)
+                #print('version_vals', version_vals)
+                token_val_source = version_vals[source_version]; #print('token_val_source', token_val_source)
+                token_val_target = version_vals[target_version]; #print('token_val_target', token_val_target)
                 if token_val_source == token:
-                    print('match', token)
-                    assert False
+                    #print('match', token)
                     return token_val_target
+        
         for k,v in spec_dict.items():
-            print('k', k, 'v', v)
+            #print('k', k, 'v', v)
             if k == self._SPEC_DICTIONARY_VERSION:
-                print('processing version')
                 spec_new_dict[self._SPEC_DICTIONARY_VERSION] = target_version
             elif k == self._SPEC_DICTIONARY_SPEC:
-                print('processing variables')
                 vars = []
                 for var_spec in spec_dict[self._SPEC_DICTIONARY_SPEC]:
                     var_spec_new = {}
-                    '''
-                    for token, version_vals in self._spec_tokens_dict.items():
-                        print('token', token, 'version_vals', version_vals)
-                        #token_source = 
-                        token_val_source = version_vals[source_version]; print('token_val_source', token_val_source)
-                        token_val_target = version_vals[target_version]; print('token_val_target', token_val_target)
-                    '''
                     for var_spec_token, var_spec_val in var_spec.items():
                         print('var_spec_token', var_spec_token, 'var_spec_val', var_spec_val)
                         var_spec_token_target = upgrade_token(var_spec_token)
                         var_spec_val_target = upgrade_token(var_spec_val)
+                        if var_spec_val_target is None:
+                            var_spec_val_target = var_spec_val
                         print('replace', var_spec_token, 'with', var_spec_token_target)
                         print('replace', var_spec_val, 'with', var_spec_val_target)
                         var_spec_new[var_spec_token_target] = var_spec_val_target
-                        #if token_val_source == var_spec_token:
-                        #    print('match')
-                        #    var_spec_new[self._spec_tokens_dict[token][target_version]] = val
                     print('var_spec_new', var_spec_new)
                     vars.append(var_spec_new)
-                spec_new_dict[ self._spec_tokens_dict[self._SPEC_DICTIONARY_SPEC]] = vars
+                spec_new_dict[self._spec_tokens_dict['SPEC_DICTIONARY_SPEC'][target_version]] = vars
             else:
                 spec_new_dict[k] = v
-        print('spec_new_dict', spec_new_dict); assert False
+        print('spec_new_dict', spec_new_dict); 
+        with open(spec_file+'_v{}.spec'.format('1.2'), 'w') as f:
+            json.dump(spec_new_dict, f, indent='\t', cls=np_JSONEncoder)
         return spec_new_dict
                     
         
@@ -326,8 +314,8 @@ class SmlpSpec:
             #self._spec_logger.info(json.stringif(self.spec_dict, ensure_ascii=False, indent='\t', cls=np_JSONEncoder)) #parse_float=Fraction
             #self.set_spec_tokens()
             self.sanity_check_spec()
-            print(self._SPEC_DICTIONARY_SPEC); 
-            #self.upgrade_spec(spec_dict, '1.1', '1.2')
+            #print(self._SPEC_DICTIONARY_SPEC); 
+            #self.upgrade_spec(spec_file, '1.1', '1.2')
 
     # Override relative and absolute radii values supplied in the spec file
     def set_radii(self, rad_abs, rad_rel):
