@@ -1,0 +1,5 @@
+#Forest semantics: majority vote
+#Number of trees: 1
+
+#TREE 0
+(y1 = 0.5) | based on 8 samples

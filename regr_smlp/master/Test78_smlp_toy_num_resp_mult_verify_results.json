@@ -1,0 +1,22 @@
+{
+	"asrt1": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"p1": 7.0,
+			"y2": 9.0,
+			"p2": 3.0,
+			"y1": 5.0
+		},
+		"assertion_feasible": true
+	},
+	"asrt2": {
+		"configuration_consistent": "true",
+		"assertion_status": "PASS",
+		"counter_example": null,
+		"assertion_feasible": true
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}

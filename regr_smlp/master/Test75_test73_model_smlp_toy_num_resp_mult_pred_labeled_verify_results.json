@@ -1,0 +1,38 @@
+{
+	"asrt1": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"y2": 9.0,
+			"p1": 4.0,
+			"y1": 5.0,
+			"p2": 6.0
+		},
+		"assertion_feasible": false
+	},
+	"asrt2": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"p1": 1.0,
+			"y2": 5.0,
+			"p2": 7.0,
+			"y1": 5.0
+		},
+		"assertion_feasible": true
+	},
+	"asrt3": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"p1": 1.0,
+			"y2": 5.0,
+			"p2": 7.0,
+			"y1": 5.0
+		},
+		"assertion_feasible": false
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}

@@ -47,22 +47,22 @@
 		}
 	],
 	"witnesses": {
-		"stable_witness": {
+		"query_stable_witness": {
 			"x": 7,
 			"p1": 7.0,
 			"p2": 6.000000067055225
 		},
-		"grid_conflict": {
+		"query_grid_conflict": {
 			"x": 6.2,
 			"p1": 3.0,
 			"p2": 6.000000067055225
 		},
-		"unstable_witness": {
+		"query_unstable_witness": {
 			"x": 7,
 			"p1": 7.0,
 			"p2": 6.0
 		},
-		"infeasible_witness": {
+		"query_infeasible_witness": {
 			"x": 7,
 			"p1": 7.0,
 			"p2": 6.0

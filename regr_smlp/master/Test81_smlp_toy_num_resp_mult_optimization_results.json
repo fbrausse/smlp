@@ -1,0 +1,17 @@
+{
+	"obj1": {
+		"y2": 9.0,
+		"y1": 9.0,
+		"p2": 7.0,
+		"p1": 4.0,
+		"x": 11.000000014901161,
+		"obj1_scaled": 1.0,
+		"obj1": 9.0,
+		"threshold_lo_scaled": 0.96875,
+		"threshold_lo": 8.875,
+		"threshold_up_scaled": 1.0,
+		"threshold_up": 9.0,
+		"max_in_data": 9.0,
+		"min_in_data": 5.0
+	}
+}

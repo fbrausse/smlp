@@ -1,0 +1,71 @@
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "discretize": Start
+
+smlp_logger - INFO - loading training data
+
+smlp_logger - INFO - data summary
+               x         p1         p2        num
+count  10.000000  10.000000  11.000000  10.000000
+mean   10.400000   2.800000   5.454545   4.170000
+std     1.074968   0.788811   1.694912   4.223492
+min     9.000000   2.000000   3.000000  -0.500000
+25%    10.000000   2.000000   4.000000   1.500000
+50%    10.000000   3.000000   6.000000   2.650000
+75%    11.000000   3.000000   7.000000   7.575000
+max    12.000000   4.000000   8.000000  11.000000
+
+smlp_logger - INFO - training data
+   categ    PF   PF1     x   p1  p2   num
+0    c14  fail  pass  10.0  2.0   3   2.4
+1    c15  pass  pass  12.0  NaN   4   1.2
+2     c1  fail  pass   NaN  3.0   4  -0.5
+3     c9  fail  fail  11.0  2.0   6   NaN
+4     c5  pass  fail  10.0  2.0   8   0.0
+5    c10  pass  pass   9.0  4.0   7   2.5
+6    c13  fail  fail   9.0  3.0   6   3.3
+7     c4  fail  fail  10.0  3.0   4   2.8
+8    c15  fail  pass  11.0  4.0   4   9.0
+9    c11  fail  fail  12.0  2.0   7  10.0
+10   c19  pass  fail  10.0  3.0   7  11.0
+
+smlp_logger - INFO - training data after imputing missing values
+   categ     x   p1  p2   num    PF   PF1
+0    c14  10.0  2.0   3   2.4  fail  pass
+1    c15  12.0  2.0   4   1.2  pass  pass
+2     c1  10.0  3.0   4  -0.5  fail  pass
+3     c9  11.0  2.0   6  -0.5  fail  fail
+4     c5  10.0  2.0   8   0.0  pass  fail
+5    c10   9.0  4.0   7   2.5  pass  pass
+6    c13   9.0  3.0   6   3.3  fail  fail
+7     c4  10.0  3.0   4   2.8  fail  fail
+8    c15  11.0  4.0   4   9.0  fail  pass
+9    c11  12.0  2.0   7  10.0  fail  fail
+10   c19  10.0  3.0   7  11.0  pass  fail
+
+smlp_logger - INFO - data after discretization
+   categ     x    p1    p2   num
+0    c14  Bin1  Bin0  Bin0  Bin2
+1    c15  Bin2  Bin0  Bin1  Bin1
+2     c1  Bin1  Bin1  Bin1  Bin0
+3     c9  Bin2  Bin0  Bin2  Bin0
+4     c5  Bin1  Bin0  Bin3  Bin1
+5    c10  Bin0  Bin1  Bin3  Bin3
+6    c13  Bin0  Bin1  Bin2  Bin4
+7     c4  Bin1  Bin1  Bin1  Bin3
+8    c15  Bin2  Bin1  Bin1  Bin4
+9    c11  Bin2  Bin0  Bin3  Bin5
+10   c19  Bin1  Bin1  Bin3  Bin5
+
+smlp_logger - INFO - feature data types
+           type                                            levels
+categ    object    [c1, c10, c11, c13, c14, c15, c19, c4, c5, c9]
+x      category                          ['Bin0', 'Bin1', 'Bin2']
+p1     category                                  ['Bin0', 'Bin1']
+p2     category                  ['Bin0', 'Bin1', 'Bin2', 'Bin3']
+num    category  ['Bin0', 'Bin1', 'Bin2', 'Bin3', 'Bin4', 'Bin5']
+
+smlp_logger - INFO - Running SMLP in mode "discretize": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

@@ -1,0 +1,86 @@
+~~~~~ Regression log file ~~~~~
+Test 12 Passed:
+Test12_superlarge_train_dt_sklearn_tree_rules.txt Passed
+Test12_superlarge_train.txt Passed
+Test12_superlarge_train_data_bounds.json Passed
+Test12_superlarge_train_labeled_prediction_precisions.csv Passed
+Test12_superlarge_train_labeled_predictions_summary.csv Passed
+Test12_superlarge_train_model_features_dict.json Passed
+Test12_superlarge_train_model_levels_dict.json Passed
+Test12_superlarge_train_test_prediction_precisions.csv Passed
+Test12_superlarge_train_test_predictions_summary.csv Passed
+Test12_superlarge_train_training_prediction_precisions.csv Passed
+Test12_superlarge_train_training_predictions_summary.csv Passed
+
+Test 13 Passed:
+Test13_superlarge_train.txt Passed
+Test13_superlarge_train_data_bounds.json Passed
+Test13_superlarge_train_labeled_prediction_precisions.csv Passed
+Test13_superlarge_train_labeled_predictions_summary.csv Passed
+Test13_superlarge_train_model_features_dict.json Passed
+Test13_superlarge_train_model_gen.json Passed
+Test13_superlarge_train_model_levels_dict.json Passed
+Test13_superlarge_train_test_prediction_precisions.csv Passed
+Test13_superlarge_train_test_predictions_summary.csv Passed
+Test13_superlarge_train_training_prediction_precisions.csv Passed
+Test13_superlarge_train_training_predictions_summary.csv Passed
+
+Test 14 Passed:
+Test14_superlarge_train.txt Passed
+Test14_superlarge_train_data_bounds.json Passed
+Test14_superlarge_train_labeled_prediction_precisions.csv Passed
+Test14_superlarge_train_labeled_predictions_summary.csv Passed
+Test14_superlarge_train_model_features_dict.json Passed
+Test14_superlarge_train_model_levels_dict.json Passed
+Test14_superlarge_train_poly_sklearn_formula.txt Passed
+Test14_superlarge_train_test_prediction_precisions.csv Passed
+Test14_superlarge_train_test_predictions_summary.csv Passed
+Test14_superlarge_train_training_prediction_precisions.csv Passed
+Test14_superlarge_train_training_predictions_summary.csv Passed
+
+Test 34 Passed:
+Test34_doe_four_levels_real.txt Passed
+Test34_doe_four_levels_real_doe.csv Passed
+
+Test 35 Passed:
+Test35_doe_four_levels_real.txt Passed
+Test35_doe_four_levels_real_doe.csv Passed
+
+Test 36 Passed:
+Test36_doe_four_levels_real.txt Passed
+Test36_doe_four_levels_real_doe.csv Passed
+
+Test 37 Passed:
+Test37_doe_three_levels_real_nan.txt Passed
+Test37_doe_three_levels_real_nan_doe.csv Passed
+
+Test 38 Passed:
+Test38_doe_two_levels.txt Passed
+Test38_doe_two_levels_doe.csv Passed
+
+Test 39 Passed:
+Test39_doe_two_levels.txt Passed
+Test39_doe_two_levels_doe.csv Passed
+
+Test 40 Passed:
+Test40_doe_two_levels.txt Passed
+Test40_doe_two_levels_doe.csv Passed
+
+Test 41 Passed:
+Test41_doe_two_levels.txt Passed
+
+Test 42 Passed:
+Test42_doe_two_levels.txt Passed
+
+Test 43 Passed:
+Test43_doe_two_levels.txt Passed
+Test43_doe_two_levels_doe.csv Passed
+
+Test 44 Passed:
+Test44_doe_two_levels.txt Passed
+Test44_doe_two_levels_doe.csv Passed
+
+Test 45 Passed:
+Test45_doe_two_levels_real.txt Passed
+Test45_doe_two_levels_real_doe.csv Passed
+

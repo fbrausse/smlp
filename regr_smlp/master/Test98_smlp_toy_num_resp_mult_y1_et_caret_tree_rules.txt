@@ -1,0 +1,543 @@
+#Forest semantics: majority vote
+#Number of trees: 270
+
+#TREE 0
+(y1 = 0.5) | based on 8 samples
+#TREE 1
+(y1 = 0.5) | based on 8 samples
+#TREE 2
+(y1 = 0.5) | based on 8 samples
+#TREE 3
+(y1 = 0.5) | based on 8 samples
+#TREE 4
+(y1 = 0.5) | based on 8 samples
+#TREE 5
+(y1 = 0.5) | based on 8 samples
+#TREE 6
+(y1 = 0.5) | based on 8 samples
+#TREE 7
+(y1 = 0.5) | based on 8 samples
+#TREE 8
+(y1 = 0.5) | based on 8 samples
+#TREE 9
+(y1 = 0.5) | based on 8 samples
+#TREE 10
+(y1 = 0.5) | based on 8 samples
+#TREE 11
+(y1 = 0.5) | based on 8 samples
+#TREE 12
+(y1 = 0.5) | based on 8 samples
+#TREE 13
+(y1 = 0.5) | based on 8 samples
+#TREE 14
+(y1 = 0.5) | based on 8 samples
+#TREE 15
+(y1 = 0.5) | based on 8 samples
+#TREE 16
+(y1 = 0.5) | based on 8 samples
+#TREE 17
+(y1 = 0.5) | based on 8 samples
+#TREE 18
+(y1 = 0.5) | based on 8 samples
+#TREE 19
+(y1 = 0.5) | based on 8 samples
+#TREE 20
+(y1 = 0.5) | based on 8 samples
+#TREE 21
+(y1 = 0.5) | based on 8 samples
+#TREE 22
+(y1 = 0.5) | based on 8 samples
+#TREE 23
+(y1 = 0.5) | based on 8 samples
+#TREE 24
+(y1 = 0.5) | based on 8 samples
+#TREE 25
+(y1 = 0.5) | based on 8 samples
+#TREE 26
+(y1 = 0.5) | based on 8 samples
+#TREE 27
+(y1 = 0.5) | based on 8 samples
+#TREE 28
+(y1 = 0.5) | based on 8 samples
+#TREE 29
+(y1 = 0.5) | based on 8 samples
+#TREE 30
+(y1 = 0.5) | based on 8 samples
+#TREE 31
+(y1 = 0.5) | based on 8 samples
+#TREE 32
+(y1 = 0.5) | based on 8 samples
+#TREE 33
+(y1 = 0.5) | based on 8 samples
+#TREE 34
+(y1 = 0.5) | based on 8 samples
+#TREE 35
+(y1 = 0.5) | based on 8 samples
+#TREE 36
+(y1 = 0.5) | based on 8 samples
+#TREE 37
+(y1 = 0.5) | based on 8 samples
+#TREE 38
+(y1 = 0.5) | based on 8 samples
+#TREE 39
+(y1 = 0.5) | based on 8 samples
+#TREE 40
+(y1 = 0.5) | based on 8 samples
+#TREE 41
+(y1 = 0.5) | based on 8 samples
+#TREE 42
+(y1 = 0.5) | based on 8 samples
+#TREE 43
+(y1 = 0.5) | based on 8 samples
+#TREE 44
+(y1 = 0.5) | based on 8 samples
+#TREE 45
+(y1 = 0.5) | based on 8 samples
+#TREE 46
+(y1 = 0.5) | based on 8 samples
+#TREE 47
+(y1 = 0.5) | based on 8 samples
+#TREE 48
+(y1 = 0.5) | based on 8 samples
+#TREE 49
+(y1 = 0.5) | based on 8 samples
+#TREE 50
+(y1 = 0.5) | based on 8 samples
+#TREE 51
+(y1 = 0.5) | based on 8 samples
+#TREE 52
+(y1 = 0.5) | based on 8 samples
+#TREE 53
+(y1 = 0.5) | based on 8 samples
+#TREE 54
+(y1 = 0.5) | based on 8 samples
+#TREE 55
+(y1 = 0.5) | based on 8 samples
+#TREE 56
+(y1 = 0.5) | based on 8 samples
+#TREE 57
+(y1 = 0.5) | based on 8 samples
+#TREE 58
+(y1 = 0.5) | based on 8 samples
+#TREE 59
+(y1 = 0.5) | based on 8 samples
+#TREE 60
+(y1 = 0.5) | based on 8 samples
+#TREE 61
+(y1 = 0.5) | based on 8 samples
+#TREE 62
+(y1 = 0.5) | based on 8 samples
+#TREE 63
+(y1 = 0.5) | based on 8 samples
+#TREE 64
+(y1 = 0.5) | based on 8 samples
+#TREE 65
+(y1 = 0.5) | based on 8 samples
+#TREE 66
+(y1 = 0.5) | based on 8 samples
+#TREE 67
+(y1 = 0.5) | based on 8 samples
+#TREE 68
+(y1 = 0.5) | based on 8 samples
+#TREE 69
+(y1 = 0.5) | based on 8 samples
+#TREE 70
+(y1 = 0.5) | based on 8 samples
+#TREE 71
+(y1 = 0.5) | based on 8 samples
+#TREE 72
+(y1 = 0.5) | based on 8 samples
+#TREE 73
+(y1 = 0.5) | based on 8 samples
+#TREE 74
+(y1 = 0.5) | based on 8 samples
+#TREE 75
+(y1 = 0.5) | based on 8 samples
+#TREE 76
+(y1 = 0.5) | based on 8 samples
+#TREE 77
+(y1 = 0.5) | based on 8 samples
+#TREE 78
+(y1 = 0.5) | based on 8 samples
+#TREE 79
+(y1 = 0.5) | based on 8 samples
+#TREE 80
+(y1 = 0.5) | based on 8 samples
+#TREE 81
+(y1 = 0.5) | based on 8 samples
+#TREE 82
+(y1 = 0.5) | based on 8 samples
+#TREE 83
+(y1 = 0.5) | based on 8 samples
+#TREE 84
+(y1 = 0.5) | based on 8 samples
+#TREE 85
+(y1 = 0.5) | based on 8 samples
+#TREE 86
+(y1 = 0.5) | based on 8 samples
+#TREE 87
+(y1 = 0.5) | based on 8 samples
+#TREE 88
+(y1 = 0.5) | based on 8 samples
+#TREE 89
+(y1 = 0.5) | based on 8 samples
+#TREE 90
+(y1 = 0.5) | based on 8 samples
+#TREE 91
+(y1 = 0.5) | based on 8 samples
+#TREE 92
+(y1 = 0.5) | based on 8 samples
+#TREE 93
+(y1 = 0.5) | based on 8 samples
+#TREE 94
+(y1 = 0.5) | based on 8 samples
+#TREE 95
+(y1 = 0.5) | based on 8 samples
+#TREE 96
+(y1 = 0.5) | based on 8 samples
+#TREE 97
+(y1 = 0.5) | based on 8 samples
+#TREE 98
+(y1 = 0.5) | based on 8 samples
+#TREE 99
+(y1 = 0.5) | based on 8 samples
+#TREE 100
+(y1 = 0.5) | based on 8 samples
+#TREE 101
+(y1 = 0.5) | based on 8 samples
+#TREE 102
+(y1 = 0.5) | based on 8 samples
+#TREE 103
+(y1 = 0.5) | based on 8 samples
+#TREE 104
+(y1 = 0.5) | based on 8 samples
+#TREE 105
+(y1 = 0.5) | based on 8 samples
+#TREE 106
+(y1 = 0.5) | based on 8 samples
+#TREE 107
+(y1 = 0.5) | based on 8 samples
+#TREE 108
+(y1 = 0.5) | based on 8 samples
+#TREE 109
+(y1 = 0.5) | based on 8 samples
+#TREE 110
+(y1 = 0.5) | based on 8 samples
+#TREE 111
+(y1 = 0.5) | based on 8 samples
+#TREE 112
+(y1 = 0.5) | based on 8 samples
+#TREE 113
+(y1 = 0.5) | based on 8 samples
+#TREE 114
+(y1 = 0.5) | based on 8 samples
+#TREE 115
+(y1 = 0.5) | based on 8 samples
+#TREE 116
+(y1 = 0.5) | based on 8 samples
+#TREE 117
+(y1 = 0.5) | based on 8 samples
+#TREE 118
+(y1 = 0.5) | based on 8 samples
+#TREE 119
+(y1 = 0.5) | based on 8 samples
+#TREE 120
+(y1 = 0.5) | based on 8 samples
+#TREE 121
+(y1 = 0.5) | based on 8 samples
+#TREE 122
+(y1 = 0.5) | based on 8 samples
+#TREE 123
+(y1 = 0.5) | based on 8 samples
+#TREE 124
+(y1 = 0.5) | based on 8 samples
+#TREE 125
+(y1 = 0.5) | based on 8 samples
+#TREE 126
+(y1 = 0.5) | based on 8 samples
+#TREE 127
+(y1 = 0.5) | based on 8 samples
+#TREE 128
+(y1 = 0.5) | based on 8 samples
+#TREE 129
+(y1 = 0.5) | based on 8 samples
+#TREE 130
+(y1 = 0.5) | based on 8 samples
+#TREE 131
+(y1 = 0.5) | based on 8 samples
+#TREE 132
+(y1 = 0.5) | based on 8 samples
+#TREE 133
+(y1 = 0.5) | based on 8 samples
+#TREE 134
+(y1 = 0.5) | based on 8 samples
+#TREE 135
+(y1 = 0.5) | based on 8 samples
+#TREE 136
+(y1 = 0.5) | based on 8 samples
+#TREE 137
+(y1 = 0.5) | based on 8 samples
+#TREE 138
+(y1 = 0.5) | based on 8 samples
+#TREE 139
+(y1 = 0.5) | based on 8 samples
+#TREE 140
+(y1 = 0.5) | based on 8 samples
+#TREE 141
+(y1 = 0.5) | based on 8 samples
+#TREE 142
+(y1 = 0.5) | based on 8 samples
+#TREE 143
+(y1 = 0.5) | based on 8 samples
+#TREE 144
+(y1 = 0.5) | based on 8 samples
+#TREE 145
+(y1 = 0.5) | based on 8 samples
+#TREE 146
+(y1 = 0.5) | based on 8 samples
+#TREE 147
+(y1 = 0.5) | based on 8 samples
+#TREE 148
+(y1 = 0.5) | based on 8 samples
+#TREE 149
+(y1 = 0.5) | based on 8 samples
+#TREE 150
+(y1 = 0.5) | based on 8 samples
+#TREE 151
+(y1 = 0.5) | based on 8 samples
+#TREE 152
+(y1 = 0.5) | based on 8 samples
+#TREE 153
+(y1 = 0.5) | based on 8 samples
+#TREE 154
+(y1 = 0.5) | based on 8 samples
+#TREE 155
+(y1 = 0.5) | based on 8 samples
+#TREE 156
+(y1 = 0.5) | based on 8 samples
+#TREE 157
+(y1 = 0.5) | based on 8 samples
+#TREE 158
+(y1 = 0.5) | based on 8 samples
+#TREE 159
+(y1 = 0.5) | based on 8 samples
+#TREE 160
+(y1 = 0.5) | based on 8 samples
+#TREE 161
+(y1 = 0.5) | based on 8 samples
+#TREE 162
+(y1 = 0.5) | based on 8 samples
+#TREE 163
+(y1 = 0.5) | based on 8 samples
+#TREE 164
+(y1 = 0.5) | based on 8 samples
+#TREE 165
+(y1 = 0.5) | based on 8 samples
+#TREE 166
+(y1 = 0.5) | based on 8 samples
+#TREE 167
+(y1 = 0.5) | based on 8 samples
+#TREE 168
+(y1 = 0.5) | based on 8 samples
+#TREE 169
+(y1 = 0.5) | based on 8 samples
+#TREE 170
+(y1 = 0.5) | based on 8 samples
+#TREE 171
+(y1 = 0.5) | based on 8 samples
+#TREE 172
+(y1 = 0.5) | based on 8 samples
+#TREE 173
+(y1 = 0.5) | based on 8 samples
+#TREE 174
+(y1 = 0.5) | based on 8 samples
+#TREE 175
+(y1 = 0.5) | based on 8 samples
+#TREE 176
+(y1 = 0.5) | based on 8 samples
+#TREE 177
+(y1 = 0.5) | based on 8 samples
+#TREE 178
+(y1 = 0.5) | based on 8 samples
+#TREE 179
+(y1 = 0.5) | based on 8 samples
+#TREE 180
+(y1 = 0.5) | based on 8 samples
+#TREE 181
+(y1 = 0.5) | based on 8 samples
+#TREE 182
+(y1 = 0.5) | based on 8 samples
+#TREE 183
+(y1 = 0.5) | based on 8 samples
+#TREE 184
+(y1 = 0.5) | based on 8 samples
+#TREE 185
+(y1 = 0.5) | based on 8 samples
+#TREE 186
+(y1 = 0.5) | based on 8 samples
+#TREE 187
+(y1 = 0.5) | based on 8 samples
+#TREE 188
+(y1 = 0.5) | based on 8 samples
+#TREE 189
+(y1 = 0.5) | based on 8 samples
+#TREE 190
+(y1 = 0.5) | based on 8 samples
+#TREE 191
+(y1 = 0.5) | based on 8 samples
+#TREE 192
+(y1 = 0.5) | based on 8 samples
+#TREE 193
+(y1 = 0.5) | based on 8 samples
+#TREE 194
+(y1 = 0.5) | based on 8 samples
+#TREE 195
+(y1 = 0.5) | based on 8 samples
+#TREE 196
+(y1 = 0.5) | based on 8 samples
+#TREE 197
+(y1 = 0.5) | based on 8 samples
+#TREE 198
+(y1 = 0.5) | based on 8 samples
+#TREE 199
+(y1 = 0.5) | based on 8 samples
+#TREE 200
+(y1 = 0.5) | based on 8 samples
+#TREE 201
+(y1 = 0.5) | based on 8 samples
+#TREE 202
+(y1 = 0.5) | based on 8 samples
+#TREE 203
+(y1 = 0.5) | based on 8 samples
+#TREE 204
+(y1 = 0.5) | based on 8 samples
+#TREE 205
+(y1 = 0.5) | based on 8 samples
+#TREE 206
+(y1 = 0.5) | based on 8 samples
+#TREE 207
+(y1 = 0.5) | based on 8 samples
+#TREE 208
+(y1 = 0.5) | based on 8 samples
+#TREE 209
+(y1 = 0.5) | based on 8 samples
+#TREE 210
+(y1 = 0.5) | based on 8 samples
+#TREE 211
+(y1 = 0.5) | based on 8 samples
+#TREE 212
+(y1 = 0.5) | based on 8 samples
+#TREE 213
+(y1 = 0.5) | based on 8 samples
+#TREE 214
+(y1 = 0.5) | based on 8 samples
+#TREE 215
+(y1 = 0.5) | based on 8 samples
+#TREE 216
+(y1 = 0.5) | based on 8 samples
+#TREE 217
+(y1 = 0.5) | based on 8 samples
+#TREE 218
+(y1 = 0.5) | based on 8 samples
+#TREE 219
+(y1 = 0.5) | based on 8 samples
+#TREE 220
+(y1 = 0.5) | based on 8 samples
+#TREE 221
+(y1 = 0.5) | based on 8 samples
+#TREE 222
+(y1 = 0.5) | based on 8 samples
+#TREE 223
+(y1 = 0.5) | based on 8 samples
+#TREE 224
+(y1 = 0.5) | based on 8 samples
+#TREE 225
+(y1 = 0.5) | based on 8 samples
+#TREE 226
+(y1 = 0.5) | based on 8 samples
+#TREE 227
+(y1 = 0.5) | based on 8 samples
+#TREE 228
+(y1 = 0.5) | based on 8 samples
+#TREE 229
+(y1 = 0.5) | based on 8 samples
+#TREE 230
+(y1 = 0.5) | based on 8 samples
+#TREE 231
+(y1 = 0.5) | based on 8 samples
+#TREE 232
+(y1 = 0.5) | based on 8 samples
+#TREE 233
+(y1 = 0.5) | based on 8 samples
+#TREE 234
+(y1 = 0.5) | based on 8 samples
+#TREE 235
+(y1 = 0.5) | based on 8 samples
+#TREE 236
+(y1 = 0.5) | based on 8 samples
+#TREE 237
+(y1 = 0.5) | based on 8 samples
+#TREE 238
+(y1 = 0.5) | based on 8 samples
+#TREE 239
+(y1 = 0.5) | based on 8 samples
+#TREE 240
+(y1 = 0.5) | based on 8 samples
+#TREE 241
+(y1 = 0.5) | based on 8 samples
+#TREE 242
+(y1 = 0.5) | based on 8 samples
+#TREE 243
+(y1 = 0.5) | based on 8 samples
+#TREE 244
+(y1 = 0.5) | based on 8 samples
+#TREE 245
+(y1 = 0.5) | based on 8 samples
+#TREE 246
+(y1 = 0.5) | based on 8 samples
+#TREE 247
+(y1 = 0.5) | based on 8 samples
+#TREE 248
+(y1 = 0.5) | based on 8 samples
+#TREE 249
+(y1 = 0.5) | based on 8 samples
+#TREE 250
+(y1 = 0.5) | based on 8 samples
+#TREE 251
+(y1 = 0.5) | based on 8 samples
+#TREE 252
+(y1 = 0.5) | based on 8 samples
+#TREE 253
+(y1 = 0.5) | based on 8 samples
+#TREE 254
+(y1 = 0.5) | based on 8 samples
+#TREE 255
+(y1 = 0.5) | based on 8 samples
+#TREE 256
+(y1 = 0.5) | based on 8 samples
+#TREE 257
+(y1 = 0.5) | based on 8 samples
+#TREE 258
+(y1 = 0.5) | based on 8 samples
+#TREE 259
+(y1 = 0.5) | based on 8 samples
+#TREE 260
+(y1 = 0.5) | based on 8 samples
+#TREE 261
+(y1 = 0.5) | based on 8 samples
+#TREE 262
+(y1 = 0.5) | based on 8 samples
+#TREE 263
+(y1 = 0.5) | based on 8 samples
+#TREE 264
+(y1 = 0.5) | based on 8 samples
+#TREE 265
+(y1 = 0.5) | based on 8 samples
+#TREE 266
+(y1 = 0.5) | based on 8 samples
+#TREE 267
+(y1 = 0.5) | based on 8 samples
+#TREE 268
+(y1 = 0.5) | based on 8 samples
+#TREE 269
+(y1 = 0.5) | based on 8 samples

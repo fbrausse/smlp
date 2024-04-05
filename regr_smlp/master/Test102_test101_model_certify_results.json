@@ -1,0 +1,23 @@
+{
+	"query1": {
+		"witness_consistent": "true",
+		"witness_feasible": "false",
+		"witness_stable": "false",
+		"witness_status": "FAIL"
+	},
+	"query2": {
+		"witness_consistent": "true",
+		"witness_feasible": "false",
+		"witness_stable": "false",
+		"witness_status": "FAIL"
+	},
+	"query3": {
+		"witness_consistent": "true",
+		"witness_feasible": "true",
+		"witness_stable": "true",
+		"witness_status": "PASS"
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}

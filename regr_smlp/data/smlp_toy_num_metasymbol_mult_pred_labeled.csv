@@ -1,0 +1,10 @@
+categ,PF ,|PF |,x,p1,p2
+c0,fail,pass,10.0,2.0,3
+c12,pass,pass,12.0,,4
+c2,fail,pass,,3.0,4
+c17,fail,fail,11.0,2.0,6
+c18,pass,fail,10.0,2.0,8
+c8,pass,pass,9.0,4.0,7
+c7,fail,fail,9.0,3.0,6
+c3,fail,fail,10.0,3.0,4
+c12,pass,pass,11.0,4.0,4

@@ -1,0 +1,313 @@
+{
+	"vacuity": {
+		"objv1": {
+			"value_in_config": 7.92,
+			"threshold_scaled": 0.73,
+			"threshold": 7.92,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.6200000000000001,
+			"threshold": 7.48,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.36
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.75
+		}
+	},
+	"iter(0, 2)": {
+		"objv1": {
+			"value_in_config": 7.92,
+			"threshold_scaled": 0.5,
+			"threshold": 7.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.5,
+			"threshold": 7.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.36
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.75
+		}
+	},
+	"iter(0, 5)": {
+		"objv1": {
+			"value_in_config": 7.92,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.36
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.75
+		}
+	},
+	"iter(0, 'completed')": {
+		"objv1": {
+			"value_in_config": 7.92,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.36
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.75
+		},
+		"objv1_scaled_objv2_scaled": {
+			"value_in_config": 0.62
+		},
+		"threshold_lo_scaled": {
+			"value_in_config": 0.5625
+		},
+		"threshold_lo": {
+			"value_in_config": 0.5625
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 0.625
+		},
+		"threshold_up": {
+			"value_in_config": 0.625
+		},
+		"max_in_data": {
+			"value_in_config": 1.0
+		},
+		"min_in_data": {
+			"value_in_config": 0.0
+		}
+	},
+	"iter(1, 'selection')": {
+		"objv1": {
+			"value_in_config": 7.92,
+			"threshold_scaled": 0.6625,
+			"threshold": 7.65,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.36
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.75
+		}
+	},
+	"iter(1, 2)": {
+		"objv1": {
+			"value_in_config": 8.08,
+			"threshold_scaled": 0.746875,
+			"threshold": 7.9875,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.68
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.0
+		}
+	},
+	"iter(1, 'completed')": {
+		"objv1": {
+			"value_in_config": 8.08,
+			"threshold_scaled": 0.746875,
+			"threshold": 7.9875,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.68
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"objv1_scaled": {
+			"value_in_config": 0.77
+		},
+		"threshold_lo_scaled": {
+			"value_in_config": 0.746875
+		},
+		"threshold_lo": {
+			"value_in_config": 0.746875
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 0.83125
+		},
+		"threshold_up": {
+			"value_in_config": 0.83125
+		},
+		"max_in_data": {
+			"value_in_config": 1.0
+		},
+		"min_in_data": {
+			"value_in_config": 0.0
+		}
+	},
+	"final": {
+		"objv1": {
+			"value_in_config": 8.08,
+			"threshold_scaled": 0.746875,
+			"threshold": 7.9875,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 7.48,
+			"threshold_scaled": 0.5625,
+			"threshold": 7.25,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"y2": {
+			"value_in_config": 8.68
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 7.48
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"objv1_scaled": {
+			"value_in_config": 0.77
+		},
+		"threshold_lo_scaled": {
+			"value_in_config": 0.746875
+		},
+		"threshold_lo": {
+			"value_in_config": 0.746875
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 0.83125
+		},
+		"threshold_up": {
+			"value_in_config": 0.83125
+		},
+		"max_in_data": {
+			"value_in_config": 1.0
+		},
+		"min_in_data": {
+			"value_in_config": 0.0
+		}
+	}
+}

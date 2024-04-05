@@ -135,7 +135,7 @@ smlp_logger - INFO - y_train after sampling: (8, 2)
 
 smlp_logger - INFO - Preparing training data for modeling: end
 
-smlp_logger - INFO - Saving data bounds into file:/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_data_bounds.json
+smlp_logger - INFO - Saving data bounds into file:./Test115_smlp_toy_basic_data_bounds.json
 
 smlp_logger - INFO - {'x1': {'min': -0.8218, 'max': 9.546}, 'x2': {'min': -1.0, 'max': 1.0}, 'p1': {'min': 0.1, 'max': 10.0}, 'p2': {'min': 3.0, 'max': 7.0}, 'y1': {'min': 0.24, 'max': 10.7007}, 'y2': {'min': 1.12, 'max': 12.02}}
 
@@ -143,9 +143,9 @@ smlp_logger - INFO - TRAIN MODEL
 
 smlp_logger - INFO - Model training: start
 
-smlp_logger - INFO - Writing tree rules into file /nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_dt_sklearn_tree_rules.txt
+smlp_logger - INFO - Writing tree rules into file ./Test115_smlp_toy_basic_dt_sklearn_tree_rules.txt
 
-smlp_logger - INFO - Writing tree rules into file /nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_dt_sklearn_tree_rules.txt
+smlp_logger - INFO - Writing tree rules into file ./Test115_smlp_toy_basic_dt_sklearn_tree_rules.txt
 
 smlp_logger - INFO - Model training: end
 
@@ -158,10 +158,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_training_predictions_summary.csv
+./Test115_smlp_toy_basic_training_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_training_prediction_precisions.csv
+./Test115_smlp_toy_basic_training_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on training data --  msqe: 0.000
 
@@ -178,10 +178,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_test_predictions_summary.csv
+./Test115_smlp_toy_basic_test_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_test_prediction_precisions.csv
+./Test115_smlp_toy_basic_test_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on test data --  msqe: 24.278
 
@@ -198,10 +198,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_labeled_predictions_summary.csv
+./Test115_smlp_toy_basic_labeled_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test115_smlp_toy_basic_labeled_prediction_precisions.csv
+./Test115_smlp_toy_basic_labeled_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on labeled data --  msqe: 4.856
 

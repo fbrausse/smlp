@@ -1,0 +1,23 @@
+{
+	"smlp_execution": "aborted",
+	"interface_consistent": "false",
+	"query1": {
+		"query_feasible": "unknown",
+		"query_stable": "unknown",
+		"query_status": "ERROR",
+		"query_result": null
+	},
+	"query2": {
+		"query_feasible": "unknown",
+		"query_stable": "unknown",
+		"query_status": "ERROR",
+		"query_result": null
+	},
+	"query3": {
+		"query_feasible": "unknown",
+		"query_stable": "unknown",
+		"query_status": "ERROR",
+		"query_result": null
+	},
+	"model_consistent": "false"
+}

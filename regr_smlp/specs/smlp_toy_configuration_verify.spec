@@ -47,19 +47,19 @@
 		}
 	],
 	"configurations": {
-		"stable_config": {
+		"assert_stable_config": {
 			"p1": 7.0,
 			"p2": 6.000000067055225
 		},
-		"grid_conflict": {
+		"assert_grid_conflict": {
 			"p1": 3.0,
 			"p2": 6.000000067055225
 		},
-		"unstable_config": {
+		"assert_unstable_config": {
 			"p1": 7.0,
 			"p2": 6.0
 		},
-		"not_feasible": {
+		"assert_infeasible": {
 			"p1": 7.0,
 			"p2": 6.0
 		}

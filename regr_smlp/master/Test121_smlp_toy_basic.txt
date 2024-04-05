@@ -103,7 +103,7 @@ smlp_logger - INFO - y_train after sampling: (8, 2)
 
 smlp_logger - INFO - Preparing training data for modeling: end
 
-smlp_logger - INFO - Saving data bounds into file:/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test121_smlp_toy_basic_data_bounds.json
+smlp_logger - INFO - Saving data bounds into file:./Test121_smlp_toy_basic_data_bounds.json
 
 smlp_logger - INFO - {'p1': {'min': 0.1, 'max': 10.0}, 'p2': {'min': 3.0, 'max': 7.0}, 'y1': {'min': 0.24, 'max': 10.7007}, 'y2': {'min': 1.12, 'max': 12.02}}
 
@@ -152,10 +152,6 @@ smlp_logger - INFO - Building model terms: Start
 smlp_logger - INFO - Building model terms: End
 
 smlp_logger - INFO - Model interface constraints are consistent
-
-smlp_logger - INFO - Querying condition consistency_check <-> True
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
 smlp_logger - INFO - Querying condition synthesis_feasibility <-> y2<=0 and y2<=0
 

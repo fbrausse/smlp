@@ -1,17 +1,17 @@
 {
-	"stable_config": {
+	"assert_stable_config": {
 		"configuration_consistent": "true",
 		"assertion_status": "PASS",
 		"counter_example": null,
 		"assertion_feasible": true
 	},
-	"grid_conflict": {
+	"assert_grid_conflict": {
 		"configuration_consistent": "false",
 		"assertion_status": "ERROR",
 		"counter_example": null,
 		"assertion_feasible": "false"
 	},
-	"unstable_config": {
+	"assert_unstable_config": {
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
@@ -23,7 +23,7 @@
 		},
 		"assertion_feasible": true
 	},
-	"not_feasible": {
+	"assert_infeasible": {
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {

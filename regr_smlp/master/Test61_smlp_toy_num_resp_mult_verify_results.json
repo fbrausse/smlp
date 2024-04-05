@@ -1,0 +1,23 @@
+{
+	"asrt_y1": {
+		"configuration_consistent": "skipped",
+		"assertion_status": "PASS",
+		"counter_example": null,
+		"assertion_feasible": true
+	},
+	"asrt_y2": {
+		"configuration_consistent": "skipped",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"y2": 5.380239367485046,
+			"y1": 5.367881536483765,
+			"p2": 3.363086516639646,
+			"p1": 1.0,
+			"x": 4.1667309548392275
+		},
+		"assertion_feasible": true
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "skipped",
+	"model_consistent": "true"
+}

@@ -1,0 +1,63 @@
+#Forest semantics: majority vote
+#Number of trees: 30
+
+#TREE 0
+(y2 = 0.0) | based on 8 samples
+#TREE 1
+(y2 = 0.0) | based on 8 samples
+#TREE 2
+(y2 = 0.0) | based on 8 samples
+#TREE 3
+(y2 = 0.0) | based on 8 samples
+#TREE 4
+(y2 = 0.0) | based on 8 samples
+#TREE 5
+(y2 = 0.0) | based on 8 samples
+#TREE 6
+(y2 = 0.0) | based on 8 samples
+#TREE 7
+(y2 = 0.0) | based on 8 samples
+#TREE 8
+(y2 = 0.0) | based on 8 samples
+#TREE 9
+(y2 = 0.0) | based on 8 samples
+#TREE 10
+(y2 = 0.0) | based on 8 samples
+#TREE 11
+(y2 = 0.0) | based on 8 samples
+#TREE 12
+(y2 = 0.0) | based on 8 samples
+#TREE 13
+(y2 = 0.0) | based on 8 samples
+#TREE 14
+(y2 = 0.0) | based on 8 samples
+#TREE 15
+(y2 = 0.0) | based on 8 samples
+#TREE 16
+(y2 = 0.0) | based on 8 samples
+#TREE 17
+(y2 = 0.0) | based on 8 samples
+#TREE 18
+(y2 = 0.0) | based on 8 samples
+#TREE 19
+(y2 = 0.0) | based on 8 samples
+#TREE 20
+(y2 = 0.0) | based on 8 samples
+#TREE 21
+(y2 = 0.0) | based on 8 samples
+#TREE 22
+(y2 = 0.0) | based on 8 samples
+#TREE 23
+(y2 = 0.0) | based on 8 samples
+#TREE 24
+(y2 = 0.0) | based on 8 samples
+#TREE 25
+(y2 = 0.0) | based on 8 samples
+#TREE 26
+(y2 = 0.0) | based on 8 samples
+#TREE 27
+(y2 = 0.0) | based on 8 samples
+#TREE 28
+(y2 = 0.0) | based on 8 samples
+#TREE 29
+(y2 = 0.0) | based on 8 samples

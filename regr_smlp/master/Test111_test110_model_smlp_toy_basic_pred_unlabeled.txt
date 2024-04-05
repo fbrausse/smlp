@@ -76,7 +76,7 @@ smlp_logger - INFO - Preparing new data for modeling: end
 
 smlp_logger - INFO - LOAD TRAINED MODEL
 
-smlp_logger - INFO - Seving model rerun configuration in file /nfs/iil/proj/dt/eva/smlp/repo/regr/models/test110_model_rerun_model_config.json
+smlp_logger - INFO - Seving model rerun configuration in file ./../models/test110_model_rerun_model_config.json
 
 smlp_logger - INFO - PREDICT ON NEW DATA
 
@@ -87,7 +87,7 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test111_test110_model_smlp_toy_basic_pred_unlabeled_new_predictions_summary.csv
+./Test111_test110_model_smlp_toy_basic_pred_unlabeled_new_predictions_summary.csv
 
 smlp_logger - INFO - Reporting prediction results: end
 

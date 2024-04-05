@@ -1,22 +1,28 @@
 {
 	"smlp_execution": "completed",
 	"interface_consistent": "true",
-	"query1": {
-		"witness_exists": "false",
-		"stable_witness": "false",
-		"query_status": "UNSAT",
-		"query_witness": null
+	"query_feasible_unstable": {
+		"query_feasible": "true",
+		"query_stable": "false",
+		"query_status": "FAIL",
+		"query_result": null
 	},
-	"query2": {
-		"witness_exists": "true",
-		"stable_witness": "true",
-		"query_status": "STABLE_SAT",
-		"query_witness": {
+	"query_feasible_stable": {
+		"query_feasible": "true",
+		"query_stable": "true",
+		"query_status": "PASS",
+		"query_result": {
 			"p1": 0.0,
 			"y2": 0.0,
 			"p2": 0.0,
 			"y1": 0.0
 		}
+	},
+	"query_infeasible": {
+		"query_feasible": "false",
+		"query_stable": "false",
+		"query_status": "FAIL",
+		"query_result": null
 	},
 	"model_consistent": "true"
 }

@@ -135,7 +135,7 @@ smlp_logger - INFO - y_train after sampling: (8, 2)
 
 smlp_logger - INFO - Preparing training data for modeling: end
 
-smlp_logger - INFO - Saving data bounds into file:/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test116_smlp_toy_basic_data_bounds.json
+smlp_logger - INFO - Saving data bounds into file:./Test116_smlp_toy_basic_data_bounds.json
 
 smlp_logger - INFO - {'x1': {'min': -0.8218, 'max': 9.546}, 'x2': {'min': -1.0, 'max': 1.0}, 'p1': {'min': 0.1, 'max': 10.0}, 'p2': {'min': 3.0, 'max': 7.0}, 'y1': {'min': 0.24, 'max': 10.7007}, 'y2': {'min': 1.12, 'max': 12.02}}
 

@@ -1,0 +1,508 @@
+#Forest semantics: majority vote
+#Number of trees: 100
+
+#TREE 0
+if (p2 > 0.7673577288013687) and (p1 <= 0.38953525870551137) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.7673577288013687) and (p2 > 0.5576736627825649) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.7673577288013687) and (p2 <= 0.5576736627825649) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.7673577288013687) and (p1 > 0.38953525870551137) and (p1 > 0.6548261259006458) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.7673577288013687) and (p1 > 0.38953525870551137) and (p1 <= 0.6548261259006458) then (y2 = 0.0) | based on 1 samples
+#TREE 1
+if (p2 > 0.38377441344027147) and (p1 <= 0.638445619325361) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.38377441344027147) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.38377441344027147) and (p1 > 0.638445619325361) then (y2 = 1.0) | based on 1 samples
+#TREE 2
+if (p2 > 0.08755072024071157) and (p1 <= 0.6821769753853684) and (p2 > 0.3346724118372859) then (y2 = 0.0) | based on 5 samples
+if (p2 > 0.08755072024071157) and (p1 > 0.6821769753853684) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.08755072024071157) and (p1 <= 0.6821769753853684) and (p2 <= 0.3346724118372859) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.08755072024071157) then (y2 = 1.0) | based on 1 samples
+#TREE 3
+if (p1 <= 0.8015787977732619) and (p2 > 0.13502758095740694) and (p2 > 0.764729942030688) then (y2 = 0.0) | based on 3 samples
+if (p1 <= 0.8015787977732619) and (p2 > 0.13502758095740694) and (p2 <= 0.764729942030688) and (p2 > 0.38059587665243666) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.8015787977732619) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8015787977732619) and (p2 > 0.13502758095740694) and (p2 <= 0.764729942030688) and (p2 <= 0.38059587665243666) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8015787977732619) and (p2 <= 0.13502758095740694) then (y2 = 1.0) | based on 1 samples
+#TREE 4
+if (p1 <= 0.8390417540627726) and (p2 > 0.29457343290307253) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.8390417540627726) and (p2 <= 0.29457343290307253) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.8390417540627726) then (y2 = 1.0) | based on 1 samples
+#TREE 5
+if (p2 <= 0.9118424513898056) and (p2 > 0.5199985159374545) and (p1 <= 0.9072759439736958) then (y2 = 0.0) | based on 4 samples
+if (p2 <= 0.9118424513898056) and (p2 <= 0.5199985159374545) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.9118424513898056) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.9118424513898056) and (p2 > 0.5199985159374545) and (p1 > 0.9072759439736958) then (y2 = 1.0) | based on 1 samples
+#TREE 6
+if (p2 > 0.39934922680228446) and (p1 <= 0.12492772337278711) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.39934922680228446) and (p1 > 0.12492772337278711) and (p1 <= 0.8017026641414047) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.39934922680228446) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.39934922680228446) and (p1 > 0.12492772337278711) and (p1 > 0.8017026641414047) then (y2 = 1.0) | based on 1 samples
+#TREE 7
+if (p2 > 0.27713262488932006) and (p1 <= 0.8102526403079986) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.27713262488932006) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.27713262488932006) and (p1 > 0.8102526403079986) then (y2 = 1.0) | based on 1 samples
+#TREE 8
+if (p1 <= 0.8176500768482918) and (p2 > 0.08833521236122363) and (p1 > 0.05029969990733066) then (y2 = 0.0) | based on 2 samples
+if (p1 <= 0.8176500768482918) and (p2 > 0.08833521236122363) and (p1 <= 0.05029969990733066) and (p2 > 0.7332973168543162) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.8176500768482918) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8176500768482918) and (p2 > 0.08833521236122363) and (p1 <= 0.05029969990733066) and (p2 <= 0.7332973168543162) and (p2 > 0.3432020214301661) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.8176500768482918) and (p2 > 0.08833521236122363) and (p1 <= 0.05029969990733066) and (p2 <= 0.7332973168543162) and (p2 <= 0.3432020214301661) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8176500768482918) and (p2 <= 0.08833521236122363) then (y2 = 1.0) | based on 1 samples
+#TREE 9
+if (p1 <= 0.9337844862294311) and (p2 > 0.03534622352353587) and (p2 > 0.7685403060262175) then (y2 = 0.0) | based on 3 samples
+if (p1 <= 0.9337844862294311) and (p2 > 0.03534622352353587) and (p2 <= 0.7685403060262175) and (p2 > 0.5464673466751389) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.9337844862294311) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.9337844862294311) and (p2 > 0.03534622352353587) and (p2 <= 0.7685403060262175) and (p2 <= 0.5464673466751389) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.9337844862294311) and (p2 <= 0.03534622352353587) then (y2 = 1.0) | based on 1 samples
+#TREE 10
+if (p2 > 0.4760226986724989) and (p1 <= 0.15971587838591816) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.4760226986724989) and (p1 > 0.15971587838591816) and (p1 <= 0.5530613835682447) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.4760226986724989) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4760226986724989) and (p1 > 0.15971587838591816) and (p1 > 0.5530613835682447) then (y2 = 1.0) | based on 1 samples
+#TREE 11
+if (p2 > 0.4152747022059163) and (p1 <= 0.42447976322121905) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.4152747022059163) and (p1 > 0.42447976322121905) and (p1 <= 0.7503873204115719) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.4152747022059163) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4152747022059163) and (p1 > 0.42447976322121905) and (p1 > 0.7503873204115719) then (y2 = 1.0) | based on 1 samples
+#TREE 12
+if (p2 > 0.378931327433759) and (p1 <= 0.8097833990164955) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.378931327433759) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.378931327433759) and (p1 > 0.8097833990164955) then (y2 = 1.0) | based on 1 samples
+#TREE 13
+if (p2 > 0.054834724895113485) and (p1 <= 0.5752484153840917) and (p2 > 0.6445663154535162) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.054834724895113485) and (p1 <= 0.5752484153840917) and (p2 <= 0.6445663154535162) and (p2 > 0.3624031925348376) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.054834724895113485) and (p1 > 0.5752484153840917) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.054834724895113485) and (p1 <= 0.5752484153840917) and (p2 <= 0.6445663154535162) and (p2 <= 0.3624031925348376) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.054834724895113485) then (y2 = 1.0) | based on 1 samples
+#TREE 14
+if (p2 > 0.341744390941106) and (p1 <= 0.7342843193254827) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.341744390941106) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.341744390941106) and (p1 > 0.7342843193254827) then (y2 = 1.0) | based on 1 samples
+#TREE 15
+if (p2 > 0.6478692095949636) and (p1 <= 0.5303398661922384) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.6478692095949636) and (p2 > 0.4006901022945115) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.6478692095949636) and (p2 <= 0.4006901022945115) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.6478692095949636) and (p1 > 0.5303398661922384) then (y2 = 1.0) | based on 1 samples
+#TREE 16
+if (p1 <= 0.5083941302766997) and (p1 > 0.3130697718882327) then (y2 = 0.0) | based on 2 samples
+if (p1 <= 0.5083941302766997) and (p1 <= 0.3130697718882327) and (p2 > 0.6104108531076512) then (y2 = 0.0) | based on 2 samples
+if (p1 <= 0.5083941302766997) and (p1 <= 0.3130697718882327) and (p2 <= 0.6104108531076512) and (p2 <= 0.5833407285445125) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.5083941302766997) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.5083941302766997) and (p1 <= 0.3130697718882327) and (p2 <= 0.6104108531076512) and (p2 > 0.5833407285445125) then (y2 = 0.0) | based on 1 samples
+#TREE 17
+if (p2 > 0.4330626323041798) and (p1 <= 0.07806138139127818) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.4330626323041798) and (p1 > 0.07806138139127818) and (p1 <= 0.8656761659615096) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.4330626323041798) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4330626323041798) and (p1 > 0.07806138139127818) and (p1 > 0.8656761659615096) then (y2 = 1.0) | based on 1 samples
+#TREE 18
+if (p2 <= 0.9726138221903768) and (p2 > 0.44156180441916887) and (p1 > 0.23436725523060525) and (p1 <= 0.8040999059118796) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.9726138221903768) and (p2 > 0.44156180441916887) and (p1 <= 0.23436725523060525) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.9726138221903768) and (p2 <= 0.44156180441916887) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.9726138221903768) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.9726138221903768) and (p2 > 0.44156180441916887) and (p1 > 0.23436725523060525) and (p1 > 0.8040999059118796) then (y2 = 1.0) | based on 1 samples
+#TREE 19
+if (p2 > 0.11755728214865424) and (p2 > 0.644815850298055) and (p1 <= 0.5369134273086271) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.11755728214865424) and (p2 <= 0.644815850298055) and (p2 > 0.36950566244970007) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.11755728214865424) and (p2 > 0.644815850298055) and (p1 > 0.5369134273086271) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.11755728214865424) and (p2 <= 0.644815850298055) and (p2 <= 0.36950566244970007) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.11755728214865424) then (y2 = 1.0) | based on 1 samples
+#TREE 20
+if (p2 > 0.49280360084623265) and (p1 <= 0.661676961771062) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.49280360084623265) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.49280360084623265) and (p1 > 0.661676961771062) then (y2 = 1.0) | based on 1 samples
+#TREE 21
+if (p2 <= 0.9186634998389815) and (p2 > 0.15696626584040313) and (p2 > 0.41822693236241515) and (p1 > 0.2678697897437354) and (p1 <= 0.5349987053940998) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.9186634998389815) and (p2 > 0.15696626584040313) and (p2 > 0.41822693236241515) and (p1 <= 0.2678697897437354) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.9186634998389815) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.9186634998389815) and (p2 > 0.15696626584040313) and (p2 > 0.41822693236241515) and (p1 > 0.2678697897437354) and (p1 > 0.5349987053940998) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.9186634998389815) and (p2 > 0.15696626584040313) and (p2 <= 0.41822693236241515) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.9186634998389815) and (p2 <= 0.15696626584040313) then (y2 = 1.0) | based on 1 samples
+#TREE 22
+if (p1 <= 0.5864256967727215) and (p2 > 0.023026633087092373) and (p2 > 0.6092218191993644) then (y2 = 0.0) | based on 3 samples
+if (p1 <= 0.5864256967727215) and (p2 > 0.023026633087092373) and (p2 <= 0.6092218191993644) and (p2 > 0.30037856667431867) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.5864256967727215) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.5864256967727215) and (p2 > 0.023026633087092373) and (p2 <= 0.6092218191993644) and (p2 <= 0.30037856667431867) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.5864256967727215) and (p2 <= 0.023026633087092373) then (y2 = 1.0) | based on 1 samples
+#TREE 23
+if (p2 <= 0.9702766639973394) and (p2 > 0.3902021237074723) and (p1 <= 0.9939465224714701) then (y2 = 0.0) | based on 4 samples
+if (p2 <= 0.9702766639973394) and (p2 <= 0.3902021237074723) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.9702766639973394) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.9702766639973394) and (p2 > 0.3902021237074723) and (p1 > 0.9939465224714701) then (y2 = 1.0) | based on 1 samples
+#TREE 24
+if (p2 > 0.5055697078376867) and (p1 <= 0.6862764175451717) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.5055697078376867) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.5055697078376867) and (p1 > 0.6862764175451717) then (y2 = 1.0) | based on 1 samples
+#TREE 25
+if (p2 > 0.6872995689917819) and (p1 <= 0.3139565933095089) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.6872995689917819) and (p2 > 0.4518852694019489) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.6872995689917819) and (p2 <= 0.4518852694019489) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.6872995689917819) and (p1 > 0.3139565933095089) and (p1 > 0.7425437123712821) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.6872995689917819) and (p1 > 0.3139565933095089) and (p1 <= 0.7425437123712821) then (y2 = 0.0) | based on 1 samples
+#TREE 26
+if (p2 > 0.3134672834134974) and (p1 <= 0.4298643113253006) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.3134672834134974) and (p1 > 0.4298643113253006) and (p1 <= 0.9896713891018514) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.3134672834134974) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.3134672834134974) and (p1 > 0.4298643113253006) and (p1 > 0.9896713891018514) then (y2 = 1.0) | based on 1 samples
+#TREE 27
+if (p1 <= 0.8026946730924279) and (p1 > 0.3379622915936458) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.8026946730924279) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8026946730924279) and (p1 <= 0.3379622915936458) and (p2 > 0.8978333193333043) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.8026946730924279) and (p1 <= 0.3379622915936458) and (p2 <= 0.8978333193333043) and (p2 > 0.6785121839451146) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.8026946730924279) and (p1 <= 0.3379622915936458) and (p2 <= 0.8978333193333043) and (p2 <= 0.6785121839451146) and (p2 > 0.17737396457851165) and (p2 > 0.5809016478442977) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.8026946730924279) and (p1 <= 0.3379622915936458) and (p2 <= 0.8978333193333043) and (p2 <= 0.6785121839451146) and (p2 > 0.17737396457851165) and (p2 <= 0.5809016478442977) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8026946730924279) and (p1 <= 0.3379622915936458) and (p2 <= 0.8978333193333043) and (p2 <= 0.6785121839451146) and (p2 <= 0.17737396457851165) then (y2 = 1.0) | based on 1 samples
+#TREE 28
+if (p2 > 0.3455858469687336) and (p1 <= 0.5390871179006468) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.3455858469687336) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.3455858469687336) and (p1 > 0.5390871179006468) then (y2 = 1.0) | based on 1 samples
+#TREE 29
+if (p2 > 0.23600829450227706) and (p1 <= 0.5397191641571555) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.23600829450227706) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.23600829450227706) and (p1 > 0.5397191641571555) then (y2 = 1.0) | based on 1 samples
+#TREE 30
+if (p2 > 0.7941011026474186) and (p1 <= 0.6769119141050204) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.7941011026474186) and (p2 > 0.3322790155591228) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.7941011026474186) and (p2 <= 0.3322790155591228) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.7941011026474186) and (p1 > 0.6769119141050204) then (y2 = 1.0) | based on 1 samples
+#TREE 31
+if (p1 <= 0.9419819013876756) and (p2 > 0.3252086706111248) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.9419819013876756) and (p2 <= 0.3252086706111248) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.9419819013876756) then (y2 = 1.0) | based on 1 samples
+#TREE 32
+if (p2 > 0.4943563777461445) and (p1 <= 0.7124383122252479) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.4943563777461445) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4943563777461445) and (p1 > 0.7124383122252479) then (y2 = 1.0) | based on 1 samples
+#TREE 33
+if (p2 > 0.3252049942152598) and (p1 <= 0.6761637118999677) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.3252049942152598) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.3252049942152598) and (p1 > 0.6761637118999677) then (y2 = 1.0) | based on 1 samples
+#TREE 34
+if (p2 > 0.31580084251044355) and (p1 <= 0.2819651469038637) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.31580084251044355) and (p1 > 0.2819651469038637) and (p1 <= 0.8188755020121464) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.31580084251044355) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.31580084251044355) and (p1 > 0.2819651469038637) and (p1 > 0.8188755020121464) then (y2 = 1.0) | based on 1 samples
+#TREE 35
+if (p1 <= 0.8922818628569514) and (p2 > 0.7209493553829144) then (y2 = 0.0) | based on 3 samples
+if (p1 <= 0.8922818628569514) and (p2 <= 0.7209493553829144) and (p2 > 0.5036758092623249) then (y2 = 0.0) | based on 2 samples
+if (p1 <= 0.8922818628569514) and (p2 <= 0.7209493553829144) and (p2 <= 0.5036758092623249) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.8922818628569514) then (y2 = 1.0) | based on 1 samples
+#TREE 36
+if (p2 > 0.4065410403565229) and (p1 <= 0.7455611828461108) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.4065410403565229) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4065410403565229) and (p1 > 0.7455611828461108) then (y2 = 1.0) | based on 1 samples
+#TREE 37
+if (p1 <= 0.5503449004843575) and (p1 > 0.26291555201770533) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.5503449004843575) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.5503449004843575) and (p1 <= 0.26291555201770533) and (p2 > 0.9580538645191369) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.5503449004843575) and (p1 <= 0.26291555201770533) and (p2 <= 0.9580538645191369) and (p2 > 0.791112189975894) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.5503449004843575) and (p1 <= 0.26291555201770533) and (p2 <= 0.9580538645191369) and (p2 <= 0.791112189975894) and (p2 > 0.06919262938836128) and (p2 > 0.25614287068328995) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.5503449004843575) and (p1 <= 0.26291555201770533) and (p2 <= 0.9580538645191369) and (p2 <= 0.791112189975894) and (p2 > 0.06919262938836128) and (p2 <= 0.25614287068328995) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.5503449004843575) and (p1 <= 0.26291555201770533) and (p2 <= 0.9580538645191369) and (p2 <= 0.791112189975894) and (p2 <= 0.06919262938836128) then (y2 = 1.0) | based on 1 samples
+#TREE 38
+if (p2 > 0.4877031471057344) and (p1 <= 0.25524044793808853) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.4877031471057344) and (p1 > 0.25524044793808853) and (p1 <= 0.718679267083611) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.4877031471057344) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4877031471057344) and (p1 > 0.25524044793808853) and (p1 > 0.718679267083611) then (y2 = 1.0) | based on 1 samples
+#TREE 39
+if (p1 <= 0.9419775441950082) and (p2 > 0.7868173177292651) then (y2 = 0.0) | based on 3 samples
+if (p1 <= 0.9419775441950082) and (p2 <= 0.7868173177292651) and (p2 > 0.33420362018649996) then (y2 = 0.0) | based on 2 samples
+if (p1 <= 0.9419775441950082) and (p2 <= 0.7868173177292651) and (p2 <= 0.33420362018649996) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.9419775441950082) then (y2 = 1.0) | based on 1 samples
+#TREE 40
+if (p2 > 0.24444026790766057) and (p1 <= 0.4160567286499109) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.24444026790766057) and (p1 > 0.4160567286499109) and (p1 <= 0.8417984998513938) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.24444026790766057) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.24444026790766057) and (p1 > 0.4160567286499109) and (p1 > 0.8417984998513938) then (y2 = 1.0) | based on 1 samples
+#TREE 41
+if (p2 <= 0.8855811389561655) and (p1 <= 0.5105071489282451) and (p2 > 0.2753413212887307) then (y2 = 0.0) | based on 4 samples
+if (p2 <= 0.8855811389561655) and (p1 <= 0.5105071489282451) and (p2 <= 0.2753413212887307) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.8855811389561655) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.8855811389561655) and (p1 > 0.5105071489282451) then (y2 = 1.0) | based on 1 samples
+#TREE 42
+if (p2 > 0.7758411205261206) and (p1 <= 0.45896863073993877) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.7758411205261206) and (p2 > 0.02360201228300124) and (p2 > 0.32269293138026267) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.7758411205261206) and (p1 > 0.45896863073993877) and (p1 > 0.9212933089217605) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.7758411205261206) and (p1 > 0.45896863073993877) and (p1 <= 0.9212933089217605) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.7758411205261206) and (p2 > 0.02360201228300124) and (p2 <= 0.32269293138026267) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.7758411205261206) and (p2 <= 0.02360201228300124) then (y2 = 1.0) | based on 1 samples
+#TREE 43
+if (p2 > 0.7791755636125689) and (p1 <= 0.5001768062357683) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.7791755636125689) and (p2 > 0.2853253659946327) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.7791755636125689) and (p2 <= 0.2853253659946327) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.7791755636125689) and (p1 > 0.5001768062357683) then (y2 = 1.0) | based on 1 samples
+#TREE 44
+if (p2 > 0.5500607390655488) and (p1 <= 0.24846635211653373) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.5500607390655488) and (p1 > 0.24846635211653373) and (p1 <= 0.6349350959690917) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.5500607390655488) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.5500607390655488) and (p1 > 0.24846635211653373) and (p1 > 0.6349350959690917) then (y2 = 1.0) | based on 1 samples
+#TREE 45
+if (p2 > 0.5602135260404151) and (p1 <= 0.8915785196663711) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.5602135260404151) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.5602135260404151) and (p1 > 0.8915785196663711) then (y2 = 1.0) | based on 1 samples
+#TREE 46
+if (p2 > 0.24544406228020976) and (p1 <= 0.26511952526174465) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.24544406228020976) and (p1 > 0.26511952526174465) and (p1 <= 0.5060017628157519) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.24544406228020976) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.24544406228020976) and (p1 > 0.26511952526174465) and (p1 > 0.5060017628157519) then (y2 = 1.0) | based on 1 samples
+#TREE 47
+if (p2 > 0.20776174506533973) and (p1 <= 0.11266384046183146) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.20776174506533973) and (p1 > 0.11266384046183146) and (p1 <= 0.7479634344335475) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.20776174506533973) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.20776174506533973) and (p1 > 0.11266384046183146) and (p1 > 0.7479634344335475) then (y2 = 1.0) | based on 1 samples
+#TREE 48
+if (p1 <= 0.7379106444948869) and (p2 > 0.307001816717443) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.7379106444948869) and (p2 <= 0.307001816717443) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.7379106444948869) then (y2 = 1.0) | based on 1 samples
+#TREE 49
+if (p2 > 0.798519540018644) and (p1 <= 0.7296289325364069) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.798519540018644) and (p1 <= 0.1354528058485374) and (p2 <= 0.42882203945034864) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.798519540018644) and (p1 > 0.7296289325364069) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.798519540018644) and (p1 > 0.1354528058485374) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.798519540018644) and (p1 <= 0.1354528058485374) and (p2 > 0.42882203945034864) then (y2 = 0.0) | based on 1 samples
+#TREE 50
+if (p1 <= 0.5349833581293856) and (p2 > 0.3320282834265513) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.5349833581293856) and (p2 <= 0.3320282834265513) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.5349833581293856) then (y2 = 1.0) | based on 1 samples
+#TREE 51
+if (p2 > 0.5139580394672034) and (p1 <= 0.667395065383704) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.5139580394672034) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.5139580394672034) and (p1 > 0.667395065383704) then (y2 = 1.0) | based on 1 samples
+#TREE 52
+if (p2 > 0.41559233861770123) and (p1 <= 0.8305540819794657) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.41559233861770123) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.41559233861770123) and (p1 > 0.8305540819794657) then (y2 = 1.0) | based on 1 samples
+#TREE 53
+if (p2 > 0.24997303599956122) and (p1 <= 0.9449580902908733) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.24997303599956122) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.24997303599956122) and (p1 > 0.9449580902908733) then (y2 = 1.0) | based on 1 samples
+#TREE 54
+if (p2 <= 0.9105368027978282) and (p2 > 0.11328702817599842) and (p2 > 0.45120145980717985) and (p1 <= 0.932138100234856) then (y2 = 0.0) | based on 4 samples
+if (p2 > 0.9105368027978282) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.9105368027978282) and (p2 > 0.11328702817599842) and (p2 > 0.45120145980717985) and (p1 > 0.932138100234856) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.9105368027978282) and (p2 > 0.11328702817599842) and (p2 <= 0.45120145980717985) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.9105368027978282) and (p2 <= 0.11328702817599842) then (y2 = 1.0) | based on 1 samples
+#TREE 55
+if (p2 > 0.3698112849936873) and (p1 <= 0.9966890877097329) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.3698112849936873) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.3698112849936873) and (p1 > 0.9966890877097329) then (y2 = 1.0) | based on 1 samples
+#TREE 56
+if (p1 <= 0.7904476163864358) and (p2 > 0.610545704891228) then (y2 = 0.0) | based on 3 samples
+if (p1 <= 0.7904476163864358) and (p2 <= 0.610545704891228) and (p2 > 0.39007064098310534) then (y2 = 0.0) | based on 2 samples
+if (p1 <= 0.7904476163864358) and (p2 <= 0.610545704891228) and (p2 <= 0.39007064098310534) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.7904476163864358) then (y2 = 1.0) | based on 1 samples
+#TREE 57
+if (p2 <= 0.8761705932562103) and (p2 > 0.26255522885561106) and (p1 <= 0.5365386081563954) then (y2 = 0.0) | based on 4 samples
+if (p2 <= 0.8761705932562103) and (p2 <= 0.26255522885561106) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.8761705932562103) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.8761705932562103) and (p2 > 0.26255522885561106) and (p1 > 0.5365386081563954) then (y2 = 1.0) | based on 1 samples
+#TREE 58
+if (p2 > 0.13040534133576107) and (p2 > 0.30445960726066623) and (p1 <= 0.17619946048418034) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.13040534133576107) and (p2 > 0.30445960726066623) and (p1 > 0.17619946048418034) and (p1 <= 0.6089714824263806) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.13040534133576107) and (p2 > 0.30445960726066623) and (p1 > 0.17619946048418034) and (p1 > 0.6089714824263806) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.13040534133576107) and (p2 <= 0.30445960726066623) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.13040534133576107) then (y2 = 1.0) | based on 1 samples
+#TREE 59
+if (p2 > 0.5628896791315123) and (p1 <= 0.3953563828930987) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.5628896791315123) and (p1 > 0.3953563828930987) and (p1 <= 0.7425113966420811) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.5628896791315123) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.5628896791315123) and (p1 > 0.3953563828930987) and (p1 > 0.7425113966420811) then (y2 = 1.0) | based on 1 samples
+#TREE 60
+if (p2 > 0.29568238290757054) and (p1 <= 0.8807629635002292) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.29568238290757054) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.29568238290757054) and (p1 > 0.8807629635002292) then (y2 = 1.0) | based on 1 samples
+#TREE 61
+if (p2 > 0.6448756091505641) and (p1 <= 0.7802189019416547) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.6448756091505641) and (p2 > 0.31921030336920564) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.6448756091505641) and (p2 <= 0.31921030336920564) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.6448756091505641) and (p1 > 0.7802189019416547) then (y2 = 1.0) | based on 1 samples
+#TREE 62
+if (p2 > 0.40775410523999206) and (p1 <= 0.35838276676758324) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.40775410523999206) and (p1 > 0.35838276676758324) and (p1 <= 0.642143270067006) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.40775410523999206) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.40775410523999206) and (p1 > 0.35838276676758324) and (p1 > 0.642143270067006) then (y2 = 1.0) | based on 1 samples
+#TREE 63
+if (p1 <= 0.9551846375480223) and (p2 > 0.46347270974119786) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.9551846375480223) and (p2 <= 0.46347270974119786) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.9551846375480223) then (y2 = 1.0) | based on 1 samples
+#TREE 64
+if (p2 <= 0.8648104606498082) and (p2 > 0.5269342816382792) and (p1 <= 0.5903809175781817) then (y2 = 0.0) | based on 4 samples
+if (p2 <= 0.8648104606498082) and (p2 <= 0.5269342816382792) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.8648104606498082) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.8648104606498082) and (p2 > 0.5269342816382792) and (p1 > 0.5903809175781817) then (y2 = 1.0) | based on 1 samples
+#TREE 65
+if (p2 > 0.2588784351287775) and (p1 <= 0.9154622358807653) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.2588784351287775) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.2588784351287775) and (p1 > 0.9154622358807653) then (y2 = 1.0) | based on 1 samples
+#TREE 66
+if (p2 > 0.3330574130327708) and (p1 <= 0.808572262436418) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.3330574130327708) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.3330574130327708) and (p1 > 0.808572262436418) then (y2 = 1.0) | based on 1 samples
+#TREE 67
+if (p2 > 0.37996283470651265) and (p1 <= 0.9973980397905214) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.37996283470651265) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.37996283470651265) and (p1 > 0.9973980397905214) then (y2 = 1.0) | based on 1 samples
+#TREE 68
+if (p2 > 0.2900665776292172) and (p1 <= 0.25694221456392774) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.2900665776292172) and (p1 > 0.25694221456392774) and (p1 <= 0.53440084030591) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.2900665776292172) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.2900665776292172) and (p1 > 0.25694221456392774) and (p1 > 0.53440084030591) then (y2 = 1.0) | based on 1 samples
+#TREE 69
+if (p1 <= 0.8811519843904078) and (p1 > 0.44687234375014545) then (y2 = 0.0) | based on 2 samples
+if (p1 <= 0.8811519843904078) and (p1 <= 0.44687234375014545) and (p2 > 0.18638314967340935) and (p2 <= 0.8890043310713813) and (p2 > 0.36390200630238556) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.8811519843904078) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8811519843904078) and (p1 <= 0.44687234375014545) and (p2 > 0.18638314967340935) and (p2 > 0.8890043310713813) then (y2 = 0.0) | based on 1 samples
+if (p1 <= 0.8811519843904078) and (p1 <= 0.44687234375014545) and (p2 > 0.18638314967340935) and (p2 <= 0.8890043310713813) and (p2 <= 0.36390200630238556) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.8811519843904078) and (p1 <= 0.44687234375014545) and (p2 <= 0.18638314967340935) then (y2 = 1.0) | based on 1 samples
+#TREE 70
+if (p2 > 0.04931370869712611) and (p2 > 0.2859757226883294) and (p1 <= 0.9745492772080699) then (y2 = 0.0) | based on 5 samples
+if (p2 > 0.04931370869712611) and (p2 > 0.2859757226883294) and (p1 > 0.9745492772080699) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.04931370869712611) and (p2 <= 0.2859757226883294) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.04931370869712611) then (y2 = 1.0) | based on 1 samples
+#TREE 71
+if (p2 <= 0.975938606064738) and (p2 > 0.5588992387259726) and (p1 > 0.369596745525299) and (p1 <= 0.9954817926024468) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.975938606064738) and (p2 > 0.5588992387259726) and (p1 <= 0.369596745525299) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.975938606064738) and (p2 <= 0.5588992387259726) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.975938606064738) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.975938606064738) and (p2 > 0.5588992387259726) and (p1 > 0.369596745525299) and (p1 > 0.9954817926024468) then (y2 = 1.0) | based on 1 samples
+#TREE 72
+if (p2 > 0.01289768471051831) and (p2 > 0.545370601481947) and (p1 <= 0.45443898507134944) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.01289768471051831) and (p2 > 0.545370601481947) and (p1 > 0.45443898507134944) and (p1 <= 0.9125637856370601) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.01289768471051831) and (p2 > 0.545370601481947) and (p1 > 0.45443898507134944) and (p1 > 0.9125637856370601) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.01289768471051831) and (p2 <= 0.545370601481947) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.01289768471051831) then (y2 = 1.0) | based on 1 samples
+#TREE 73
+if (p1 <= 0.7889165751584417) and (p2 > 0.2870774899083551) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.7889165751584417) and (p2 <= 0.2870774899083551) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.7889165751584417) then (y2 = 1.0) | based on 1 samples
+#TREE 74
+if (p2 > 0.09689574087825406) and (p2 > 0.49965871735587203) and (p1 <= 0.5218467188635127) then (y2 = 0.0) | based on 5 samples
+if (p2 > 0.09689574087825406) and (p2 > 0.49965871735587203) and (p1 > 0.5218467188635127) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.09689574087825406) and (p2 <= 0.49965871735587203) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.09689574087825406) then (y2 = 1.0) | based on 1 samples
+#TREE 75
+if (p2 > 0.7510520740184244) and (p1 <= 0.5813020335423303) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.7510520740184244) and (p2 > 0.09802355219735749) and (p2 > 0.3052348557354593) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.7510520740184244) and (p1 > 0.5813020335423303) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.7510520740184244) and (p2 > 0.09802355219735749) and (p2 <= 0.3052348557354593) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.7510520740184244) and (p2 <= 0.09802355219735749) then (y2 = 1.0) | based on 1 samples
+#TREE 76
+if (p2 > 0.7007179663985585) and (p1 <= 0.052084931196684454) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.7007179663985585) and (p1 > 0.052084931196684454) and (p1 > 0.9614572333923808) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.7007179663985585) and (p1 > 0.052084931196684454) and (p1 <= 0.9614572333923808) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.7007179663985585) and (p1 > 0.03926347826573228) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.7007179663985585) and (p1 <= 0.03926347826573228) and (p2 > 0.12003675120099096) and (p2 > 0.5265273591957937) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.7007179663985585) and (p1 <= 0.03926347826573228) and (p2 > 0.12003675120099096) and (p2 <= 0.5265273591957937) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.7007179663985585) and (p1 <= 0.03926347826573228) and (p2 <= 0.12003675120099096) then (y2 = 1.0) | based on 1 samples
+#TREE 77
+if (p2 > 0.3611685560835379) and (p1 <= 0.7598039134218376) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.3611685560835379) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.3611685560835379) and (p1 > 0.7598039134218376) then (y2 = 1.0) | based on 1 samples
+#TREE 78
+if (p1 <= 0.6819941814439344) and (p2 > 0.7497925561618957) then (y2 = 0.0) | based on 3 samples
+if (p1 <= 0.6819941814439344) and (p2 <= 0.7497925561618957) and (p2 > 0.04140440112658768) and (p2 > 0.5356676468301759) then (y2 = 0.0) | based on 2 samples
+if (p1 > 0.6819941814439344) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.6819941814439344) and (p2 <= 0.7497925561618957) and (p2 > 0.04140440112658768) and (p2 <= 0.5356676468301759) then (y2 = 1.0) | based on 1 samples
+if (p1 <= 0.6819941814439344) and (p2 <= 0.7497925561618957) and (p2 <= 0.04140440112658768) then (y2 = 1.0) | based on 1 samples
+#TREE 79
+if (p2 > 0.008065070495039723) and (p2 > 0.5416440442244018) and (p1 <= 0.43714068524406324) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.008065070495039723) and (p2 > 0.5416440442244018) and (p1 > 0.43714068524406324) and (p1 <= 0.7303793901719057) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.008065070495039723) and (p2 > 0.5416440442244018) and (p1 > 0.43714068524406324) and (p1 > 0.7303793901719057) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.008065070495039723) and (p2 <= 0.5416440442244018) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.008065070495039723) then (y2 = 1.0) | based on 1 samples
+#TREE 80
+if (p2 > 0.37619898672038643) and (p1 <= 0.6912837441504391) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.37619898672038643) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.37619898672038643) and (p1 > 0.6912837441504391) then (y2 = 1.0) | based on 1 samples
+#TREE 81
+if (p2 > 0.546951303047571) and (p1 <= 0.06445350407830137) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.546951303047571) and (p1 > 0.06445350407830137) and (p1 <= 0.5306209207189366) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.546951303047571) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.546951303047571) and (p1 > 0.06445350407830137) and (p1 > 0.5306209207189366) then (y2 = 1.0) | based on 1 samples
+#TREE 82
+if (p2 > 0.03960084637608419) and (p2 <= 0.9039558912964113) and (p2 > 0.24910012605614218) and (p2 > 0.7788486970990045) and (p1 <= 0.9758182559049773) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.03960084637608419) and (p2 <= 0.9039558912964113) and (p2 > 0.24910012605614218) and (p2 <= 0.7788486970990045) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.03960084637608419) and (p2 > 0.9039558912964113) then (y2 = 0.0) | based on 1 samples
+if (p2 > 0.03960084637608419) and (p2 <= 0.9039558912964113) and (p2 > 0.24910012605614218) and (p2 > 0.7788486970990045) and (p1 > 0.9758182559049773) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.03960084637608419) and (p2 <= 0.9039558912964113) and (p2 <= 0.24910012605614218) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.03960084637608419) then (y2 = 1.0) | based on 1 samples
+#TREE 83
+if (p2 > 0.552268020134544) and (p1 <= 0.7000778069254373) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.552268020134544) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.552268020134544) and (p1 > 0.7000778069254373) then (y2 = 1.0) | based on 1 samples
+#TREE 84
+if (p2 > 0.33872135325275426) and (p1 <= 0.410836367127875) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.33872135325275426) and (p1 > 0.410836367127875) and (p1 <= 0.9631402916103323) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.33872135325275426) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.33872135325275426) and (p1 > 0.410836367127875) and (p1 > 0.9631402916103323) then (y2 = 1.0) | based on 1 samples
+#TREE 85
+if (p2 > 0.4012295754632119) and (p1 <= 0.3774126001528523) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.4012295754632119) and (p1 > 0.3774126001528523) and (p1 <= 0.9479443740322927) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.4012295754632119) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4012295754632119) and (p1 > 0.3774126001528523) and (p1 > 0.9479443740322927) then (y2 = 1.0) | based on 1 samples
+#TREE 86
+if (p2 > 0.2553266865458929) and (p1 <= 0.621824325351894) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.2553266865458929) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.2553266865458929) and (p1 > 0.621824325351894) then (y2 = 1.0) | based on 1 samples
+#TREE 87
+if (p2 > 0.7685865707549204) and (p1 <= 0.138507838425463) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.7685865707549204) and (p2 > 0.4794289603786071) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.7685865707549204) and (p2 <= 0.4794289603786071) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.7685865707549204) and (p1 > 0.138507838425463) and (p1 > 0.7477255725524041) then (y2 = 1.0) | based on 1 samples
+if (p2 > 0.7685865707549204) and (p1 > 0.138507838425463) and (p1 <= 0.7477255725524041) then (y2 = 0.0) | based on 1 samples
+#TREE 88
+if (p2 > 0.7198476743511146) and (p1 <= 0.9474632087850307) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.7198476743511146) and (p2 > 0.12694832578295454) and (p2 > 0.26819942635788324) then (y2 = 0.0) | based on 2 samples
+if (p2 > 0.7198476743511146) and (p1 > 0.9474632087850307) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.7198476743511146) and (p2 > 0.12694832578295454) and (p2 <= 0.26819942635788324) then (y2 = 1.0) | based on 1 samples
+if (p2 <= 0.7198476743511146) and (p2 <= 0.12694832578295454) then (y2 = 1.0) | based on 1 samples
+#TREE 89
+if (p1 <= 0.6055255088049571) and (p2 > 0.387720966892187) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.6055255088049571) and (p2 <= 0.387720966892187) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.6055255088049571) then (y2 = 1.0) | based on 1 samples
+#TREE 90
+if (p2 > 0.24457917979200333) and (p1 <= 0.7474515557975748) then (y2 = 0.0) | based on 5 samples
+if (p2 <= 0.24457917979200333) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.24457917979200333) and (p1 > 0.7474515557975748) then (y2 = 1.0) | based on 1 samples
+#TREE 91
+if (p2 <= 0.8126054242312002) and (p2 > 0.4289941864818372) and (p1 <= 0.9388068751147048) then (y2 = 0.0) | based on 4 samples
+if (p2 <= 0.8126054242312002) and (p2 <= 0.4289941864818372) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.8126054242312002) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.8126054242312002) and (p2 > 0.4289941864818372) and (p1 > 0.9388068751147048) then (y2 = 1.0) | based on 1 samples
+#TREE 92
+if (p1 <= 0.6303423524975508) and (p2 > 0.26886312862339573) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.6303423524975508) and (p2 <= 0.26886312862339573) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.6303423524975508) then (y2 = 1.0) | based on 1 samples
+#TREE 93
+if (p2 <= 0.8765763574636432) and (p2 > 0.2309212541302672) and (p2 > 0.7303088246149856) and (p1 <= 0.5055405737392328) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.8765763574636432) and (p2 > 0.2309212541302672) and (p2 <= 0.7303088246149856) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.8765763574636432) and (p2 <= 0.2309212541302672) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.8765763574636432) then (y2 = 0.0) | based on 1 samples
+if (p2 <= 0.8765763574636432) and (p2 > 0.2309212541302672) and (p2 > 0.7303088246149856) and (p1 > 0.5055405737392328) then (y2 = 1.0) | based on 1 samples
+#TREE 94
+if (p2 > 0.25803846924474394) and (p1 <= 0.0691195740686355) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.25803846924474394) and (p1 > 0.0691195740686355) and (p1 <= 0.6551666863519543) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.25803846924474394) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.25803846924474394) and (p1 > 0.0691195740686355) and (p1 > 0.6551666863519543) then (y2 = 1.0) | based on 1 samples
+#TREE 95
+if (p2 > 0.656436661564017) and (p1 <= 0.7608029128801092) then (y2 = 0.0) | based on 3 samples
+if (p2 <= 0.656436661564017) and (p2 > 0.5350942136703363) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.656436661564017) and (p2 <= 0.5350942136703363) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.656436661564017) and (p1 > 0.7608029128801092) then (y2 = 1.0) | based on 1 samples
+#TREE 96
+if (p1 <= 0.9957510959337238) and (p2 > 0.24341955140392274) then (y2 = 0.0) | based on 5 samples
+if (p1 <= 0.9957510959337238) and (p2 <= 0.24341955140392274) then (y2 = 1.0) | based on 2 samples
+if (p1 > 0.9957510959337238) then (y2 = 1.0) | based on 1 samples
+#TREE 97
+if (p2 > 0.4985881580498946) and (p1 <= 0.12664469058003494) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.4985881580498946) and (p1 > 0.12664469058003494) and (p1 <= 0.9358853951263639) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.4985881580498946) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.4985881580498946) and (p1 > 0.12664469058003494) and (p1 > 0.9358853951263639) then (y2 = 1.0) | based on 1 samples
+#TREE 98
+if (p2 > 0.33006499955899316) and (p1 <= 0.29657478970316) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.33006499955899316) and (p1 > 0.29657478970316) and (p1 <= 0.7463907418988602) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.33006499955899316) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.33006499955899316) and (p1 > 0.29657478970316) and (p1 > 0.7463907418988602) then (y2 = 1.0) | based on 1 samples
+#TREE 99
+if (p2 > 0.30543398172847647) and (p1 <= 0.20325704906287465) then (y2 = 0.0) | based on 3 samples
+if (p2 > 0.30543398172847647) and (p1 > 0.20325704906287465) and (p1 <= 0.7424534597631793) then (y2 = 0.0) | based on 2 samples
+if (p2 <= 0.30543398172847647) then (y2 = 1.0) | based on 2 samples
+if (p2 > 0.30543398172847647) and (p1 > 0.20325704906287465) and (p1 > 0.7424534597631793) then (y2 = 1.0) | based on 1 samples

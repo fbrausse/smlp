@@ -1,0 +1,245 @@
+
+smlp_logger - INFO - Model exploration specification:
+{'version': '1.1', 'spec': [{'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'p1', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'p2', 'type': 'input', 'range': 'float', 'bounds': [3, 7]}], 'alpha': 'p1==1 or p1==4 or p1==7'}
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Computed spec global constraint expressions:
+
+smlp_logger - INFO - Global alpha : p1==1 or p1==4 or p1==7
+
+smlp_logger - INFO - Global beta  : None
+
+smlp_logger - INFO - Radii  theta : {}
+
+smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+
+smlp_logger - INFO - Assertion asrt1: (y2**3+p2)/2<6
+
+smlp_logger - INFO - Running SMLP in mode "verify": Start
+
+smlp_logger - INFO - PREPARE DATA FOR MODELING
+
+smlp_logger - INFO - Preparing training data for modeling: start
+
+smlp_logger - INFO - loading training data
+
+smlp_logger - INFO - data summary
+              y1         y2          x         p1         p2
+count  11.000000  11.000000  10.000000  10.000000  11.000000
+mean    6.818182   6.818182  10.400000   2.800000   5.454545
+std     2.088932   2.088932   1.074968   0.788811   1.694912
+min     5.000000   5.000000   9.000000   2.000000   3.000000
+25%     5.000000   5.000000  10.000000   2.000000   4.000000
+50%     5.000000   5.000000  10.000000   3.000000   6.000000
+75%     9.000000   9.000000  11.000000   3.000000   7.000000
+max     9.000000   9.000000  12.000000   4.000000   8.000000
+
+smlp_logger - INFO - training data
+   categ  y1  y2     x   p1  p2
+0    c14   5   9  10.0  2.0   3
+1    c15   9   9  12.0  NaN   4
+2     c1   5   9   NaN  3.0   4
+3     c9   5   5  11.0  2.0   6
+4     c5   9   5  10.0  2.0   8
+5    c10   9   9   9.0  4.0   7
+6    c13   5   5   9.0  3.0   6
+7     c4   5   5  10.0  3.0   4
+8    c15   9   9  11.0  4.0   4
+9    c11   5   5  12.0  2.0   7
+10   c19   9   5  10.0  3.0   7
+
+smlp_logger - INFO - training data after imputing missing values
+       x   p1   p2   y2
+0   10.0  2.0  3.0  9.0
+1   12.0  2.0  4.0  9.0
+2   10.0  3.0  4.0  9.0
+3   11.0  2.0  6.0  5.0
+4   10.0  2.0  8.0  5.0
+5    9.0  4.0  7.0  9.0
+6    9.0  3.0  6.0  5.0
+7   10.0  3.0  4.0  5.0
+8   11.0  4.0  4.0  9.0
+9   12.0  2.0  7.0  5.0
+10  10.0  3.0  7.0  5.0
+
+smlp_logger - INFO - training data after encoding levels of categorical features with integers
+       x   p1   p2   y2
+0   10.0  2.0  3.0  9.0
+1   12.0  2.0  4.0  9.0
+2   10.0  3.0  4.0  9.0
+3   11.0  2.0  6.0  5.0
+4   10.0  2.0  8.0  5.0
+5    9.0  4.0  7.0  9.0
+6    9.0  3.0  6.0  5.0
+7   10.0  3.0  4.0  5.0
+8   11.0  4.0  4.0  9.0
+9   12.0  2.0  7.0  5.0
+10  10.0  3.0  7.0  5.0
+
+smlp_logger - INFO - training data after scaling (normalizing) features and responses
+           x   p1   p2   y2
+0   0.333333  0.0  0.0  1.0
+1   1.000000  0.0  0.2  1.0
+2   0.333333  0.5  0.2  1.0
+3   0.666667  0.0  0.6  0.0
+4   0.333333  0.0  1.0  0.0
+5   0.000000  1.0  0.8  1.0
+6   0.000000  0.5  0.6  0.0
+7   0.333333  0.5  0.2  0.0
+8   0.666667  1.0  0.2  1.0
+9   1.000000  0.0  0.8  0.0
+10  0.333333  0.5  0.8  0.0
+
+smlp_logger - INFO - Sampling from training data: start
+
+smlp_logger - INFO - Sampling from training data: end
+
+smlp_logger - INFO - X_train after sampling: (8, 3)
+
+smlp_logger - INFO - y_train after sampling: (8, 1)
+
+smlp_logger - INFO - Preparing training data for modeling: end
+
+smlp_logger - INFO - Saving data bounds into file:./test69_model_data_bounds.json
+
+smlp_logger - INFO - {'x': {'min': 9.0, 'max': 12.0}, 'p1': {'min': 2.0, 'max': 4.0}, 'p2': {'min': 3.0, 'max': 8.0}, 'y2': {'min': 5.0, 'max': 9.0}}
+
+smlp_logger - INFO - TRAIN MODEL
+
+smlp_logger - INFO - Model training: start
+
+smlp_logger - INFO - keras_main: start
+
+smlp_logger - INFO - _keras_train_multi_response: start
+
+smlp_logger - INFO - building NN model using Keras Functional API
+
+smlp_logger - INFO - layers_spec_list [1, 2.0, 1.0]
+
+smlp_logger - INFO - input layer of size 3
+
+smlp_logger - INFO - dense layer of size 6
+
+smlp_logger - INFO - dense layer of size 3
+
+smlp_logger - INFO - _keras_train_multi_response: end
+
+smlp_logger - INFO - keras_main: end
+
+smlp_logger - INFO - Model training: end
+
+smlp_logger - INFO - PREDICT ON TRAINING DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test69_smlp_toy_num_resp_mult_training_predictions_summary.csv
+
+smlp_logger - INFO - Saving prediction precisions into file: 
+./Test69_smlp_toy_num_resp_mult_training_prediction_precisions.csv
+
+smlp_logger - INFO - Prediction on training data --  msqe: 6.998
+
+smlp_logger - INFO - Prediction on training data --  r2_score: -0.866
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - PREDICT ON TEST DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test69_smlp_toy_num_resp_mult_test_predictions_summary.csv
+
+smlp_logger - INFO - Saving prediction precisions into file: 
+./Test69_smlp_toy_num_resp_mult_test_prediction_precisions.csv
+
+smlp_logger - INFO - Prediction on test data --  msqe: 10.821
+
+smlp_logger - INFO - Prediction on test data --  r2_score: -2.043
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - PREDICT ON LABELED DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test69_smlp_toy_num_resp_mult_labeled_predictions_summary.csv
+
+smlp_logger - INFO - Saving prediction precisions into file: 
+./Test69_smlp_toy_num_resp_mult_labeled_prediction_precisions.csv
+
+smlp_logger - INFO - Prediction on labeled data --  msqe: 8.040
+
+smlp_logger - INFO - Prediction on labeled data --  r2_score: -1.027
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - Creating model exploration base components: Start
+
+smlp_logger - INFO - Parsing the SPEC: Start
+
+smlp_logger - INFO - Parsing the SPEC: End
+
+smlp_logger - INFO - Variable domains (alpha): {'y2': {'range': 'float', 'interval': None}, 'x': {'range': 'float', 'interval': [0, 10]}, 'p1': {'range': 'float', 'interval': [0, 10]}, 'p2': {'range': 'float', 'interval': [3, 7]}}
+
+smlp_logger - INFO - Input bounds (alpha): {'x': {'min': 0, 'max': 10}, 'p1': {'min': 0, 'max': 10}, 'p2': {'min': 3, 'max': 7}}
+
+smlp_logger - INFO - Knob bounds (eta): {}
+
+smlp_logger - INFO - Knob grids (eta): {}
+
+smlp_logger - INFO - Alpha global   constraints: (or (or (= p1 1) (= p1 4)) (= p1 7))
+
+smlp_logger - INFO - Alpha ranges   constraints: (and (and (and true (and (>= x 0) (<= x 10))) (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7)))
+
+smlp_logger - INFO - Alpha combined constraints: (and (and (and (and true (and (>= x 0) (<= x 10))) (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7))) (or (or (= p1 1) (= p1 4)) (= p1 7)))
+
+smlp_logger - INFO - Beta  global   constraints: true
+
+smlp_logger - INFO - Eta   ranges   constraints: true
+
+smlp_logger - INFO - Eta   grid     constraints: true
+
+smlp_logger - INFO - Eta   global   constraints: true
+
+smlp_logger - INFO - Eta   combined constraints: true
+
+smlp_logger - INFO - Creating model exploration base components: End
+
+smlp_logger - INFO - Input and knob interface constraints are consistent
+
+smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Building model terms: End
+
+smlp_logger - INFO - Model interface constraints are consistent
+
+smlp_logger - INFO - Verifying consistency of configuration for assertion asrt1:
+   true
+
+smlp_logger - INFO - Input, knob and configuration constraints are consistent
+
+smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+p2)/2<6
+
+smlp_logger - INFO - The configuration is inconsistent with assertion asrt1
+
+smlp_logger - INFO - Completed with result: FAIL
+
+smlp_logger - INFO - Running SMLP in mode "verify": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

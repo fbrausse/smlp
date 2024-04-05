@@ -1,6 +1,6 @@
 
 smlp_logger - INFO - Model exploration specification:
-{'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'p1', 'type': 'knob', 'range': 'float', 'rad-rel': Fraction(1, 10), 'grid': [2, 4, 7], 'bounds': [0, 10]}, {'label': 'p2', 'type': 'knob', 'range': 'float', 'rad-abs': Fraction(1, 5), 'bounds': [3, 7]}], 'witnesses': {'stable_witness': {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'grid_conflict': {'x': Fraction(31, 5), 'p1': Fraction(3, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'unstable_witness': {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}, 'infeasible_witness': {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}}}
+{'version': '1.2', 'variables': [{'label': 'y1', 'interface': 'output', 'type': 'real'}, {'label': 'y2', 'interface': 'output', 'type': 'real'}, {'label': 'x', 'interface': 'input', 'type': 'real', 'range': [0, 10]}, {'label': 'p1', 'interface': 'knob', 'type': 'real', 'rad-rel': Fraction(1, 10), 'grid': [2, 4, 7], 'range': [0, 10]}, {'label': 'p2', 'interface': 'knob', 'type': 'real', 'rad-abs': Fraction(1, 5), 'range': [3, 7]}], 'witnesses': {'query_stable_witness': {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'query_grid_conflict': {'x': Fraction(31, 5), 'p1': Fraction(3, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'query_unstable_witness': {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}, 'query_infeasible_witness': {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}}}
 
 smlp_logger - INFO - Executing run_smlp.py script: Start
 
@@ -14,24 +14,24 @@ smlp_logger - INFO - Radii  theta : {'p1': {'rad-abs': None, 'rad-rel': Fraction
 
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
 
-smlp_logger - INFO - Query stable_witness: y2<=90
+smlp_logger - INFO - Query query_stable_witness: y2<=90
 
-smlp_logger - INFO - Query grid_conflict: y1>=9
+smlp_logger - INFO - Query query_grid_conflict: y1>=9
 
-smlp_logger - INFO - Query unstable_witness: y1>=(-10)
+smlp_logger - INFO - Query query_unstable_witness: y1>=(-10)
 
-smlp_logger - INFO - Query infeasible_witness: y1>9
+smlp_logger - INFO - Query query_infeasible_witness: y1>9
 
-smlp_logger - INFO - Witness to query stable_witness
+smlp_logger - INFO - Witness to query query_stable_witness
 {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(240000002682209, 40000000000000)}
 
-smlp_logger - INFO - Witness to query grid_conflict
+smlp_logger - INFO - Witness to query query_grid_conflict
 {'x': Fraction(31, 5), 'p1': Fraction(3, 1), 'p2': Fraction(240000002682209, 40000000000000)}
 
-smlp_logger - INFO - Witness to query unstable_witness
+smlp_logger - INFO - Witness to query query_unstable_witness
 {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}
 
-smlp_logger - INFO - Witness to query infeasible_witness
+smlp_logger - INFO - Witness to query query_infeasible_witness
 {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}
 
 smlp_logger - INFO - Running SMLP in mode "certify": Start
@@ -123,7 +123,7 @@ smlp_logger - INFO - y_train after sampling: (8, 2)
 
 smlp_logger - INFO - Preparing training data for modeling: end
 
-smlp_logger - INFO - Saving data bounds into file:/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test128_smlp_toy_ctg_num_resp_data_bounds.json
+smlp_logger - INFO - Saving data bounds into file:./Test128_smlp_toy_ctg_num_resp_data_bounds.json
 
 smlp_logger - INFO - {'x': {'min': 9.0, 'max': 12.0}, 'p1': {'min': 2.0, 'max': 4.0}, 'p2': {'min': 3.0, 'max': 8.0}, 'y1': {'min': 5.0, 'max': 9.0}, 'y2': {'min': 5.0, 'max': 9.0}}
 
@@ -142,10 +142,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test128_smlp_toy_ctg_num_resp_training_predictions_summary.csv
+./Test128_smlp_toy_ctg_num_resp_training_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test128_smlp_toy_ctg_num_resp_training_prediction_precisions.csv
+./Test128_smlp_toy_ctg_num_resp_training_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on training data --  msqe: 0.000
 
@@ -162,10 +162,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test128_smlp_toy_ctg_num_resp_test_predictions_summary.csv
+./Test128_smlp_toy_ctg_num_resp_test_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test128_smlp_toy_ctg_num_resp_test_prediction_precisions.csv
+./Test128_smlp_toy_ctg_num_resp_test_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on test data --  msqe: 3.304
 
@@ -182,10 +182,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test128_smlp_toy_ctg_num_resp_labeled_predictions_summary.csv
+./Test128_smlp_toy_ctg_num_resp_labeled_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test128_smlp_toy_ctg_num_resp_labeled_prediction_precisions.csv
+./Test128_smlp_toy_ctg_num_resp_labeled_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on labeled data --  msqe: 0.901
 
@@ -199,7 +199,7 @@ smlp_logger - INFO - Parsing the SPEC: Start
 
 smlp_logger - INFO - Parsing the SPEC: End
 
-smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x': {'range': 'float', 'interval': [0, 10]}, 'p1': {'range': 'float', 'interval': [0, 10]}, 'p2': {'range': 'float', 'interval': [3, 7]}}
+smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'real', 'interval': None}, 'y2': {'range': 'real', 'interval': None}, 'x': {'range': 'real', 'interval': [0, 10]}, 'p1': {'range': 'real', 'interval': [0, 10]}, 'p2': {'range': 'real', 'interval': [3, 7]}}
 
 smlp_logger - INFO - Input bounds (alpha): {'x': {'min': 0, 'max': 10}}
 
@@ -233,44 +233,44 @@ smlp_logger - INFO - Building model terms: End
 
 smlp_logger - INFO - Model interface constraints are consistent
 
-smlp_logger - INFO - Certifying consistency of witness for query stable_witness:
+smlp_logger - INFO - Certifying consistency of witness for query query_stable_witness:
    (and (and (= x 7) (= p1 7)) (= p2 (/ 240000002682209 40000000000000)))
 
 smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
 
-smlp_logger - INFO - Certifying consistency of witness for query grid_conflict:
+smlp_logger - INFO - Certifying consistency of witness for query query_grid_conflict:
    (and (and (= x (/ 31 5)) (= p1 3)) (= p2 (/ 240000002682209 40000000000000)))
 
 smlp_logger - INFO - Input, knob and concrete witness constraints are inconsistent
 
-smlp_logger - INFO - Certifying consistency of witness for query unstable_witness:
+smlp_logger - INFO - Certifying consistency of witness for query query_unstable_witness:
    (and (and (= x 7) (= p1 7)) (= p2 6))
 
 smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
 
-smlp_logger - INFO - Certifying consistency of witness for query infeasible_witness:
+smlp_logger - INFO - Certifying consistency of witness for query query_infeasible_witness:
    (and (and (= x 7) (= p1 7)) (= p2 6))
 
 smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
 
-smlp_logger - INFO - Certifying stability of witness for query stable_witness:
+smlp_logger - INFO - Certifying stability of witness for query query_stable_witness:
    {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(240000002682209, 40000000000000)}
 
-smlp_logger - INFO - Witness to query stable_witness is a valid witness; checking its stability
+smlp_logger - INFO - Witness to query query_stable_witness is a valid witness; checking its stability
 
-smlp_logger - INFO - Witness to query stable_witness is stable for radii {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
+smlp_logger - INFO - Witness to query query_stable_witness is stable for radii {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
 
-smlp_logger - INFO - Certifying stability of witness for query unstable_witness:
+smlp_logger - INFO - Certifying stability of witness for query query_unstable_witness:
    {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}
 
-smlp_logger - INFO - Witness to query unstable_witness is a valid witness; checking its stability
+smlp_logger - INFO - Witness to query query_unstable_witness is a valid witness; checking its stability
 
-smlp_logger - INFO - Witness to query unstable_witness is not stable for radii {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
+smlp_logger - INFO - Witness to query query_unstable_witness is not stable for radii {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
 
-smlp_logger - INFO - Certifying stability of witness for query infeasible_witness:
+smlp_logger - INFO - Certifying stability of witness for query query_infeasible_witness:
    {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}
 
-smlp_logger - INFO - Witness to query infeasible_witness is not a valid witness (even without stability requirements)
+smlp_logger - INFO - Witness to query query_infeasible_witness is not a valid witness (even without stability requirements)
 
 smlp_logger - INFO - Running SMLP in mode "certify": End
 

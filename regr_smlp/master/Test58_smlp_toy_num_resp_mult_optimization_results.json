@@ -1,0 +1,26 @@
+{
+	"objv_y1": {
+		"p1": 7.0,
+		"x": 0.0,
+		"y2": 9.0,
+		"p2": 6.53125,
+		"y1": 9.0,
+		"objv_y1": 9.0,
+		"threshold_lo": 8.96875,
+		"threshold_up": 9.0,
+		"max_in_data": 9.0,
+		"min_in_data": 5.0
+	},
+	"objv_y2": {
+		"p1": 7.0,
+		"x": 0.0,
+		"y2": 9.0,
+		"p2": 3.0,
+		"y1": 5.0,
+		"objv_y2": 9.0,
+		"threshold_lo": 8.96875,
+		"threshold_up": 9.0,
+		"max_in_data": 9.0,
+		"min_in_data": 5.0
+	}
+}

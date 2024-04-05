@@ -1,6 +1,6 @@
 
 smlp_logger - INFO - Model exploration specification:
-{'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'p1', 'type': 'knob', 'range': 'float', 'rad-rel': Fraction(1, 10), 'grid': [2, 4, 7], 'bounds': [0, 10]}, {'label': 'p2', 'type': 'knob', 'range': 'float', 'rad-abs': Fraction(1, 5), 'bounds': [3, 7]}], 'configurations': {'stable_config': {'p1': Fraction(7, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'grid_conflict': {'p1': Fraction(3, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'unstable_config': {'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}, 'not_feasible': {'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}}}
+{'version': '1.2', 'variables': [{'label': 'y1', 'interface': 'output', 'type': 'real'}, {'label': 'y2', 'interface': 'output', 'type': 'real'}, {'label': 'x', 'interface': 'input', 'type': 'real', 'range': [0, 10]}, {'label': 'p1', 'interface': 'knob', 'type': 'real', 'rad-rel': Fraction(1, 10), 'grid': [2, 4, 7], 'range': [0, 10]}, {'label': 'p2', 'interface': 'knob', 'type': 'real', 'rad-abs': Fraction(1, 5), 'range': [3, 7]}], 'configurations': {'assert_stable_config': {'p1': Fraction(7, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'assert_grid_conflict': {'p1': Fraction(3, 1), 'p2': Fraction(240000002682209, 40000000000000)}, 'assert_unstable_config': {'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}, 'assert_infeasible': {'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}}}
 
 smlp_logger - INFO - Executing run_smlp.py script: Start
 
@@ -14,24 +14,24 @@ smlp_logger - INFO - Radii  theta : {'p1': {'rad-abs': None, 'rad-rel': Fraction
 
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
 
-smlp_logger - INFO - Assertion stable_config: y2<=90
+smlp_logger - INFO - Assertion assert_stable_config: y2<=90
 
-smlp_logger - INFO - Assertion grid_conflict: y1>=9
+smlp_logger - INFO - Assertion assert_grid_conflict: y1>=9
 
-smlp_logger - INFO - Assertion unstable_config: y1>=(-10)
+smlp_logger - INFO - Assertion assert_unstable_config: y1>=(-10)
 
-smlp_logger - INFO - Assertion not_feasible: y1>20
+smlp_logger - INFO - Assertion assert_infeasible: y1>20
 
-smlp_logger - INFO - Configuration for assertion stable_config:
+smlp_logger - INFO - Configuration for assertion assert_stable_config:
 {'p1': Fraction(7, 1), 'p2': Fraction(240000002682209, 40000000000000)}
 
-smlp_logger - INFO - Configuration for assertion grid_conflict:
+smlp_logger - INFO - Configuration for assertion assert_grid_conflict:
 {'p1': Fraction(3, 1), 'p2': Fraction(240000002682209, 40000000000000)}
 
-smlp_logger - INFO - Configuration for assertion unstable_config:
+smlp_logger - INFO - Configuration for assertion assert_unstable_config:
 {'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}
 
-smlp_logger - INFO - Configuration for assertion not_feasible:
+smlp_logger - INFO - Configuration for assertion assert_infeasible:
 {'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}
 
 smlp_logger - INFO - Running SMLP in mode "verify": Start
@@ -123,7 +123,7 @@ smlp_logger - INFO - y_train after sampling: (8, 2)
 
 smlp_logger - INFO - Preparing training data for modeling: end
 
-smlp_logger - INFO - Saving data bounds into file:/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test129_smlp_toy_ctg_num_resp_data_bounds.json
+smlp_logger - INFO - Saving data bounds into file:./Test129_smlp_toy_ctg_num_resp_data_bounds.json
 
 smlp_logger - INFO - {'x': {'min': 9.0, 'max': 12.0}, 'p1': {'min': 2.0, 'max': 4.0}, 'p2': {'min': 3.0, 'max': 8.0}, 'y1': {'min': 5.0, 'max': 9.0}, 'y2': {'min': 5.0, 'max': 9.0}}
 
@@ -142,10 +142,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test129_smlp_toy_ctg_num_resp_training_predictions_summary.csv
+./Test129_smlp_toy_ctg_num_resp_training_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test129_smlp_toy_ctg_num_resp_training_prediction_precisions.csv
+./Test129_smlp_toy_ctg_num_resp_training_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on training data --  msqe: 0.000
 
@@ -162,10 +162,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test129_smlp_toy_ctg_num_resp_test_predictions_summary.csv
+./Test129_smlp_toy_ctg_num_resp_test_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test129_smlp_toy_ctg_num_resp_test_prediction_precisions.csv
+./Test129_smlp_toy_ctg_num_resp_test_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on test data --  msqe: 3.304
 
@@ -182,10 +182,10 @@ smlp_logger - INFO - Model prediction: end
 smlp_logger - INFO - Reporting prediction results: start
 
 smlp_logger - INFO - Saving predictions summary into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test129_smlp_toy_ctg_num_resp_labeled_predictions_summary.csv
+./Test129_smlp_toy_ctg_num_resp_labeled_predictions_summary.csv
 
 smlp_logger - INFO - Saving prediction precisions into file: 
-/nfs/iil/proj/dt/eva/smlp/repo/regr/code/Test129_smlp_toy_ctg_num_resp_labeled_prediction_precisions.csv
+./Test129_smlp_toy_ctg_num_resp_labeled_prediction_precisions.csv
 
 smlp_logger - INFO - Prediction on labeled data --  msqe: 0.901
 
@@ -199,7 +199,7 @@ smlp_logger - INFO - Parsing the SPEC: Start
 
 smlp_logger - INFO - Parsing the SPEC: End
 
-smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x': {'range': 'float', 'interval': [0, 10]}, 'p1': {'range': 'float', 'interval': [0, 10]}, 'p2': {'range': 'float', 'interval': [3, 7]}}
+smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'real', 'interval': None}, 'y2': {'range': 'real', 'interval': None}, 'x': {'range': 'real', 'interval': [0, 10]}, 'p1': {'range': 'real', 'interval': [0, 10]}, 'p2': {'range': 'real', 'interval': [3, 7]}}
 
 smlp_logger - INFO - Input bounds (alpha): {'x': {'min': 0, 'max': 10}}
 
@@ -233,45 +233,45 @@ smlp_logger - INFO - Building model terms: End
 
 smlp_logger - INFO - Model interface constraints are consistent
 
-smlp_logger - INFO - Verifying consistency of configuration for assertion stable_config:
+smlp_logger - INFO - Verifying consistency of configuration for assertion assert_stable_config:
    (and (= p1 7) (= p2 (/ 240000002682209 40000000000000)))
 
 smlp_logger - INFO - Input, knob and configuration constraints are consistent
 
-smlp_logger - INFO - Verifying consistency of configuration for assertion grid_conflict:
+smlp_logger - INFO - Verifying consistency of configuration for assertion assert_grid_conflict:
    (and (= p1 3) (= p2 (/ 240000002682209 40000000000000)))
 
 smlp_logger - INFO - Input, knob and configuration constraints are inconsistent
 
-smlp_logger - INFO - Verifying consistency of configuration for assertion unstable_config:
+smlp_logger - INFO - Verifying consistency of configuration for assertion assert_unstable_config:
    (and (= p1 7) (= p2 6))
 
 smlp_logger - INFO - Input, knob and configuration constraints are consistent
 
-smlp_logger - INFO - Verifying consistency of configuration for assertion not_feasible:
+smlp_logger - INFO - Verifying consistency of configuration for assertion assert_infeasible:
    (and (= p1 7) (= p2 6))
 
 smlp_logger - INFO - Input, knob and configuration constraints are consistent
 
-smlp_logger - INFO - Verifying assertion stable_config <-> y2<=90
+smlp_logger - INFO - Verifying assertion assert_stable_config <-> y2<=90
 
-smlp_logger - INFO - The configuration is consistent with assertion stable_config
+smlp_logger - INFO - The configuration is consistent with assertion assert_stable_config
 
 smlp_logger - INFO - Completed with result: PASS
 
-smlp_logger - INFO - Skipping verification of assertion grid_conflict <-> (>= y1 9)
+smlp_logger - INFO - Skipping verification of assertion assert_grid_conflict <-> (>= y1 9)
 
 smlp_logger - INFO - Reporting result: ERROR
 
-smlp_logger - INFO - Verifying assertion unstable_config <-> y1>=(-10)
+smlp_logger - INFO - Verifying assertion assert_unstable_config <-> y1>=(-10)
 
-smlp_logger - INFO - The configuration is consistent with assertion unstable_config
+smlp_logger - INFO - The configuration is consistent with assertion assert_unstable_config
 
 smlp_logger - INFO - Completed with result: FAIL
 
-smlp_logger - INFO - Verifying assertion not_feasible <-> y1>20
+smlp_logger - INFO - Verifying assertion assert_infeasible <-> y1>20
 
-smlp_logger - INFO - The configuration is inconsistent with assertion not_feasible
+smlp_logger - INFO - The configuration is inconsistent with assertion assert_infeasible
 
 smlp_logger - INFO - Completed with result: FAIL
 

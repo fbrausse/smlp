@@ -1,9 +1,9 @@
 {
-	"smlp_execution": "running",
+	"smlp_execution": "completed",
 	"interface_consistent": "true",
 	"model_consistent": "true",
-	"witness_exists": "unknown",
-	"stable_witness": "unknown",
-	"query_status": "unknown",
-	"query_witness": null
+	"configuration_feasible": "true",
+	"configuration_stable": "false",
+	"synthesis_status": "FAIL",
+	"synthesis_result": null
 }
