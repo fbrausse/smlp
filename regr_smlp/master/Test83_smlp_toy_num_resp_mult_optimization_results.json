@@ -1,8 +1,8 @@
 {
 	"obj1": {
 		"value_in_config": 9.0,
-		"threshold_scaled": 0.96015625,
-		"threshold": 8.840625,
+		"threshold_scaled": 1.0,
+		"threshold": 9.0,
 		"max_in_data": 9.0,
 		"min_in_data": 5.0
 	},
@@ -15,8 +15,8 @@
 	},
 	"objv3": {
 		"value_in_config": 9.0,
-		"threshold_scaled": 0.96015625,
-		"threshold": 8.840625,
+		"threshold_scaled": 1.0,
+		"threshold": 9.0,
 		"max_in_data": 9.0,
 		"min_in_data": 5.0
 	},
@@ -39,15 +39,9 @@
 		"value_in_config": 1.0
 	},
 	"threshold_lo_scaled": {
-		"value_in_config": 0.96015625
-	},
-	"threshold_lo": {
-		"value_in_config": 0.96015625
-	},
-	"threshold_up_scaled": {
 		"value_in_config": 1.0
 	},
-	"threshold_up": {
+	"threshold_lo": {
 		"value_in_config": 1.0
 	},
 	"max_in_data": {

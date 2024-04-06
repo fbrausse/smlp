@@ -249,7 +249,8 @@ class SmlpOptimize:
                 (T, l0) = (l0, 2*l0 - u0)
             else:
                 T = (l + u) / 2
-            quer_form = objv_term > smlp.Cnst(T)
+            #quer_form = objv_term > smlp.Cnst(T)
+            quer_form = objv_term >= smlp.Cnst(T)
             quer_expr = '{} > {}'.format(objv_expr, str(T)) if objv_expr is not None else None
             quer_name = objv_name + '_' + str(T)
             quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form

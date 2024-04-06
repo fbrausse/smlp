@@ -236,37 +236,37 @@ smlp_logger - INFO - Pareto optimization: Start
 
 smlp_logger - INFO - Optimize single objective obj1_scaled_objv2_scaled_objv3_scaled: Start
 
-smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_1 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (> (ite (< |:0| |:3|) |:0| |:3|) 1) (and (> y1 7) (> y2 6)))))))
+smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_1 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (>= (ite (< |:0| |:3|) |:0| |:3|) 1) (and (> y1 7) (> y2 6)))))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv2_scaled_objv3_scaled from inf to 1
 
-smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (> (ite (< |:0| |:3|) |:0| |:3|) 0) (and (> y1 7) (> y2 6)))))))
+smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (>= (ite (< |:0| |:3|) |:0| |:3|) 0) (and (> y1 7) (> y2 6)))))))
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
 smlp_logger - INFO - Increasing threshold lower bound for objective obj1_scaled_objv2_scaled_objv3_scaled from -inf to 0.3333333333333333
 
-smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.6666666666666666 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (> (ite (< |:0| |:3|) |:0| |:3|) (/ 6004799503160661 9007199254740992)) (and (> y1 7) (> y2 6)))))))
+smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.6666666666666666 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (>= (ite (< |:0| |:3|) |:0| |:3|) (/ 6004799503160661 9007199254740992)) (and (> y1 7) (> y2 6)))))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv2_scaled_objv3_scaled from 1 to 0.6666666666666666
 
-smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.5 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (> (ite (< |:0| |:3|) |:0| |:3|) (/ 1 2)) (and (> y1 7) (> y2 6)))))))
+smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.5 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (>= (ite (< |:0| |:3|) |:0| |:3|) (/ 1 2)) (and (> y1 7) (> y2 6)))))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv2_scaled_objv3_scaled from 0.6666666666666666 to 0.5
 
-smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.41666666666666663 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (> (ite (< |:0| |:3|) |:0| |:3|) (/ 3752999689475413 9007199254740992)) (and (> y1 7) (> y2 6)))))))
+smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.41666666666666663 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (>= (ite (< |:0| |:3|) |:0| |:3|) (/ 3752999689475413 9007199254740992)) (and (> y1 7) (> y2 6)))))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv2_scaled_objv3_scaled from 0.5 to 0.41666666666666663
 
-smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.375 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (> (ite (< |:0| |:3|) |:0| |:3|) (/ 3 8)) (and (> y1 7) (> y2 6)))))))
+smlp_logger - INFO - Querying condition obj1_scaled_objv2_scaled_objv3_scaled_0.375 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 6) (- (- (* (/ 1 2) y1) y2) (/ (- 13) 2))))) (let ((|:2| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (let ((|:3| (ite (< |:1| |:2|) |:1| |:2|))) (and (>= (ite (< |:0| |:3|) |:0| |:3|) (/ 3 8)) (and (> y1 7) (> y2 6)))))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
@@ -327,13 +327,7 @@ smlp_logger - INFO - Pareto optimization in progress with objectives thresholds:
 
 smlp_logger - INFO - Optimize single objective obj1_scaled_objv3_scaled: Start
 
-smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_1 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) 1) (and (> y1 7) (> y2 6)))))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv3_scaled from inf to 1
-
-smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_0.6916666666666667 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ 3114989742264593 4503599627370496)) (and (> y1 7) (> y2 6)))))
+smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_1 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) 1) (and (> y1 7) (> y2 6)))))
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
@@ -343,6 +337,36 @@ smlp_logger - INFO - Pareto optimization in progress with objectives thresholds:
     Scaled to [0,1]: {'obj1': '1.000000', 'objv2': '0.333333', 'objv3': '1.000000'}
     Original  scale: {'obj1': '9.000000', 'objv2': '-4.500000', 'objv3': '9.000000'}
 
+
+smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_1.6166666666666667 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 3640409698791151 2251799813685248)) (and (> y1 7) (> y2 6)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv3_scaled from inf to 1.6166666666666667
+
+smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_1.3083333333333333 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 5892209512476399 4503599627370496)) (and (> y1 7) (> y2 6)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv3_scaled from 1.6166666666666667 to 1.3083333333333333
+
+smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_1.1541666666666668 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 649738071240431 562949953421312)) (and (> y1 7) (> y2 6)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv3_scaled from 1.3083333333333333 to 1.1541666666666668
+
+smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_1.0770833333333334 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 1212688024661743 1125899906842624)) (and (> y1 7) (> y2 6)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv3_scaled from 1.1541666666666668 to 1.0770833333333334
+
+smlp_logger - INFO - Querying condition obj1_scaled_objv3_scaled_1.0385416666666667 <-> (let ((|:0| (* (/ 1 4) (- y2 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 2338587931504367 2251799813685248)) (and (> y1 7) (> y2 6)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled_objv3_scaled from 1.0770833333333334 to 1.0385416666666667
 
 smlp_logger - INFO - Optimize single objective obj1_scaled_objv3_scaled: End
 

@@ -258,164 +258,72 @@ smlp_logger - INFO - Pareto optimization: Start
 
 smlp_logger - INFO - Optimize single objective objv1_scaled_objv2_scaled: Start
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_1 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) 1) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_1 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) 1) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from inf to 1
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_0 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) 0) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_0 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) 0) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -inf to 0
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_0.5 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 1 2)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from 1 to 0
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from 1 to 0.5
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-2 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (- 2)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_0.25 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 1 4)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -inf to -2
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from 0.5 to 0.25
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-1.0 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (- 1)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_0.125 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 1 8)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -2 to -1.0
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from 0.25 to 0.125
 
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '-1.000000', 'objv2': '-1.000000'}
-    Original  scale: {'objv1': '1.000000', 'objv2': '1.000000'}
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_0.0625 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 1 16)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
 
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.5 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 2)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -1.0 to -0.5
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '-0.500000', 'objv2': '-0.500000'}
-    Original  scale: {'objv1': '3.000000', 'objv2': '3.000000'}
-
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.25 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 4)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.5 to -0.25
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '-0.250000', 'objv2': '-0.250000'}
-    Original  scale: {'objv1': '4.000000', 'objv2': '4.000000'}
-
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.125 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 8)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.25 to -0.125
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '-0.125000', 'objv2': '-0.125000'}
-    Original  scale: {'objv1': '4.500000', 'objv2': '4.500000'}
-
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.0625 <-> (let ((|:0| (* (/ 1 4) (- y1 5)))) (let ((|:1| (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 16)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))))
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.125 to -0.0625
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '-0.062500', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '4.750000', 'objv2': '4.750000'}
-
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from 0.125 to 0.0625
 
 smlp_logger - INFO - Optimize single objective objv1_scaled_objv2_scaled: End
 
 smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '-0.062500', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '4.750000', 'objv2': '4.750000'}
+    Scaled to [0,1]: {'objv1': '0.000000', 'objv2': '0.000000'}
+    Original  scale: {'objv1': '5.000000', 'objv2': '5.000000'}
 
 
-smlp_logger - INFO - Checking whether to fix objective 0 at threshold -0.0625...
+smlp_logger - INFO - Checking whether to fix objective 0 at threshold 0.0...
 
 
-smlp_logger - INFO - Querying condition thresholds_0.037500000000000006_-0.0625_check <-> True
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Not fixing objective 0 at threshold -0.0625...
-
-
-smlp_logger - INFO - Lower bounds of objectives ['objv1'] can be raised to threshold 0.037500000000000006...
-
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '0.037500', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '5.150000', 'objv2': '4.750000'}
-
-
-smlp_logger - INFO - Fixing objective 1 at threshold -0.0625...
-
-
-smlp_logger - INFO - Optimize single objective objv1_scaled: Start
-
-smlp_logger - INFO - Querying condition objv1_scaled_1 <-> (and (> (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)) 1) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))
+smlp_logger - INFO - Querying condition thresholds_0.1_0.0_check <-> True
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from inf to 1
+smlp_logger - INFO - Fixing objective 0 at threshold 0.0...
 
-smlp_logger - INFO - Querying condition objv1_scaled_0.51875 <-> (and (> (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)) (/ 2336242306698445 4503599627370496)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))
+
+smlp_logger - INFO - Checking whether to fix objective 1 at threshold 0.0...
+
+
+smlp_logger - INFO - Querying condition thresholds_0.0_0.1_check <-> True
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from 1 to 0.51875
-
-smlp_logger - INFO - Querying condition objv1_scaled_0.278125 <-> (and (> (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)) (/ 5010254585449677 18014398509481984)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from 0.037500000000000006 to 0.278125
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '0.278125', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '6.112500', 'objv2': '4.750000'}
-
-
-smlp_logger - INFO - Querying condition objv1_scaled_0.3984375 <-> (and (> (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)) (/ 51 128)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from 0.278125 to 0.3984375
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '0.398438', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '6.593750', 'objv2': '4.750000'}
-
-
-smlp_logger - INFO - Querying condition objv1_scaled_0.45859375 <-> (and (> (* (/ 1 4) (- (* (/ 1 2) (+ y1 y2)) 5)) (/ 4130645283228877 9007199254740992)) (and (and (> (* (/ 1 2) (+ (* (* y2 y2) y2) p2)) 6) (>= y1 0)) (> y2 0)))
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from 0.3984375 to 0.45859375
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '0.458594', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '6.834375', 'objv2': '4.750000'}
-
-
-smlp_logger - INFO - Optimize single objective objv1_scaled: End
-
-smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '0.458594', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '6.834375', 'objv2': '4.750000'}
+smlp_logger - INFO - Fixing objective 1 at threshold 0.0...
 
 
 smlp_logger - INFO - Pareto optimization completed with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '0.458594', 'objv2': '-0.062500'}
-    Original  scale: {'objv1': '6.834375', 'objv2': '4.750000'}
+    Scaled to [0,1]: {'objv1': '0.000000', 'objv2': '0.000000'}
+    Original  scale: {'objv1': '5.000000', 'objv2': '5.000000'}
 
 
 smlp_logger - INFO - Pareto optimization: End

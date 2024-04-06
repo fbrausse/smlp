@@ -706,7 +706,8 @@ class SmlpData:
             for rn in resp_names:
                 feat_names_dict[rn] = feat_names
             #print('feat_names_dict used for feat_names', feat_names_dict)
-
+        
+        #print('data\n', data, '\n', 'feat_names', feat_names, 'resp_names', resp_names)
         # extract the required columns in data -- features and responses
         if is_training or new_labeled:
             data = data[feat_names + resp_names]

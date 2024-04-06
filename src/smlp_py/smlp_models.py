@@ -352,7 +352,7 @@ class SmlpModels:
             # iterate over all responses and merge all predicitions into one return value y_pred
             y_pred = pd.DataFrame(index=np.arange(X.shape[0]), columns=np.arange(0))
             for rn in model.keys():
-                #print('model_dict', model); print('model', model[rn])
+                #print('rn', rn); print('model_dict', model); print('model', model[rn])
                 if model_lib == 'caret':
                     y_pred[rn] = list(caret_predict_model(model[rn], data=X)['prediction_label']); 
                 elif model_lib in ['keras', 'sklearn']:

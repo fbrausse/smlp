@@ -48,16 +48,16 @@
 		"y2": {
 			"value_in_config": 5.0
 		},
-		"x": {
-			"value_in_config": 10.0
-		},
-		"p1": {
-			"value_in_config": 4.0
-		},
 		"y1": {
 			"value_in_config": 6.44
 		},
 		"p2": {
+			"value_in_config": 4.0
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
 			"value_in_config": 4.0
 		}
 	},
@@ -79,16 +79,16 @@
 		"y2": {
 			"value_in_config": 5.0
 		},
-		"x": {
-			"value_in_config": 10.0
-		},
-		"p1": {
-			"value_in_config": 4.0
-		},
 		"y1": {
 			"value_in_config": 6.44
 		},
 		"p2": {
+			"value_in_config": 4.0
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
 			"value_in_config": 4.0
 		},
 		"objv1_scaled_objv2_scaled": {

@@ -1,15 +1,15 @@
 {
 	"objv1": {
 		"value_in_config": 6.0,
-		"threshold_scaled": 0.1875,
-		"threshold": 5.75,
+		"threshold_scaled": 0.25,
+		"threshold": 6.0,
 		"max_in_data": 9.0,
 		"min_in_data": 5.0
 	},
 	"objv2": {
 		"value_in_config": 7.0,
-		"threshold_scaled": 0.465625,
-		"threshold": 6.8625,
+		"threshold_scaled": 0.25,
+		"threshold": 6.0,
 		"max_in_data": 9.0,
 		"min_in_data": 5.0
 	},
@@ -28,20 +28,20 @@
 	"p1": {
 		"value_in_config": 2.0
 	},
-	"objv2_scaled": {
-		"value_in_config": 0.5
+	"objv1_scaled_objv2_scaled": {
+		"value_in_config": 0.25
 	},
 	"threshold_lo_scaled": {
-		"value_in_config": 0.465625
+		"value_in_config": 0.25
 	},
 	"threshold_lo": {
-		"value_in_config": 0.465625
+		"value_in_config": 0.25
 	},
 	"threshold_up_scaled": {
-		"value_in_config": 0.64375
+		"value_in_config": 0.5
 	},
 	"threshold_up": {
-		"value_in_config": 0.64375
+		"value_in_config": 0.5
 	},
 	"max_in_data": {
 		"value_in_config": 1.0

@@ -246,33 +246,33 @@ smlp_logger - INFO - Increasing threshold lower bound for objective obj1_scaled 
 
 smlp_logger - INFO - Querying condition obj1_scaled_0.5 <-> (y1+y2)/2 > 0.5
 
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective obj1_scaled from 0 to 0.5
+
+smlp_logger - INFO - Querying condition obj1_scaled_0.75 <-> (y1+y2)/2 > 0.75
+
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled from 1 to 0.5
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled from 1 to 0.75
 
-smlp_logger - INFO - Querying condition obj1_scaled_0.25 <-> (y1+y2)/2 > 0.25
+smlp_logger - INFO - Querying condition obj1_scaled_0.625 <-> (y1+y2)/2 > 0.625
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective obj1_scaled from 0 to 0.25
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled from 0.75 to 0.625
 
-smlp_logger - INFO - Querying condition obj1_scaled_0.375 <-> (y1+y2)/2 > 0.375
+smlp_logger - INFO - Querying condition obj1_scaled_0.5625 <-> (y1+y2)/2 > 0.5625
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective obj1_scaled from 0.25 to 0.375
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled from 0.625 to 0.5625
 
-smlp_logger - INFO - Querying condition obj1_scaled_0.4375 <-> (y1+y2)/2 > 0.4375
+smlp_logger - INFO - Querying condition obj1_scaled_0.53125 <-> (y1+y2)/2 > 0.53125
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective obj1_scaled from 0.375 to 0.4375
-
-smlp_logger - INFO - Querying condition obj1_scaled_0.46875 <-> (y1+y2)/2 > 0.46875
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective obj1_scaled from 0.4375 to 0.46875
+smlp_logger - INFO - Decreasing threshold upper bound for objective obj1_scaled from 0.5625 to 0.53125
 
 smlp_logger - INFO - Optimize single objective obj1_scaled: End
 
@@ -286,51 +286,39 @@ smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled
 
 smlp_logger - INFO - Querying condition objv2_scaled_0 <-> y1 > 0
 
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -inf to 0
+
+smlp_logger - INFO - Querying condition objv2_scaled_0.5 <-> y1 > 0.5
+
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 1 to 0
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 1 to 0.5
 
-smlp_logger - INFO - Querying condition objv2_scaled_-2 <-> y1 > -2
+smlp_logger - INFO - Querying condition objv2_scaled_0.25 <-> y1 > 0.25
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -inf to -2
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.5 to 0.25
 
-smlp_logger - INFO - Querying condition objv2_scaled_-1.0 <-> y1 > -1.0
+smlp_logger - INFO - Querying condition objv2_scaled_0.125 <-> y1 > 0.125
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -2 to -1.0
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.25 to 0.125
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.5 <-> y1 > -0.5
+smlp_logger - INFO - Querying condition objv2_scaled_0.0625 <-> y1 > 0.0625
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -1.0 to -0.5
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.125 to 0.0625
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.25 <-> y1 > -0.25
+smlp_logger - INFO - Querying condition objv2_scaled_0.03125 <-> y1 > 0.03125
 
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.5 to -0.25
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.125 <-> y1 > -0.125
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.25 to -0.125
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.0625 <-> y1 > -0.0625
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.125 to -0.0625
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.03125 <-> y1 > -0.03125
-
-smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
-
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.0625 to -0.03125
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.0625 to 0.03125
 
 smlp_logger - INFO - Optimize single objective objv2_scaled: End
 

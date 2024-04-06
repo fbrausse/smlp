@@ -236,43 +236,43 @@ smlp_logger - INFO - Pareto optimization: Start
 
 smlp_logger - INFO - Optimize single objective objective1_scaled_objective2_scaled: Start
 
-smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (> (ite (< |:0| |:1|) |:0| |:1|) 1) (and (>= y1 4) (>= y2 8)))))
+smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) 1) (and (>= y1 4) (>= y2 8)))))
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
 smlp_logger - INFO - Increasing threshold lower bound for objective objective1_scaled_objective2_scaled from -inf to 1.0
 
-smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_2 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (> (ite (< |:0| |:1|) |:0| |:1|) 2) (and (>= y1 4) (>= y2 8)))))
+smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_2 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) 2) (and (>= y1 4) (>= y2 8)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objective1_scaled_objective2_scaled from inf to 2
 
-smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.5 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ 3 2)) (and (>= y1 4) (>= y2 8)))))
+smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.5 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 3 2)) (and (>= y1 4) (>= y2 8)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objective1_scaled_objective2_scaled from 2 to 1.5
 
-smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.25 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ 5 4)) (and (>= y1 4) (>= y2 8)))))
+smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.25 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 5 4)) (and (>= y1 4) (>= y2 8)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objective1_scaled_objective2_scaled from 1.5 to 1.25
 
-smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.125 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ 9 8)) (and (>= y1 4) (>= y2 8)))))
+smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.125 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 9 8)) (and (>= y1 4) (>= y2 8)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objective1_scaled_objective2_scaled from 1.25 to 1.125
 
-smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.0625 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ 17 16)) (and (>= y1 4) (>= y2 8)))))
+smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.0625 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 17 16)) (and (>= y1 4) (>= y2 8)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objective1_scaled_objective2_scaled from 1.125 to 1.0625
 
-smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.03125 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (> (ite (< |:0| |:1|) |:0| |:1|) (/ 33 32)) (and (>= y1 4) (>= y2 8)))))
+smlp_logger - INFO - Querying condition objective1_scaled_objective2_scaled_1.03125 <-> (let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ 33 32)) (and (>= y1 4) (>= y2 8)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
