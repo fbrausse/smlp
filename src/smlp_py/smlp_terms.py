@@ -1389,7 +1389,7 @@ class ModelTerms(SmlpTerms):
         for var in feat_names:
             domain_dict[var] = self.var_domain(var, spec_domain_dict)
         domain_features = smlp.domain(domain_dict)
-        interface_consistent = self.check_alpha_eta_consistency(domain_features, None, alpha, eta, 'ALL')
+        #interface_consistent = self.check_alpha_eta_consistency(domain_features, None, alpha, eta, 'ALL')
         if not interface_consistent:
             return None, None, None, eta, alpha, beta, False, False
         
