@@ -118,7 +118,7 @@ class ModelCaret:
         
     # given training algo name like dt and the hyper parameter dictionary param_dict  
     # for that algo in the python package used in this class), this function returns  
-    # a modified dictionary obtained from param_dictby by adds algo name like dt_sklearn
+    # a modified dictionary obtained from param_dict by adding algo name like dt_sklearn
     # (where sklearn is the name of the package used) to the parameter name and its
     # correponding abbriviated name in param_dict.
     def _param_dict_with_func_name(self, param_dict, func):
@@ -135,7 +135,7 @@ class ModelCaret:
     
     # predictions for single response using models supported in caret package
     def _caret_train_single_response(self, get_model_file_prefix, feature_names, resp_name, algo,
-            X_train, X_test, y_train, y_test, interactive_plots, seed,
+            X_train, X_test, y_train, y_test, interactive_plots, seed, data_split_shuffle,
             folds=3, sample_weights_vect=None, models_compare=False):
 
         # prefix of output / report filename for this function -- includes _report_name_prefix,
@@ -151,9 +151,7 @@ class ModelCaret:
         df_train = pd.concat([X_train, y_train], axis=1)
 
         #print('df_train\n', df_train); print(resp_name)
-        #print('data_split_shuffle:', self._hparam_name_local_to_global('data_split_shuffle', 'setup'))
-        exp_clf = setup(df_train, target=resp_name, session_id=seed, 
-            data_split_shuffle=True)
+        exp_clf = setup(df_train, target=resp_name, session_id=seed, data_split_shuffle=data_split_shuffle)
 
         # create multiple models to find best (this step is optional, useful but time consuming)
         if models_compare:
@@ -248,14 +246,15 @@ class ModelCaret:
         # supported model training algorithms
         if not algo in self._CARET_MODELS:
             raise Exception('Unsupported model ' + str(algo) + ' in caret_main')
-        #print(self._hparam_name_local_to_global('fold', 'setup'))
+
         folds = hparam_dict[self._hparam_name_local_to_global('fold', 'setup')]
+        data_split_shuffle = hparam_dict[self._hparam_name_local_to_global('data_split_shuffle', 'setup')]
         #max_depth = hparam_dict['caret_max_depth']
 
         models = {}
         for rn in response_names:
             models[rn] = self._caret_train_single_response(get_model_file_prefix, feature_names_dict[rn], rn, algo,
-            X_train, X_test, y_train[[rn]], y_test[[rn]], interactive_plots, seed,
+            X_train, X_test, y_train[[rn]], y_test[[rn]], interactive_plots, seed, data_split_shuffle,
             folds, sample_weights_vect=sample_weights_vect, models_compare=models_compare)
         
         return models

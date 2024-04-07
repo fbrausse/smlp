@@ -452,7 +452,7 @@ class SubgroupDiscovery:
             class_samples = [rownms[i] for i in range(len(rownms)) if subset_cond_list[i]];
             #rownms [ resp == pos_val ]; #pnv(class_samples)
             # class_samples %in% class_samples_in
-            feat_class_bin_col = [e in class_samples_in for e in class_samples] ; print(feat_class_bin_col); 
+            feat_class_bin_col = [e in class_samples_in for e in class_samples] ; #print(feat_class_bin_col); 
             return feat_class_bin_col
         else:
             # paste(class_samples_in, collapse=rpa_class_indices_separator)

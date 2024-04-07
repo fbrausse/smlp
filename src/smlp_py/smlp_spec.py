@@ -249,8 +249,8 @@ class SmlpSpec:
         with open(spec_file+'.spec', 'r') as sf:
             spec_dict = json.load(sf) #, parse_float=Fraction
         spec_new_dict = {}
-        print('varoiables ?', self._SPEC_DICTIONARY_SPEC)
-        print('spec tokens dict vals', self._spec_tokens_dict.values())
+        #print('varoiables ?', self._SPEC_DICTIONARY_SPEC)
+        #print('spec tokens dict vals', self._spec_tokens_dict.values())
         def upgrade_token(token):
             for version_vals in self._spec_tokens_dict.values():
                 #print('version_vals', version_vals)
@@ -269,20 +269,20 @@ class SmlpSpec:
                 for var_spec in spec_dict[self._SPEC_DICTIONARY_SPEC]:
                     var_spec_new = {}
                     for var_spec_token, var_spec_val in var_spec.items():
-                        print('var_spec_token', var_spec_token, 'var_spec_val', var_spec_val)
+                        #print('var_spec_token', var_spec_token, 'var_spec_val', var_spec_val)
                         var_spec_token_target = upgrade_token(var_spec_token)
                         var_spec_val_target = upgrade_token(var_spec_val)
                         if var_spec_val_target is None:
                             var_spec_val_target = var_spec_val
-                        print('replace', var_spec_token, 'with', var_spec_token_target)
-                        print('replace', var_spec_val, 'with', var_spec_val_target)
+                        #print('replace', var_spec_token, 'with', var_spec_token_target)
+                        #print('replace', var_spec_val, 'with', var_spec_val_target)
                         var_spec_new[var_spec_token_target] = var_spec_val_target
-                    print('var_spec_new', var_spec_new)
+                    #print('var_spec_new', var_spec_new)
                     vars.append(var_spec_new)
                 spec_new_dict[self._spec_tokens_dict['SPEC_DICTIONARY_SPEC'][target_version]] = vars
             else:
                 spec_new_dict[k] = v
-        print('spec_new_dict', spec_new_dict); 
+        #print('spec_new_dict', spec_new_dict); 
         with open(spec_file+'_v{}.spec'.format('1.2'), 'w') as f:
             json.dump(spec_new_dict, f, indent='\t', cls=np_JSONEncoder)
         return spec_new_dict
@@ -302,7 +302,7 @@ class SmlpSpec:
             self.set_spec_tokens()
             assert self._SPEC_DICTIONARY_VERSION in spec_dict.keys()
             assert self._SPEC_DICTIONARY_SPEC in spec_dict.keys()
-            print(set(spec_dict.keys()))
+            #print(set(spec_dict.keys()))
             assert (set(spec_dict.keys())).issubset({self._SPEC_DICTIONARY_VERSION, self._SPEC_DICTIONARY_SPEC,
                 self._SPEC_DICTIONARY_ASSERTIONS, self._SPEC_DICTIONARY_OBJECTIVES, self._SPEC_DICTIONARY_QUERIES,
                 self._SPEC_DICTIONARY_ALPHA, self._SPEC_DICTIONARY_BETA, self._SPEC_DICTIONARY_ETA, 
@@ -372,15 +372,15 @@ class SmlpSpec:
     # In verification mode the knobs are allowed (to consider verification with stability)
     # but value of each knob should eveluate to a constant bsed on the knob constraints
     # defined in spec file. As part of methodology (and to make things simple), we require
-    # constant assignement to knobs to be defined through singletom grid or through range
+    # constant assignement to knobs to be defined through singleton grid or through range
     # that only contains one value (that is, max and min bounds must equeal, e.g., [5,5]).
     # it is possible to assign fixed values to knobs using global eta expressions, say using
     # firmula knob1=5 and knob2=3, which assigns values 5 and 3 to knobs knob1 and knob2,
     # but we want to avoid extra check for global eta constrainst required to understand 
     # whether all knobs are forced to exacly one value, thus the above methodology convention.
-    # TODO !!!!!!!!! add argument 'witness_dict'; the first two checks must be performed anyway
-    # raise Exception() checks, while the rest only when witness_dict is None/not provided
-    # in spec with "witnesses" feild. Same fpr sanity check foe certification mode.
+    # Constant values to knobs can also be specified in the spec file using 'configurations' 
+    # field. The first two sanity checks in this function must be performed anyway, while  
+    # the rest only when "configurations" field is not specified in the spec file. 
     def sanity_check_verification_spec(self):
         if self.get_spec_asrt_exprs_dict is None:
             raise Exception('Assertions are not specified in "verify" mode: aborting...')
@@ -418,8 +418,11 @@ class SmlpSpec:
             raise Exception('Knobs ' + str(knobs_without_range_and_grid) + ' have neither ranges nor grids specified, in "varify" mode: aborting...')
         return witness
             
+    # Similar to sanity check for spec file in verify mode.
+    # Knob values in this case can be provided is spec file using
+    # the "witnesses" field instead of the "configurations" field.
     def sanity_check_certification_spec(self):
-        print(self.get_spec_witn_dict)
+        #print(self.get_spec_witn_dict)
         if self.get_spec_witn_dict is not None:
             return self.get_spec_witn_dict
         non_constant_knobs_inputs = []

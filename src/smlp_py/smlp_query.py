@@ -77,6 +77,18 @@ class SmlpQuery:
         else:
             return cand_found
     
+    def update_consistecy_results(self, mode_status_dict, interface_consistent, model_consistent,
+            mode_status, mode_results_file):
+        # update mode_status_dict based on interface and model consistency results 
+        # computed by get_model_exploration_base_components()
+        mode_status_dict['interface_consistent'] = str(interface_consistent).lower()
+        mode_status_dict['model_consistent'] = str(model_consistent).lower()
+        if not interface_consistent or not model_consistent:
+            mode_status_dict['smlp_execution'] = 'aborted'
+            mode_status_dict[mode_status] = 'ERROR'
+        with open(mode_results_file, 'w') as f:
+            json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+        return mode_status_dict
     
     def get_model_exploration_base_components(self, mode_status_dict, results_file,
             syst_expr_dict:dict, algo, model, model_features_dict:dict, feat_names:list, resp_names:list, 
@@ -266,6 +278,7 @@ class SmlpQuery:
             #delta, None, #None, None, None, None, quer_names, quer_exprs, 
             alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #scale_objv, 
             float_approx, float_precision, data_bounds_json_path)
+        
         if not interface_consistent or not model_consistent:
             for quer_name in quer_names:
                 if universal:
@@ -605,7 +618,7 @@ class SmlpQuery:
         # execute queries
         quer_res_dict = self.query_conditions(
             False, model_full_term_dict, quer_names, quer_exprs, quer_forms_dict, domain, 
-            eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision) #, mode_status_dict)
+            eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
         
         # adjust key names in the reusts
         for quer_name in quer_names:

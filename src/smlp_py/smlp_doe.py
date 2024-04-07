@@ -389,7 +389,7 @@ class SmlpDoepy:
             raise Exception('doe_spec argument in function sample_doepy is ' + 
                 str(type(doe_spec)) + ' (must be either file path or a dictionary')
         doe_spec_dict = self._process_doe_spec(doe_algo, doe_spec_dict)
-        print('doe_spec_dict after processing\n', doe_spec_dict)
+        #print('doe_spec_dict after processing\n', doe_spec_dict)
         
         if doe_algo == self.FULL_FACTORIAL:
             doe_out_df = build.full_fact(doe_spec_dict)
@@ -429,7 +429,7 @@ class SmlpDoepy:
             doe_out_df = build.uniform_random(doe_spec_dict, num_samples=num_samples)
         else:
             raise Exception('Unsupported DOE algorithm ' + str(doe_algo))
-        print('doe_out_df\n', doe_out_df); 
+        #print('doe_out_df\n', doe_out_df); 
         self._doepy_logger.info('DOE table with ' + str(doe_out_df.shape[0]) + ' entries has been generated')
         doe_out_df.to_csv(self.get_doe_results_file_name(report_file_prefix), index=False)
         return doe_out_df
@@ -437,16 +437,16 @@ class SmlpDoepy:
         
 '''
         doepy_example_dict = {'Pressure':[40, 50, 70], 'Temperature':[290, 320, 350], 'FlowRate':[0.2, 0.3, 0.2], 'Time':[5, 8, 5]}
-        doepy_example_df = pd.DataFrame.from_dict(doepy_example_dict); print('doepy_example_df\n', doepy_example_df); 
-        doe_out_df = doeInst.sample_doepy(doeInst.LATIN_HYPERCUBE_SPACE_FILLING, doepy_example_dict, num_samples=100); print('doe_out_df\n', doe_out_df); 
-        doe_out_df = build.space_filling_lhs(doepy_example_dict, num_samples=100); print('doe_out_df\n', doe_out_df); 
+        doepy_example_df = pd.DataFrame.from_dict(doepy_example_dict); #print('doepy_example_df\n', doepy_example_df); 
+        doe_out_df = doeInst.sample_doepy(doeInst.LATIN_HYPERCUBE_SPACE_FILLING, doepy_example_dict, num_samples=100); #print('doe_out_df\n', doe_out_df); 
+        doe_out_df = build.space_filling_lhs(doepy_example_dict, num_samples=100); #print('doe_out_df\n', doe_out_df); 
         assert False
         ranges_dict = {'a':[5,7], 'b':[-1,1], 'c':[0,1]}
         ranges_df = pd.DataFrame.from_dict(ranges_dict);
         ranges_df.to_csv('.../doe_ranges.csv', index=False)
         doe_ranges_dict = read_write.read_variables_csv('.../doe_ranges.csv')
-        print('doe_ranges_dict\n', doe_ranges_dict)
-        doe_out_df = build.space_filling_lhs(doe_ranges_dict, num_samples=100); print('doe_out_df\n', doe_out_df); 
+        #print('doe_ranges_dict\n', doe_ranges_dict)
+        doe_out_df = build.space_filling_lhs(doe_ranges_dict, num_samples=100); #print('doe_out_df\n', doe_out_df); 
         assert False
         #example_ranges_df = read_write.read_variables_csv('ranges.csv'); 
         read_write.write_csv(
@@ -455,8 +455,8 @@ class SmlpDoepy:
             filename='DOE_table.csv'
         )
         ff2n(3)
-        print(levels)
-        abc = fullfact(levels); print('abc', abc)
+        #print(levels)
+        abc = fullfact(levels); #print('abc', abc)
         assert False
 '''
         

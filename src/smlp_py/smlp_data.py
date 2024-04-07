@@ -491,12 +491,12 @@ class SmlpData:
         if resp_type in [int, float] and resp_to_bool is not None:
             assert pos_value == STAT_POSITIVE_VALUE and neg_value == STAT_NEGATIVE_VALUE
             #print('resp_to_bool', resp_to_bool, type(resp_to_bool)); print(resp_to_bool is None)
-            df_resp_cond = resp_to_bool; print('resp_cond', resp_to_bool)
+            df_resp_cond = resp_to_bool; #print('resp_cond', resp_to_bool)
             for resp_name in resp_names:
                 df_resp_cond = df_resp_cond.replace('{}'.format(resp_name), 'resp_df[resp_name]')
             #print('df_resp_cond', df_resp_cond); assert False
 
-            resp_conds = df_resp_cond.split(self._CONDITION_SEPARATOR); print('resp_conds', resp_conds)
+            resp_conds = df_resp_cond.split(self._CONDITION_SEPARATOR); #print('resp_conds', resp_conds)
             for resp_name, resp_cond in zip(resp_names, resp_conds):
                 #resp = resp_df[resp_name]; 
                 #print(resp_name, resp_cond)

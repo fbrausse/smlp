@@ -1389,6 +1389,7 @@ class ModelTerms(SmlpTerms):
         for var in feat_names:
             domain_dict[var] = self.var_domain(var, spec_domain_dict)
         domain_features = smlp.domain(domain_dict)
+        interface_consistent = True # TMP !!!!!!!!!!!!!!!!!!!!
         #interface_consistent = self.check_alpha_eta_consistency(domain_features, None, alpha, eta, 'ALL')
         if not interface_consistent:
             return None, None, None, eta, alpha, beta, False, False
@@ -1396,10 +1397,10 @@ class ModelTerms(SmlpTerms):
         # now define solver donain that includes input, knob and output dec;arations from spec file.
         for var in resp_names:
             domain_dict[var] = self.var_domain(var, spec_domain_dict)
-
+        
         #print('domain_dict', domain_dict)
         domain = smlp.domain(domain_dict)
-
+        
         if syst_expr_dict is not None:
             self._smlp_terms_logger.info('Building system terms: Start')
             for resp, syst_expr in syst_expr_dict.items():
@@ -1430,7 +1431,7 @@ class ModelTerms(SmlpTerms):
         model_consistent = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, 'ALL')
         if not model_consistent:
             return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, True, False
-
+        
         return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent
     
     # create base solver instance with model constraints, declare logic and (non/)incremental mode
