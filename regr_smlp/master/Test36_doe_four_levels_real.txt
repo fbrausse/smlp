@@ -8,9 +8,3 @@ smlp_logger - WARNING - factor a contains more than two levels in the DOE spec; 
 smlp_logger - WARNING - factor b contains more than two levels in the DOE spec; only min / max values will be used
 
 smlp_logger - WARNING - factor c contains more than two levels in the DOE spec; only min / max values will be used
-
-smlp_logger - INFO - DOE table with 125 entries has been generated
-
-smlp_logger - INFO - Running SMLP in mode "doe": End
-
-smlp_logger - INFO - Executing run_smlp.py script: End

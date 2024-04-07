@@ -15,6 +15,6 @@
 		"counter_example": "unknown"
 	},
 	"smlp_execution": "aborted",
-	"interface_consistent": "false",
+	"interface_consistent": "true",
 	"model_consistent": "false"
 }

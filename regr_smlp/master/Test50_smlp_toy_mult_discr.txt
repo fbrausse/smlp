@@ -46,14 +46,14 @@ smlp_logger - INFO - training data after imputing missing values
 
 smlp_logger - INFO - data after discretization
    categ     x    p1    p2   num
-0    c14  Bin1  Bin0  Bin0  Bin2
-1    c15  Bin3  Bin0  Bin1  Bin1
+0    c14  Bin1  Bin0  Bin0  Bin3
+1    c15  Bin3  Bin0  Bin1  Bin2
 2     c1  Bin1  Bin1  Bin1  Bin0
 3     c9  Bin2  Bin0  Bin2  Bin0
-4     c5  Bin1  Bin0  Bin4  Bin0
-5    c10  Bin0  Bin2  Bin3  Bin2
+4     c5  Bin1  Bin0  Bin4  Bin1
+5    c10  Bin0  Bin2  Bin3  Bin3
 6    c13  Bin0  Bin1  Bin2  Bin3
-7     c4  Bin1  Bin1  Bin1  Bin2
+7     c4  Bin1  Bin1  Bin1  Bin3
 8    c15  Bin2  Bin2  Bin1  Bin4
 9    c11  Bin3  Bin0  Bin3  Bin5
 10   c19  Bin1  Bin1  Bin3  Bin5

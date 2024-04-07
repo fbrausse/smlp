@@ -1,23 +1,22 @@
 {
-	"smlp_execution": "completed",
-	"interface_consistent": "true",
+	"smlp_execution": "running",
+	"interface_consistent": "unknown",
 	"query1": {
-		"query_feasible": "false",
-		"query_stable": "false",
-		"query_status": "FAIL",
+		"query_feasible": "unknown",
+		"query_stable": "unknown",
+		"query_status": "unknown",
 		"query_result": null
 	},
 	"query2": {
-		"query_feasible": "true",
-		"query_stable": "false",
-		"query_status": "FAIL",
+		"query_feasible": "unknown",
+		"query_stable": "unknown",
+		"query_status": "unknown",
 		"query_result": null
 	},
 	"query3": {
-		"query_feasible": "false",
-		"query_stable": "false",
-		"query_status": "FAIL",
+		"query_feasible": "unknown",
+		"query_stable": "unknown",
+		"query_status": "unknown",
 		"query_result": null
-	},
-	"model_consistent": "true"
+	}
 }

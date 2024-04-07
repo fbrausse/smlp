@@ -15,8 +15,8 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"y2": 55.69463654220261,
-			"y1": -58.38640996591811,
+			"y2": 55.69463654220258,
+			"y1": -58.38640996591834,
 			"p2": 6.125,
 			"p1": 7.5,
 			"x": 1.0
@@ -27,8 +27,8 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"y2": 55.69463654220261,
-			"y1": -58.38640996591811,
+			"y2": 55.69463654220258,
+			"y1": -58.38640996591834,
 			"p2": 6.125,
 			"p1": 7.5,
 			"x": 1.0

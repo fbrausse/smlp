@@ -52,32 +52,32 @@ smlp_logger - INFO - training data
 10   c19   9   5  10.0  3.0   7
 
 smlp_logger - INFO - training data after imputing missing values
-       x   p1   p2   y1   y2
-0   10.0  2.0  3.0  5.0  9.0
-1   12.0  2.0  4.0  9.0  9.0
-2   10.0  3.0  4.0  5.0  9.0
-3   11.0  2.0  6.0  5.0  5.0
-4   10.0  2.0  8.0  9.0  5.0
-5    9.0  4.0  7.0  9.0  9.0
-6    9.0  3.0  6.0  5.0  5.0
-7   10.0  3.0  4.0  5.0  5.0
-8   11.0  4.0  4.0  9.0  9.0
-9   12.0  2.0  7.0  5.0  5.0
-10  10.0  3.0  7.0  9.0  5.0
+       x   p1  p2  y1  y2
+0   10.0  2.0   3   5   9
+1   12.0  2.0   4   9   9
+2   10.0  3.0   4   5   9
+3   11.0  2.0   6   5   5
+4   10.0  2.0   8   9   5
+5    9.0  4.0   7   9   9
+6    9.0  3.0   6   5   5
+7   10.0  3.0   4   5   5
+8   11.0  4.0   4   9   9
+9   12.0  2.0   7   5   5
+10  10.0  3.0   7   9   5
 
 smlp_logger - INFO - training data after encoding levels of categorical features with integers
-       x   p1   p2   y1   y2
-0   10.0  2.0  3.0  5.0  9.0
-1   12.0  2.0  4.0  9.0  9.0
-2   10.0  3.0  4.0  5.0  9.0
-3   11.0  2.0  6.0  5.0  5.0
-4   10.0  2.0  8.0  9.0  5.0
-5    9.0  4.0  7.0  9.0  9.0
-6    9.0  3.0  6.0  5.0  5.0
-7   10.0  3.0  4.0  5.0  5.0
-8   11.0  4.0  4.0  9.0  9.0
-9   12.0  2.0  7.0  5.0  5.0
-10  10.0  3.0  7.0  9.0  5.0
+       x   p1  p2  y1  y2
+0   10.0  2.0   3   5   9
+1   12.0  2.0   4   9   9
+2   10.0  3.0   4   5   9
+3   11.0  2.0   6   5   5
+4   10.0  2.0   8   9   5
+5    9.0  4.0   7   9   9
+6    9.0  3.0   6   5   5
+7   10.0  3.0   4   5   5
+8   11.0  4.0   4   9   9
+9   12.0  2.0   7   5   5
+10  10.0  3.0   7   9   5
 
 smlp_logger - INFO - training data after scaling (normalizing) features and responses
            x   p1   p2   y1   y2
@@ -145,9 +145,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test61_smlp_toy_num_resp_mult_training_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on training data --  msqe: 5.791
+smlp_logger - INFO - Prediction on training data --  msqe: 3.173
 
-smlp_logger - INFO - Prediction on training data --  r2_score: -0.488
+smlp_logger - INFO - Prediction on training data --  r2_score: 0.183
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -165,9 +165,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test61_smlp_toy_num_resp_mult_test_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on test data --  msqe: 6.635
+smlp_logger - INFO - Prediction on test data --  msqe: 3.059
 
-smlp_logger - INFO - Prediction on test data --  r2_score: -0.866
+smlp_logger - INFO - Prediction on test data --  r2_score: 0.140
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -185,9 +185,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test61_smlp_toy_num_resp_mult_labeled_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on labeled data --  msqe: 6.021
+smlp_logger - INFO - Prediction on labeled data --  msqe: 3.142
 
-smlp_logger - INFO - Prediction on labeled data --  r2_score: -0.518
+smlp_logger - INFO - Prediction on labeled data --  r2_score: 0.208
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -223,26 +223,4 @@ smlp_logger - INFO - Eta   combined constraints: true
 
 smlp_logger - INFO - Creating model exploration base components: End
 
-smlp_logger - INFO - Input and knob interface constraints are consistent
-
 smlp_logger - INFO - Building model terms: Start
-
-smlp_logger - INFO - Building model terms: End
-
-smlp_logger - INFO - Model interface constraints are consistent
-
-smlp_logger - INFO - Verifying assertion asrt_y1 <-> not(p2<y1*2+x<=(p1+1)>5 and y1<=10)
-
-smlp_logger - INFO - The configuration is consistent with assertion asrt_y1
-
-smlp_logger - INFO - Completed with result: PASS
-
-smlp_logger - INFO - Verifying assertion asrt_y2 <-> -2*y2-1<10-p2 and p2>5 and p2<8
-
-smlp_logger - INFO - The configuration is consistent with assertion asrt_y2
-
-smlp_logger - INFO - Completed with result: FAIL
-
-smlp_logger - INFO - Running SMLP in mode "verify": End
-
-smlp_logger - INFO - Executing run_smlp.py script: End

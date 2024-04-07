@@ -1,6 +1,6 @@
 {
 	"smlp_execution": "aborted",
-	"interface_consistent": "false",
+	"interface_consistent": "true",
 	"query1": {
 		"query_feasible": "unknown",
 		"query_stable": "unknown",
