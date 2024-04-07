@@ -262,25 +262,33 @@ def main():
     file_path = path.dirname(path.abspath(__file__))
     # Regression arguments
     parser = ArgumentParser(description='SMLP regression')
-    parser.add_argument('-o', '--output', help='Output directory')
-    parser.add_argument('-t', '--tests', help='Specify a single test or run everything')
-    parser.add_argument('-m', '--modes', help='Specify modes of test to run, default is all modes')
+    parser.add_argument('-o', '--output', help='Output directory.')
+    parser.add_argument('-t', '--tests', help='Specify tests to run. It can be a comma-separated list of test numbers\
+                        like -t 5,8,10; it can be a range of consecutive tests like -t 10:15; one can also run\
+                        all toy tests, where toy means that the test data name starts with smlp_toy, by specifying\
+                        -t toy; or run all other tests by specifying -t real; or run all the regression tests by\
+                        specifying -t all.')
+    parser.add_argument('-m', '--modes', help='Specify modes (e.g., verify) of tests to run, default is all modes.')
     parser.add_argument('-d', '--debug', action='store_true')
-    parser.add_argument('-p', '--print_command', action='store_true')
+    parser.add_argument('-p', '--print_command', action='store_true', help='print the command to run manually;\
+                        the test will not be executed.')
     parser.add_argument('-diff', '--diff', action='store_true')
-    parser.add_argument('-c', '--cross_check', action='store_true', help='Cross check specific csv outputs.')
+    #parser.add_argument('-c', '--cross_check', action='store_true', help='Cross check specific csv outputs.')
     parser.add_argument('-w', '--workers', help='Number of concurrent tests that will run, default 2.')
-    parser.add_argument('-temp', '--tempdir', help='Specify where to copy and run code, default=temp_dir.')
+    #parser.add_argument('-temp', '--tempdir', help='Specify where to copy and run code, default=temp_dir.')
     parser.add_argument('-i', '--ignore_tests', help='Ignores test/s that are passed as this argument.')
-    parser.add_argument('-n', '--no_all', action='store_true', help='Answer no on all replacing.')
-    parser.add_argument('-f', '--fail_txt', action='store_true', help='Don\'t check all files if txt fails')
-    parser.add_argument('-time', '--timeout', help='Set the timeout for each test to given value, if not provided, no timeout.')
-    parser.add_argument('-tol', '--tolerance', help='Set the csv compare tolerance')
-    parser.add_argument('-def', '--default', help='Yes/No/Y/N to all replacements')
-    parser.add_argument('-conf', '--config_default', help='Yes/No/Y/N to config file all replacements')
-    #parser.add_argument('-bval', '--bad_value', help='Either 0 or 1', default='1')
+    parser.add_argument('-n', '--no_all', action='store_true', help='Answer no to all file replacements/updates\
+                        when a mismatch is found between current and master results.')
+    parser.add_argument('-f', '--fail_txt', action='store_true', help='Don\'t compare all files if .txt main log\
+                        file comparison fails.')
+    parser.add_argument('-time', '--timeout', help='Set the timeout for each test to given value, if not provided,\
+                        no timeout.')
+    parser.add_argument('-tol', '--tolerance', help='Set the csv comparison tolerance to ignore differences in low\
+                        decimal bits.')
+    parser.add_argument('-def', '--default', help='Yes/No/Y/N answer to all master file replacements/updates.')
+    parser.add_argument('-conf', '--config_default', help='Yes/No/Y/N answer to config file all replacements/updates.')
     parser.add_argument('-g', '--no_graphical_compare', action='store_true', help='Answer no on all replacing.')
-    parser.add_argument('-r', '--rscript_version', help='Which version of R should be used.', default='R3')
+
     args = parser.parse_args()
     if not args.output:
         output_path = './' #file_path.replace('\\', '/')
@@ -369,9 +377,9 @@ def main():
             csvreader = reader(rFile, delimiter=',')
             next(csvreader, None)
             for row in csvreader:
-                if (row[1].startswith('ev_toy') or row[1].startswith('mlbt_toy') or row[2].startswith('ev_toy') or row[
+                if (row[1].startswith('smlp_toy') or row[1].startswith('mlbt_toy') or row[2].startswith('smlp_toy') or row[
                     2].startswith('mlbt_toy') or (
-                            conf_identifier(row[3]) and get_conf_name(row[3]).startswith('ev_toy')) or (
+                            conf_identifier(row[3]) and get_conf_name(row[3]).startswith('smlp_toy')) or (
                             not conf_identifier(row[3]) and row[1] == '' and row[2] == '')) and (
                         row[0] not in ignored_tests):
                     tests_list.append(row[0])
@@ -381,9 +389,9 @@ def main():
             csvreader = reader(rFile, delimiter=',')
             next(csvreader, None)
             for row in csvreader:
-                if (not (row[1].startswith('ev_toy') or row[1].startswith('mlbt_toy') or row[2].startswith('ev_toy') or
+                if (not (row[1].startswith('smlp_toy') or row[1].startswith('mlbt_toy') or row[2].startswith('smlp_toy') or
                          row[2].startswith('mlbt_toy') or (
-                                 conf_identifier(row[3]) and get_conf_name(row[3]).startswith('ev_toy')))) and (
+                                 conf_identifier(row[3]) and get_conf_name(row[3]).startswith('smlp_toy')))) and (
                         row[0] not in ignored_tests):
                     tests_list.append(row)
                     tests_queue.put(row)
@@ -978,41 +986,7 @@ def main():
                     if log:
                         write_to_log('Error in {stage} stage:'.format(stage=test_error[0]))
                         write_to_log(test_error[1])
-        if args.cross_check:
-            for t in cross_tests:
-                i = get_file_from_list_underscore(t[0], files_in_master)
-                j = get_file_from_list_underscore(t[1], files_in_master)
-                for k, l in zip(i, j):
-                    master_k = path.join(master_path, k)
-                    master_l = path.join(master_path, l)
-                    if path.exists(master_k) and path.exists(master_l):
-                        if master_k.endswith('.txt') and master_l.endswith('.txt'):
-                            print('comparing {file1} with {file2}'.format(file1=k, file2=l))
-                            p = Popen(
-                                '{diff} -I \'Feature selection.*file .*\' -I\'\\[-v-] Input.*\' {k} {l}'.format(
-                                    diff=diff,
-                                    k=master_k,
-                                    l=master_l),
-                                shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-                            output, error = p.communicate()
-                            if p.returncode == 1:
-                                Popen('{diff} {l} {k}'.format(diff=DIFF, k=master_k, l=master_l), shell=True).wait()
-                            else:
-                                print("Passed!")
-                        elif args.cross_check:
-                            print('comparing {file1} with {file2}'.format(file1=k, file2=l))
-                            p = Popen('{diff} {k} {l}'.format(diff=diff, k=master_k, l=master_l), shell=True,
-                                      stdin=PIPE,
-                                      stdout=PIPE, stderr=PIPE)
-                            output, error = p.communicate()
-                            if p.returncode == 1:
-                                Popen('{diff} {l} {k}'.format(diff=DIFF, k=master_k, l=master_l), shell=True).wait()
-                            else:
-                                print("Passed!")
-                    elif not path.exists(master_k):
-                        print('File {file} does not exist'.format(file=k))
-                    else:
-                        print('File {file} does not exist'.format(file=l))
+
     if DEBUG:
         print('9')
         print('log and not args.diff', log and not args.diff)

@@ -26,5 +26,9 @@
 		"threshold_up": 1.0752000000000002,
 		"max_in_data": 102.36396627,
 		"min_in_data": 1.0752000000000002
-	}
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true",
+	"synthesis_feasible": "true"
 }

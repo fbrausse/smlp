@@ -218,55 +218,55 @@ smlp_logger - INFO - Pareto optimization vacuity check: End
 
 smlp_logger - INFO - Optimize single objective objv_y1: Start
 
-smlp_logger - INFO - Querying condition objv_y1_9.0 <-> y1 > 9.0
+smlp_logger - INFO - Querying condition objv_y1_9.0 <-> y1 >= 9.0
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
 smlp_logger - INFO - Increasing threshold lower bound for objective objv_y1 from -inf to 9.0
 
-smlp_logger - INFO - Querying condition objv_y1_13.0 <-> y1 > 13.0
+smlp_logger - INFO - Querying condition objv_y1_13.0 <-> y1 >= 13.0
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y1 from inf to 13.0
 
-smlp_logger - INFO - Querying condition objv_y1_11.0 <-> y1 > 11.0
+smlp_logger - INFO - Querying condition objv_y1_11.0 <-> y1 >= 11.0
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y1 from 13.0 to 11.0
 
-smlp_logger - INFO - Querying condition objv_y1_10.0 <-> y1 > 10.0
+smlp_logger - INFO - Querying condition objv_y1_10.0 <-> y1 >= 10.0
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y1 from 11.0 to 10.0
 
-smlp_logger - INFO - Querying condition objv_y1_9.5 <-> y1 > 9.5
+smlp_logger - INFO - Querying condition objv_y1_9.5 <-> y1 >= 9.5
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y1 from 10.0 to 9.5
 
-smlp_logger - INFO - Querying condition objv_y1_9.25 <-> y1 > 9.25
+smlp_logger - INFO - Querying condition objv_y1_9.25 <-> y1 >= 9.25
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y1 from 9.5 to 9.25
 
-smlp_logger - INFO - Querying condition objv_y1_9.125 <-> y1 > 9.125
+smlp_logger - INFO - Querying condition objv_y1_9.125 <-> y1 >= 9.125
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y1 from 9.25 to 9.125
 
-smlp_logger - INFO - Querying condition objv_y1_9.0625 <-> y1 > 9.0625
+smlp_logger - INFO - Querying condition objv_y1_9.0625 <-> y1 >= 9.0625
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y1 from 9.125 to 9.0625
 
-smlp_logger - INFO - Querying condition objv_y1_9.03125 <-> y1 > 9.03125
+smlp_logger - INFO - Querying condition objv_y1_9.03125 <-> y1 >= 9.03125
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
@@ -276,55 +276,55 @@ smlp_logger - INFO - Optimize single objective objv_y1: End
 
 smlp_logger - INFO - Optimize single objective objv_y2: Start
 
-smlp_logger - INFO - Querying condition objv_y2_9.0 <-> y2 > 9.0
+smlp_logger - INFO - Querying condition objv_y2_9.0 <-> y2 >= 9.0
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
 smlp_logger - INFO - Increasing threshold lower bound for objective objv_y2 from -inf to 9.0
 
-smlp_logger - INFO - Querying condition objv_y2_13.0 <-> y2 > 13.0
+smlp_logger - INFO - Querying condition objv_y2_13.0 <-> y2 >= 13.0
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y2 from inf to 13.0
 
-smlp_logger - INFO - Querying condition objv_y2_11.0 <-> y2 > 11.0
+smlp_logger - INFO - Querying condition objv_y2_11.0 <-> y2 >= 11.0
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y2 from 13.0 to 11.0
 
-smlp_logger - INFO - Querying condition objv_y2_10.0 <-> y2 > 10.0
+smlp_logger - INFO - Querying condition objv_y2_10.0 <-> y2 >= 10.0
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y2 from 11.0 to 10.0
 
-smlp_logger - INFO - Querying condition objv_y2_9.5 <-> y2 > 9.5
+smlp_logger - INFO - Querying condition objv_y2_9.5 <-> y2 >= 9.5
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y2 from 10.0 to 9.5
 
-smlp_logger - INFO - Querying condition objv_y2_9.25 <-> y2 > 9.25
+smlp_logger - INFO - Querying condition objv_y2_9.25 <-> y2 >= 9.25
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y2 from 9.5 to 9.25
 
-smlp_logger - INFO - Querying condition objv_y2_9.125 <-> y2 > 9.125
+smlp_logger - INFO - Querying condition objv_y2_9.125 <-> y2 >= 9.125
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y2 from 9.25 to 9.125
 
-smlp_logger - INFO - Querying condition objv_y2_9.0625 <-> y2 > 9.0625
+smlp_logger - INFO - Querying condition objv_y2_9.0625 <-> y2 >= 9.0625
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv_y2 from 9.125 to 9.0625
 
-smlp_logger - INFO - Querying condition objv_y2_9.03125 <-> y2 > 9.03125
+smlp_logger - INFO - Querying condition objv_y2_9.03125 <-> y2 >= 9.03125
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 

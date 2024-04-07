@@ -1327,6 +1327,7 @@ Test90_smlp_toy_num_resp_mult_labeled_predictions_summary.csv Passed
 Test90_smlp_toy_num_resp_mult_missing_values_dict.json Passed
 Test90_smlp_toy_num_resp_mult_model_features_dict.json Passed
 Test90_smlp_toy_num_resp_mult_model_levels_dict.json Passed
+Test90_smlp_toy_num_resp_mult_optimization_results.json Passed
 Test90_smlp_toy_num_resp_mult_resp-distr.png Failed -> master file does not exist
 Test90_smlp_toy_num_resp_mult_smlp_model_term.json Passed
 Test90_smlp_toy_num_resp_mult_test_prediction_precisions.csv Passed
@@ -1913,6 +1914,7 @@ Test124_smlp_toy_basic.txt Passed
 Test124_smlp_toy_basic_data_bounds.json Passed
 Test124_smlp_toy_basic_model_features_dict.json Passed
 Test124_smlp_toy_basic_model_levels_dict.json Passed
+Test124_smlp_toy_basic_optimization_results.json Passed
 
 Test 125 Passed:
 Test125_smlp_toy_basic.txt Passed

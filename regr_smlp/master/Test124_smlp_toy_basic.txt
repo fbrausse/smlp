@@ -161,7 +161,7 @@ smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Pareto optimization vacuity check: End
 
-smlp_logger - INFO - Model configuration tuning instance is inconsistent; aborting...
+smlp_logger - INFO - Model configuration optimized synthesis instance is inconsistent; aborting...
 
 smlp_logger - INFO - Running SMLP in mode "optsyn": End
 

@@ -298,7 +298,7 @@ class ModelSklearn:
             else:
                 is_classification = False
                 break
-        print('is_classification', is_classification); assert False
+        #print('is_classification', is_classification); assert False
         '''
         hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
         hparam_dict_local['random_state'] = seed
@@ -308,7 +308,7 @@ class ModelSklearn:
 
         # print text representation of the tree model
         text_representation = tree.export_text(model)
-        print(text_representation)
+        #print(text_representation)
 
         '''
         # visualaize tree TODO !!!!!!!!!!!! does not work 
@@ -383,7 +383,7 @@ class ModelSklearn:
     def _sklearn_train_multi_response(self, get_model_file_prefix, feat_names, resp_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, sample_weights_vect):
-        print('feat_names', feat_names, 'X_train\n', X_train)
+        #print('feat_names', feat_names, 'X_train\n', X_train)
         assert feat_names == X_train.columns.tolist()
         assert feat_names == X_test.columns.tolist()
         if algo in ['dt', 'et', 'rf']:
