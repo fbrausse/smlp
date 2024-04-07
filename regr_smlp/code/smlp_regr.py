@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import os
 from os import path, chdir, sep, remove, listdir, kill
 from argparse import ArgumentParser
