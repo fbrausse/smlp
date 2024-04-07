@@ -15,6 +15,9 @@ from threading import Timer
 
 # from difflib import ndiff, context_diff
 
+TUI_DIFF = 'diff'
+GUI_DIFF = 'tkdiff'
+
 DEBUG = False
 # used for excluding from diff reports that involve randomness
 files_to_ignore_from_diff = ['Test41_doe_two_levels_doe.csv', 'Test42_doe_two_levels_doe.csv']
@@ -310,6 +313,11 @@ def main():
         with open(file_path, 'r') as rFile:
             return rFile.read().splitlines()"""
 
+    global DIFF
+    if 'DISPLAY' in os.environ:
+        DIFF = GUI_DIFF
+    else:
+        DIFF = TUI_DIFF
 
     code_path = file_path  # Path to SMLP regression code - also where smlp_tests.csv file and this script are located.
 
@@ -838,7 +846,7 @@ def main():
                             if p.returncode == 1:
                                 if not comapre_files(new_file, master_file):
                                     if not args.no_graphical_compare and to_show:
-                                        Popen('tkdiff {l} {k}'.format(k=new_file, l=master_file), shell=True).wait()
+                                        Popen('{diff} {l} {k}'.format(diff=DIFF, k=new_file, l=master_file), shell=True).wait()
                                     if args.default or (args.config_default and config_file):
                                         if args.config_default and config_file:
                                             user_input = args.config_default
@@ -988,7 +996,7 @@ def main():
                                 shell=True, stdin=PIPE, stdout=PIPE, stderr=PIPE)
                             output, error = p.communicate()
                             if p.returncode == 1:
-                                Popen('tkdiff {l} {k}'.format(k=master_k, l=master_l), shell=True).wait()
+                                Popen('{diff} {l} {k}'.format(diff=DIFF, k=master_k, l=master_l), shell=True).wait()
                             else:
                                 print("Passed!")
                         elif args.cross_check:
@@ -998,7 +1006,7 @@ def main():
                                       stdout=PIPE, stderr=PIPE)
                             output, error = p.communicate()
                             if p.returncode == 1:
-                                Popen('tkdiff {l} {k}'.format(k=master_k, l=master_l), shell=True).wait()
+                                Popen('{diff} {l} {k}'.format(diff=DIFF, k=master_k, l=master_l), shell=True).wait()
                             else:
                                 print("Passed!")
                     elif not path.exists(master_k):
@@ -1019,7 +1027,7 @@ def main():
                       stdout=PIPE, stderr=PIPE)
             output, error = p.communicate()
             if p.returncode == 1:
-                Popen('tkdiff {master_log} {new_log}'.format(new_log=log_file, master_log=master_log_file),
+                Popen('{diff} {master_log} {new_log}'.format(diff=DIFF, new_log=log_file, master_log=master_log_file),
                       shell=True).wait()
                 user_input = input(
                     'Do you wish to switch the new log file with the master log file?\n(yes/no|y/n): ').lower()
