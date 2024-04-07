@@ -149,10 +149,12 @@ class ModelCaret:
         use_sample_weights = False
         perform_cv = folds > 1 # whether to perform cross-validation
         df_train = pd.concat([X_train, y_train], axis=1)
+
         #print('df_train\n', df_train); print(resp_name)
+        #print('data_split_shuffle:', self._hparam_name_local_to_global('data_split_shuffle', 'setup'))
         exp_clf = setup(df_train, target=resp_name, session_id=seed, 
-            data_split_shuffle=self._hparam_name_local_to_global('data_split_shuffle', 'setup'))
-        
+            data_split_shuffle=True)
+
         # create multiple models to find best (this step is optional, useful but time consuming)
         if models_compare:
             eslf._caret_logger.info('compare models')
