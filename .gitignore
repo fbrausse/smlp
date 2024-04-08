@@ -45,3 +45,5 @@ obj/table.c.o
 /regr_smlp/code/test*.*
 /regr_smlp/data/smlp_s2_tx.csv
 /regr_smlp/code/__pycache__/
+/regr_smlp/code/all_log.txt
+/regr_smlp/code/logs.log
