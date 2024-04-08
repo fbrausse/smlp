@@ -1,5 +1,5 @@
 
-LINKS = doc.pdf spec.pdf
+LINKS = doc.pdf
 
 .PHONY: all clean
 
