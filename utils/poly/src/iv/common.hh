@@ -1,9 +1,7 @@
-/*
- * common.hh
+/* SPDX-License-Identifier: Apache-2.0
  *
- * Copyright 2020 Franz Brauße <brausse@informatik.uni-trier.de>
- *
- * See the LICENSE file for terms of distribution.
+ * Copyright 2020 Franz Brausse <franz.brausse@manchester.ac.uk>
+ * Copyright 2020 The University of Manchester
  */
 
 #ifndef IV_COMMON_HH

@@ -1,3 +1,10 @@
+/*
+ * smtlib2-parser.hh
+ * 
+ * Copyright 2022-2024 Franz Brauße <franz.brausse@manchester.ac.uk>
+ *
+ * See the LICENSE file for terms of distribution.
+ */
 
 #ifndef ES_SMTLIB2_PARSER_HH
 #define ES_SMTLIB2_PARSER_HH

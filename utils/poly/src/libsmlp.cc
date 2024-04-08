@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2022-2024 Franz Brausse <franz.brausse@manchester.ac.uk>
+ * Copyright 2022-2024 The University of Manchester
+ */
 
 #include <boost/python.hpp>
 #include <boost/python/suite/indexing/vector_indexing_suite.hpp>
