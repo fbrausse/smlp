@@ -40,6 +40,8 @@ obj/check-data-lib.c.o
 obj/check-data.c.o
 obj/response.c.o
 obj/table.c.o
+
 /regr_smlp/code/Test*.*
+/regr_smlp/code/test*.*
 /regr_smlp/data/smlp_s2_tx.csv
 /regr_smlp/code/__pycache__/
