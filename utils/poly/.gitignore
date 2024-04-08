@@ -2,3 +2,6 @@
 __pycache__
 /prefix
 /smlp
+/smlp-*.*.*/
+/releases
+/wheel/
