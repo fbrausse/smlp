@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 # data processing -- mainly to prepare data for model training
 import os
 import logging

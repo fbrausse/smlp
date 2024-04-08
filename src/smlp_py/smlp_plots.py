@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 import matplotlib.pyplot as plt; plt.rcdefaults()
 from matplotlib import cm
 import seaborn as sns

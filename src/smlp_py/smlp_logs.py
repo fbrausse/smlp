@@ -1,8 +1,5 @@
-#
-# This file is part of smlprover.
-#
-# Copyright 2020 Franz Brauße <franz.brausse@manchester.ac.uk>
-# See the LICENSE file for terms of distribution.
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
 
 # TODO !!!:  inst actually contains info required for logging, so maybe all feilds and paths/filenames
 # definitions need to be moved into a logger module/class (which does not exist now).
