@@ -383,6 +383,11 @@ class ModelSklearn:
     def _sklearn_train_multi_response(self, get_model_file_prefix, feat_names, resp_names, algo,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, sample_weights_vect):
+
+        # set the seed for reproducibility
+        if seed is not None:
+            np.random.seed(seed)
+
         #print('feat_names', feat_names, 'X_train\n', X_train)
         assert feat_names == X_train.columns.tolist()
         assert feat_names == X_test.columns.tolist()
