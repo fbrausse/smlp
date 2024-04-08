@@ -19,6 +19,23 @@ from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_wit
     list_subtraction_set, get_expression_variables)
 #from smlp_py.smlp_spec import SmlpSpec
 
+def _keras_is_sequential(model):
+    try:
+        # v2.9 has this API
+        clz = keras.engine.sequential.Sequential
+    except AttributeError:
+        # v2.14+ has this API
+        clz = keras.src.engine.sequential.Sequential
+    return isinstance(model, clz)
+
+def _keras_is_functional(model):
+    try:
+        # v2.9 has this API
+        clz = keras.engine.functional.Functional
+    except AttributeError:
+        # v2.14+ has this API
+        clz = keras.src.engine.functional.Functional
+    return isinstance(model, clz)
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
@@ -760,9 +777,9 @@ class NNKerasTerms: #(SmlpTerms):
     def _get_nn_keras_model_type(self, model):
         #print('keras model', model, type(model))
         #print('keras terms', keras)
-        if isinstance(model, keras.engine.sequential.Sequential):
+        if _keras_is_sequential(model):
             model_type = 'sequential'
-        elif isinstance(model, keras.engine.functional.Functional):
+        elif _keras_is_functional(model):
             model_type = 'functional'
         else:
             raise Exception('Unsupported Keras NN type (neither sequential nor functional)')
