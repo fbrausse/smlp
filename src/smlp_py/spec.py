@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
 
 from enum import Enum, unique
 from typing import NamedTuple, Sequence, List

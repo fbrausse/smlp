@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
 
 import pandas as pd
 import numpy as np

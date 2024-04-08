@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 import smlp
 from smlp_py.smlp_terms import SmlpTerms, ModelTerms, ScalerTerms
 from smlp_py.smlp_query import SmlpQuery
