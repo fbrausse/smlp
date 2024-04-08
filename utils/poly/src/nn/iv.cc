@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: Apache-2.0
+ *
+ * Copyright 2020 Franz Brausse <franz.brausse@manchester.ac.uk>
+ * Copyright 2020 The University of Manchester
+ */
 
 #ifndef IV_ANON_NN_COMMON
 # define IV_ANON_NN_COMMON 1

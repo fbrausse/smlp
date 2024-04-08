@@ -1,3 +1,10 @@
+/*
+ * sexpr.hh
+ * 
+ * Copyright 2022-2024 Franz Brauße <franz.brausse@manchester.ac.uk>
+ *
+ * See the LICENSE file for terms of distribution.
+ */
 
 #ifndef ES_SEXPR_HH
 #define ES_SEXPR_HH
