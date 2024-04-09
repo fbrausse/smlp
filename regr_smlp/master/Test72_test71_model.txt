@@ -57,3 +57,22 @@ smlp_logger - INFO - Eta   combined constraints: true
 smlp_logger - INFO - Creating model exploration base components: End
 
 smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Building model terms: End
+
+smlp_logger - INFO - Model interface constraints are consistent
+
+smlp_logger - INFO - Verifying consistency of configuration for assertion asrt1:
+   true
+
+smlp_logger - INFO - Input, knob and configuration constraints are consistent
+
+smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+p2)/2<6
+
+smlp_logger - INFO - The configuration is inconsistent with assertion asrt1
+
+smlp_logger - INFO - Completed with result: FAIL
+
+smlp_logger - INFO - Running SMLP in mode "verify": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

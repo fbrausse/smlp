@@ -88,9 +88,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on new data --  msqe: 8.026
+smlp_logger - INFO - Prediction on new data --  msqe: 9.591
 
-smlp_logger - INFO - Prediction on new data --  r2_score: -1.032
+smlp_logger - INFO - Prediction on new data --  r2_score: -1.428
 
 smlp_logger - INFO - Reporting prediction results: end
 

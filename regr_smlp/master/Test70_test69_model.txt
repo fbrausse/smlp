@@ -57,3 +57,5 @@ smlp_logger - INFO - Eta   combined constraints: true
 smlp_logger - INFO - Creating model exploration base components: End
 
 smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Building model terms: End

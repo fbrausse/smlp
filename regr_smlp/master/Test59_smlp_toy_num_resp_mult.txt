@@ -143,9 +143,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test59_smlp_toy_num_resp_mult_training_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on training data --  msqe: 5.117
+smlp_logger - INFO - Prediction on training data --  msqe: 4.743
 
-smlp_logger - INFO - Prediction on training data --  r2_score: -0.365
+smlp_logger - INFO - Prediction on training data --  r2_score: -0.265
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -163,9 +163,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test59_smlp_toy_num_resp_mult_test_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on test data --  msqe: 10.165
+smlp_logger - INFO - Prediction on test data --  msqe: 5.139
 
-smlp_logger - INFO - Prediction on test data --  r2_score: -1.859
+smlp_logger - INFO - Prediction on test data --  r2_score: -0.445
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -183,9 +183,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test59_smlp_toy_num_resp_mult_labeled_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on labeled data --  msqe: 6.494
+smlp_logger - INFO - Prediction on labeled data --  msqe: 4.851
 
-smlp_logger - INFO - Prediction on labeled data --  r2_score: -0.637
+smlp_logger - INFO - Prediction on labeled data --  r2_score: -0.223
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -222,3 +222,5 @@ smlp_logger - INFO - Eta   combined constraints: true
 smlp_logger - INFO - Creating model exploration base components: End
 
 smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Building model terms: End

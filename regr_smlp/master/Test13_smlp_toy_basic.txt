@@ -124,9 +124,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test13_smlp_toy_basic_training_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on training data --  msqe: 31.493
+smlp_logger - INFO - Prediction on training data --  msqe: 46.363
 
-smlp_logger - INFO - Prediction on training data --  r2_score: -5.769
+smlp_logger - INFO - Prediction on training data --  r2_score: -12.726
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -144,9 +144,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test13_smlp_toy_basic_test_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on test data --  msqe: 15.566
+smlp_logger - INFO - Prediction on test data --  msqe: 14.261
 
-smlp_logger - INFO - Prediction on test data --  r2_score: -31.481
+smlp_logger - INFO - Prediction on test data --  r2_score: -75.890
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -164,9 +164,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test13_smlp_toy_basic_labeled_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on labeled data --  msqe: 28.307
+smlp_logger - INFO - Prediction on labeled data --  msqe: 39.942
 
-smlp_logger - INFO - Prediction on labeled data --  r2_score: -2.012
+smlp_logger - INFO - Prediction on labeled data --  r2_score: -3.809
 
 smlp_logger - INFO - Reporting prediction results: end
 

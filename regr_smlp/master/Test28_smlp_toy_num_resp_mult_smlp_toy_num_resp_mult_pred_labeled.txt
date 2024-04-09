@@ -193,9 +193,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test28_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_training_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on training data --  msqe: 4.872
+smlp_logger - INFO - Prediction on training data --  msqe: 5.375
 
-smlp_logger - INFO - Prediction on training data --  r2_score: -0.299
+smlp_logger - INFO - Prediction on training data --  r2_score: -0.433
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -213,9 +213,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test28_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_test_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on test data --  msqe: 6.339
+smlp_logger - INFO - Prediction on test data --  msqe: 10.612
 
-smlp_logger - INFO - Prediction on test data --  r2_score: -0.783
+smlp_logger - INFO - Prediction on test data --  r2_score: -1.985
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -233,9 +233,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test28_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_labeled_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on labeled data --  msqe: 5.272
+smlp_logger - INFO - Prediction on labeled data --  msqe: 6.803
 
-smlp_logger - INFO - Prediction on labeled data --  r2_score: -0.329
+smlp_logger - INFO - Prediction on labeled data --  r2_score: -0.715
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -253,9 +253,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test28_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on new data --  msqe: 6.223
+smlp_logger - INFO - Prediction on new data --  msqe: 8.309
 
-smlp_logger - INFO - Prediction on new data --  r2_score: -0.575
+smlp_logger - INFO - Prediction on new data --  r2_score: -1.103
 
 smlp_logger - INFO - Reporting prediction results: end
 
