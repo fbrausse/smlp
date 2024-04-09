@@ -227,13 +227,13 @@ In the regr_smlp directory, we also provide two tests on a real-life data set
 as have been used at Intel. To run them from inside the regr_smlp/code
 directory, run the following commands:
 
-    ../../src/run_smlp.py -out_dir ./ -pref Test130 -data ../data/smlp_s2_tx \
+    ../../src/run_smlp.py -out_dir ./ -pref smlp_s2_tx_dt -data ../data/smlp_s2_tx \
     -mode optimize -pareto f -sat_thresh f -resp o0 -feat \
     Byte,CH,RANK,Timing,i0,i1,i2,i3 -model dt_sklearn -dt_sklearn_max_depth 15 \
     -data_scaler min_max -epsilon 0.05 -log_time f -plots f \
     -spec ../specs/smlp_s2_tx
 
-    ../../src/run_smlp.py -out_dir ./ -pref Test131 -data ../data/smlp_s2_tx \
+    ../../src/run_smlp.py -out_dir ./ -pref smlp_s2_tx_nn -data ../data/smlp_s2_tx \
     -mode optimize -pareto f -sat_thresh f -resp o0 \
     -feat Byte,CH,RANK,Timing,i0,i1,i2,i3 \
     -model nn_keras -nn_keras_epochs 20 -data_scaler min_max \
