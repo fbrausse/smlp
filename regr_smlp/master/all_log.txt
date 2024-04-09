@@ -215,13 +215,12 @@ Test14_smlp_toy_basic_training_predictions_summary.csv Passed
 
 Test 15 Passed:
 Test15_Test5_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt Passed
-Test15_Test5_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_eval_dt_caret_new-col-y1.png Failed -> master file does not exist
 Test15_Test5_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json Passed
 Test15_Test5_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv Passed
 Test15_Test5_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv Passed
 
-Test 16 Failed:
-Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt Failed -> content diff
+Test 16 Passed:
+Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt Passed
 Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json Passed
 Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv Passed
 Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv Passed
@@ -249,18 +248,14 @@ test19_model_model_features_dict.json Passed
 test19_model_model_levels_dict.json Passed
 test19_model_rerun_model_config.json Passed
 
-Test 19 Failed:
-Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled.txt Failed -> content diff
-Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y1.png Failed -> master file does not exist
-Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y2.png Failed -> master file does not exist
+Test 19 Passed:
+Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled.txt Passed
 Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json Passed
 Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv Passed
 Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv Passed
 
-Test 20 Failed:
-Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt Failed -> content diff
-Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y1.png Failed -> master file does not exist
-Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y2.png Failed -> master file does not exist
+Test 20 Passed:
+Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt Passed
 Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json Passed
 Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv Passed
 Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv Passed
@@ -305,10 +300,8 @@ test24_model_model_features_dict.json Passed
 test24_model_model_levels_dict.json Passed
 test24_model_rerun_model_config.json Passed
 
-Test 24 Failed:
-Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled.txt Failed -> content diff
-Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y1.png Failed -> master file does not exist
-Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y2.png Failed -> master file does not exist
+Test 24 Passed:
+Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled.txt Passed
 Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json Passed
 Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv Passed
 Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv Passed
@@ -330,16 +323,14 @@ test26_model_model_features_dict.json Passed
 test26_model_model_levels_dict.json Passed
 test26_model_rerun_model_config.json Passed
 
-Test 26 Failed:
-Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt Failed -> content diff
-Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y1.png Failed -> master file does not exist
-Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y2.png Failed -> master file does not exist
+Test 26 Passed:
+Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt Passed
 Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json Passed
 Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv Passed
 Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv Passed
 
-Test 27 Passed:
-Test27_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt Passed
+Test 27 Failed:
+Test27_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt Failed -> content diff
 Test27_smlp_toy_num_resp_mult_data_bounds.json Passed
 Test27_smlp_toy_num_resp_mult_model_features_dict.json Passed
 Test27_smlp_toy_num_resp_mult_model_gen.json Passed
@@ -389,11 +380,9 @@ Test31_smlp_toy_num_resp_mult_features_ranking.csv Passed
 Test31_smlp_toy_num_resp_mult_missing_values_dict.json Passed
 Test31_smlp_toy_num_resp_mult_ranking_resp_feat.csv Passed
 
-Test 32 Failed:
-Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt Failed -> content diff
+Test 32 Passed:
+Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt Passed
 Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_args_config.json Passed
-Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y1.png Failed -> master file does not exist
-Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_eval_dt_sklearn_new-col-y2.png Failed -> master file does not exist
 Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json Passed
 Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv Passed
 Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv Passed
@@ -687,7 +676,7 @@ test69_model_smlp_model_term.json Failed -> content diff
 Test69_smlp_toy_num_resp_mult_verify_results.json Failed -> new file does not exist
 
 Test 70 Failed:
-Test70_test69_model.txt Failed -> content diff
+Test70_test69_model.txt Passed
 Test70_test69_model_verify_results.json Failed -> new file does not exist
 
 Test 71 Failed:
@@ -707,8 +696,8 @@ test71_model_model_levels_dict.json Passed
 test71_model_rerun_model_config.json Passed
 test71_model_smlp_model_term.json Failed -> content diff
 
-Test 72 Failed:
-Test72_test71_model.txt Failed -> content diff
+Test 72 Passed:
+Test72_test71_model.txt Passed
 Test72_test71_model_verify_results.json Passed
 
 Test 73 Passed:
