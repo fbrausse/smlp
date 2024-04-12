@@ -310,6 +310,8 @@ static kay::Q _Q_bin(const kay::Q &a, const kay::Q &b)
 
 static kay::Q _Q_div(const kay::Q &a, const kay::Q &b)
 {
+	if (!b)
+		throw std::runtime_error("division by zero on type libsmlp.Q");
 	return a / b;
 }
 
