@@ -1,7 +1,7 @@
 {
   "version": "1.2",
   "variables": [
-      	{ "label": "Timing", "interface": "knob", "type": "int", "rad-abs": 5 },
+      	{ "label": "Timing", "interface": "knob", "type": "int", "range": [-31,29], "rad-abs": 5 },
 	{ "label": "CH",     "interface": "input", "type": "int", "range": [0,1] },
 	{ "label": "RANK",   "interface": "input", "type": "int", "range": [0,1] },
 	{ "label": "Byte",   "interface": "input", "type": "int", "range": [0,7] },

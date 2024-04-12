@@ -752,17 +752,34 @@ class NNKerasTerms: #(SmlpTerms):
         assert layer_biases.shape[0] == len(curr_layer_terms)
         return curr_layer_terms
 
+    def _keras_is_sequential(self, model):
+        try:
+            # v2.9 has this API
+            cl = keras.engine.sequential.Sequential
+        except AttributeError:
+            # v2.14+ has this API
+            cl = keras.src.engine.sequential.Sequential
+        return isinstance(model, cl)
 
+    def _keras_is_functional(self, model):
+        try:
+            # v2.9 has this API
+            cl = keras.engine.functional.Functional
+        except AttributeError:
+            # v2.14+ has this API
+            cl = keras.src.engine.functional.Functional
+        return isinstance(model, cl)
+    
     # determine the model type -- sequential vs functional
     def _get_nn_keras_model_type(self, model):
         #print('keras model', model, type(model))
-        #print('keras terms', keras)
-        if isinstance(model, keras.engine.sequential.Sequential):
+        if self._keras_is_sequential(model):
             model_type = 'sequential'
-        elif isinstance(model, keras.engine.functional.Functional):
+        elif self._keras_is_functional(model):
             model_type = 'functional'
         else:
             raise Exception('Unsupported Keras NN type (neither sequential nor functional)')
+            assert False
         return model_type
     
     # Create SMLP terms from polynomial model. Returns a dictionary with response names from model_resp_names as keys
@@ -838,8 +855,11 @@ class ScalerTerms:
     # orig_min stands for min(x) and orig_max stands for max(x). Note that 1 / (max(x) - min(x)) is a
     # rational constant, it is defined to smlp instance as a fraction (thus there is no loss of precision).
     def feature_scaler_to_term(self, orig_feat_name, scaled_feat_name, orig_min, orig_max): 
-        #print('feature_scaler_to_term', 'orig_min', orig_min, type(orig_min), 'orig_max', orig_max, type(orig_max))
-        return smlp.Cnst(smlp.Q(1) / smlp.Q(orig_max - orig_min)) * (smlp.Var(orig_feat_name) - smlp.Cnst(orig_min))
+        #print('feature_scaler_to_term', 'orig_min', orig_min, type(orig_min), 'orig_max', orig_max, type(orig_max), flush=True)
+        if orig_min == orig_max:
+            return smlp.Cnst(0) # same as returning smlp.Cnst(smlp.Q(0))
+        else:
+            return smlp.Cnst(smlp.Q(1) / smlp.Q(orig_max - orig_min)) * (smlp.Var(orig_feat_name) - smlp.Cnst(orig_min))
     
     # Computes dictionary with features as keys and scaler terms as values
     def feature_scaler_terms(self, data_bounds, feat_names): 
@@ -956,7 +976,7 @@ class ModelTerms(SmlpTerms):
     # 
     # Only a subset of all model algorithms supported in training and prediction modes are currently
     # supported in _compute_pure_model_terms(). For each supported model algorithm, a dedicated function
-    # computing a dictionary of model terms from the model / dictionary of mdels is called. 
+    # computing a dictionary of model terms from the model / dictionary of mdoels is called. 
     def _compute_pure_model_terms(self, algo, model, model_feat_names, model_resp_names, feat_names, resp_names):
         assert not isinstance(model, dict)
         if algo == 'nn_keras': 
@@ -1001,31 +1021,31 @@ class ModelTerms(SmlpTerms):
         # compute model terms
         model_feat_names = [self._scalerTermsInst._scaled_name(feat) for feat in feat_names] if feat_were_scaled else feat_names
         model_resp_names = [self._scalerTermsInst._scaled_name(resp) for resp in resp_names] if resp_were_scaled else resp_names
-        #print('adding model terms: model_feat_names', model_feat_names, 'model_resp_names', model_resp_names)
+        #print('adding model terms: model_feat_names', model_feat_names, 'model_resp_names', model_resp_names, flush=True)
 
         model_term_dict = self._compute_pure_model_terms(algo, model, model_feat_names, model_resp_names, 
             feat_names, resp_names)
-        #print('model_term_dict', model_term_dict.keys())
+        #print('model_term_dict', model_term_dict.keys(), flush=True)
         
-        model_full_term_dict = model_term_dict; #print('model_full_term_dict', model_full_term_dict)
+        model_full_term_dict = model_term_dict; #print('model_full_term_dict', model_full_term_dict, flush=True)
         
         # compute features scaling term (skipped when it is identity);
         # substitute them instead of scaled feature variables in the model
         # terms (where the latter variables are inputs to the model)
         if feat_were_scaled:
-            #print('adding feature scaler terms')
+            #print('adding feature scaler terms', data_bounds, feat_names, flush=True)
             #scaled_feat_names = [self._scalerTermsInst._scaled_name(feat)for feat in feat_names]
             feature_scaler_terms_dict = self._scalerTermsInst.feature_scaler_terms(data_bounds, feat_names)
-            #print('feature_scaler_terms_dict', feature_scaler_terms_dict)
+            #print('feature_scaler_terms_dict', feature_scaler_terms_dict, flush=True)
 
             for resp_name, model_term in model_term_dict.items():
                 #print('model term before', model_term)
                 for feat_name, feat_term in feature_scaler_terms_dict.items():
-                    #print('feat_name', feat_name)
+                    #print('feat_name', feat_name, 'feat_term', feat_term, flush=True)
                     model_term = smlp.subst(model_term, {feat_name: feat_term})
-                #print('model term after', model_term)
+                #print('model term after', model_term, flush=True)
                 model_term_dict[resp_name] = model_term
-            #print('model_term_dict', model_term_dict)
+            #print('model_term_dict', model_term_dict, flush=True)
             model_full_term_dict = model_term_dict
             
         # compute responses in original scale from scaled responses that are
@@ -1036,13 +1056,13 @@ class ModelTerms(SmlpTerms):
             # substitute scaled response variables with scaled response terms (the model outputs)
             # in original response terms within responses_unscaler_terms_dict
             for resp_name, resp_term in responses_unscaler_terms_dict.items():
-                #print('resp_name', resp_name, resp_term)
+                #print('resp_name', resp_name, resp_term, flush=True)
                 responses_unscaler_terms_dict[resp_name] = smlp.subst(resp_term, 
                     {self._scalerTermsInst._scaled_name(resp_name): model_term_dict[self._scalerTermsInst._scaled_name(resp_name)]})
-            #print('responses_unscaler_terms_dict full model', responses_unscaler_terms_dict)
+            #print('responses_unscaler_terms_dict full model', responses_unscaler_terms_dict, flush=True)
             model_full_term_dict = responses_unscaler_terms_dict
             
-        #print('model_full_term_dict', model_full_term_dict);
+        #print('model_full_term_dict', model_full_term_dict, flush=True);
         return model_full_term_dict
 
     # Computes a dictionary with response names as keys and an smlp term corresponding to the model for that
@@ -1055,7 +1075,7 @@ class ModelTerms(SmlpTerms):
     # reponses have been scaled prior to training.
     def compute_models_terms_dict(self, algo, model_or_model_dict, model_features_dict, feat_names, resp_names, 
             data_bounds, data_scaler,scale_features, scale_responses):
-        #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names)
+        #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names, flush=True)
         assert lists_union_order_preserving_without_duplicates(list(model_features_dict.values())) == feat_names
         
         if isinstance(model_or_model_dict, dict):
@@ -1358,12 +1378,12 @@ class ModelTerms(SmlpTerms):
         spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
         
         # contraints on features used as control variables and on the responses
-        alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names) 
-        alph_global = self.compute_global_alpha_formula(alph_expr, feat_names)
-        alpha = self._smlpTermsInst.smlp_and(alph_ranges, alph_global)
-        beta = self.compute_beta_formula(beta_expr, feat_names+resp_names)
-        eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names)
-        eta_grids = self.compute_grid_range_formulae_eta()
+        alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names); #print('alph_ranges')
+        alph_global = self.compute_global_alpha_formula(alph_expr, feat_names); #print('alph_global')
+        alpha = self._smlpTermsInst.smlp_and(alph_ranges, alph_global); #print('alpha')
+        beta = self.compute_beta_formula(beta_expr, feat_names+resp_names); #print('beta')
+        eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names); #print('eta_ranges')
+        eta_grids = self.compute_grid_range_formulae_eta(); #print('eta_grids')
         eta_global = self.compute_eta_formula(eta_expr, feat_names); #print('eta_global', eta_global)
         eta = self._smlpTermsInst.smlp_and_multi([eta_ranges, eta_grids, eta_global]); #print('eta', eta)
         
@@ -1389,12 +1409,11 @@ class ModelTerms(SmlpTerms):
         for var in feat_names:
             domain_dict[var] = self.var_domain(var, spec_domain_dict)
         domain_features = smlp.domain(domain_dict)
-        interface_consistent = True # TMP !!!!!!!!!!!!!!!!!!!!
         interface_consistent = self.check_alpha_eta_consistency(domain_features, None, alpha, eta, 'ALL')
         if not interface_consistent:
             return None, None, None, eta, alpha, beta, False, False
-        
-        # now define solver donain that includes input, knob and output dec;arations from spec file.
+        #print('interface_consistent', interface_consistent)
+        # now define solver donain that includes input, knob and output declarations from spec file.
         for var in resp_names:
             domain_dict[var] = self.var_domain(var, spec_domain_dict)
         
@@ -1419,19 +1438,34 @@ class ModelTerms(SmlpTerms):
         self._smlp_terms_logger.info('Building model terms: Start')
         # model terms with terms for scaling inputs and / or unscaling responses are all composed to 
         # build model terms with inputs and outputs in the original scale. 
+        #print('algo', algo, flush=True)
         if algo == 'system':
             if syst_expr_dict is None:
                 raise Exception('System must be specified when model training algorithm is "system"')
             model_full_term_dict = system_term_dict
         else:
+            #print('model', model, flush=True)
             model_full_term_dict = self.compute_models_terms_dict(algo, model, 
                 model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
+            '''
+            try:
+                model_full_term_dict = self.compute_models_terms_dict(algo, model, 
+                    model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
+            except Exception as e:
+                print('error', e)
+            '''
         self._smlp_terms_logger.info('Building model terms: End')
         
         model_consistent = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, 'ALL')
+        '''
+        try:
+            model_consistent = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, 'ALL')
+        except Exception as e:
+            print('error', e, flush=True)
+        '''
         if not model_consistent:
             return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, True, False
-        
+
         return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent
     
     # create base solver instance with model constraints, declare logic and (non/)incremental mode
@@ -1462,10 +1496,13 @@ class ModelTerms(SmlpTerms):
     # instead of the domain that contains output declarations as well (the argument 'domain').
     def check_alpha_eta_consistency(self, domain:smlp.domain, model_full_term_dict:dict, 
             alpha:smlp.form2, eta:smlp.form2, solver_logic:str):
+        #print('create solver: model', model_full_term_dict, flush=True)
         solver = self.create_model_exploration_instance_from_smlp_components(
             domain, model_full_term_dict, False, solver_logic)
-        solver.add(alpha); #print('alpha', alpha)
+        #print('add alpha', alpha, flush=True)
+        solver.add(alpha); #print('alpha', alpha, flush=True)
         solver.add(eta); #print('eta', eta)
+        #print('create check', flush=True)
         res = solver.check(); #print('res', res)
         consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'
         if isinstance(res, smlp.sat):

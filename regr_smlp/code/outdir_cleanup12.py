@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 
 # This script cleans the code directory from SMLP execution output files
 from glob import glob

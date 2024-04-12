@@ -384,8 +384,14 @@ class ModelSklearn:
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, sample_weights_vect):
         #print('feat_names', feat_names, 'X_train\n', X_train)
+        
+        # set the seed for reproducibility
+        if seed is not None:
+            np.random.seed(seed)
+            
         assert feat_names == X_train.columns.tolist()
         assert feat_names == X_test.columns.tolist()
+        
         if algo in ['dt', 'et', 'rf']:
             if algo == 'dt':
                 #print('feat_names', feat_names, 'X_train\n', X_train, '\nX_test\n',  X_test)

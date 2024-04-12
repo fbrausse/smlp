@@ -288,7 +288,7 @@ class SmlpOptimize:
                 else:
                     l = T
                 self._opt_logger.info('Increasing threshold lower bound for objective ' + str(objv_name) + ' from ' + str(l_prev) + ' to ' + str(l))
-                
+                print('call_info', call_info, update_progress_report); #assert False
                 stable_witness_terms[objv_name] = objv_witn_val_term
                 if call_info is not None and call_info['update_thresholds'] and update_progress_report:
                     witness_vals_dict = self._smlpTermsInst.witness_term_to_const(stable_witness_terms, sat_approx,  
@@ -385,7 +385,7 @@ class SmlpOptimize:
                 objv_bounds_dict, None, sat_approx=True, sat_precision=64, save_trace=False); #print('opt_conf', opt_conf)
         self.mode_status_dict['smlp_execution'] = 'completed'
         with open(self.optimization_results_file+'.json', 'w') as f:
-                json.dump(opt_conf | self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
+            json.dump(opt_conf | self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
     
     
     # direction hi/up means we want to maximize the objectives, direction lo/dn means we want to minimize.
@@ -454,6 +454,7 @@ class SmlpOptimize:
         '''
         update_thresholds_dict['objv_thresholds'] = t
         #print('t', t, 't_vals', t)
+        print('update_thresholds_dict', update_thresholds_dict)
         r = self.optimize_single_objective(model_full_term_dict, min_name, None, min_objs, 
             epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
             scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
@@ -732,12 +733,8 @@ class SmlpOptimize:
             K = K_pr
         #print('end of while loop')
         #print('s', s)
-
-        if scale_objectives:
-            self.report_current_thresholds(s, witness, objv_bounds_dict, objv_names, objv_exprs, 
-                True, (call_n, 'Final'), scale_objectives)
-        else:
-            assert False # not supported
+        self.report_current_thresholds(s, witness, objv_bounds_dict, objv_names, objv_exprs, 
+            True, (call_n, 'Final'), scale_objectives)
         
         self._opt_logger.info('Pareto optimization: End')
         return s
@@ -810,8 +807,11 @@ class SmlpOptimize:
 
         self.mode_status_dict = self._queryInst.update_consistecy_results(self.mode_status_dict, 
             interface_consistent, model_consistent, 'optimization_status', self.optimization_results_file+'.json')
-        if not interface_consistent or not model_consistent:
-            self._query_logger.info('Input and knob interface constraints are inconsistent; aborting...')
+        if not interface_consistent:
+            self._opt_logger.info('Input and knob interface constraints are inconsistent; aborting...')
+            return
+        elif not model_consistent:
+            self._opt_logger.info('Input and knob interface constraints are inconsistent with model constraints; aborting...')
             return
             
         # TODO !!!: when re-using a saved model, X and y are not available, need to adapt computation of 
@@ -868,8 +868,11 @@ class SmlpOptimize:
 
         self.mode_status_dict = self._queryInst.update_consistecy_results(self.mode_status_dict, 
             interface_consistent, model_consistent, 'optsyn_status', self.optimization_results_file+'.json')
-        if not interface_consistent or not model_consistent:
-            self._query_logger.info('Input and knob interface constraints are inconsistent; aborting...')
+        if not interface_consistent:
+            self._opt_logger.info('Input and knob interface constraints are inconsistent; aborting...')
+            return
+        elif not model_consistent:
+            self._opt_logger.info('Input and knob interface constraints are inconsistent with model constraints; aborting...')
             return
         
         # TODO !!!: when re-using a saved model, X and y are not available, need to adapt computation of 

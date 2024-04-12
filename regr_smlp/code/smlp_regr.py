@@ -168,32 +168,34 @@ def spec_identifier(switches):
             spec = switches.find('--spec ')
             if spec + 7 > len(switches) - 1:
                 return 'no spec'
-            spec_prefix3 = switches[spec + 7:spec + 10]; 
-            spec = switches[spec + 7]
+            spec_id = '--spec '
         else:
             spec = switches.find('-spec ');
-            sub_switches = switches[spec + 5:].strip(); #print('sub_switches', sub_switches)
-            i = sub_switches.find(' -'); #print('i', i)
-            if i != -1:
-                return sub_switches[:i]
-            else:
-                return sub_switches
+            spec_id = '-spec '
+        #print('spec', spec, 'spec_id', spec_id)
+        sub_switches = switches[spec + len(spec_id)-1:].strip(); #print('sub_switches', sub_switches)
+        i = sub_switches.find(' -'); #print('i', i)
+        if i != -1:
+            return sub_switches[:i]
+        else:
+            return sub_switches
 
 def solver_path_identifier(switches):
     option_short = '-solver_path '
     option_full = '--solver_path '
     if option_short in switches or option_full in switches:
-        #print('solver', switches.find(option_short), switches.find(option_full))
+        print('solver', switches.find(option_short), switches.find(option_full))
         if option_full in switches:
-            solver = switches.find(option_full); print('solver', solver, len(option_full), len(switches))
+            solver = switches.find(option_full); #print('solver', solver, len(option_full), len(switches))
             if solver + len(option_full) > len(switches) - 1:
                 return 'no solver'
-            solver_prefix3 = switches[solver + len(option_full):solver + len(option_full)+3]; 
-            solver = switches[solver + len(option_full)]; print('solver', solver)
-            sub_switches = switches[solver + (len((option_short))-1):].strip(); #print('sub_switches', sub_switches)
+            #solver_prefix3 = switches[solver + len(option_full):solver + len(option_full)+3]; 
+            solver = switches[solver + len(option_full)]; #
+            sub_switches = switches[solver + (len((option_short))-1):].strip()
         else:
             solver = switches.find(option_short);
-            sub_switches = switches[solver + (len((option_short))-1):].strip(); #print('sub_switches', sub_switches)
+            sub_switches = switches[solver + (len((option_short))-1):].strip()
+        print('solver', solver); print('sub_switches', sub_switches)
         i = sub_switches.find(' -'); #print('i', i)
         if i != -1:
             return sub_switches[:i]
@@ -604,6 +606,20 @@ def main():
                 if test_type == 'help':
                     command += ' {args} > {output}'.format(args=test_switches, output=test_out)
                 else:
+                    if test_type in ['optimize', 'verify', 'query', 'optsyn', 'certify', 'synthesize']:
+                        # add relative path to spec file name
+                        spec_fn = spec_identifier(test_switches)# + '.spec';
+                        print('spec_fn', spec_fn); print('specs_path', specs_path)
+                        if spec_fn is not None:
+                            spec_file = os.path.join(specs_path, spec_fn)
+                            test_switches = test_switches.replace(spec_fn, spec_file) ; print('test_switches', test_switches)
+                        else:
+                            raise Exception('spec file must be specified in command line in model exploration modes')
+                        # add relative path to external solver name
+                        solver_bin = solver_path_identifier(test_switches); print('solver_bin', solver_bin)
+                        if solver_bin is not None:
+                            solver_path_bin = os.path.join(solvers_path, solver_bin)
+                            test_switches = test_switches.replace(solver_bin, solver_path_bin) ; print('test_switches', test_switches)
                     #print('test_switches', test_switches); print('test_type', test_type)
                     command += ' {dat} {out_dir} {pref} {args} {debug} '.format(dat=test_data_path,
                                                                                                out_dir='-out_dir {output_path}'.format(
@@ -612,28 +628,13 @@ def main():
                                                                                                    prefix=new_prefix),
                                                                                                args=test_switches,
                                                                                                debug=debug)
-                    #print('command (1)', command);
+                    if DEBUG:
+                        print('command (1)', command);
                     #print('test_type', test_type, 'test_new_data',test_new_data) 
                     if test_type in ['prediction',  'novelty']  or (test_new_data != ""): #use_config_file and
                         command += '{new_dat} '.format(new_dat=test_new_data_path)
                         #print('command (2)', command);
-                    
-                    if test_type in ['optimize', 'verify', 'query', 'optsyn', 'certify', 'synthesize']:
-                        spec_fn = spec_identifier(test_switches)# + '.spec';
-                        #print('spec_fn', spec_fn); print('specs_path', specs_path)
-                        if spec_fn is not None:
-                            spec_file = os.path.join(specs_path, spec_fn)
-                            command += '-spec {spec} '.format(spec=spec_file); #print('command', command)
-                        else:
-                            #print('test', q.get(), 'test_id',  test[0])
-                            raise Exception('spec file must be specified in command line in model exploration modes')
 
-                        solver_bin = solver_path_identifier(test_switches)
-                        #print('solver_bin', solver_bin)
-                        if solver_bin is not None:
-                            solver_path_bin = os.path.join(solvers_path, solver_bin)
-                            command += '-solver_path {solver} '.format(solver=solver_path_bin); #print('command', command)
-                        
                 if DEBUG:
                     print('command (2)', command);
                     

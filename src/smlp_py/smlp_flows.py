@@ -158,7 +158,7 @@ class SmlpFlows:
         if args.analytics_mode == 'discretize':
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
-                feat_names, resp_names, None, args.impute_responses, 'training', 
+                feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
                 args.positive_value, args.negative_value, args.response_to_bool)
             self.discrInst.smlp_discretize_df(X, algo=args.discretization_algo, 
                 bins=args.discretization_bins, labels=args.discretization_labels,
@@ -171,15 +171,12 @@ class SmlpFlows:
             #from smlp.subgroups import SubgroupDiscovery
             #instSubgroup = SubgroupDiscovery()
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
-                feat_names, resp_names, None, args.impute_responses, 'training', 
+                feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
                 args.positive_value, args.negative_value, args.response_to_bool)
             #data = pd.concat([X,y], axis=1); print('data\n',data)
             fs_ranking_df, fs_summary_df, results_dict = self.psgInst.smlp_subgroups(X, y, resp_names, 
                 args.positive_value, args.negative_value, args.psg_quality_target, args.psg_max_dimension, 
-                args.psg_top_ranked, args.interactive_plots)
-            #print('fs_ranking_df\n', fs_ranking_df); 
-            #for col in results_dict['num1']['psg_df'].columns.tolist():
-            #    print('\ncol ', col, '\n', results_dict['num1']['psg_df'][col]) #
+                args.psg_top_ranked, args.interactive_plots); #print('fs_ranking_df\n', fs_ranking_df); 
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None

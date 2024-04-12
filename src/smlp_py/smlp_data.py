@@ -414,19 +414,21 @@ class SmlpData:
     
     # drop features with single value (applies both to categorical and numeric features),
     # both to features and to responses, in training data only (not new data)
-    def _drop_constant_features(self, df, data_name):
+    def _drop_constant_features(self, df, keep_feat, data_name):
         constant_cols = []
         #print('df\n', df)
         for col in df.columns.tolist():
-            #print('df[col]', df[col]); print('df[col].dropna()', df[col].dropna())
-            unique_vals = df[col].dropna().unique()
-            if len(unique_vals) == 0:
+            #print('col', col, 'df[col]', df[col]); print('df[col].dropna()', df[col].dropna())
+            unique_vals = df[col].dropna().unique(); #print('col', col, 'unique', unique_vals)
+            if len(unique_vals) == 1:
                 constant_cols.append(col)
-        df.drop(constant_cols, axis=1, inplace=True)
-        if len(constant_cols) > 0:
+        #print('constant_cols', constant_cols, 'keep_feat', keep_feat)
+        constant_cols_to_drop = [c for c in constant_cols if c not in keep_feat]
+        df.drop(constant_cols_to_drop, axis=1, inplace=True)
+        if len(constant_cols_to_drop) > 0:
             self._data_logger.info('The following constant features have been droped from ' + str(data_name) + ' data:')
-            self._data_logger.info(str(constant_cols))
-        return df, constant_cols
+            self._data_logger.info(str(constant_cols_to_drop))
+        return df, constant_cols_to_drop
     
     # We n=do not amake a direct usage of boolean type in data, convert such columns into object/string type
     def _cast_boolean_features(self, df):
@@ -494,7 +496,7 @@ class SmlpData:
             df_resp_cond = resp_to_bool; #print('resp_cond', resp_to_bool)
             for resp_name in resp_names:
                 df_resp_cond = df_resp_cond.replace('{}'.format(resp_name), 'resp_df[resp_name]')
-            #print('df_resp_cond', df_resp_cond); assert False
+            #print('df_resp_cond', df_resp_cond)
 
             resp_conds = df_resp_cond.split(self._CONDITION_SEPARATOR); #print('resp_conds', resp_conds)
             for resp_name, resp_cond in zip(resp_names, resp_conds):
@@ -680,14 +682,14 @@ class SmlpData:
         
         return
         
-    def preprocess_data(self, data_file, feat_names, resp_names, feat_names_dict, impute_resp, data_version_str,
+    def preprocess_data(self, data_file, feat_names, resp_names, feat_names_dict, keep_feat, impute_resp, data_version_str,
             pos_value, neg_value, resp_to_bool):
         self._data_logger.info('loading ' + data_version_str + ' data')
         data = pd.read_csv(data_file)
         self._data_logger.info('data summary\n' + str(data.describe()))
         #plot_data_columns(data)
         self._data_logger.info(data_version_str + ' data\n' + str(data))
-         
+
         # sanity-check the response names aginst input data
         is_training = data_version_str == 'training'
         new_labeled = self._sanity_check_responses(data, resp_names, is_training)
@@ -713,19 +715,23 @@ class SmlpData:
             data = data[feat_names + resp_names]
         else:
             data = data[feat_names]
-        #print('data 0\n', data); assert False
+        #print('data 0\n', data)
         
         # in training data, drop all rows where at least one response has a missing value
         if is_training:
             if not impute_resp:
                 data = self._drop_rows_with_na_in_responses(data, resp_names, 'training'); #print('data 1\n', data)
-            data, constant_feat = self._drop_constant_features(data, 'training'); #print('data 2\n', data)
-            resp_names = [rn for rn in resp_names if not rn in constant_feat]
-            feat_names = [fn for fn in feat_names if not rn in constant_feat]
+            data, constant_feat = self._drop_constant_features(data, keep_feat, 'training'); #print('constant_feat', constant_feat); print('data 2\n', data)
+            resp_names = [rn for rn in resp_names if not rn in constant_feat]; #print('resp_names', resp_names)
+            feat_names = [fn for fn in feat_names if not fn in constant_feat]; #print('feat_names', feat_names)
             for rn in feat_names_dict.keys():
                 if not rn in resp_names:
                     del feat_names_dict[rn]
-        
+                else:
+                    for fn in feat_names_dict[rn]:
+                        if fn not in feat_names:
+                            feat_names_dict[rn].remove(fn)
+            #print('feat_names_dict', feat_names_dict)
         # impute missing values; before doing that, save the missing values location information in 
         # self._missing_values_dict and write it out as json file.
         self._compute_missing_values_dict(data)
@@ -861,7 +867,7 @@ class SmlpData:
         # basic pre-processing, including inferring feature and response names, dropping rows 
         # where a response value is missing; imputing missing values in features.
         X, y, feat_names, resp_names, model_features_dict = self.preprocess_data(data_file, 
-            feat_names, resp_names, model_features_dict, impute_responses, data_version_str, pos_value, neg_value, resp_to_bool)
+            feat_names, resp_names, model_features_dict, keep_feat, impute_responses, data_version_str, pos_value, neg_value, resp_to_bool)
         if not y is None:
             assert set(resp_names) == set(y.columns.tolist())
         
@@ -879,7 +885,7 @@ class SmlpData:
         
         # Feature selection / MRMR go here, will refine model_features_dict
         if is_training:
-            keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); #print('keep_feat', keep_feat)
+            #keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); #print('keep_feat', keep_feat)
             #print('features before mrmr', feat_names)
             for rn in resp_names:
                 mrmr_feat = self._mrmrInst.mrmr_regres(X, y[rn], rn, mrmr_features_n); #print('mrmr_feat', mrmr_feat)
@@ -929,6 +935,7 @@ class SmlpData:
             pos_value, neg_value, resp_to_bool, save_model:bool, use_model:bool):
 
         #scale = not self._get_data_scaler(scaler_type) is None
+        keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); #print('keep_feat', keep_feat)
         if data_file is not None:
             split_test = self._DEF_SPLIT_TEST if split_test is None else split_test
             X, y, X_train, y_train, X_test, y_test, mm_scaler_feat, mm_scaler_resp, \
@@ -937,9 +944,12 @@ class SmlpData:
                 train_first_n, train_random_n, train_uniform_n, interactive_plots, 
                 mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type, 
                 scale_features, scale_responses, impute_responses, None, None, None, None)
-
-            assert scaler_type == 'none' or (not mm_scaler_feat is None)
-            assert scaler_type == 'none' or (not mm_scaler_resp is None)
+            
+            # santy check that: not mm_scaler_feat is None --> not scaler_type == 'none'
+            #assert scaler_type == 'none' or (not mm_scaler_feat is None)
+            #assert scaler_type == 'none' or (not mm_scaler_resp is None)
+            assert not scaler_type == 'none' or mm_scaler_feat is None
+            assert not scaler_type == 'none' or mm_scaler_resp is None
             self._save_model_levels(levels_dict, self.model_levels_dict_file)
             self._save_model_features(resp_names, feat_names, self.model_features_dict_file)
             self._save_data_scaler(scale_features, scale_responses, mm_scaler_feat, mm_scaler_resp, 
