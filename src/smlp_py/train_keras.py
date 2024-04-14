@@ -12,7 +12,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 
 # SMLP
 from smlp_py.smlp_logs import *
-from smlp_py.smlp_plots import plot  #, evaluate_model, evaluate_prediction, distplot_dataframe,
+from smlp_py.smlp_plots import plot
 from smlp_py.smlp_utils import str_to_bool
 
 # Methods for training and predction, results reporting with Tensorflow/KERAS package.
@@ -382,7 +382,7 @@ class ModelKeras:
         
     # runs Keras NN algorithm, outputs lots of stats, saves model to disk
     # epochs and batch_size are arguments of NN algorithm from keras library
-    def keras_main(self, feat_names, resp_names : list, algo,
+    def keras_main(self, feat_names, resp_names:list, algo:str,
             X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
             seed, weights_coef, model_per_response:bool):
         self._keras_logger.info('keras_main: start')

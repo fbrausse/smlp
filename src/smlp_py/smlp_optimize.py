@@ -288,7 +288,6 @@ class SmlpOptimize:
                 else:
                     l = T
                 self._opt_logger.info('Increasing threshold lower bound for objective ' + str(objv_name) + ' from ' + str(l_prev) + ' to ' + str(l))
-                print('call_info', call_info, update_progress_report); #assert False
                 stable_witness_terms[objv_name] = objv_witn_val_term
                 if call_info is not None and call_info['update_thresholds'] and update_progress_report:
                     witness_vals_dict = self._smlpTermsInst.witness_term_to_const(stable_witness_terms, sat_approx,  
@@ -454,7 +453,7 @@ class SmlpOptimize:
         '''
         update_thresholds_dict['objv_thresholds'] = t
         #print('t', t, 't_vals', t)
-        print('update_thresholds_dict', update_thresholds_dict)
+        #print('update_thresholds_dict', update_thresholds_dict)
         r = self.optimize_single_objective(model_full_term_dict, min_name, None, min_objs, 
             epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
             scale_objectives, min_name, objv_bounds, update_thresholds_dict, 

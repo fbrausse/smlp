@@ -184,7 +184,7 @@ def solver_path_identifier(switches):
     option_short = '-solver_path '
     option_full = '--solver_path '
     if option_short in switches or option_full in switches:
-        print('solver', switches.find(option_short), switches.find(option_full))
+        #print('solver', switches.find(option_short), switches.find(option_full))
         if option_full in switches:
             solver = switches.find(option_full); #print('solver', solver, len(option_full), len(switches))
             if solver + len(option_full) > len(switches) - 1:
@@ -195,7 +195,7 @@ def solver_path_identifier(switches):
         else:
             solver = switches.find(option_short);
             sub_switches = switches[solver + (len((option_short))-1):].strip()
-        print('solver', solver); print('sub_switches', sub_switches)
+        #print('solver', solver); print('sub_switches', sub_switches)
         i = sub_switches.find(' -'); #print('i', i)
         if i != -1:
             return sub_switches[:i]
@@ -553,15 +553,17 @@ def main():
                             test_data_path = path.join(doe_path, test_data).replace('\\', '/')
                             #print('test_data_path', test_data_path); print('test_data', test_data)
                             if path.exists(test_data_path + '.csv'):
-                                test_data_path = '-doe_spec \"{0}\"'.format(test_data_path)
+                                test_data_path = '-doe_spec \"{0}.csv\"'.format(test_data_path)
                             else:
                                 execute_test = False
                                 test_errors.append(['Build', 'DOE file does not exist'])
                         else:
                             test_data_path = path.join(data_path, test_data).replace('\\', '/')
                             #print('test_data_path', test_data_path); print('test_data', test_data)
-                            if path.exists(test_data_path + '.csv'):
+                            if path.exists(test_data_path):
                                 test_data_path = '-data \"{0}\"'.format(test_data_path)
+                            elif path.exists(test_data_path + '.csv'):
+                                test_data_path = '-data \"{0}.csv\"'.format(test_data_path)
                             else:
                                 execute_test = False
                                 test_errors.append(['Build', 'Data file does not exist'])
@@ -574,11 +576,13 @@ def main():
                         print('use_config_file', use_config_file )
                         print(test_new_data != "")
                         
-                if test_type in [ 'prediction', 'novelty'] or (test_new_data != ""): #use_config_file and
+                if test_type == 'prediction' or (test_new_data != ""): #use_config_file and
                     if not test_new_data == '':
                         test_new_data_path = path.join(data_path, test_new_data).replace('\\', '/')
-                        if path.exists(test_new_data_path + '.csv'):
+                        if path.exists(test_new_data_path):
                             test_new_data_path = '-new_dat \"{0}\"'.format(test_new_data_path)
+                        elif path.exists(test_new_data_path + '.csv'):
+                            test_new_data_path = '-new_dat \"{0}.csv\"'.format(test_new_data_path)
                         else:
                             execute_test = False
                             test_errors.append(['Build', 'New data file does not exist'])
@@ -631,7 +635,7 @@ def main():
                     if DEBUG:
                         print('command (1)', command);
                     #print('test_type', test_type, 'test_new_data',test_new_data) 
-                    if test_type in ['prediction',  'novelty']  or (test_new_data != ""): #use_config_file and
+                    if test_type == 'prediction'  or (test_new_data != ""): #use_config_file and
                         command += '{new_dat} '.format(new_dat=test_new_data_path)
                         #print('command (2)', command);
 
@@ -908,6 +912,9 @@ def main():
                             if os.path.isfile(file):
                                 master_files.remove(file)
                     else:
+                        # not comparing directories; such as the range plots directory in mode subgroups 
+                        if os.path.isdir(new_file):
+                            continue
                         print('File master {file} does not exist'.format(file=file))
                         test_files_check.append((file, 'Failed -> master file does not exist'))
                         if file.endswith("smlp_error.txt"):

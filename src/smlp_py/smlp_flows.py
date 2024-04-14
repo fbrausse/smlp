@@ -104,16 +104,20 @@ class SmlpFlows:
     def data_fname(self):
         if self.args.labeled_data is None:
             return None
-        else:
+        elif not self.args.labeled_data.endswith('bz2') and not self.args.labeled_data.endswith('gz') and not self.args.labeled_data.endswith('.csv'):
             return self.args.labeled_data + '.csv'
+        else:
+            return self.args.labeled_data 
         
     # new (unseen during training) data file name (including the directory path)
     @property
     def new_data_fname(self):
         if self.args.new_data is None:
             return None
-        else:
+        elif not self.args.new_data.endswith('bz2') and not self.args.new_data.endswith('gz') and not self.args.new_data.endswith('.csv'):
             return self.args.new_data + '.csv'
+        else:
+            return self.args.new_data
         
     ''' not used currently
     # filename with full path for logging error message before aborting
@@ -206,16 +210,16 @@ class SmlpFlows:
                     if resp_name in objv_names:
                         raise Exception('Response (output) names must be different from names of objectives')
             self.dataInst.set_spec_inst(self.specInst)
-            
+        
         # prepare data for model training
         if args.analytics_mode in self.model_prediction_modes + self.model_exploration_modes:
             self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
             self.logger.info('PREPARE DATA FOR MODELING')    
             X, y, X_train, y_train, X_test, y_test, X_new, y_new, mm_scaler_feat, mm_scaler_resp, \
             levels_dict, model_features_dict, feat_names, resp_names = self.dataInst.process_data(
-                self.configInst.report_file_prefix,
-                self.data_fname, self.new_data_fname, True, args.split_test, feat_names, resp_names, args.keep_features,
-                args.train_first_n, args.train_random_n, args.train_uniform_n, args.interactive_plots, args.data_scaler,
+                self.configInst.report_file_prefix, self.data_fname, self.new_data_fname, True, args.split_test, 
+                feat_names, resp_names, args.keep_features, args.train_first_n, args.train_random_n, args.train_uniform_n, 
+                args.interactive_plots, args.response_plots, args.data_scaler,
                 args.scale_features, args.scale_responses, args.impute_responses, args.mrmr_feat_count_for_prediction, 
                 args.positive_value, args.negative_value, args.response_to_bool, args.save_model, args.use_model)
 
@@ -229,8 +233,8 @@ class SmlpFlows:
             else:
                 model = self.modelInst.build_models(args.model, X, y, X_train, y_train, X_test, y_test, X_new, y_new,
                     resp_names, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict, 
-                    self.modelInst.get_hyperparams_dict(args, args.model), args.interactive_plots, args.seed, 
-                    args.sample_weights_coef, args.save_model, args.use_model, args.model_per_response, 
+                    self.modelInst.get_hyperparams_dict(args, args.model), args.interactive_plots, args.prediction_plots,  
+                    args.seed, args.sample_weights_coef, args.save_model, args.use_model, args.model_per_response, 
                     self.configInst.model_rerun_config)
             
             # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 

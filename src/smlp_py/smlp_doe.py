@@ -377,7 +377,7 @@ class SmlpDoepy:
                 central_composite_center, central_composite_face:str, 
                 central_composite_alpha:str, box_behnken_centers:int): #Union([dict, str])
         if type(doe_spec) == str:
-            doe_spec_fname = doe_spec + '.csv'
+            doe_spec_fname = doe_spec# + '.csv'
             if os.path.isfile(doe_spec_fname):
                 doe_spec_dict = pd.read_csv(doe_spec_fname); #print('doe_spec_df\n', doe_spec_dict)
                 doe_spec_dict = doe_spec_dict.to_dict(orient='list'); #print('doe_spec_df\n', doe_spec_dict)

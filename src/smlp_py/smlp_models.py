@@ -39,6 +39,7 @@ class SmlpModels:
         self._DEF_USE_MODEL = False
         self._DEF_SAVE_MODEL_CONFIG = True
         self._MODEL_PER_RESPONSE = False
+        self._DEF_PREDICTION_PLOTS = True
 
         self._model_params_common_dict = {
             'model': {'abbr': 'model', 'type':str,
@@ -62,7 +63,12 @@ class SmlpModels:
             'model_per_response': {'abbr':'model_per_response', 'type':str_to_bool,
                 'help': 'Should a separate model, possible with a different, dedicated feature set, ' +
                     'be built per response (as opposite to building one multi-response model)?' +
-                    '[default: ' + str(self._MODEL_PER_RESPONSE) + ']'}
+                    '[default: ' + str(self._MODEL_PER_RESPONSE) + ']'},
+            'prediction_plots': {'abbr':'pred_plots', 'default': self._DEF_PREDICTION_PLOTS, 'type':str_to_bool,
+                'help': 'Should response distribution plots and plots comparing response values in ' +
+                    'data with the predicted values be generated? A related option interactive_plots ' +
+                    'controls whether the generated plots should be displayed interactively during runtime ' +
+                    '[default: ' + str(self._DEF_PREDICTION_PLOTS) + ']'}
         }
         self._instKeras = ModelKeras()
         self._instSklearn = ModelSklearn()
@@ -226,8 +232,8 @@ class SmlpModels:
     # msqe and R2_score (for now) precision columns and prediction results in the original
     # scale of training data, respectively. The argument data_version indicates the data origin:
     # training (train), test/validation, full labeled data (labeled) and new/unseen data (new).
-    def _report_prediction_results(self, algo, resp_names, resp_df, pred_df,
-            mm_scaler_resp, interactive_plots, data_version):
+    def _report_prediction_results(self, algo:str, resp_names:list[str], resp_df:pd.DataFrame, pred_df:pd.DataFrame,
+            mm_scaler_resp, interactive_plots:bool, prediction_plots:bool, data_version:str):
         self._model_logger.info('Reporting prediction results: start')
 
         #print('pred\n', pred_df); print('\npred_type', type(pred_df));
@@ -267,9 +273,9 @@ class SmlpModels:
             legend = 'Prediction on ' + data_version + ' data -- '
             self._model_logger.info("{1} msqe: {0:.3f}".format(mean_squared_error(orig_resp_df, orig_pred_df), legend))
             self._model_logger.info("{1} r2_score: {0:.3f}".format(r2_score(orig_resp_df, orig_pred_df), legend))
-            
-            evaluate_prediction(algo, orig_resp_df, orig_pred_df, data_version, interactive_plots,
-                                out_prefix=self.report_file_prefix, log_scale=False)
+            if prediction_plots:
+                evaluate_prediction(algo, orig_resp_df, orig_pred_df, data_version, interactive_plots,
+                                    out_prefix=self.report_file_prefix, log_scale=False)
         
         assert isinstance(orig_pred_df, pd.DataFrame)
         assert isinstance(orig_resp_df, pd.DataFrame) or resp_df is None
@@ -292,10 +298,10 @@ class SmlpModels:
         return hparams_dict
     
     # training model for all supported algorithms from verious python packages
-    def model_train(self, feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
-            hparams_dict :dict, plots : bool, seed : int, sample_weights_coef : float, model_per_response:bool):
+    def model_train(self, feat_names_dict:dict, resp_names:list, algo, 
+            X_train:pd.DataFrame, X_test:pd.DataFrame, y_train:pd.DataFrame, y_test:pd.DataFrame,
+            hparams_dict:dict, plots:bool, seed:int, sample_weights_coef:float, model_per_response:bool):
         self._model_logger.info('Model training: start')
-        #print('feat_names_dict', feat_names_dict, 'resp_names', resp_names)
         model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
             
         if algo == 'nn_keras':
@@ -328,7 +334,7 @@ class SmlpModels:
     # correponding models as values. For example, the caret package currently does not support 
     # training of multiple responses at once therefore we train a caret model per response and
     # combine prediction results as one np.array(). 
-    def _model_predict(self, model, X, y, resp_names : list, algo : str, model_per_response:bool):
+    def _model_predict(self, model, X:pd.DataFrame, y:pd.DataFrame, resp_names:list, algo:str, model_per_response:bool):
         self._model_logger.info('Model prediction: start')
 
         model_lib = algo.rsplit('_', 1)[1]
@@ -376,12 +382,14 @@ class SmlpModels:
         assert isinstance(y_pred_df, pd.DataFrame)
         self._model_logger.info('Model prediction: end')
         return y_pred_df
+
     
     # training, validation, testing of models and prediction on training, test, entire labeled data
     # as well as new data, if available. Reporting model prediction results as well as accuracy scores.
-    def build_models(self, algo:str, X, y, X_train, y_train, X_test, y_test, X_new, y_new, 
-            resp_names:list, mm_scaler_feat, mm_scaler_resp, levels_dict:dict, feat_names_dict:dict, 
-            hparams_dict:dict, plots:bool, seed:int, sample_weights_coef:float, save_model:bool, 
+    def build_models(self, algo:str, X:pd.DataFrame, y:pd.DataFrame, X_train:pd.DataFrame, y_train:pd.DataFrame, 
+            X_test:pd.DataFrame, y_test:pd.DataFrame, X_new:pd.DataFrame, y_new:pd.DataFrame, resp_names:list,
+            mm_scaler_feat, mm_scaler_resp, levels_dict:dict, feat_names_dict:dict, 
+            hparams_dict:dict, plots:bool, pred_plots:bool, seed:int, sample_weights_coef:float, save_model:bool, 
             use_model:bool, model_per_response:bool, model_rerun_config:dict):
         if not y_train is None:
             assert resp_names == y_train.columns.tolist()
@@ -449,7 +457,7 @@ class SmlpModels:
             #print('(2)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test);
             y_train_pred = self._model_predict(model, X_train, y_train, resp_names, algo, model_per_response)
             self._report_prediction_results(algo, resp_names, y_train, y_train_pred, mm_scaler_resp,
-                plots, 'training')
+                plots, pred_plots, 'training')
         
         if not X_test is None and not y_test is None:
             self._model_logger.info('PREDICT ON TEST DATA')
@@ -457,7 +465,7 @@ class SmlpModels:
             y_test_pred = self._model_predict(model, X_test, y_test, resp_names, algo, model_per_response)
             #print('(3b)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
             self._report_prediction_results(algo, resp_names, y_test, y_test_pred, mm_scaler_resp, 
-                plots, 'test')
+                plots, pred_plots, 'test')
 
         if X is not None and y is not None:
             self._model_logger.info('PREDICT ON LABELED DATA')
@@ -476,7 +484,7 @@ class SmlpModels:
             #print('(4)'); print('y\n', y)
             y_pred = self._model_predict(model, X, y, resp_names, algo, model_per_response)
             self._report_prediction_results(algo, resp_names, y, y_pred, mm_scaler_resp,
-                plots, 'labeled')
+                plots, pred_plots, 'labeled')
 
         if X_new is not None:
             self._model_logger.info('PREDICT ON NEW DATA')
@@ -484,6 +492,6 @@ class SmlpModels:
             y_new_pred = self._model_predict(model, X_new, y_new, resp_names, algo, model_per_response)
             #print('y_new\n', y_new, '\ny_new_pred\n', y_new_pred)
             self._report_prediction_results(algo, resp_names, y_new, y_new_pred, mm_scaler_resp, 
-                plots, 'new')
+                plots, pred_plots, 'new')
 
         return model

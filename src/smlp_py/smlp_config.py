@@ -43,10 +43,13 @@ class SmlpConfig:
                 raise Exception('A training data file, a model or doe spec file should be provided')   
         
         if data_name_prefix is not None:
-            input_data_name_prefix = data_name_prefix
+            input_data_name_prefix = data_name_prefix.removesuffix('.csv')
+        elif doe_spec_name_prefix is not None:
+            input_data_name_prefix = doe_spec_name_prefix.removesuffix('.csv')
         else:
-            input_data_name_prefix = doe_spec_name_prefix
-        
+            assert model_name is not None
+            input_data_name_prefix = None
+
         # record model_name 
         #model_name = model_name
 
@@ -59,7 +62,7 @@ class SmlpConfig:
             model_name_prefix = os.path.join(out_dir, model_name)
 
         # define _report_name_prefix to be used as a prefix in SMLP report filenames
-        if input_data_name_prefix is None: #data_name_prefix
+        if input_data_name_prefix is None:
             assert not model_name is None
             _, model_name = os.path.split(model_name)
             report_name_prefix = os.path.join(out_dir, run_prefix + '_' + model_name)
@@ -67,8 +70,8 @@ class SmlpConfig:
             report_name_prefix = os.path.join(out_dir, run_prefix + '_' + input_data_name_prefix)
 
         # if new_data is not None, its name is added to self._filename_prefix
-        new_data_file_prefix = new_data_file_prefix
         if not new_data_file_prefix is None:
+            new_data_file_prefix = new_data_file_prefix.removesuffix('.csv')
             _, new_data_fname = os.path.split(new_data_file_prefix)
             report_name_prefix = report_name_prefix + '_' + new_data_fname
         return report_name_prefix, model_name_prefix
@@ -132,7 +135,7 @@ class SmlpConfig:
         # compute and save report_file_prefix and model_file_prefix as part of self
         self.report_file_prefix, self.model_file_prefix = self.args_get_report_name_prefix(args.labeled_data, 
             args.log_files_prefix, args.output_directory, args.new_data, args.model_name, args.doe_spec_file) 
-
+        
         # Save tool configuration and model rerun configuration
         # Adapted code from https://micha-feigin.medium.com/on-using-config-files-with-pythons-argparse-8af09d0bdfb9
         # TODO !!! this is not the right place to save configuration. This is better to do 

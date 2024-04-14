@@ -48,6 +48,7 @@ class SmlpData:
         self._DEF_SCALE_FEATURES = True
         self._DEF_SCALE_RESPONSES = True
         self._DEF_IMPUTE_RESPONSES = False
+        self._DEF_RESPONSE_PLOTS = True # should response values distribution plots be genrated?
         
         # SMLP default values of positive and negative samples in banary responses 
         self.SMLP_NEGATIVE_VALUE = int(0)
@@ -230,6 +231,10 @@ class SmlpData:
                 'help':'Value that represents negative values in a binary categorical response ' +
                     'in the original input data (before any data processing has been applied) ' +
                     '[default: {}]'.format(str(self.SMLP_NEGATIVE_VALUE))},
+            'response_plots': {'abbr':'resp_plots', 'default': self._DEF_RESPONSE_PLOTS, 'type':str_to_bool,
+                'help': 'Should response value distribution plots be genrated during data processing? ' +
+                    'A related option interactive_plots controls whether the generated plots should be ' +
+                    'displayed interactively during runtime [default: ' + str(self._DEF_RESPONSE_PLOTS) + ']'}
             } | self._mrmrInst.mrmr_params_dict
         self.data_bounds_dict = None
         
@@ -414,7 +419,7 @@ class SmlpData:
     
     # drop features with single value (applies both to categorical and numeric features),
     # both to features and to responses, in training data only (not new data)
-    def _drop_constant_features(self, df, keep_feat, data_name):
+    def _drop_constant_features(self, df:pd.DataFrame, keep_feat:list[str], data_name:str):
         constant_cols = []
         #print('df\n', df)
         for col in df.columns.tolist():
@@ -431,7 +436,7 @@ class SmlpData:
         return df, constant_cols_to_drop
     
     # We n=do not amake a direct usage of boolean type in data, convert such columns into object/string type
-    def _cast_boolean_features(self, df):
+    def _cast_boolean_features(self, df:pd.DataFrame):
         col_types = df.dtypes
         for i, resp_name in enumerate(df.columns):
             if col_types[i] == bool:
@@ -440,7 +445,7 @@ class SmlpData:
     
     # This function should be called after rows with missing values in at least one of the responses  
     # have been dropped. Constant responses (with exactly one non-NaN value) are dropped here. 
-    def _preprocess_responses(self, resp_df, pos_value, neg_value, resp_to_bool, is_training):
+    def _preprocess_responses(self, resp_df:pd.DataFrame, pos_value:int, neg_value:int, resp_to_bool:str, is_training:bool):
         resp_names = resp_df.columns.tolist()
         resp_types = resp_df.dtypes
         for i, resp_name in enumerate(resp_names):
@@ -682,8 +687,8 @@ class SmlpData:
         
         return
         
-    def preprocess_data(self, data_file, feat_names, resp_names, feat_names_dict, keep_feat, impute_resp, data_version_str,
-            pos_value, neg_value, resp_to_bool):
+    def preprocess_data(self, data_file:str, feat_names:list[str], resp_names:list[str], feat_names_dict:dict, 
+            keep_feat:list[str], impute_resp:bool, data_version_str:str, pos_value:int, neg_value:int, resp_to_bool):
         self._data_logger.info('loading ' + data_version_str + ' data')
         data = pd.read_csv(data_file)
         self._data_logger.info('data summary\n' + str(data.describe()))
@@ -850,10 +855,11 @@ class SmlpData:
     # Besides training and test subsets, the function returns also the MinMaxScaler object 
     # used for data normalization, to be reused for applying the model to unseen datasets
     # and also to rescale back the prediction results to the original scale where needed.
-    def _prepare_data_for_modeling(self, data_file, is_training, split_test, feat_names, resp_names, keep_feat,
-            out_prefix, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots:bool, 
-            mrmr_features_n:int, pos_value, neg_value, resp_to_bool, scaler_type:str, scale_features:bool, 
-            scale_responses:bool, impute_responses:bool, 
+    def _prepare_data_for_modeling(self, data_file:str, is_training:bool, split_test:float, 
+            feat_names:list[str], resp_names:list[str], keep_feat:list[str], out_prefix:str, 
+            train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots:bool, 
+            response_plots:bool, mrmr_features_n:int, pos_value:int, neg_value:int, resp_to_bool:str, 
+            scaler_type:str, scale_features:bool, scale_responses:bool, impute_responses:bool, 
             mm_scaler_feat=None, mm_scaler_resp=None, levels_dict=None, model_features_dict=None):
         data_version_str = 'training' if is_training else 'new'
         self._data_logger.info('Preparing ' + data_version_str + ' data for modeling: start')
@@ -867,7 +873,8 @@ class SmlpData:
         # basic pre-processing, including inferring feature and response names, dropping rows 
         # where a response value is missing; imputing missing values in features.
         X, y, feat_names, resp_names, model_features_dict = self.preprocess_data(data_file, 
-            feat_names, resp_names, model_features_dict, keep_feat, impute_responses, data_version_str, pos_value, neg_value, resp_to_bool)
+            feat_names, resp_names, model_features_dict, keep_feat, impute_responses, data_version_str, 
+            pos_value, neg_value, resp_to_bool)
         if not y is None:
             assert set(resp_names) == set(y.columns.tolist())
         
@@ -910,7 +917,7 @@ class SmlpData:
             scaler_type, mm_scaler_feat, mm_scaler_resp, model_features_dict, is_training, data_version_str)
         
         # plot responses
-        if y is not None:
+        if y is not None and response_plots:
             response_distribution_plot(out_prefix, y, resp_names, interactive_plots)
 
         # split data into training and test sets. TODO !!! do we rather use seed instead of 17?
@@ -929,11 +936,12 @@ class SmlpData:
                 
     # Process data to prepare components required for training models and prediction, and reporting results in
     # original scale. Supports also prediction and results reporting in origibal scale from saved model
-    def process_data(self, report_file_prefix, data_file, new_data_file, is_training, split_test, feat_names, 
-            resp_names, keep_feat, train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots, 
+    def process_data(self, report_file_prefix:str, data_file:str, new_data_file:str, is_training:bool, split_test, 
+            feat_names:list[str], resp_names:list[str], keep_feat:list[str],  
+            train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots:bool, response_plots:bool,
             scaler_type:str, scale_features:bool, scale_responses:bool, impute_responses:bool, mrmr_features_n:int, 
             pos_value, neg_value, resp_to_bool, save_model:bool, use_model:bool):
-
+        
         #scale = not self._get_data_scaler(scaler_type) is None
         keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); #print('keep_feat', keep_feat)
         if data_file is not None:
@@ -941,15 +949,14 @@ class SmlpData:
             X, y, X_train, y_train, X_test, y_test, mm_scaler_feat, mm_scaler_resp, \
             feat_names, resp_names, levels_dict, model_features_dict = self._prepare_data_for_modeling(
                 data_file, True, split_test, feat_names, resp_names, keep_feat, report_file_prefix, 
-                train_first_n, train_random_n, train_uniform_n, interactive_plots, 
+                train_first_n, train_random_n, train_uniform_n, interactive_plots, response_plots,
                 mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type, 
                 scale_features, scale_responses, impute_responses, None, None, None, None)
             
-            # santy check that: not mm_scaler_feat is None --> not scaler_type == 'none'
-            #assert scaler_type == 'none' or (not mm_scaler_feat is None)
-            #assert scaler_type == 'none' or (not mm_scaler_resp is None)
+            # santy check that: mm_scaler_feat is not None --> scaler_type != 'none'
             assert not scaler_type == 'none' or mm_scaler_feat is None
             assert not scaler_type == 'none' or mm_scaler_resp is None
+            
             self._save_model_levels(levels_dict, self.model_levels_dict_file)
             self._save_model_features(resp_names, feat_names, self.model_features_dict_file)
             self._save_data_scaler(scale_features, scale_responses, mm_scaler_feat, mm_scaler_resp, 
@@ -971,7 +978,7 @@ class SmlpData:
         if new_data_file is not None:
             X_new, y_new = self._prepare_data_for_modeling(
                 new_data_file, False, None, feat_names, resp_names, keep_feat, report_file_prefix,  None, None, None, 
-                interactive_plots, mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type,
+                interactive_plots, response_plots, mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type,
                 scale_features, scale_responses, impute_responses, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict)
         else:
             X_new, y_new = None, None

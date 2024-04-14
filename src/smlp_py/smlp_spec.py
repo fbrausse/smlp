@@ -244,9 +244,9 @@ class SmlpSpec:
     # upgrade spec file to a new version: from version source_version to version target_version.
     # write the new spec file in the same directory where the spec_file was located.
     def upgrade_spec(self, spec_file, source_version, target_version):
-        if not os.path.isfile(spec_file+'.spec'):
-            raise Exception('Spec file ' + str(spec_file) + '.spec' + ' does not exist')
-        with open(spec_file+'.spec', 'r') as sf:
+        if not os.path.isfile(spec_file): #+'.spec'
+            raise Exception('Spec file ' + str(spec_file) + ' does not exist') #'.spec' + 
+        with open(spec_file, 'r') as sf: #+'.spec'
             spec_dict = json.load(sf) #, parse_float=Fraction
         spec_new_dict = {}
         #print('varoiables ?', self._SPEC_DICTIONARY_SPEC)
@@ -292,9 +292,9 @@ class SmlpSpec:
         if spec_file is None:
             return
         if spec_file is not None:
-            if not os.path.isfile(spec_file+'.spec'):
-                raise Exception('Spec file ' + str(spec_file) + '.spec' + ' does not exist')
-            with open(spec_file+'.spec', 'r') as sf:
+            if not os.path.isfile(spec_file): #+'.spec'
+                raise Exception('Spec file ' + str(spec_file) + ' does not exist') #'.spec' + 
+            with open(spec_file, 'r') as sf: #+'.spec'
                 spec_dict = json.load(sf, parse_float=Fraction)
             #print('spec_dict loaded\n', spec_dict)
             assert isinstance(spec_dict, dict)
