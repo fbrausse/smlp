@@ -3,16 +3,17 @@ import json
 
 import smlp
 from smlp_py.smlp_terms import ModelTerms, SmlpTerms
-from smlp_py.smlp_utils import np_JSONEncoder
+from smlp_py.smlp_utils import np_JSONEncoder #, str_to_bool
 
 
 class SmlpQuery:
     def __init__(self):
         self._smlpTermsInst = SmlpTerms()
         self._modelTermsInst = None #ModelTerms()
-        
+
         self._DEF_QUERY_NAMES = None
         self._DEF_QUERY_EXPRS = None
+        self._DEF_LEMMA_PRECISION = 0
         
         # keys in the dictionary capturing the results of function self.query_condition()
         self._query_stable = 'stable'
@@ -21,19 +22,35 @@ class SmlpQuery:
         self._query_result = 'result'
         
         self.query_params_dict = {
-            'query_names': {'abbr':'quer_names', 'default':str(self._DEF_QUERY_NAMES), 'type':str,
+            'query_names': {'abbr':'quer_names', 'default':str(self._DEF_QUERY_EXPRS), 'type':str,
                 'help':'Names of optimization objectives [default {}]'.format(str(self._DEF_QUERY_NAMES))}, 
             'query_expressions':{'abbr':'quer_exprs', 'default':self._DEF_QUERY_EXPRS, 'type':str,
                 'help':'Semicolon seperated list of expressions (functions) to be applied to the responses '
                     'to convert them into optimization objectives ' +
-                    '[default: {}]'.format(str(self._DEF_QUERY_EXPRS))}
+                    '[default: {}]'.format(str(self._DEF_QUERY_EXPRS))},
+            'lemma_precision':{'abbr':'lemma_prec', 'default':self._DEF_LEMMA_PRECISION, 'type':int,
+                'help':'Number of decimals after zero to use when approximating lemmas in model exploration modes. ' +
+                    'The default value 0 means that lemmas should not be approximated (full precision should be used ' +
+                    '[default: {}]'.format(str(self._DEF_LEMMA_PRECISION))}
         }
+        
+        # profiling SMLP run, the steps taken by the algorithm and solver runtimes
+        self._query_tracer = None
+        self._trace_runtime = None
+        self._trace_precision = None
+        self._trace_anonymize = None
 
     def set_logger(self, logger):
         self._query_logger = logger 
         self._smlpTermsInst.set_logger(logger)
         self._modelTermsInst.set_logger(logger)
-            
+    
+    def set_tracer(self, tracer, trace_runtime, trace_prec, trace_anonym):
+        self._query_tracer = tracer
+        self._trace_runtime = trace_runtime
+        self._trace_precision = trace_prec
+        self._trace_anonymize = trace_anonym
+        
     # report_file_prefix is a string used as prefix in all report files of SMLP
     def set_report_file_prefix(self, report_file_prefix):
         self.report_file_prefix = report_file_prefix
@@ -49,6 +66,12 @@ class SmlpQuery:
     # set self._modelTermsInst ModelTerms()
     def set_model_terms_inst(self, model_terms_inst):
         self._modelTermsInst = model_terms_inst
+    
+    def set_trace_file(self, trace_file):
+        self._trace_file = trace_file
+    
+    def set_lemma_precision(self, lemma_precision):
+        self._lemma_precision = lemma_precision
     
     @property
     def query_results_file(self):
@@ -69,14 +92,15 @@ class SmlpQuery:
     def synthesis_results_file(self):
         assert self.report_file_prefix is not None
         return self.report_file_prefix + '_synthesize_results.json'
-    
+
     def find_candidate(self, solver):
-        cand_found = solver.check()
-        if isinstance(cand_found, smlp.unknown):
+        #res = solver.check()
+        res = self._modelTermsInst.smlp_solver_check(solver, 'ca')
+        if isinstance(res, smlp.unknown):
             return None
         else:
-            return cand_found
-    
+            return res
+        
     def update_consistecy_results(self, mode_status_dict, interface_consistent, model_consistent,
             mode_status, mode_results_file):
         # update mode_status_dict based on interface and model consistency results 
@@ -125,9 +149,12 @@ class SmlpQuery:
         solver.add(witn_form); #print('witn_form', witn_form); print('query', query)
         if query is not None:
             solver.add(query)
-        res = solver.check(); #print('res', res)
+        res = self._modelTermsInst.smlp_solver_check(solver, 'witness_consistency')
+        #res = solver.check(); #print('res', res)
         return res
 
+    
+    
     # TODO: what about eta-interval and eta_global constraints, as well as eta-grid constraints for
     # integer control (knob) variables? Looks like they should be used as constrints -- look for a cex
     # to a candidate only under these (and other). Grid constraints for continuous variable should not 
@@ -143,8 +170,9 @@ class SmlpQuery:
         solver.add(theta); #print('adding theta', theta)
         solver.add(alpha); #print('adding alpha', alpha)
         solver.add(self._smlpTermsInst.smlp_not(query)); #print('adding negated quert', query)
-        return solver.check() # returns UNSAT or a single SAT model
-
+        return self._modelTermsInst.smlp_solver_check(solver, 'ce')
+        #return solver.check()
+    
     # Enhancement !!!: at least add here the delta condition
     def generalize_counter_example(self, coex):
         return coex
@@ -173,7 +201,7 @@ class SmlpQuery:
             #candidate_solver.add(smlp.Var(var) == smlp.Cnst(val))
             candidate_solver.add(self._smlpTermsInst.smlp_eq(smlp.Var(var), smlp.Cnst(val)))
         
-        candidate_check_res = candidate_solver.check() 
+        candidate_check_res = self._modelTermsInst.smlp_solver_check(candidate_solver, 'ca') # candidate_solver.check() 
         if isinstance(candidate_check_res, smlp.sat):
             cond_feasible = True
             if universal:
@@ -499,24 +527,51 @@ class SmlpQuery:
         candidate_solver.add(quer)
         #print('eta', eta); print('alpha', alpha);  print('quer', quer); 
         #print('solving query', quer)
+        self._query_tracer.info('{},{}'.format('synthesis' if universal else 'query', str(quer_name))) #, str(quer_expr) ,{}
+        use_approxiamted_fractions = self._lemma_precision != 0
+        assert self._lemma_precision >= 0 and isinstance(self._lemma_precision, int)
+        approx_ca_models = {} # save rounded models to check whether rounded models occure repeaedly
         while True:
             # solve Ex. eta x /\ Ay. theta x y -> alpha y -> (beta y /\ query)
             print('searching for a candidate')
+            
             ca = self.find_candidate(candidate_solver)
-            #print('ca', ca)
             if isinstance(ca, smlp.sat):
                 print('candidate found -- checking stability')
+                #print('ca', ca.model)
+                if use_approxiamted_fractions:
+                    ca_model_approx = self._smlpTermsInst.approximate_witness_term(ca.model, self._lemma_precision, approximate=False, precision=64, value_type=float)
+                    #print('ca_model_approx', ca_model_approx)
+                    knob_vals = [v for k,v in ca_model_approx.items() if k in theta_radii_dict]; #print('knob_vals', knob_vals)
+                    #h = hash(str(list(ca_model_approx.values()))); print('h', h)
+                    h = hash(str(knob_vals)); print('h', h) 
+                    if h in approx_ca_models:
+                        #print('hit!!!')
+                        approx_ca_models[h] = approx_ca_models[h] + 1
+                        #self._query_tracer.info('hits,{}'.format(str(sum(list(approx_ca_models.values())))))
+                    else:
+                        approx_ca_models[h] = 0
+                    #print('ca_model_approx', ca_model_approx)
                 feasible = True
-                ce = self.find_candidate_counter_example(universal, domain, ca.model, quer, model_full_term_dict, alpha, 
-                    theta_radii_dict, solver_logic)
+                if use_approxiamted_fractions:
+                    ce = self.find_candidate_counter_example(universal, domain, ca_model_approx, quer, model_full_term_dict, alpha, 
+                        theta_radii_dict, solver_logic)
+                else:
+                    ce = self.find_candidate_counter_example(universal, domain, ca.model, quer, model_full_term_dict, alpha, 
+                        theta_radii_dict, solver_logic)
                 if isinstance(ce, smlp.sat):
                     print('candidate not stable -- continue search')
                     cem = ce.model.copy(); #print('cem', cem)
+                    # drop Assignements to reponses from ce
                     for var in ce.model.keys():
                         if var in model_full_term_dict.keys():
                             del cem[var]
-                    lemma = self.generalize_counter_example(cem) #
-                    #print('theta_radii_dict in lemma', theta_radii_dict)
+                    if use_approxiamted_fractions:
+                        ce_model_approx = self._smlpTermsInst.approximate_witness_term(ce.model, self._lemma_precision, approximate=False, precision=64, value_type=float)
+                        #print('ce_model_approx', ce_model_approx)
+                        lemma = self.generalize_counter_example(ce_model_approx); #print('lemma', lemma)
+                    else:
+                        lemma = self.generalize_counter_example(cem); #print('lemma', lemma)
                     theta = self._modelTermsInst.compute_stability_formula_theta(lemma, delta, theta_radii_dict, universal)
                     candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
                     continue
@@ -547,7 +602,8 @@ class SmlpQuery:
                 #raise Exception('UNKNOWN return value in candidate search is currently not supported for queries')
             else:
                 raise Exception('Unexpected return value ' + str(type(ca)) + ' in candidate search for queries')
-
+        
+    
     # iterate over all queries using query_condition()        
     def query_conditions(self, universal:bool, model_full_term_dict:dict, quer_names:str, quer_exprs:str, quer_forms_dict:dict, 
             domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict,

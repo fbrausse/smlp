@@ -119,7 +119,15 @@ class SmlpOptimize:
         self._opt_logger = logger 
         self._queryInst.set_logger(logger)
         self._modelTermsInst.set_logger(logger)
-                
+        
+    def set_tracer(self, tracer, trace_runtime, trace_prec, trace_anonym):
+        self._opt_tracer = tracer
+        self._trace_runtime = trace_runtime
+        self._trace_precision = trace_prec
+        self._trace_anonymize = trace_anonym
+        self._queryInst.set_tracer(tracer, trace_runtime, trace_prec, trace_anonym)
+        self._modelTermsInst.set_tracer(tracer, trace_runtime, trace_prec, trace_anonym)
+        
     # report_file_prefix is a string used as prefix in all report files of SMLP
     def set_report_file_prefix(self, report_file_prefix):
         self.report_file_prefix = report_file_prefix
@@ -134,7 +142,7 @@ class SmlpOptimize:
     
     def set_spec_file(self, spec_file):
         self._modelTermsInst.set_spec_file(spec_file)
-        
+    
     # set self._modelTermsInst ModelTerms()
     def set_model_terms_inst(self, model_terms_inst):
         self._modelTermsInst = model_terms_inst
@@ -230,7 +238,7 @@ class SmlpOptimize:
             scale_objectives:bool, orig_objv_name:str, objv_bounds:dict, call_info=None, sat_approx=False, sat_precision=64, save_trace=False,
             l0=None, u0=None, l=(-np.inf), u=np.inf):
         self._opt_logger.info('Optimize single objective ' + str(objv_name) + ': Start')
-        
+        self._opt_tracer.info('single_objective,{},{},{},{},{}'.format(str(objv_name),str(u0),str(l0),str(u),str(l)))
         #print('l0', l0, 'u0', u0, 'l', l, 'u', u)
         #TODO !!!: we assume objectives were scaled to [0,1] and l0 and u0 are initialized to 0 and 1 respectively
         #assert scale_objectives 
@@ -262,7 +270,8 @@ class SmlpOptimize:
             quer_expr = '{} >= {}'.format(objv_expr, str(T)) if objv_expr is not None else None
             quer_name = objv_name + '_' + str(T)
             quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
-            #print('quer_and_beta', quer_and_beta)
+            #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
+            self._opt_tracer.info('u0_l0_u_l_T,{},{},{},{},{}'.format(str(u0),str(l0),str(u),str(l),str(T)))
             quer_res = self._queryInst.query_condition(
                 True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision); #print('quer_res', quer_res) 
@@ -630,6 +639,7 @@ class SmlpOptimize:
         while len(K) > 0:
             #print('start of while iteration: K =', K, 's =', s)
             call_info_dict = {'global_iter': call_n, 'update_thresholds': True, 'active_objv': K} 
+            self._opt_tracer.info('pareto_iteration,{},{},{}'.format(str(call_n), '__'.join(objv_names), '__'.join([str(e) for e in s])))
             c_lo, c_up, witness = self.active_objectives_max_min_bounds(model_full_term_dict, objv_terms_dict, 
                 s, smlp_domain, alpha, beta, eta, theta_radii_dict, epsilon, delta, solver_logic, direction,
                 scale_objectives, objv_bounds_dict, call_info_dict, sat_approx, sat_precision, save_trace)
@@ -738,20 +748,21 @@ class SmlpOptimize:
         self._opt_logger.info('Pareto optimization: End')
         return s
     
-    # vacuity check of the constraints on solver instance in optimization and optsyn modes; these constraints 
+    # synthesis feasibility check of the constraints on solver instance in optimization and optsyn modes; these constraints 
     # do not include constraints imposed on the optimization / optsyn objectives as part of optimization algo
     # in these two modes.
-    def check_vacuity(self, vacuity:bool, objv_names:list[str], objv_exprs:list[str], objv_bounds_dict:dict, 
+    def check_synthesis_feasibility(self, feasibility:bool, objv_names:list[str], objv_exprs:list[str], objv_bounds_dict:dict, 
             scale_objv:bool, feat_names:list[str], resp_names:list[str], model_full_term_dict:dict, beta:smlp.form2, 
             domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict, delta:float, solver_logic:str, 
             float_approx:bool, float_precision:int):
-        if vacuity:
-            self._opt_logger.info('Pareto optimization vacuity check: Start')
-            quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'consistency_check', 'True', beta, 
+        if feasibility:
+            self._opt_logger.info('Pareto optimization synthesis feasibility check: Start')
+            self._opt_tracer.info('synthesis_feasibility')
+            quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'synthesis_feasibility', 'True', beta, 
                 domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
             #print('quer_res', quer_res)
             if quer_res['query_status'] == 'UNSAT':
-                self._opt_logger.info('Pareto optimization vacuity check: End')
+                self._opt_logger.info('Pareto optimization synthesis feasibility check: End')
                 return True, None
             elif quer_res['query_status'] == 'STABLE_SAT':
                 witness_vals_dict = quer_res['witness']; #print('witness_vals_dict', witness_vals_dict)
@@ -766,10 +777,10 @@ class SmlpOptimize:
                 self.report_current_thresholds(s, witness_vals_dict, objv_bounds_dict, objv_names, objv_exprs, 
                     False, None, False)
                 
-                self._opt_logger.info('Pareto optimization vacuity check: End')
+                self._opt_logger.info('Pareto optimization synthesis feasibility check: End')
                 return False, s
         else:
-            self._opt_logger.info('Skipping pareto optimization vacuity check')
+            self._opt_logger.info('Skipping pareto optimization synthesis feasibility check')
             return False, None
     
         
@@ -784,7 +795,7 @@ class SmlpOptimize:
             objv_names:list[str], objv_exprs, pareto:bool, #asrt_names:list[str], asrt_exprs, 
             quer_names:list[str], quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, sat_thresholds:bool,
+            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, sat_thresholds:bool, 
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self.objv_names = objv_names
         self.objv_exprs = objv_exprs
@@ -820,13 +831,13 @@ class SmlpOptimize:
         self.objv_bounds_dict = objv_bounds_dict
         
         # instance consistency check (are the assumptions contradictory?)
-        contradiction, thresholds = self.check_vacuity(vacuity, objv_names, objv_exprs, objv_bounds_dict, scale_objv, 
+        contradiction, thresholds = self.check_synthesis_feasibility(vacuity, objv_names, objv_exprs, objv_bounds_dict, scale_objv, 
             feat_names, resp_names, model_full_term_dict, beta, 
             domain, eta, alpha, theta_radii_dict, delta, solver_logic, float_approx, float_precision)
         self.mode_status_dict['synthesis_feasible'] = str(not contradiction).lower()
         if contradiction:
             # instance is contradictory -- more precisely, stable witness does not exist; abort
-            self._opt_logger.info('Model configuration optimization instance is inconsistent; aborting...')
+            self._opt_logger.info('Model configuration optimization instance is inconsistent with synthesis constraints; aborting...')
             self.mode_status_dict['smlp_execution'] = 'aborted'
             with open(self.optimization_results_file+'.json', 'w') as f:
                 json.dump(self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
@@ -890,13 +901,13 @@ class SmlpOptimize:
         beta = self._smlpTermsInst.smlp_and(beta, asrt_conj) if beta != smlp.true else asrt_conj
         
         # instance consistency check (are the assumptions contradictory?)
-        contradiction, thresholds = self.check_vacuity(vacuity, objv_names, objv_exprs, objv_bounds_dict, scale_objv, 
+        contradiction, thresholds = self.check_synthesis_feasibility(vacuity, objv_names, objv_exprs, objv_bounds_dict, scale_objv, 
             feat_names, resp_names, model_full_term_dict, beta, 
             domain, eta, alpha, theta_radii_dict, delta, solver_logic, float_approx, float_precision)
         self.mode_status_dict['synthesis_feasible'] = str(not contradiction).lower()
         if contradiction:
             # instance is contradictory -- more precisely, stable witness does not exist; abort
-            self._opt_logger.info('Model configuration optimized synthesis instance is inconsistent; aborting...')
+            self._opt_logger.info('Model configuration optimized synthesis instance is inconsistent with synthesis constraints; aborting...')
             self.mode_status_dict['smlp_execution'] = 'aborted'
             with open(self.optimization_results_file+'.json', 'w') as f:
                 json.dump(self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)

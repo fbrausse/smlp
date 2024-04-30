@@ -20,11 +20,10 @@ from smlp_py.smlp_utils import str_to_bool
 class ModelCaret:
     def __init__(self):   
         #data_logger = logging.getLogger(__name__)
-        self._caret_logger = None # TODO !!! create a default logger?
+        self._caret_logger = None 
         self._CARET_MODELS = ['rf', 'dt', 'et', 'lightgbm', 'gbr', 'knn']
         self.SMLP_CARET_MODELS = [self._algo_name_local2global(m) for m in self._CARET_MODELS]
         self._instTreeTerms = TreeTerms()
-        
         # params for setup() function: session_id, verbose, fold, data_split_shuffle (set to False to acheive reproducibility?)
         # setup() hyper parameter defaults
         self._DEF_SESSION_ID = None

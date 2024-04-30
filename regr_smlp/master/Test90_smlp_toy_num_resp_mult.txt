@@ -241,15 +241,15 @@ smlp_logger - INFO - Building model terms: End
 
 smlp_logger - INFO - Model interface constraints are consistent
 
-smlp_logger - INFO - Pareto optimization vacuity check: Start
+smlp_logger - INFO - Pareto optimization synthesis feasibility check: Start
 
-smlp_logger - INFO - Querying condition consistency_check <-> True
+smlp_logger - INFO - Querying condition synthesis_feasibility <-> True
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Pareto optimization vacuity check: End
+smlp_logger - INFO - Pareto optimization synthesis feasibility check: End
 
-smlp_logger - INFO - Model configuration optimized synthesis instance is inconsistent; aborting...
+smlp_logger - INFO - Model configuration optimized synthesis instance is inconsistent with synthesis constraints; aborting...
 
 smlp_logger - INFO - Running SMLP in mode "optsyn": End
 

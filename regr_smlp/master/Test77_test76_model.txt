@@ -1,12 +1,12 @@
 
 smlp_logger - INFO - Model exploration specification:
-{'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'p1', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'p2', 'type': 'input', 'range': 'float', 'bounds': [3, 7]}], 'alpha': 'p1==1 or p1==4 or p1==7'}
+{'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x0', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x1', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x2', 'type': 'input', 'range': 'float', 'bounds': [3, 7]}], 'alpha': 'x1==1 or x1==4 or x1==7'}
 
 smlp_logger - INFO - Executing run_smlp.py script: Start
 
 smlp_logger - INFO - Computed spec global constraint expressions:
 
-smlp_logger - INFO - Global alpha : p1==1 or p1==4 or p1==7
+smlp_logger - INFO - Global alpha : x1==1 or x1==4 or x1==7
 
 smlp_logger - INFO - Global beta  : None
 
@@ -14,7 +14,7 @@ smlp_logger - INFO - Radii  theta : {}
 
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
 
-smlp_logger - INFO - Assertion asrt1: (y2**3+p2)/2<6
+smlp_logger - INFO - Assertion asrt1: (y2**3+x2)/2<6
 
 smlp_logger - INFO - Assertion asrt2: y1>=9
 
@@ -34,19 +34,19 @@ smlp_logger - INFO - Parsing the SPEC: Start
 
 smlp_logger - INFO - Parsing the SPEC: End
 
-smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x': {'range': 'float', 'interval': [0, 10]}, 'p1': {'range': 'float', 'interval': [0, 10]}, 'p2': {'range': 'float', 'interval': [3, 7]}}
+smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x0': {'range': 'float', 'interval': [0, 10]}, 'x1': {'range': 'float', 'interval': [0, 10]}, 'x2': {'range': 'float', 'interval': [3, 7]}}
 
-smlp_logger - INFO - Input bounds (alpha): {'x': {'min': 0, 'max': 10}, 'p1': {'min': 0, 'max': 10}, 'p2': {'min': 3, 'max': 7}}
+smlp_logger - INFO - Input bounds (alpha): {'x0': {'min': 0, 'max': 10}, 'x1': {'min': 0, 'max': 10}, 'x2': {'min': 3, 'max': 7}}
 
 smlp_logger - INFO - Knob bounds (eta): {}
 
 smlp_logger - INFO - Knob grids (eta): {}
 
-smlp_logger - INFO - Alpha global   constraints: (or (or (= p1 1) (= p1 4)) (= p1 7))
+smlp_logger - INFO - Alpha global   constraints: (or (or (= x1 1) (= x1 4)) (= x1 7))
 
-smlp_logger - INFO - Alpha ranges   constraints: (and (and true (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7)))
+smlp_logger - INFO - Alpha ranges   constraints: (and (and true (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7)))
 
-smlp_logger - INFO - Alpha combined constraints: (and (and (and true (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7))) (or (or (= p1 1) (= p1 4)) (= p1 7)))
+smlp_logger - INFO - Alpha combined constraints: (and (and (and true (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7))) (or (or (= x1 1) (= x1 4)) (= x1 7)))
 
 smlp_logger - INFO - Beta  global   constraints: true
 
@@ -83,7 +83,7 @@ smlp_logger - INFO - Verifying consistency of configuration for assertion asrt3:
 
 smlp_logger - INFO - Input, knob and configuration constraints are consistent
 
-smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+p2)/2<6
+smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+x2)/2<6
 
 smlp_logger - INFO - The configuration is inconsistent with assertion asrt1
 

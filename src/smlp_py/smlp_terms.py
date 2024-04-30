@@ -1,8 +1,6 @@
 import operator
 import numpy as np
 import pandas as pd
-#from keras.models import load_model as keras_load_model
-#from tensorflow import keras
 import keras
 from sklearn.tree import _tree
 import json
@@ -10,10 +8,11 @@ import ast
 import builtins
 import operator as op
 from fractions import Fraction
+import time
 
 import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
-    list_subtraction_set, get_expression_variables)
+    list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
 
 
@@ -129,6 +128,10 @@ class SmlpTerms:
     def smlp_mult(self, term1:smlp.term2, term2:smlp.term2):
         return term1 * term2    
     
+    # TODO: !!!  check that term2 does not evaluate to term 0 ???
+    def smlp_div(self, term1:smlp.term2, term2:smlp.term2):
+        return self.smlp_mult(smlp.Cnst(smlp.Q(1)) / term2, term1)
+        
     # https://stackoverflow.com/questions/68390248/ast-get-the-list-of-only-the-variable-names-in-an-expression
     def get_expression_variables(self, expression):
         tree = ast.parse(expression)
@@ -251,12 +254,12 @@ class SmlpTerms:
     # TODO !!!: intend to extend to ground formulas as well. Currently an assertion prevents this usage"
     # assertion checks that the constant expression is rational Q, not real R or algebraic A and also
     # nothing else like Boolean/formula type
-    def ground_smlp_expr_to_value(self, expr, approximate=False, precision=64):
-        # evaluate to constant term or formula (evaluate all operations in the expressions) -- should
-        # succeed because the assumption is that expr does not contain variables
-        #print('ground_smlp_expr_to_value: expr', expr)
-        #print('applying smlp.cnst_fold to ', expr)
-        smlp_const = smlp.cnst_fold(expr); #print('smlp_const', smlp_const)
+    def ground_smlp_expr_to_value(self, ground_term, approximate=False, precision=64):
+        # evaluate to constant term or formula (evaluate all operations in ground_term) -- should
+        # succeed because the assumption is that ground_term does not contain variables (is a ground term)
+        #print('ground_smlp_expr_to_value: ground_term', ground_term)
+        #print('applying smlp.cnst_fold to ', ground_term, 'of type', type(ground_term))
+        smlp_const = smlp.cnst_fold(ground_term); #print('smlp_const', smlp_const)
         assert isinstance(smlp.Cnst(smlp_const), smlp.libsmlp.Q) or isinstance(smlp.Cnst(smlp_const), smlp.libsmlp.A) 
         if isinstance(smlp.Cnst(smlp_const), smlp.libsmlp.A) or isinstance(smlp.Cnst(smlp_const), smlp.libsmlp.R): 
             # algebraic number, solution of a polynomial, need to specify precision for the case
@@ -290,6 +293,21 @@ class SmlpTerms:
             witness_vals_dict[k] = self.ground_smlp_expr_to_value(t, approximate, precision)
         return witness_vals_dict
 
+    def approximate_witness_term(self, witness, lemma_precision:int, approximate=False, precision=64, value_type=float):
+        assert value_type in [float, smlp.Q, smlp.R]
+        witness_approx = {}
+        approx_ca = True
+        for k, v in witness.items():
+            #print('k', k, v)
+            v_approx = self.ground_smlp_expr_to_value(v, approximate=approx_ca, precision=10)
+            #print('v_approx', v_approx, type(v_approx), round(v_approx, 10))
+            if approx_ca: # v_approx is float / real / algebraic (?)
+                witness_approx[k] = smlp.Cnst(round(v_approx, lemma_precision))
+            else: # v_approx is a fraction
+                witness_approx[k] = self.smlp_div(smlp.Cnst(v_approx.numerator), smlp.Cnst(v_approx.denominator))
+        #print('witness_approx', witness_approx)
+        return witness_approx
+                    
     # Converts values in sat assignmenet (witness) from python fractions to terms.
     def witness_const_to_term(self, witness):
         witness_vals_dict = {}
@@ -321,11 +339,15 @@ class TreeTerms:
             '!=':op.ne
         }
         self.instSmlpTerms = SmlpTerms()
+        self._compress_rules = None
     
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
 
+    def set_compress_rules(self, compress_rules:bool):
+        self._compress_rules = compress_rules
+    
     # generate rules from a single decision or regression tree that predicts a single response
     def _get_abstract_rules(self, tree, feature_names, resp_names, class_names, rounding=-1):
         #print('_get_abstract_rules: tree', tree, '\nresp_names', resp_names)
@@ -381,7 +403,7 @@ class TreeTerms:
                     consequent_dict[rn] = responses_values[i]
             else:
                 # TODO: this branch has not been tested; likely will not work with multiple responses as classes
-                # in th enext line is defined as hard coded for resp_names[0] -- meaning, the last index [0].
+                # in the next line is defined as hard coded for resp_names[0] -- meaning, the last index [0].
                 classes = path[-1][0][0]
                 l = np.argmax(classes)
                 # was hard-coded rounding: class_probability = np.round(100.0*classes[l]/np.sum(classes),2)
@@ -515,7 +537,46 @@ class TreeTerms:
     #     ('p3', '>', 0.7000000178813934)], 'consequent': {'num1': 1.0, 'num2': 0.0}, 'coverage': 2}.
     # rules is a list of rules. It is computed from a tree model using method trees_to_rules of the same
     # class TreeTerms.
-    def rules_to_term(self, rules):
+    def compress_antecedent(self, antecedent):
+        if not self._compress_rules:
+            return antecedent, len(antecedent), len(antecedent)
+        ant_dict = {}
+        ant_reduced = []
+        for trp in antecedent:
+            #print('trp', trp, type(trp[0]), type(trp[1]), type(trp[2]))
+            ant_dict[trp[0]] = {'lo':[], 'lo_cl':[], 'up':[], 'up_cl':[]}
+        for trp in antecedent:
+            if trp[1] == '<':
+                ant_dict[trp[0]]['up'].append(trp[2])
+                #ant_dict[trp[0]]['op_op'].append(trp[2])
+            elif trp[1] == '<=':
+                ant_dict[trp[0]]['up'].append(trp[2])
+                ant_dict[trp[0]]['up_cl'].append(trp[2])
+            elif trp[1] == '>':
+                ant_dict[trp[0]]['lo'].append(trp[2])
+                #ant_dict[trp[0]]['lo_op'].append(trp[2])
+            elif trp[1] == '>=':
+                ant_dict[trp[0]]['lo'].append(trp[2])
+                ant_dict[trp[0]]['lo_cl'].append(trp[2])
+            else:
+                raise Exception('Unexpected binop ' + str(trp[1]) + ' in function reduce_antecedent')
+        #print('ant_dict', ant_dict)
+        for k,v in ant_dict.items():
+            #print('k', k, 'v', v)
+            if ant_dict[k]['up'] != []:
+                mx = min(ant_dict[k]['up'])
+                op = '<=' if mx in ant_dict[k]['up_cl'] else '<'
+                ant_reduced.append([k,op, mx])
+            if ant_dict[k]['lo'] != []:
+                mn = max(ant_dict[k]['lo'])
+                op = '>=' if mn in ant_dict[k]['lo_cl'] else '>'
+                ant_reduced.append([k,op, mn])
+        #print('antecedent', len(antecedent), antecedent, '\nant_reduced', len(ant_reduced), ant_reduced)
+        #print('antecedent size: ', len(antecedent), ' --> ', len(ant_reduced), flush=True)
+        return ant_reduced, len(antecedent), len(ant_reduced)
+    
+    def rules_to_term(self, rules, ant_reduction_stats):
+        #print('rules_to_term start', flush=True)
         # Convert the antecedent and consequent of a rule (corresponding to a full branch in a tree)
         # into smlp terms and return a dictionary with response names as the keys and pairs of terms
         # (antecdent_term, consequent_term) as the values. This function should be used for a rule
@@ -523,6 +584,7 @@ class TreeTerms:
         def rule_to_term(rule):
             antecedent = rule['antecedent']; #print('antecedent', antecedent)
             consequent = rule['consequent']; #print('consequent', consequent)
+            antecedent, ant_befor, ant_after = self.compress_antecedent(antecedent)
             if len(antecedent) == 0:
                 ant = smlp.true
             else:
@@ -535,22 +597,27 @@ class TreeTerms:
                 #term = smlp.Ite(ant, smlp.Cnst(val), smlp.Var('SMLP_UNDEFINED'))
                 #res_dict[resp] = term
                 res_dict[resp] = (ant, smlp.Cnst(val))
-            return res_dict
+            return res_dict, ant_befor, ant_after
         
         # returned value
         rules_dict = {}
+        #print('numer of rules', len(rules), flush=True)
+        
         for i, rule in enumerate(rules):
             # this is an example of a rule (corresponds to a branch in a decision/regression tree):
             # {'antecedent': [('p3', '>', 0.4000000134110451), ('FMAX_abc', '<=', 0.75), ('FMAX_xyz', '>', 
             #     0.5000000149011612)], 'consequent': {'num1': 0.0, 'num2': 0.0}, 'coverage': 2}
             #print('\n ====== i', i, 'rule', rule)
-            rule_dict = rule_to_term(rule)
+            rule_dict, ant_befor, ant_after = rule_to_term(rule)
+            ant_reduction_stats['before'].append(ant_befor)
+            ant_reduction_stats['after'].append(ant_after)
             # here is how the corresponding rule_dict looks like (it contains smlp / smt2 terms):
             # {'num1': (<smlp.libsmlp.form2 (and (and (> p3 (/ 53687093 134217728)) (<= FMAX_abc (/ 3 4))) 
             #     (> FMAX_xyz (/ 33554433 67108864)))>, <smlp.libsmlp.term2 0>), 
             #  'num2': (<smlp.libsmlp.form2 (and (and (> p3 (/ 53687093 134217728)) (<= FMAX_abc (/ 3 4))) 
             #     (> FMAX_xyz (/ 33554433 67108864)))>, <smlp.libsmlp.term2 0>)}
             #print('rule_dict', rule_dict)
+            #print('number of rule terms', len(rule_dict), flush=True)
             for resp, (ant_term, con_term) in rule_dict.items():            
                 if i == 0:
                     # The condition along a branch of a decision tree is implied by disjunction 
@@ -563,7 +630,9 @@ class TreeTerms:
                 else:
                     rules_dict[resp] = smlp.Ite(ant_term, con_term, rules_dict[resp])
         #print('rules_dict', rules_dict)
-        return rules_dict
+
+        #print('rules_to_term end', flush=True)
+        return rules_dict, ant_reduction_stats
     
     def tree_model_to_term(self, tree_model, algo, feat_names, resp_names):
         if algo in ['dt_caret', 'dt_sklearn']:
@@ -574,17 +643,32 @@ class TreeTerms:
             raise Exception('Model trained using algorithm ' + str(algo) + ' is currently not supported in smlp_opt')
         rules = self.trees_to_rules(tree_estimators, feat_names, resp_names, None, False, None) # rules_filename
         #print('------- rules ---------\n', rules); 
+        #print('tree_term_dict_dict start', flush=True)
         tree_term_dict_dict = {} 
+        ant_reduction_stats = {'before':[], 'after':[]}
         for i, tree_rules in enumerate(rules):
             #print('====== tree_rules ======\n', tree_rules)
-            tree_term_dict = self.rules_to_term(tree_rules); #print('tree term_dict', tree_term_dict); 
+            tree_term_dict, ant_reduction_stats = self.rules_to_term(tree_rules, ant_reduction_stats); #print('tree term_dict', tree_term_dict); 
             assert list(tree_term_dict.keys()) == resp_names
             tree_term_dict_dict['tree_'+str(i)] = tree_term_dict
+        if self._compress_rules:
+            self._smlp_terms_logger.info(
+                'Tree rules (branches) antecedent reduction statistics for response {}:'.format(resp_names[0]) + \
+                '\n\ttree branches/rules count  ' + str(len(rules)) + \
+                '\n\tantecedent lengths before  ' + str(sum(ant_reduction_stats['before'])) + \
+                '\n\tantecedent lengths after   ' + str(sum(ant_reduction_stats['after'])) + \
+                '\n\tunique conjuncts before    ' + str(sum(list(set(ant_reduction_stats['before'])))) + \
+                '\n\tunique conjuncts after     ' + str(sum(list(set(ant_reduction_stats['after'])))) + \
+                '\n\ttree max depth before      ' + str(max(ant_reduction_stats['before'])) + \
+                '\n\ttree max depth after       ' + str(max(ant_reduction_stats['after'])))
+
         #print('**********tree_term_dict_dict\n', tree_term_dict_dict)
-        
-        number_of_trees = len(rules)
+        #print('tree_term_dict_dict end', flush=True)
+        number_of_trees = len(rules); #print('number_of_trees (rules)', number_of_trees)
         tree_model_term_dict = {}
+        #print('tree_model_term_dict start', flush=True)
         for j, tree_rules in enumerate(rules):
+            #print('j', j, flush=True)
             for resp_name in resp_names:
                 if j == 0:
                     tree_model_term_dict[resp_name] = tree_term_dict_dict['tree_'+str(j)][resp_name]
@@ -596,10 +680,11 @@ class TreeTerms:
                         #tree_model_term_dict[resp_name] = smlp.Div(tree_model_term_dict[resp_name], smlp.Cnst(int(number_of_trees)))
                         tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(smlp.Cnst(smlp.Q(1) / smlp.Q(int(number_of_trees))), tree_model_term_dict[resp_name])
                     #print('tree_model_term_dict', tree_model_term_dict)
-        
+        #print('tree_model_term_dict end', flush=True)
         return tree_model_term_dict
 
     def tree_models_to_term(self, model, algo, feat_names, resp_names):
+        #print('tree_models_to_term start', flush=True)
         #print('tree_models_to_term: feat_names', feat_names, 'resp_names', resp_names)
         if isinstance(model, dict):
             # case when model is per response
@@ -611,6 +696,7 @@ class TreeTerms:
         else:
             # there is one model covering all responses (one or multiple responses)
             tree_model_term_dict = self.tree_model_to_term(model, algo, feat_names, resp_names)
+        #print('tree_models_to_term end', flush=True)
         return tree_model_term_dict
 
 # Method to generate smlp term from sklearn (and caret) representation of a polynomial model    
@@ -913,11 +999,28 @@ class ModelTerms(SmlpTerms):
         
         self._SPEC_DOMAIN_RANGE_TAG = 'range'
         self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
-        
+        self._DEF_COMPRESS_RULES = True
+        self.model_term_params_dict = {
+            'compress_rules': {'abbr':'compress_rules', 'default':str(self._DEF_COMPRESS_RULES), 'type':str_to_bool,
+                'help':'Should rules that represent tree branches be compressed to eliminate redundant repeated splitting ' +
+                'of ranges of model features after training tree based models, in order to build smaller model terms? ' +
+                '[default {}]'.format(str(self._DEF_COMPRESS_RULES))}
+        }
         
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
+        self._treeTermsInst.set_logger(logger)
+        self._polyTermsInst.set_logger(logger)
+        self._nnKerasTermsInst.set_logger(logger)
+    
+    # set tracer from a caller script
+    # logs solver statistics in a trace log file
+    def set_tracer(self, tracer, trace_runtime, trace_prec, trace_anonym):
+        self._smlp_terms_tracer = tracer
+        self._trace_runtime = trace_runtime
+        self._trace_precision = trace_prec
+        self._trace_anonymize = trace_anonym
     
     # model_file_prefix is a string used as prefix in all outut files of SMLP that are used to 
     # save a trained ML model and to re-run the model on new data (without need for re-training)
@@ -933,6 +1036,10 @@ class ModelTerms(SmlpTerms):
     
     def set_smlp_spec_inst(self, spec_inst):
         self._specInst = spec_inst
+    
+    def set_compress_rules(self, compress_rules:bool):
+        self._compress_rules = compress_rules
+        self._treeTermsInst.set_compress_rules(compress_rules)
     
     # file to dump tree model converted to SMLP term
     @property
@@ -1012,7 +1119,6 @@ class ModelTerms(SmlpTerms):
     def _compute_model_terms_dict(self, algo, model, feat_names, resp_names, data_bounds, data_scaler,
             scale_features, scale_responses):
         assert not isinstance(model, dict)
-
         # were features and / or responses scaled prior building the model?
         feat_were_scaled = scale_features and data_scaler != 'none'
         resp_were_scaled = scale_responses and data_scaler != 'none'
@@ -1043,6 +1149,7 @@ class ModelTerms(SmlpTerms):
                 for feat_name, feat_term in feature_scaler_terms_dict.items():
                     #print('feat_name', feat_name, 'feat_term', feat_term, flush=True)
                     model_term = smlp.subst(model_term, {feat_name: feat_term})
+                    #print('subst done', flush=True)
                 #print('model term after', model_term, flush=True)
                 model_term_dict[resp_name] = model_term
             #print('model_term_dict', model_term_dict, flush=True)
@@ -1077,7 +1184,7 @@ class ModelTerms(SmlpTerms):
             data_bounds, data_scaler,scale_features, scale_responses):
         #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names, flush=True)
         assert lists_union_order_preserving_without_duplicates(list(model_features_dict.values())) == feat_names
-        
+
         if isinstance(model_or_model_dict, dict):
             models_full_terms_dict = {}
             for i, resp_name in enumerate(model_or_model_dict.keys()):
@@ -1482,10 +1589,82 @@ class ModelTerms(SmlpTerms):
         # let solver know definition of responses (the model's function)
         if model_full_term_dict is not None:
             for resp_name, resp_term in model_full_term_dict.items():
-                #base_solver.add(smlp.Var(resp_name) == resp_term)
-                base_solver.add(op.eq(smlp.Var(resp_name), resp_term))
+                eq_form = self._smlpTermsInst.smlp_eq(smlp.Var(resp_name), resp_term)
+                base_solver.add(eq_form)
         return base_solver
     
+    # wrapper function on solver.check to measure runtime and return status in a convenient way
+    def smlp_solver_check(self, solver, call_name):
+        start = time.time()
+        #print('solver chack start', flush=True)
+        res = solver.check()
+        #print('solver chack end', flush=True)
+        end = time.time()
+        if  isinstance(res, smlp.unknown):
+            #print('smlp_unknown', smlp.unknown)
+            status = 'unknown'
+            sat_model = {}
+        elif isinstance(res, smlp.sat):
+            #print('smlp_sat', smlp.sat)
+            status = 'sat'
+            sat_model = self._smlpTermsInst.witness_term_to_const(res.model, approximate=False, precision=None)
+        elif isinstance(res, smlp.unsat):
+            #print('smlp_unsat', smlp.unsat)
+            status = 'unsat'
+            sat_model = {}
+        else:
+            raise Exception('Unexpected solver result ' + str(res))
+        anonym_interface_dict = self._specInst.get_anonymized_interface; #print('anonym_interface_dict', anonym_interface_dict)
+        
+        # genrate columns for trace file to enabe viewing candidates and counter-example in a convenient way
+        if call_name == 'interface_consistency':
+            if self._trace_anonymize:
+                interface_column_names = list(anonym_interface_dict['knobs'].values()) +  list(anonym_interface_dict['inputs'].values()) \
+                    + list(anonym_interface_dict['outputs'].values())
+            else:
+                interface_column_names = list(anonym_interface_dict['knobs'].keys()) +  list(anonym_interface_dict['inputs'].keys()) \
+                    + list(anonym_interface_dict['outputs'].keys())
+            if self._trace_runtime == 0:
+                self._smlp_terms_tracer.info(','.join(['stage', 'solver'] + interface_column_names))
+            else:
+                self._smlp_terms_tracer.info(','.join(['stage', 'solver', 'runtime'] + interface_column_names))
+        
+        if status == 'sat':
+            assignment = {}
+            for k in anonym_interface_dict['knobs'].keys():
+                if k in sat_model.keys():
+                    name = k if not self._trace_anonymize else anonym_interface_dict['knobs'][k]
+                    assignment[name] = sat_model[k] if self._trace_precision == 0 else round(float(sat_model[k]), self._trace_precision)
+            for k in anonym_interface_dict['inputs'].keys():
+                if k in sat_model.keys():
+                    name = k if not self._trace_anonymize else anonym_interface_dict['inputs'][k]
+                    assignment[name] = sat_model[k] if self._trace_precision == 0 else round(float(sat_model[k]), self._trace_precision)
+            for k in anonym_interface_dict['outputs'].keys():
+                if k in sat_model.keys():
+                    name = k if not self._trace_anonymize else anonym_interface_dict['outputs'][k]
+                    assignment[name] = sat_model[k] if self._trace_precision == 0 else round(float(sat_model[k]), self._trace_precision)
+            
+            #print('sat_model', sat_model); print('assignment', assignment, self._trace_anonymize)
+            #print('anonym_interface_dict', anonym_interface_dict)
+            if self._trace_anonymize:
+                knob_values = [str(assignment[e]) for e in list(anonym_interface_dict['knobs'].values()) if e in assignment.keys()]
+                input_values = [str(assignment[e]) for e in list(anonym_interface_dict['inputs'].values()) if e in assignment.keys()]
+                output_values = [str(assignment[e]) for e in list(anonym_interface_dict['outputs'].values()) if e in assignment.keys()]
+            else:
+                knob_values = [str(assignment[e]) for e in list(anonym_interface_dict['knobs'].keys()) if e in assignment.keys()]
+                input_values = [str(assignment[e]) for e in list(anonym_interface_dict['inputs'].keys()) if e in assignment.keys()]
+                output_values = [str(assignment[e]) for e in list(anonym_interface_dict['outputs'].keys()) if e in assignment.keys()]
+        else:
+            knob_values = input_values = output_values = []
+        
+        if self._trace_runtime == 0:
+            self._smlp_terms_tracer.info(','.join([call_name, status] + knob_values + input_values + output_values))
+        else:
+            elapsed = round(end - start, self._trace_runtime)
+            self._smlp_terms_tracer.info(','.join([call_name, status, str(elapsed)] + knob_values + input_values + output_values))
+
+        return res
+
     # function to check that alpha and eta constraints on inputs and knobs are consistent.
     # TODO: model_full_term_dict is not required here but omiting it causes z3 error 
     # result smlp::z3_solver::check(): Assertion `m.num_consts() == size(symbols)' failed.
@@ -1503,7 +1682,8 @@ class ModelTerms(SmlpTerms):
         solver.add(alpha); #print('alpha', alpha, flush=True)
         solver.add(eta); #print('eta', eta)
         #print('create check', flush=True)
-        res = solver.check(); #print('res', res)
+        #res = solver.check(); print('res', res, flush=True)
+        res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency')
         consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'
         if isinstance(res, smlp.sat):
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are consistent')

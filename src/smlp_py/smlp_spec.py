@@ -355,8 +355,20 @@ class SmlpSpec:
         return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
             var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_INPUT_TAG]
     
+    # anonymize system/model interface names -- knobs, inputs, outputs.
+    # currently is used to anonymize trace logs for debugging.
+    @property
+    def get_anonymized_interface(self):
+        def anomym_dict(var, name_pref):
+            return dict(zip(sorted(var), [name_pref + str(i) for i in range(len(var))]))
+        anonymize_dict = {'knobs':{}, 'inputs':{}, 'outputs':{}}
+        anonymize_dict['knobs'] = anomym_dict(self.get_spec_knobs, 'p')
+        anonymize_dict['inputs'] = anomym_dict(self.get_spec_inputs, 'x')
+        anonymize_dict['outputs'] = anomym_dict(self.get_spec_responses, 'y')
+        return anonymize_dict
+        
     # API to get definition of the original system (that SMLP intends to model with ML).
-    # If provided, it is a string that correponds to python expression of the system;s funcion.
+    # If provided, it is a string that correponds to python expression of the system's funcion.
     # The feild is not mondatory (we do not always know or want to use definition of the 
     # original system), and the function returns None if system is not specified in the spec.
     @property
@@ -641,16 +653,16 @@ class SmlpSpec:
         quer_names = list(quer_expr_dict.keys()) if quer_expr_dict is not None else None
         quer_exprs = list(quer_expr_dict.values()) if quer_expr_dict is not None else None
 
-        # objectives
+        # optimization objectives
         objv_expr_dict, objv_names, objv_exprs = self.get_cmdl_objectives(objv_names_cmdl, objv_exprs_cmdl, resp_names, cmdl_cond_sep)
         objv_expr_dict = self.get_spec_objv_exprs_dict; #print('objv_expr_dict', objv_expr_dict)
         objv_names = list(objv_expr_dict.keys()) if objv_expr_dict is not None else None
         objv_exprs = list(objv_expr_dict.values()) if objv_expr_dict is not None else None
         
-        # witnesses
+        # witnesses (value assignements to both knobs and inputs)
         witn_dict = self.get_spec_witn_dict
         
-        # knob configurations
+        # knob configurations (value assignements to knobs only)
         config_dict = self.get_spec_config_dict
         
         self._spec_logger.info('Computed spec global constraint expressions:')

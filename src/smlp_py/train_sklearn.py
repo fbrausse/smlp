@@ -29,7 +29,6 @@ class ModelSklearn:
         self.SMLP_SKLEARN_MODELS = [self._algo_name_local2global(m) for m in self._SKLEARN_MODELS]
         self._instTreeTerms = TreeTerms()
         self._instPolyTerms = PolyTerms()
-        
         # trees (rf, dt, et) common
         self._DEF_MIN_SAMPLES_SPLIT = 2
         self._DEF_MIN_SAMPLES_LEAF = 1

@@ -69,10 +69,18 @@ class SmlpLogger:
         ch.setLevel(log_level_object)
 
         # create formatter and add it to the handlers
-        if log_time:
-            formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        if logger_name == 'smlp_logger':
+            if log_time:
+                formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            else:
+                formatter = logging.Formatter('\n%(name)s - %(levelname)s - %(message)s')
+        elif logger_name == 'smlp_tracer':
+            if log_time:
+                formatter = logging.Formatter('%(asctime)s - %(message)s')
+            else:
+                formatter = logging.Formatter('%(message)s')
         else:
-            formatter = logging.Formatter('\n%(name)s - %(levelname)s - %(message)s')
+            raise Exception('Unexpected logger ' + str(logger_name))
         #formatter = logging.Formatter('[%(asctime)s] %(levelname)8s --- %(message)s ' +
         #                             '(%(filename)s:%(lineno)s)',datefmt='%Y-%m-%d %H:%M:%S')
         fh.setFormatter(formatter)
@@ -84,4 +92,28 @@ class SmlpLogger:
 
         return logger
 
+# profiling SMLP run, the steps taken by the algorithm and solver runtimes
+class SmlpTracer:
+    def __init__(self):
+        self._query_tracer = None
+        self._trace_runtime = None
+        self._trace_precision = None
+        self._trace_anonymize = None
+        
+        # default values for controlling trace logs 
+        self._DEF_TRACE_RUNTIME = 0 # whether / how many decinal points of runtimes to include in trace
+        self._DEF_TRACE_PRECISION = 0 # whether / how many decinal points of fractions approx to include in trace
+        self._DEF_TRACE_ANONYMIZE = False
+        self.trace_params_dict = {
+            'trace_runtime': {'abbr':'trace_runtime', 'default':str(self._DEF_TRACE_RUNTIME), 'type':int,
+                'help':'Should trace include solver runtimes and what precision to use in terms of number ' +
+                        'of decimal points after 0; the option value 0 means to not include the runtimes ' +
+                        'in the trace [default {}]'.format(str(self._DEF_TRACE_RUNTIME))}, 
+            'trace_precision':{'abbr':'trace_prec', 'default':self._DEF_TRACE_PRECISION, 'type':int,
+                'help':'Decimals after 0 to use when rounding fractions; option value 0 means to use fractions ' +
+                    '(implying no rounding) [default: {}]'.format(str(self._DEF_TRACE_PRECISION))},
+            'trace_anonymize':{'abbr':'trace_anonym', 'default':self._DEF_TRACE_ANONYMIZE, 'type':str_to_bool,
+                'help':'Should anonymized names of system inputs, knobs and outputs be uses in trace log file?' +
+                    '[default: {}]'.format(str(self._DEF_TRACE_ANONYMIZE))}
+        }
 

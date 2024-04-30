@@ -9,11 +9,11 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"x": 0.0,
-			"p1": 4.0,
+			"x2": 6.000000067055225,
+			"x0": 0.0,
 			"y2": 9.0,
-			"p2": 6.000000067055225,
-			"y1": 9.0
+			"y1": 9.0,
+			"x1": 4.0
 		},
 		"assertion_feasible": true
 	},

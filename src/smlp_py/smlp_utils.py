@@ -41,6 +41,12 @@ def str_to_bool(value):
         return True
     raise ValueError(f'{value} is not a valid boolean value')
 
+def str_to_float_list(value):
+    return [float(x) for x in value.split(',')]
+
+def str_to_str_list(value):
+    return [x for x in value.split(',')]
+
 def timed(f, desc=None, log=lambda *args: print(*args, file=sys.stderr)):
     now = datetime.datetime.now()
     r = f()
@@ -51,28 +57,6 @@ def timed(f, desc=None, log=lambda *args: print(*args, file=sys.stderr)):
     return r, t
 
 '''
-# extract names of system/desigh inputs from interface spec file
-def get_input_names(spec):
-    return [s['label'] for s in spec if s['type'] != 'response']
-
-
-def get_radii(spec, center):
-    abs_radii = []
-    for s,c in zip(spec, center):
-        if s['type'] == 'categorical':
-            abs_radii.append(0)
-            continue
-        if 'rad-rel' in s and c != 0:
-            w = s['rad-rel']
-            abs_radii.append(Fraction(w) * abs(c))
-        else:
-            try:
-                w = s['rad-abs']
-            except KeyError:
-                w = s['rad-rel']
-            abs_radii.append(w)
-    return abs_radii
-
 def scaler_from_bounds(spec, bnds):
     sc = MinMaxScaler()
     mmin = []
@@ -333,29 +317,3 @@ def get_expression_variables(expression):
             variables.append(node.id)
     return [v for v in set(variables) if v not in vars(builtins)]
 
-# sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
-# the same; this is mostly important for model exploration modes 
-def model_features_sanity_check(model_features_dict:dict, feat_names:list[str], train_df:DataFrame, 
-        test_df:DataFrame, feat_df:DataFrame):
-    if feat_names is not None: 
-        if train_df is not None:
-            assert feat_names == train_df.columns.tolist()
-        if test_df is not None:
-            assert feat_names == test_df.columns.tolist()    
-        if feat_df is not None:
-            assert feat_names == feat_df.columns.tolist()
-    if model_features_dict is not None:
-        for resp, feats in model_features_dict.items():
-            if feat_names is not None:
-                feats_ordered = [ft for ft in feat_names if ft in feats]
-                assert feats == feats_ordered
-            if train_df is not None:
-                feats_ordered = [ft for ft in train_df.columns.tolist() if ft in feats]
-                assert feats == feats_ordered
-            if test_df is not None:
-                feats_ordered = [ft for ft in test_df.columns.tolist() if ft in feats]
-                assert feats == feats_ordered
-            if feat_df is not None:
-                feats_ordered = [ft for ft in feat_df.columns.tolist() if ft in feats]
-                assert feats == feats_ordered
-    

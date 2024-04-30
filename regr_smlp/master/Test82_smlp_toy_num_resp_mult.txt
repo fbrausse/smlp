@@ -219,9 +219,9 @@ smlp_logger - INFO - Building model terms: End
 
 smlp_logger - INFO - Model interface constraints are consistent
 
-smlp_logger - INFO - Pareto optimization vacuity check: Start
+smlp_logger - INFO - Pareto optimization synthesis feasibility check: Start
 
-smlp_logger - INFO - Querying condition consistency_check <-> True
+smlp_logger - INFO - Querying condition synthesis_feasibility <-> True
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
@@ -230,7 +230,7 @@ smlp_logger - INFO - Pareto optimization vacuity completed with objectives thres
     Original  scale: {'obj1': '7.000000', 'objv2': '5.000000', 'objv3': '9.000000'}
 
 
-smlp_logger - INFO - Pareto optimization vacuity check: End
+smlp_logger - INFO - Pareto optimization synthesis feasibility check: End
 
 smlp_logger - INFO - Pareto optimization: Start
 

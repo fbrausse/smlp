@@ -1,6 +1,6 @@
 # imports from SMLP modules
-from smlp_py.smlp_logs import SmlpLogger
-from smlp_py.smlp_utils import str_to_bool, np_JSONEncoder, model_features_sanity_check
+from smlp_py.smlp_logs import SmlpLogger, SmlpTracer
+from smlp_py.smlp_utils import str_to_bool, np_JSONEncoder
 from smlp_py.smlp_models import SmlpModels
 from smlp_py.smlp_data import SmlpData
 from smlp_py.smlp_subgroups import SubgroupDiscovery
@@ -23,7 +23,8 @@ class SmlpFlows:
         self.dataInst = SmlpData()
         self.modelInst = SmlpModels()
         self.psgInst = SubgroupDiscovery()
-        self.loggerInst = SmlpLogger() 
+        self.loggerInst = SmlpLogger()
+        self.tracerInst = SmlpTracer()
         self.configInst = SmlpConfig()
         self.doeInst = SmlpDoepy();
         self.discrInst = SmlpDiscretize()
@@ -45,18 +46,20 @@ class SmlpFlows:
                     self.loggerInst.logger_params_dict | \
                     self.doeInst.doepy_params_dict | \
                     self.discrInst.discr_params_dict | \
-                    self.psgInst.get_subgroup_hparam_default_dict() |\
+                    self.psgInst.get_subgroup_hparam_default_dict() | \
                     self.specInst.spec_params_dict | \
+                    self.modelTernaInst.model_term_params_dict | \
+                    self.tracerInst.trace_params_dict | \
                     self.queryInst.query_params_dict | \
                     self.verifyInst.asrt_params_dict | \
                     self.optInst.opt_params_dict | \
                     self.solverInst.solver_params_dict #| \
                     
-            
         self.args = self.configInst.args_dict_parse(argv, args_dict)
         self.log_file = self.configInst.report_file_prefix + '.txt'
-
-        # set loggers
+        self.trace_file = self.configInst.report_file_prefix + '_trace.csv'
+        
+        # create and set loggers
         self.logger = self.loggerInst.create_logger('smlp_logger', self.log_file, 
             self.args.log_level, self.args.log_mode, self.args.log_time)
         self.dataInst.set_logger(self.logger)
@@ -82,13 +85,12 @@ class SmlpFlows:
         self.queryInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.queryInst.set_model_file_prefix(self.configInst.model_file_prefix)
 
-        # set spec file / spec
+        # set spec file / spec and term params
         self.modelTernaInst.set_spec_file(self.args.spec)
+        self.modelTernaInst.set_compress_rules(self.args.compress_rules)
         self.dataInst.set_spec_inst(self.specInst)
         self.specInst.set_radii(self.args.radius_absolute, self.args.radius_relative)
         self.specInst.set_deltas(self.args.delta_absolute, self.args.delta_relative)
-        #self.specInst.set_spec_witness_file(args.witness_file)
-        
         
         # set external solver to SMLP
         self.solverInst.set_solver_path(self.args.solver_path)
@@ -98,7 +100,15 @@ class SmlpFlows:
         self.model_exploration_modes = ['optimize', 'synthesize', 'verify', 'query', 'optsyn', 'certify']
         self.supervised_modes = ['subgroups', 'discretize'] + self.model_prediction_modes + \
             self.model_exploration_modes
-    
+        
+        # create and set tracer (to profile steps of system/model exploration algorithm)
+        if self.args.analytics_mode in self.model_exploration_modes:
+            self.tracer = self.loggerInst.create_logger('smlp_tracer', self.trace_file, 
+                self.args.log_level, self.args.log_mode, self.args.log_time)
+            self.optInst.set_tracer(self.tracer, self.args.trace_runtime, 
+                self.args.trace_precision, self.args.trace_anonymize)
+            self.queryInst.set_lemma_precision(self.args.lemma_precision)
+        
     # TODO !!!: is this the right place to define data_fname and new_data_fname and error_file ???
     @property
     def data_fname(self):
@@ -130,18 +140,19 @@ class SmlpFlows:
     # The main function to run SMLP in all supported modes
     def smlp_flow(self):
         self.logger.info('Executing run_smlp.py script: Start')
+        
         args = self.args
         # extract response and feature names
         if args.analytics_mode in self.supervised_modes:
             if args.response is None:
-                if args.analytics_mode in self.model_exploration_modes:
+                if args.analytics_mode in self.model_exploration_modes or (args.analytics_mode in self.model_prediction_modes and args.spec is not None):
                     resp_names = self.specInst.get_spec_responses
                 else:
                     raise Exception('Response names should be provided')
             else:
                 resp_names = args.response.split(',')
             if args.features is None:
-                if args.analytics_mode in self.model_exploration_modes:
+                if args.analytics_mode in self.model_exploration_modes or (args.analytics_mode in self.model_prediction_modes and args.spec is not None):
                     feat_names = self.specInst.get_spec_features
                 else:
                     feat_names = None
@@ -196,7 +207,7 @@ class SmlpFlows:
             # xploration modes require all these components (objectives, assertions, queries) but their computation
             # is not a real overhead and we prefer to keep code readable and computate all these expressions.
             # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
-            # the responses as objectives, and the names of objectives are names of the responses prefixed bu 'objv_'.
+            # the responses as objectives, and the names of objectives are names of the responses prefixed by 'objv_'.
             alpha_global_expr, beta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs, quer_names, quer_exprs, \
                 config_dict, witn_dict, objv_names, objv_exprs, syst_expr_dict = self.specInst.get_spec_component_exprs(
                 args.alpha, args.beta, args.delta_absolute, args.delta_relative, args.assertions_names, args.assertions_expressions, 
@@ -225,7 +236,7 @@ class SmlpFlows:
 
             # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
             # the same; this is mostly important for model exploration modes 
-            model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
+            self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
             
             # model training, validation, testing, prediction on training, labeled and new data (when available)
             if args.model == 'system':
@@ -239,7 +250,7 @@ class SmlpFlows:
             
             # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
             # the same; this is mostly important for model exploration modes 
-            model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
+            self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
             
             if args.analytics_mode in self.model_prediction_modes:
                 self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
@@ -248,7 +259,7 @@ class SmlpFlows:
         
         # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
         # the same; this is mostly important for model exploration modes 
-        model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
+        self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
         
         if args.analytics_mode in self.model_exploration_modes:
             if args.analytics_mode == 'verify':
@@ -324,3 +335,7 @@ class SmlpFlows:
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
+        
+        # print modules loaded during  SMLP execution
+        #import sys
+        #print('modules', sys.modules)

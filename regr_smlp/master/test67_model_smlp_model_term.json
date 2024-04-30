@@ -1,1 +1,1 @@
-"{'y2_scaled': <smlp.libsmlp.term2 (ite (and (> p2_scaled (/ 53687093 134217728)) (> p1_scaled (/ 3 4))) 1 (ite (<= p2_scaled (/ 53687093 134217728)) 1 0))>}"
+"{'y2_scaled': <smlp.libsmlp.term2 (ite (and (> x2_scaled (/ 53687093 134217728)) (> x1_scaled (/ 3 4))) 1 (ite (<= x2_scaled (/ 53687093 134217728)) 1 0))>}"

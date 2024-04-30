@@ -15,7 +15,7 @@ from smlp_py.smlp_plots import evaluate_prediction
 from smlp_py.train_keras import ModelKeras 
 from smlp_py.train_caret import ModelCaret 
 from smlp_py.train_sklearn import ModelSklearn
-from smlp_py.smlp_utils import str_to_bool, model_features_sanity_check
+from smlp_py.smlp_utils import str_to_bool
 
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
@@ -155,6 +155,33 @@ class SmlpModels:
                 return json.load(f)
         else:
             return None
+    
+    # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
+    # the same; this is mostly important for model exploration modes 
+    def model_features_sanity_check(self, model_features_dict:dict, feat_names:list[str], train_df:pd.DataFrame, 
+            test_df:pd.DataFrame, feat_df:pd.DataFrame):
+        if feat_names is not None: 
+            if train_df is not None:
+                assert feat_names == train_df.columns.tolist()
+            if test_df is not None:
+                assert feat_names == test_df.columns.tolist()    
+            if feat_df is not None:
+                assert feat_names == feat_df.columns.tolist()
+        if model_features_dict is not None:
+            for resp, feats in model_features_dict.items():
+                if feat_names is not None:
+                    feats_ordered = [ft for ft in feat_names if ft in feats]
+                    assert feats == feats_ordered
+                if train_df is not None:
+                    feats_ordered = [ft for ft in train_df.columns.tolist() if ft in feats]
+                    assert feats == feats_ordered
+                if test_df is not None:
+                    feats_ordered = [ft for ft in test_df.columns.tolist() if ft in feats]
+                    assert feats == feats_ordered
+                if feat_df is not None:
+                    feats_ordered = [ft for ft in feat_df.columns.tolist() if ft in feats]
+                    assert feats == feats_ordered
+    
     
     # Several of model training packages return prediction results as np.array.
     # This function converts prediction results from np.array to pd.DataFrame.
@@ -302,7 +329,7 @@ class SmlpModels:
             X_train:pd.DataFrame, X_test:pd.DataFrame, y_train:pd.DataFrame, y_test:pd.DataFrame,
             hparams_dict:dict, plots:bool, seed:int, sample_weights_coef:float, model_per_response:bool):
         self._model_logger.info('Model training: start')
-        model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
+        self.model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
             
         if algo == 'nn_keras':
             keras_algo = algo[:-len('_keras')]
