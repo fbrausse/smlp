@@ -50,7 +50,7 @@ class SmlpTerms:
         self._smlp_terms_logger = None
         self.report_file_prefix = None
         self.model_file_prefix = None
-
+        
         # supported operators in ast module for expression parsing and transformation
         # https://docs.python.org/3/library/ast.html -- AST (Abstract Syntax Trees)
         # OD version of AST documentation: https://docs.python.org/2/library/ast.html
@@ -641,33 +641,51 @@ class TreeTerms:
             tree_estimators = tree_model.estimators_
         else:
             raise Exception('Model trained using algorithm ' + str(algo) + ' is currently not supported in smlp_opt')
-        rules = self.trees_to_rules(tree_estimators, feat_names, resp_names, None, False, None) # rules_filename
-        #print('------- rules ---------\n', rules); 
+        trees = self.trees_to_rules(tree_estimators, feat_names, resp_names, None, False, None)
+        #print('------- trees ---------\n', trees); 
         #print('tree_term_dict_dict start', flush=True)
         tree_term_dict_dict = {} 
         ant_reduction_stats = {'before':[], 'after':[]}
-        for i, tree_rules in enumerate(rules):
-            #print('====== tree_rules ======\n', tree_rules)
+        branches_count_per_tree = []
+        for i, tree_rules in enumerate(trees):
+            #print('====== tree_rules ======\n', len(tree_rules), tree_rules)
+            branches_count_per_tree.append(len(tree_rules))
             tree_term_dict, ant_reduction_stats = self.rules_to_term(tree_rules, ant_reduction_stats); #print('tree term_dict', tree_term_dict); 
             assert list(tree_term_dict.keys()) == resp_names
             tree_term_dict_dict['tree_'+str(i)] = tree_term_dict
         if self._compress_rules:
+            trees_count = len(trees)
+            branches_count = sum(branches_count_per_tree)
+            ant_len_befor = sum(ant_reduction_stats['before'])
+            ant_len_after = sum(ant_reduction_stats['after'])
+            unique_conj_befor = sum(list(set(ant_reduction_stats['before'])))
+            unique_conj_after = sum(list(set(ant_reduction_stats['after'])))
+            tree_max_depth_befor = max(ant_reduction_stats['before'])
+            tree_max_depth_after = max(ant_reduction_stats['after'])
+            assert branches_count >= trees_count
+            assert ant_len_befor >= branches_count
+            assert ant_len_befor >= ant_len_after
+            assert ant_len_befor >= unique_conj_befor
+            assert ant_len_after >= unique_conj_after
+            assert unique_conj_befor >= unique_conj_after
+            assert tree_max_depth_befor >= tree_max_depth_after
             self._smlp_terms_logger.info(
-                'Tree rules (branches) antecedent reduction statistics for response {}:'.format(resp_names[0]) + \
-                '\n\ttree branches/rules count  ' + str(len(rules)) + \
-                '\n\tantecedent lengths before  ' + str(sum(ant_reduction_stats['before'])) + \
-                '\n\tantecedent lengths after   ' + str(sum(ant_reduction_stats['after'])) + \
-                '\n\tunique conjuncts before    ' + str(sum(list(set(ant_reduction_stats['before'])))) + \
-                '\n\tunique conjuncts after     ' + str(sum(list(set(ant_reduction_stats['after'])))) + \
-                '\n\ttree max depth before      ' + str(max(ant_reduction_stats['before'])) + \
-                '\n\ttree max depth after       ' + str(max(ant_reduction_stats['after'])))
+                'Tree rules (branches) antecedent compression statistics for response(s) {}:'.format(','.join(resp_names)) + \
+                '\n\ttrees count in the model   ' + str(trees_count) + \
+                '\n\ttree branches/rules count  ' + str(branches_count) + \
+                '\n\tantecedent lengths before  ' + str(ant_len_befor) + \
+                '\n\tantecedent lengths after   ' + str(ant_len_after) + \
+                '\n\tunique conjuncts before    ' + str(unique_conj_befor) + \
+                '\n\tunique conjuncts after     ' + str(unique_conj_after) + \
+                '\n\ttree max depth before      ' + str(tree_max_depth_befor) + \
+                '\n\ttree max depth after       ' + str(tree_max_depth_after))
 
         #print('**********tree_term_dict_dict\n', tree_term_dict_dict)
         #print('tree_term_dict_dict end', flush=True)
-        number_of_trees = len(rules); #print('number_of_trees (rules)', number_of_trees)
+        number_of_trees = len(trees); #print('number_of_trees (trees)', number_of_trees)
         tree_model_term_dict = {}
         #print('tree_model_term_dict start', flush=True)
-        for j, tree_rules in enumerate(rules):
+        for j, tree_rules in enumerate(trees):
             #print('j', j, flush=True)
             for resp_name in resp_names:
                 if j == 0:

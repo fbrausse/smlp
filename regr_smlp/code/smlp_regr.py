@@ -613,17 +613,17 @@ def main():
                     if test_type in ['optimize', 'verify', 'query', 'optsyn', 'certify', 'synthesize']:
                         # add relative path to spec file name
                         spec_fn = spec_identifier(test_switches)# + '.spec';
-                        print('spec_fn', spec_fn); print('specs_path', specs_path)
+                        #print('spec_fn', spec_fn); print('specs_path', specs_path)
                         if spec_fn is not None:
                             spec_file = os.path.join(specs_path, spec_fn)
-                            test_switches = test_switches.replace(spec_fn, spec_file) ; print('test_switches', test_switches)
+                            test_switches = test_switches.replace(spec_fn, spec_file) ; #print('test_switches', test_switches)
                         else:
                             raise Exception('spec file must be specified in command line in model exploration modes')
                         # add relative path to external solver name
-                        solver_bin = solver_path_identifier(test_switches); print('solver_bin', solver_bin)
+                        solver_bin = solver_path_identifier(test_switches); #print('solver_bin', solver_bin)
                         if solver_bin is not None:
                             solver_path_bin = os.path.join(solvers_path, solver_bin)
-                            test_switches = test_switches.replace(solver_bin, solver_path_bin) ; print('test_switches', test_switches)
+                            test_switches = test_switches.replace(solver_bin, solver_path_bin) ; #print('test_switches', test_switches)
                     #print('test_switches', test_switches); print('test_type', test_type)
                     command += ' {dat} {out_dir} {pref} {args} {debug} '.format(dat=test_data_path,
                                                                                                out_dir='-out_dir {output_path}'.format(
