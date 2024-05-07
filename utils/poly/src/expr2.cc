@@ -161,90 +161,85 @@ expr2s smlp::unroll(const expr &e,
 	);
 }
 
-static sptr<form2> _subst(const sptr<form2> &f,
-                          const hmap<str,sptr<term2>> &repl,
-                          hmap<sptr<form2>,sptr<form2>> &fs,
-                          hmap<sptr<term2>,sptr<term2>> &ts);
+namespace {
 
-static sptr<term2> _subst(const sptr<term2> &e,
-                          const hmap<str,sptr<term2>> &repl,
-                          hmap<sptr<form2>,sptr<form2>> &fs,
-                          hmap<sptr<term2>,sptr<term2>> &ts)
-{
-	auto it = ts.find(e);
-	if (it == ts.end())
-	{
-		it = ts.emplace(e, e->match(
-		[&](const name &n) {
-			auto it = repl.find(n.id);
-			return it == repl.end() ? e : it->second;
-		},
-		[&](const bop2 &b) {
-			sptr<term2> l = _subst(b.left, repl, fs, ts);
-			sptr<term2> r = _subst(b.right, repl, fs, ts);
-			return l == b.left && r == b.right
-			     ? e : make2t(bop2 { b.op, move(l), move(r) });
-		},
-		[&](const uop2 &u) {
-			sptr<term2> a = _subst(u.operand, repl, fs, ts);
-			return a == u.operand ? e : make2t(uop2 { u.op, move(a) });
-		},
-		[&](const cnst2 &) { return e; },
-		[&](const ite2 &i) {
-			sptr<form2> c = _subst(i.cond, repl, fs, ts);
-			sptr<term2> y = _subst(i.yes, repl, fs, ts);
-			sptr<term2> n = _subst(i.no, repl, fs, ts);
-			return c == i.cond && y == i.yes && n == i.no
-			     ? e : ite(move(c), move(y), move(n));
-		}
-		)).first;
-	}
-	return it->second;
-}
+struct _subst {
 
-static sptr<form2> _subst(const sptr<form2> &f,
-                          const hmap<str,sptr<term2>> &repl,
-                          hmap<sptr<form2>,sptr<form2>> &fs,
-                          hmap<sptr<term2>,sptr<term2>> &ts)
-{
-	auto it = fs.find(f);
-	if (it == fs.end())
+	const hmap<str,sptr<term2>> &repl;
+	hmap<sptr<form2>,sptr<form2>> fs;
+	hmap<sptr<term2>,sptr<term2>> ts;
+
+	_subst(const hmap<str,sptr<term2>> &repl) : repl(repl) {}
+
+	sptr<term2> subst(const sptr<term2> &e)
 	{
-		using expr2_ops::cmp;
-		it = fs.emplace(f, f->match(
-		[&](const prop2 &p){
-			sptr<term2> l = _subst(p.left, repl, fs, ts);
-			sptr<term2> r = _subst(p.right, repl, fs, ts);
-			return l == p.left && r == p.right
-			     ? f : cmp(move(l), p.cmp, move(r));
-		},
-		[&](const lbop2 &b){
-			vec<sptr<form2>> a = b.args;
-			for (sptr<form2> &o : a)
-				o = _subst(o, repl, fs, ts);
-			return a == b.args ? f : make2f(lbop2 { b.op, move(a) });
-		},
-		[&](const lneg2 &n){
-			sptr<form2> m = _subst(n.arg, repl, fs, ts);
-			return m == n.arg ? f : neg(move(m));
-		}
-		)).first;
+		auto it = ts.find(e);
+		if (it == ts.end())
+			it = ts.emplace(e, e->match(
+			[&](const name &n) {
+				auto it = repl.find(n.id);
+				return it == repl.end() ? e : it->second;
+			},
+			[&](const bop2 &b) {
+				sptr<term2> l = subst(b.left);
+				sptr<term2> r = subst(b.right);
+				return l == b.left && r == b.right
+				     ? e : make2t(bop2 { b.op, move(l), move(r) });
+			},
+			[&](const uop2 &u) {
+				sptr<term2> a = subst(u.operand);
+				return a == u.operand ? e : make2t(uop2 { u.op, move(a) });
+			},
+			[&](const cnst2 &) { return e; },
+			[&](const ite2 &i) {
+				sptr<form2> c = subst(i.cond);
+				sptr<term2> y = subst(i.yes);
+				sptr<term2> n = subst(i.no);
+				return c == i.cond && y == i.yes && n == i.no
+				     ? e : ite(move(c), move(y), move(n));
+			}
+			)).first;
+		return it->second;
 	}
-	return it->second;
-}
+
+	sptr<form2> subst(const sptr<form2> &f)
+	{
+		auto it = fs.find(f);
+		if (it == fs.end())
+		{
+			using expr2_ops::cmp;
+			it = fs.emplace(f, f->match(
+			[&](const prop2 &p){
+				sptr<term2> l = subst(p.left);
+				sptr<term2> r = subst(p.right);
+				return l == p.left && r == p.right
+				     ? f : cmp(move(l), p.cmp, move(r));
+			},
+			[&](const lbop2 &b){
+				vec<sptr<form2>> a = b.args;
+				for (sptr<form2> &o : a)
+					o = subst(o);
+				return a == b.args ? f : make2f(lbop2 { b.op, move(a) });
+			},
+			[&](const lneg2 &n){
+				sptr<form2> m = subst(n.arg);
+				return m == n.arg ? f : neg(move(m));
+			}
+			)).first;
+		}
+		return it->second;
+	}
+};
+} // end anon namespace
 
 sptr<form2> smlp::subst(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 {
-	hmap<sptr<form2>,sptr<form2>> fs;
-	hmap<sptr<term2>,sptr<term2>> ts;
-	return _subst(f, repl, fs, ts);
+	return _subst(repl).subst(f);
 }
 
 sptr<term2> smlp::subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl)
 {
-	hmap<sptr<form2>,sptr<form2>> fs;
-	hmap<sptr<term2>,sptr<term2>> ts;
-	return _subst(e, repl, fs, ts);
+	return _subst(repl).subst(e);
 }
 
 bool smlp::is_ground(const sptr<form2> &f)
