@@ -165,11 +165,15 @@ namespace {
 
 struct map_graph {
 
-	const hmap<str,sptr<term2>> &repl;
 	hmap<sptr<form2>,sptr<form2>> fs;
 	hmap<sptr<term2>,sptr<term2>> ts;
+};
 
-	map_graph(const hmap<str,sptr<term2>> &repl) : repl(repl) {}
+struct map_graph_repl : map_graph {
+
+	const hmap<str,sptr<term2>> &repl;
+
+	map_graph_repl(const hmap<str,sptr<term2>> &repl) : repl(repl) {}
 
 	sptr<term2> subst(const sptr<term2> &e)
 	{
@@ -341,12 +345,12 @@ struct map_graph {
 
 sptr<form2> smlp::subst(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 {
-	return map_graph(repl).subst(f);
+	return map_graph_repl(repl).subst(f);
 }
 
 sptr<term2> smlp::subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl)
 {
-	return map_graph(repl).subst(e);
+	return map_graph_repl(repl).subst(e);
 }
 
 bool smlp::is_ground(const sptr<form2> &f)
@@ -378,12 +382,12 @@ bool smlp::is_ground(const sptr<term2> &e)
 
 sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 {
-	return map_graph(repl).cnst_fold(f);
+	return map_graph_repl(repl).cnst_fold(f);
 }
 
 sptr<term2> smlp::cnst_fold(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl)
 {
-	return map_graph(repl).cnst_fold(e);
+	return map_graph_repl(repl).cnst_fold(e);
 }
 
 bool smlp::is_nonlinear(const sptr<form2> &f)
