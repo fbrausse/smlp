@@ -167,6 +167,158 @@ struct map_graph {
 
 	hmap<sptr<form2>,sptr<form2>> fs;
 	hmap<sptr<term2>,sptr<term2>> ts;
+
+	sptr<term2> simplify(const sptr<term2> &t)
+	{
+		auto it = ts.find(t);
+		if (it == ts.end())
+		{
+			it = ts.emplace(t, t->match(
+			[&](const name &) { return t; },
+			[&](const cnst2 &c) {
+				if (c.value.get<kay::Z>())
+					return t;
+				const kay::Q *q = c.value.get<kay::Q>();
+				kay::Q r = *q;
+				using namespace kay;
+				canonicalize(r);
+				if (r.get_den() == 1)
+					return make2t(cnst2 { move(r.get_num()) });
+				if (r.get_num() == q->get_num() &&
+				    r.get_den() == q->get_den())
+					return t;
+				return make2t(cnst2 { move(r) });
+			},
+			[&](const bop2 &b) {
+				sptr<term2> l = simplify(b.left);
+				sptr<term2> r = simplify(b.right);
+				switch (b.op) {
+				case bop2::ADD:
+				case bop2::SUB:
+					if (*l == *zero)
+						return r;
+					if (*r == *zero)
+						return l;
+					if (*l == *r)
+						return b.op == bop2::SUB
+						     ? zero
+						     : make2t(bop2 { bop2::MUL,
+							make2t(cnst2 { kay::Z(2) }),
+							l
+						});
+					break;
+				case bop2::MUL:
+					if (*l == *zero)
+						return zero;
+					if (*r == *zero)
+						return zero;
+					if (*l == *one)
+						return r;
+					if (*r == *one)
+						return l;
+					break;
+				}
+				if (l == b.left && r == b.right)
+					return t;
+				return make2t(bop2 { b.op, move(l), move(r) });
+			},
+			[&](const uop2 &u) {
+				sptr<term2> o = simplify(u.operand);
+				if (*o == *zero)
+					return zero;
+				if (u.op == uop2::UADD)
+					return o;
+				if (const cnst2 *c = o->get<cnst2>())
+					return c->value.match(
+					[&](const A &) { return make2t(uop2 { u.op, move(o) }); },
+					[](const auto &v) { return make2t(cnst2 { kay::Q(-v) }); }
+					);
+				if (o == u.operand)
+					return t;
+				return make2t(uop2 { u.op, move(o) });
+			},
+			[&](const ite2 &i) {
+				sptr<form2> c = simplify(i.cond);
+				sptr<term2> y = simplify(i.yes);
+				sptr<term2> n = simplify(i.no);
+				if (*c == *true2)
+					return y;
+				if (*c == *false2)
+					return n;
+				if (*y == *n)
+					return y;
+				return make2t(ite2 { move(c), move(y), move(n), });
+			})).first;
+		}
+		return it->second;
+	}
+
+	sptr<form2> simplify(const sptr<form2> &t)
+	{
+		auto it = fs.find(t);
+		if (it == fs.end())
+		{
+			it = fs.emplace(t, t->match(
+			[&](const prop2 &p) {
+				sptr<term2> l = simplify(p.left);
+				sptr<term2> r = simplify(p.right);
+				if (const cnst2 *lc = l->get<cnst2>())
+				if (const cnst2 *rc = r->get<cnst2>())
+					return do_cmp(to_Q(lc->value), p.cmp,
+						      to_Q(rc->value)) ? true2 : false2;
+				if (l == p.left && r == p.right)
+					return t;
+				return make2f(prop2 { p.cmp, move(l), move(r) });
+			},
+			[&](const lbop2 &b) {
+				vec<sptr<form2>> a;
+				for (const sptr<form2> &f : b.args) {
+					sptr<form2> g = simplify(f);
+					if (*g == *true2) {
+						switch (b.op) {
+						case lbop2::AND: continue;
+						case lbop2::OR: return true2;
+						}
+						unreachable();
+					}
+					if (*g == *false2) {
+						switch (b.op) {
+						case lbop2::AND: return false2;
+						case lbop2::OR: continue;
+						}
+						unreachable();
+					}
+					a.emplace_back(move(g));
+				}
+				if (empty(a)) {
+					switch (b.op) {
+					case lbop2::AND: return true2;
+					case lbop2::OR: return false2;
+					}
+					unreachable();
+				}
+				if (size(a) == 1)
+					return a.front();
+				if (a == b.args)
+					return t;
+				return make2f(lbop2 { b.op, move(a) });
+			},
+			[&](const lneg2 &n) {
+				sptr<form2> o = simplify(n.arg);
+				if (const lneg2 *m = o->get<lneg2>())
+					return simplify(m->arg);
+				if (*o == *true2)
+					return false2;
+				if (*o == *false2)
+					return true2;
+				if (o == n.arg)
+					return t;
+				return make2f(lneg2 { move(o) });
+			}
+			)).first;
+		}
+		return it->second;
+	}
 };
 
 struct map_graph_repl : map_graph {
@@ -517,157 +669,14 @@ sptr<term2> smlp::derivative(const sptr<term2> &t, const str &var)
 	);
 }
 
-template <typename T>
-static sptr<T> simplify(const sptr<T> &t, hmap<void *,expr2s> &m)
-{
-	auto it = m.find(t.get());
-	if (it == end(m))
-		it = m.emplace(t.get(), t->match(
-		[&](const name &) -> expr2s { return t; },
-		[&](const cnst2 &c) -> expr2s {
-			if (c.value.get<kay::Z>())
-				return t;
-			const kay::Q *q = c.value.get<kay::Q>();
-			kay::Q r = *q;
-			using namespace kay;
-			canonicalize(r);
-			if (r.get_den() == 1)
-				return make2t(cnst2 { move(r.get_num()) });
-			if (r.get_num() == q->get_num() &&
-			    r.get_den() == q->get_den())
-				return t;
-			return make2t(cnst2 { move(r) });
-		},
-		[&](const bop2 &b) -> expr2s {
-			sptr<term2> l = simplify(b.left, m);
-			sptr<term2> r = simplify(b.right, m);
-			switch (b.op) {
-			case bop2::ADD:
-			case bop2::SUB:
-				if (*l == *zero)
-					return r;
-				if (*r == *zero)
-					return l;
-				if (*l == *r)
-					return b.op == bop2::SUB
-					     ? zero
-					     : make2t(bop2 { bop2::MUL,
-						make2t(cnst2 { kay::Z(2) }),
-						l
-					});
-				break;
-			case bop2::MUL:
-				if (*l == *zero)
-					return zero;
-				if (*r == *zero)
-					return zero;
-				if (*l == *one)
-					return r;
-				if (*r == *one)
-					return l;
-				break;
-			}
-			if (l == b.left && r == b.right)
-				return t;
-			return make2t(bop2 { b.op, move(l), move(r) });
-		},
-		[&](const uop2 &u) -> expr2s {
-			sptr<term2> o = simplify(u.operand, m);
-			if (*o == *zero)
-				return zero;
-			if (u.op == uop2::UADD)
-				return o;
-			if (const cnst2 *c = o->get<cnst2>())
-				return c->value.match(
-				[&](const A &) { return make2t(uop2 { u.op, move(o) }); },
-				[](const auto &v) { return make2t(cnst2 { kay::Q(-v) }); }
-				);
-			if (o == u.operand)
-				return t;
-			return make2t(uop2 { u.op, move(o) });
-		},
-		[&](const ite2 &i) -> expr2s {
-			sptr<form2> c = simplify(i.cond, m);
-			sptr<term2> y = simplify(i.yes, m);
-			sptr<term2> n = simplify(i.no, m);
-			if (*c == *true2)
-				return y;
-			if (*c == *false2)
-				return n;
-			if (*y == *n)
-				return y;
-			return make2t(ite2 { move(c), move(y), move(n), });
-		},
-		[&](const prop2 &p) -> expr2s {
-			sptr<term2> l = simplify(p.left, m);
-			sptr<term2> r = simplify(p.right, m);
-			if (const cnst2 *lc = l->get<cnst2>())
-			if (const cnst2 *rc = r->get<cnst2>())
-				return do_cmp(to_Q(lc->value), p.cmp,
-				              to_Q(rc->value)) ? true2 : false2;
-			if (l == p.left && r == p.right)
-				return t;
-			return make2f(prop2 { p.cmp, move(l), move(r) });
-		},
-		[&](const lbop2 &b) -> expr2s {
-			vec<sptr<form2>> a;
-			for (const sptr<form2> &f : b.args) {
-				sptr<form2> g = simplify(f, m);
-				if (*g == *true2) {
-					switch (b.op) {
-					case lbop2::AND: continue;
-					case lbop2::OR: return true2;
-					}
-					unreachable();
-				}
-				if (*g == *false2) {
-					switch (b.op) {
-					case lbop2::AND: return false2;
-					case lbop2::OR: continue;
-					}
-					unreachable();
-				}
-				a.emplace_back(move(g));
-			}
-			if (empty(a)) {
-				switch (b.op) {
-				case lbop2::AND: return true2;
-				case lbop2::OR: return false2;
-				}
-				unreachable();
-			}
-			if (size(a) == 1)
-				return a.front();
-			if (a == b.args)
-				return t;
-			return make2f(lbop2 { b.op, move(a) });
-		},
-		[&](const lneg2 &n) -> expr2s {
-			sptr<form2> o = simplify(n.arg, m);
-			if (const lneg2 *m = o->get<lneg2>())
-				return simplify(m->arg);
-			if (*o == *true2)
-				return false2;
-			if (*o == *false2)
-				return true2;
-			if (o == n.arg)
-				return t;
-			return make2f(lneg2 { move(o) });
-		}
-		)).first;
-	return *it->second.template get<sptr<T>>();
-}
-
 sptr<term2> smlp::simplify(const sptr<term2> &t)
 {
-	hmap<void *,expr2s> m;
-	return ::simplify(t, m);
+	return map_graph().simplify(t);
 }
 
 sptr<form2> smlp::simplify(const sptr<form2> &f)
 {
-	hmap<void *,expr2s> m;
-	return ::simplify(f, m);
+	return map_graph().simplify(f);
 }
 
 static sptr<form2> to_nnf(const sptr<form2> &f, bool phase,
