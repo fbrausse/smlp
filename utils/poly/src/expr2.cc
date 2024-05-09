@@ -163,13 +163,13 @@ expr2s smlp::unroll(const expr &e,
 
 namespace {
 
-struct _subst {
+struct map_graph {
 
 	const hmap<str,sptr<term2>> &repl;
 	hmap<sptr<form2>,sptr<form2>> fs;
 	hmap<sptr<term2>,sptr<term2>> ts;
 
-	_subst(const hmap<str,sptr<term2>> &repl) : repl(repl) {}
+	map_graph(const hmap<str,sptr<term2>> &repl) : repl(repl) {}
 
 	sptr<term2> subst(const sptr<term2> &e)
 	{
@@ -229,17 +229,124 @@ struct _subst {
 		}
 		return it->second;
 	}
+
+	sptr<form2> cnst_fold(const sptr<form2> &f)
+	{
+		auto it = fs.find(f);
+		if (it == fs.end())
+		{
+			using expr2_ops::cmp;
+			it = fs.emplace(f, f->match(
+			[&](const prop2 &p) {
+				sptr<term2> l = cnst_fold(p.left);
+				sptr<term2> r = cnst_fold(p.right);
+				const cnst2 *lc = l->get<cnst2>();
+				const cnst2 *rc = r->get<cnst2>();
+				if (!lc || !rc)
+					return l == p.left && r == p.right ? f
+					     : cmp(move(l), p.cmp, move(r));
+				bool v = do_cmp(to_Q(lc->value), p.cmp, to_Q(rc->value));
+				return v ? true2 : false2;
+			},
+			[&](const lbop2 &b) {
+				vec<sptr<form2>> args;
+				for (const sptr<form2> &a : b.args) {
+					sptr<form2> f = cnst_fold(a);
+					if (*f == *true2) {
+						if (b.op == lbop2::OR)
+							return true2;
+						continue;
+					}
+					if (*f == *false2) {
+						if (b.op == lbop2::AND)
+							return false2;
+						continue;
+					}
+					args.emplace_back(move(f));
+				}
+				return args == b.args ? f : make2f(lbop2 { b.op, move(args) });
+			},
+			[&](const lneg2 &n) {
+				sptr<form2> o = cnst_fold(n.arg);
+				if (*o == *true2)
+					return false2;
+				if (*o == *false2)
+					return true2;
+				return o == n.arg ? f : neg(move(o));
+			}
+			)).first;
+		}
+		return it->second;
+	}
+
+	sptr<term2> cnst_fold(const sptr<term2> &e)
+	{
+		auto it = ts.find(e);
+		if (it == ts.end())
+		{
+			it = ts.emplace(e, e->match(
+			[&](const name &n) {
+				auto it = repl.find(n.id);
+				return it == repl.end() ? e : cnst_fold(it->second);
+			},
+			[&](const cnst2 &) { return e; },
+			[&](const bop2 &b) {
+				sptr<term2> l = cnst_fold(b.left);
+				sptr<term2> r = cnst_fold(b.right);
+				const cnst2 *lc = l->get<cnst2>();
+				const cnst2 *rc = r->get<cnst2>();
+				if (!lc || !rc) {
+					if (l == b.left && r == b.right)
+						return e;
+					return make2t(bop2 { b.op, move(l), move(r) });
+				}
+				kay::Q q;
+				switch (b.op) {
+				case bop2::ADD: q = to_Q(lc->value) + to_Q(rc->value); break;
+				case bop2::SUB: q = to_Q(lc->value) - to_Q(rc->value); break;
+				case bop2::MUL: q = to_Q(lc->value) * to_Q(rc->value); break;
+				}
+				return make2t(cnst2 { move(q) });
+			},
+			[&](const uop2 &u) {
+				sptr<term2> o = cnst_fold(u.operand);
+				const cnst2 *c = o->get<cnst2>();
+				if (!c)
+					return o == u.operand ? e : make2t(uop2 { u.op, move(o) });
+				kay::Q q;
+				switch (u.op) {
+				case uop2::UADD: q = +to_Q(c->value); break;
+				case uop2::USUB: q = -to_Q(c->value); break;
+				}
+				return make2t(cnst2 { move(q) });
+			},
+			[&](const ite2 &i) {
+				sptr<form2> c = cnst_fold(i.cond);
+				sptr<term2> y = cnst_fold(i.yes);
+				sptr<term2> n = cnst_fold(i.no);
+				if (*c == *true2)
+					return y;
+				if (*c == *false2)
+					return n;
+				if (c == i.cond && y == i.yes && n == i.no)
+					return e;
+				return make2t(ite2 { move(c), move(y), move(n) });
+			}
+			)).first;
+		}
+		return it->second;
+	}
 };
 } // end anon namespace
 
 sptr<form2> smlp::subst(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 {
-	return _subst(repl).subst(f);
+	return map_graph(repl).subst(f);
 }
 
 sptr<term2> smlp::subst(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl)
 {
-	return _subst(repl).subst(e);
+	return map_graph(repl).subst(e);
 }
 
 bool smlp::is_ground(const sptr<form2> &f)
@@ -271,99 +378,12 @@ bool smlp::is_ground(const sptr<term2> &e)
 
 sptr<form2> smlp::cnst_fold(const sptr<form2> &f, const hmap<str,sptr<term2>> &repl)
 {
-	using expr2_ops::cmp;
-	return f->match(
-	[&](const prop2 &p) {
-		sptr<term2> l = cnst_fold(p.left, repl);
-		sptr<term2> r = cnst_fold(p.right, repl);
-		const cnst2 *lc = l->get<cnst2>();
-		const cnst2 *rc = r->get<cnst2>();
-		if (!lc || !rc)
-			return l == p.left && r == p.right ? f
-			     : cmp(move(l), p.cmp, move(r));
-		bool v = do_cmp(to_Q(lc->value), p.cmp, to_Q(rc->value));
-		return v ? true2 : false2;
-	},
-	[&](const lbop2 &b) {
-		vec<sptr<form2>> args;
-		for (const sptr<form2> &a : b.args) {
-			sptr<form2> f = cnst_fold(a, repl);
-			if (*f == *true2) {
-				if (b.op == lbop2::OR)
-					return true2;
-				continue;
-			}
-			if (*f == *false2) {
-				if (b.op == lbop2::AND)
-					return false2;
-				continue;
-			}
-			args.emplace_back(move(f));
-		}
-		return args == b.args ? f : make2f(lbop2 { b.op, move(args) });
-	},
-	[&](const lneg2 &n) {
-		sptr<form2> o = cnst_fold(n.arg, repl);
-		if (*o == *true2)
-			return false2;
-		if (*o == *false2)
-			return true2;
-		return o == n.arg ? f : neg(move(o));
-	}
-	);
+	return map_graph(repl).cnst_fold(f);
 }
 
 sptr<term2> smlp::cnst_fold(const sptr<term2> &e, const hmap<str,sptr<term2>> &repl)
 {
-	return e->match(
-	[&](const name &n) {
-		auto it = repl.find(n.id);
-		return it == repl.end() ? e : cnst_fold(it->second, repl);
-	},
-	[&](const cnst2 &) { return e; },
-	[&](const bop2 &b) {
-		sptr<term2> l = cnst_fold(b.left, repl);
-		sptr<term2> r = cnst_fold(b.right, repl);
-		const cnst2 *lc = l->get<cnst2>();
-		const cnst2 *rc = r->get<cnst2>();
-		if (!lc || !rc) {
-			if (l == b.left && r == b.right)
-				return e;
-			return make2t(bop2 { b.op, move(l), move(r) });
-		}
-		kay::Q q;
-		switch (b.op) {
-		case bop2::ADD: q = to_Q(lc->value) + to_Q(rc->value); break;
-		case bop2::SUB: q = to_Q(lc->value) - to_Q(rc->value); break;
-		case bop2::MUL: q = to_Q(lc->value) * to_Q(rc->value); break;
-		}
-		return make2t(cnst2 { move(q) });
-	},
-	[&](const uop2 &u) {
-		sptr<term2> o = cnst_fold(u.operand, repl);
-		const cnst2 *c = o->get<cnst2>();
-		if (!c)
-			return o == u.operand ? e : make2t(uop2 { u.op, move(o) });
-		kay::Q q;
-		switch (u.op) {
-		case uop2::UADD: q = +to_Q(c->value); break;
-		case uop2::USUB: q = -to_Q(c->value); break;
-		}
-		return make2t(cnst2 { move(q) });
-	},
-	[&](const ite2 &i) {
-		sptr<form2> c = cnst_fold(i.cond, repl);
-		sptr<term2> y = cnst_fold(i.yes, repl);
-		sptr<term2> n = cnst_fold(i.no, repl);
-		if (*c == *true2)
-			return y;
-		if (*c == *false2)
-			return n;
-		if (c == i.cond && y == i.yes && n == i.no)
-			return e;
-		return make2t(ite2 { move(c), move(y), move(n) });
-	}
-	);
+	return map_graph(repl).cnst_fold(e);
 }
 
 bool smlp::is_nonlinear(const sptr<form2> &f)
