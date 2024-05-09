@@ -26,10 +26,7 @@ class SmlpOptimize:
         # as a dict to be reported as json file and as df to be reported as csv file.
         self.best_config_dict = {}
         self.best_config_df = None
-        
-        self._sat_thresholds = None
-        self._DEF_SAT_THRESHOLDS = True
-        
+                
         # solver options
         #self._DEF_DELTA = 0.01 
         self._DEF_EPSILON = 0.05 
@@ -45,7 +42,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_NAMES = None
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
-        self._DEF_FRACTION_PRECISION:int  = 64
+        self._DEF_FRACTION_PRECISION:int = 64
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:
@@ -101,11 +98,7 @@ class SmlpOptimize:
                 'help': 'Should solver problem instance vacuity check be performed? ' + 
                     'Vacuity checks whether the constraints are consistent and therefore at least ' +
                     'one satisfiable assignment exist to solver constraints. Relevant in "verify", "query", ' +
-                    '"optimize" and "optsyn" modes [default: ' + str(self._DEF_VACUITY_CHECK) + ']'},
-            'sat_thresholds': {'abbr':'sat_thresh', 'default': self._DEF_SAT_THRESHOLDS, 'type':str_to_bool,
-                'help': 'Should the single objective optimization algorithm use the value of the objective in ' + 
-                    'the SAT assignmenes in order to make the binary search for the optimum more efficient? ' +
-                    'It is relevant in "optimize" and "optsyn" modes [default: ' + str(self._DEF_SAT_THRESHOLDS) + ']'}
+                    '"optimize" and "optsyn" modes [default: ' + str(self._DEF_VACUITY_CHECK) + ']'}
         }
         
         # initialize the fields in the more status dictionary mode_status_dict as unknown/running
@@ -238,7 +231,7 @@ class SmlpOptimize:
             scale_objectives:bool, orig_objv_name:str, objv_bounds:dict, call_info=None, sat_approx=False, sat_precision=64, save_trace=False,
             l0=None, u0=None, l=(-np.inf), u=np.inf):
         self._opt_logger.info('Optimize single objective ' + str(objv_name) + ': Start')
-        self._opt_tracer.info('single_objective,{},{},{},{},{}'.format(str(objv_name),str(u0),str(l0),str(u),str(l)))
+        self._opt_tracer.info('single_objective_u0_l0_u_l, {} : {} : {} : {} : {}'.format(str(objv_name),str(u0),str(l0),str(u),str(l))); print('objv_expr', objv_expr, 'objv_term', objv_term)
         #print('l0', l0, 'u0', u0, 'l', l, 'u', u)
         #TODO !!!: we assume objectives were scaled to [0,1] and l0 and u0 are initialized to 0 and 1 respectively
         #assert scale_objectives 
@@ -271,13 +264,13 @@ class SmlpOptimize:
             quer_name = objv_name + '_' + str(T)
             quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
             #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
-            self._opt_tracer.info('u0_l0_u_l_T,{},{},{},{},{}'.format(str(u0),str(l0),str(u),str(l),str(T)))
+            self._opt_tracer.info('objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
             quer_res = self._queryInst.query_condition(
                 True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision); #print('quer_res', quer_res) 
             stable_witness_status = quer_res['query_status']
             stable_witness_terms = quer_res['witness']
-            #print('quer_res', quer_res)
+            
             if stable_witness_status == 'UNSAT':
                 assert T <= u
                 self._opt_logger.info('Decreasing threshold upper bound for objective ' + str(objv_name) + ' from ' + str(u) + ' to ' + str(T))
@@ -287,20 +280,23 @@ class SmlpOptimize:
                 update_progress_report = False
                 if l != -np.inf:
                     update_progress_report = True
-
+                #print('objv_term', objv_term, flush=True); print('stable_witness_terms', stable_witness_terms, flush=True)
                 l_prev = l # save the value of l, it is for reporting only.
+                #if objv_expr is not None: # the objective is not a symbolic max_min term, we may need its value, at least to see search progress
                 objv_witn_val_term = smlp.subst(objv_term, stable_witness_terms); #print('objv_witn_val_term', objv_witn_val_term)
-                if self._sat_thresholds:
-                    objv_witn_val = self._smlpTermsInst.ground_smlp_expr_to_value(objv_witn_val_term, sat_approx, sat_precision)
-                    assert objv_witn_val >= T
-                    l = objv_witn_val
-                else:
-                    l = T
+                #using objective values as lower bounds is not sound since objective value in sat model is the ceneter-point value 
+                # and the objective's value is not guaranteed to be a lower bound in entire stability region
+                #objv_witn_val = self._smlpTermsInst.ground_smlp_expr_to_value(objv_witn_val_term, sat_approx, sat_precision)
+                #assert objv_witn_val >= T
+                #l = objv_witn_val
+                l = T
                 self._opt_logger.info('Increasing threshold lower bound for objective ' + str(objv_name) + ' from ' + str(l_prev) + ' to ' + str(l))
+                #if objv_expr is not None:
                 stable_witness_terms[objv_name] = objv_witn_val_term
                 if call_info is not None and call_info['update_thresholds'] and update_progress_report:
                     witness_vals_dict = self._smlpTermsInst.witness_term_to_const(stable_witness_terms, sat_approx,  
                         sat_precision); #print('witness_vals_dict', witness_vals_dict)
+                    #if objv_name in witness_vals_dict:
                     del witness_vals_dict[objv_name]; #print('witness_vals_dict after del', witness_vals_dict)
                     #print('call_info', call_info, 'iter', iter_count)
                     s = call_info['objv_thresholds']
@@ -318,12 +314,13 @@ class SmlpOptimize:
                     objectives_unscaler_terms_dict = self._scalerTermsInst.feature_unscaler_terms(objv_bounds, [orig_objv_name])
                     # substitute scaled objective variables with scaled objective terms
                     # in original objective terms within objectives_unscaler_terms_dict
-                    orig_objv_const_term = smlp.subst(objectives_unscaler_terms_dict[orig_objv_name], #objv_term, 
-                        {self._scalerTermsInst._scaled_name(orig_objv_name): objv_witn_val_term})
-                    #print('orig_objv_const_term', orig_objv_const_term)
-                    objv_name_unscaled = self._scalerTermsInst._unscaled_name(objv_name)
-                    if objv_name_unscaled in self.objv_names:
-                        stable_witness_terms[objv_name_unscaled] = orig_objv_const_term 
+                    if objv_expr is not None:
+                        orig_objv_const_term = smlp.subst(objectives_unscaler_terms_dict[orig_objv_name], #objv_term, 
+                            {self._scalerTermsInst._scaled_name(orig_objv_name): objv_witn_val_term})
+                        #print('orig_objv_const_term', orig_objv_const_term)
+                        objv_name_unscaled = self._scalerTermsInst._unscaled_name(objv_name)
+                        if objv_name_unscaled in self.objv_names:
+                            stable_witness_terms[objv_name_unscaled] = orig_objv_const_term 
                     if l not in [np.inf, -np.inf]:
                         unscaled_threshold_lo = self._scalerTermsInst.unscale_constant_term(objv_bounds, orig_objv_name, l)
                         #print('unscaled_threshold_lo: l', l, 'unsc', unscaled_threshold_lo)
@@ -342,8 +339,10 @@ class SmlpOptimize:
                         stable_witness_terms['threshold_up'] = smlp.Cnst(u)
                 stable_witness_terms['max_in_data'] = smlp.Cnst(objv_bounds[orig_objv_name]['max'])
                 stable_witness_terms['min_in_data'] = smlp.Cnst(objv_bounds[orig_objv_name]['min'])
+                #print('stable_witness_terms', stable_witness_terms)
                 stable_witness_vals = self._smlpTermsInst.witness_term_to_const(
                     stable_witness_terms, sat_approx, sat_precision)
+                
                 #print('adding to P', (stable_witness_vals, stable_witness_vals[objv_name]))
                 #P.append((stable_witness_vals, stable_witness_vals[objv_name]))
                 #if save_trace or l + epsilon > u:
@@ -550,7 +549,7 @@ class SmlpOptimize:
                 assert objv_names[i] not in self.best_config_dict[key_label]
                 # objective's value in SAT model/assignment must be greater or equal to the objective's 
                 # threshold in s_origin (values of objectives in the SAT model are in original scale, 
-                # just like values of moel interface variables -- inputs, knobs, responses).
+                # just like values of model interface variables -- inputs, knobs, responses).
                 #print(s_origin[i],  objv_vals_dict[objv_names[i]])
                 #assert objv_vals_dict[objv_names[i]] >= s_origin[i]
                 self.best_config_dict[key_label][objv_names[i]] = {
@@ -795,14 +794,13 @@ class SmlpOptimize:
             objv_names:list[str], objv_exprs, pareto:bool, #asrt_names:list[str], asrt_exprs, 
             quer_names:list[str], quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, sat_thresholds:bool, 
+            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,  
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self.objv_names = objv_names
         self.objv_exprs = objv_exprs
         self.feat_names = feat_names
         self.resp_names = resp_names
         self.syst_expr_dict = syst_expr_dict
-        self._sat_thresholds = sat_thresholds
         
         # output to user initial values of mode status
         with open(self.optimization_results_file+'.json', 'w') as f:
@@ -860,14 +858,13 @@ class SmlpOptimize:
     def smlp_optsyn(self, syst_expr_dict:dict, algo, model, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
             objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, sat_thresholds:bool,
+            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self.objv_names = objv_names
         self.objv_exprs = objv_exprs
         self.feat_names = feat_names
         self.resp_names = resp_names
         self.syst_expr_dict = syst_expr_dict
-        self._sat_thresholds = sat_thresholds
         
         domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = \
         self._modelTermsInst.create_model_exploration_base_components(

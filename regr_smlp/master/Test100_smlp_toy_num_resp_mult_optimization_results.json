@@ -8,8 +8,8 @@
 	},
 	"objv2": {
 		"value_in_config": -4.5,
-		"threshold_scaled": 0.3333333333333333,
-		"threshold": -4.5,
+		"threshold_scaled": 0.3125,
+		"threshold": -4.625,
 		"max_in_data": -0.5,
 		"min_in_data": -6.5
 	},

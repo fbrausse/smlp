@@ -317,3 +317,42 @@ def get_expression_variables(expression):
             variables.append(node.id)
     return [v for v in set(variables) if v not in vars(builtins)]
 
+'''
+code to control caching dynamiccally
+import functools
+import smlp
+
+def conditional_cache(use_cache):
+    def decorator(func):
+        if use_cache:
+            return functools.cache(func)
+        else:
+            return func
+    return decorator
+
+class MyClass:
+    def __init__(self, use_cache=True):
+        self.use_cache = use_cache
+
+    @property
+    def smlp_true(self):
+        decorator = conditional_cache(self.use_cache)
+        return decorator(lambda: smlp.true)()
+
+    @property
+    def smlp_false(self):
+        decorator = conditional_cache(self.use_cache)
+        return decorator(lambda: smlp.false)()
+
+# Example usage
+# Enable caching
+my_instance = MyClass(use_cache=True)
+result_true = my_instance.smlp_true
+result_false = my_instance.smlp_false
+
+# Disable caching
+my_instance.use_cache = False
+# Now, the properties will not use cache
+
+'''
+

@@ -186,173 +186,264 @@ smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-2 <-> (let ((
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -inf to -0.022943015285783935
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -inf to -2
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.011471507642891968 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 826609240734497) 72057594037927936)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-1.0 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (- 1)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from 0 to -0.011471507642891968
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -2 to -1.0
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.01720726146433795 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 2479827722203491) 144115188075855872)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-1.000000', 'objv2': '-1.000000'}
+    Original  scale: {'objv1': '-10.220700', 'objv2': '-100.213566'}
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.011471507642891968 to -0.01720726146433795
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.5 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 2)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.020075138375060943 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 5786264685141479) 288230376151711744)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -1.0 to -0.5
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.01720726146433795 to -0.020075138375060943
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.500000', 'objv2': '-0.500000'}
+    Original  scale: {'objv1': '-4.990350', 'objv2': '-49.569183'}
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02150907683042244 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 774946163188591) 36028797018963968)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.25 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 4)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.020075138375060943 to -0.02150907683042244
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022226046058103188 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 100097212745193) 4503599627370496)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.5 to -0.25
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.250000', 'objv2': '-0.250000'}
+    Original  scale: {'objv1': '-2.375175', 'objv2': '-24.246992'}
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02150907683042244 to -0.022226046058103188
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022584530671943562 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1627386942696041) 72057594037927936)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.125 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 8)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022226046058103188 to -0.022584530671943562
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.25 to -0.125
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02276377297886375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3280605424165035) 144115188075855872)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.125000', 'objv2': '-0.125000'}
+    Original  scale: {'objv1': '-1.067587', 'objv2': '-11.585896'}
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022584530671943562 to -0.02276377297886375
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.0625 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 16)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022853394132323842 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 6587042387103023) 288230376151711744)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.125 to -0.0625
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02276377297886375 to -0.022853394132323842
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.062500', 'objv2': '-0.062500'}
+    Original  scale: {'objv1': '-0.413794', 'objv2': '-5.255348'}
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02289820470905389 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1649989539122375) 72057594037927936)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.03125 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 32)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022853394132323842 to -0.02289820470905389
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022920609997418913 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3303208020591369) 144115188075855872)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.0625 to -0.03125
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.031250', 'objv2': '-0.031250'}
+    Original  scale: {'objv1': '-0.086897', 'objv2': '-2.090074'}
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02289820470905389 to -0.022920609997418913
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022931812641601424 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 6609644983529357) 288230376151711744)) (and (<= y2 0) (<= y2 0)))))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022920609997418913 to -0.022931812641601424
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022937413963692678 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3305629727351333) 144115188075855872)) (and (<= y2 0) (<= y2 0)))))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022931812641601424 to -0.022937413963692678
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022940214624738307 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 6612066690289321) 288230376151711744)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.015625 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1) 64)) (and (<= y2 0) (<= y2 0)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022937413963692678 to -0.022940214624738307
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from 0 to -0.015625
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294161495526112 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 826558788510331) 36028797018963968)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.0234375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3) 128)) (and (<= y2 0) (<= y2 0)))))
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022940214624738307 to -0.02294161495526112
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.03125 to -0.0234375
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022942315120522527 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 413292007311207) 18014398509481984)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.023438', 'objv2': '-0.023438'}
+    Original  scale: {'objv1': '-0.005173', 'objv2': '-1.298755'}
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02294161495526112 to -0.022942315120522527
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294266520315323 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1653193255356911) 72057594037927936)) (and (<= y2 0) (<= y2 0)))))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022942315120522527 to -0.02294266520315323
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022942840244468583 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3306411736825905) 144115188075855872)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.01953125 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 5) 256)) (and (<= y2 0) (<= y2 0)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02294266520315323 to -0.022942840244468583
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.015625 to -0.01953125
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294292776512626 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 6612848699763893) 288230376151711744)) (and (<= y2 0) (<= y2 0)))))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022942840244468583 to -0.02294292776512626
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022942971525455096 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3306430656409967) 144115188075855872)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.021484375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 11) 512)) (and (<= y2 0) (<= y2 0)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02294292776512626 to -0.022942971525455096
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.01953125 to -0.021484375
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022942993405619515 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 6612867619347955) 288230376151711744)) (and (<= y2 0) (<= y2 0)))))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022942971525455096 to -0.022942993405619515
-
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022943004345701727 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3306435386305983) 144115188075855872)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.0224609375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 23) 1024)) (and (<= y2 0) (<= y2 0)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022942993405619515 to -0.022943004345701727
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.021484375 to -0.0224609375
 
-smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294300981574283 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 6612872349243971) 288230376151711744)) (and (<= y2 0) (<= y2 0)))))
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294921875 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 47) 2048)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.0234375 to -0.02294921875
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022949', 'objv2': '-0.022949'}
+    Original  scale: {'objv1': '-0.000065', 'objv2': '-1.249298'}
+
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022705078125 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 93) 4096)) (and (<= y2 0) (<= y2 0)))))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022943004345701727 to -0.02294300981574283
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.0224609375 to -0.022705078125
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.0228271484375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 187) 8192)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022705078125 to -0.0228271484375
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02288818359375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 375) 16384)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.0228271484375 to -0.02288818359375
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022918701171875 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 751) 32768)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02288818359375 to -0.022918701171875
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.0229339599609375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1503) 65536)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022918701171875 to -0.0229339599609375
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294158935546875 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3007) 131072)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.0229339599609375 to -0.02294158935546875
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022945404052734375 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 6015) 262144)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.02294921875 to -0.022945404052734375
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022945', 'objv2': '-0.022945'}
+    Original  scale: {'objv1': '-0.000025', 'objv2': '-1.248912'}
+
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022943496704101562 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 12029) 524288)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.022945404052734375 to -0.022943496704101562
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.022943'}
+    Original  scale: {'objv1': '-0.000005', 'objv2': '-1.248718'}
+
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022942543029785156 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 24057) 1048576)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02294158935546875 to -0.022942543029785156
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294301986694336 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 48115) 2097152)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled_objv2_scaled from -0.022943496704101562 to -0.02294301986694336
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.022943'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-1.248670'}
+
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022942781448364258 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 96229) 4194304)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022942543029785156 to -0.022942781448364258
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294290065765381 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 192459) 8388608)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022942781448364258 to -0.02294290065765381
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022942960262298584 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 384919) 16777216)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02294290065765381 to -0.022942960262298584
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.02294299006462097 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 769839) 33554432)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022942960262298584 to -0.02294299006462097
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022943004965782166 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 1539679) 67108864)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.02294299006462097 to -0.022943004965782166
+
+smlp_logger - INFO - Querying condition objv1_scaled_objv2_scaled_-0.022943012416362762 <-> (let ((|:0| (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))))) (let ((|:1| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (and (>= (ite (< |:0| |:1|) |:0| |:1|) (/ (- 3079359) 134217728)) (and (<= y2 0) (<= y2 0)))))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled_objv2_scaled from -0.022943004965782166 to -0.022943012416362762
 
 smlp_logger - INFO - Optimize single objective objv1_scaled_objv2_scaled: End
 
 smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
     Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.022943'}
-    Original  scale: {'objv1': '0.000000', 'objv2': '-1.248670'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-1.248670'}
 
 
-smlp_logger - INFO - Checking whether to fix objective 0 at threshold -0.022943015285783935...
+smlp_logger - INFO - Checking whether to fix objective 0 at threshold -0.02294301986694336...
 
 
-smlp_logger - INFO - Querying condition thresholds_-0.022943005285783934_-0.022943015285783935_check <-> True
+smlp_logger - INFO - Querying condition thresholds_-0.022943009866943358_-0.02294301986694336_check <-> True
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Fixing objective 0 at threshold -0.022943015285783935...
+smlp_logger - INFO - Fixing objective 0 at threshold -0.02294301986694336...
 
 
-smlp_logger - INFO - Checking whether to fix objective 1 at threshold -0.022943015285783935...
+smlp_logger - INFO - Checking whether to fix objective 1 at threshold -0.02294301986694336...
 
 
-smlp_logger - INFO - Querying condition thresholds_-0.022943015285783935_-0.022943005285783934_check <-> True
+smlp_logger - INFO - Querying condition thresholds_-0.02294301986694336_-0.022943009866943358_check <-> True
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Not fixing objective 1 at threshold -0.022943015285783935...
+smlp_logger - INFO - Not fixing objective 1 at threshold -0.02294301986694336...
 
 
-smlp_logger - INFO - Lower bounds of objectives ['objv2'] can be raised to threshold -0.022943005285783934...
+smlp_logger - INFO - Lower bounds of objectives ['objv2'] can be raised to threshold -0.022943009866943358...
 
 
 smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
     Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.022943'}
-    Original  scale: {'objv1': '0.000000', 'objv2': '-1.248669'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-1.248669'}
 
 
 smlp_logger - INFO - Optimize single objective objv2_scaled: Start
@@ -363,177 +454,233 @@ smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
 smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from inf to 1
 
-smlp_logger - INFO - Querying condition objv2_scaled_0.488528497357108 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 550034189664335 1125899906842624)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_0.48852849506652835 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 8800546993365945 18014398509481984)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 1 to 0.488528497357108
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 1 to 0.48852849506652835
 
-smlp_logger - INFO - Querying condition objv2_scaled_0.23279274603566205 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 8387242594406097 36028797018963968)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.488528497357108 to 0.23279274603566205
-
-smlp_logger - INFO - Querying condition objv2_scaled_0.10492487037493906 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 3780316856979785 36028797018963968)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_0.2327927425997925 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 4193621235307925 18014398509481984)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.23279274603566205 to 0.10492487037493906
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.48852849506652835 to 0.2327927425997925
 
-smlp_logger - INFO - Querying condition objv2_scaled_0.04099093254457756 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 1476853988266629 36028797018963968)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.10492487037493906 to 0.04099093254457756
-
-smlp_logger - INFO - Querying condition objv2_scaled_0.009023963629396812 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 2600980431280409 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_0.10492486636642456 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 1890158356278915 18014398509481984)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.04099093254457756 to 0.009023963629396812
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.2327927425997925 to 0.10492486636642456
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.006959520828193561 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 4011890612291805) 576460752303423488)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_0.0409909282497406 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 369213458382205 9007199254740992)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.009023963629396812 to -0.006959520828193561
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.10492486636642456 to 0.0409909282497406
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.014951263056988746 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 2154704087429529) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_0.00902395919139862 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ 2600979152114521 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.0409909282497406 to 0.00902395919139862
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.0069595253377723685 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 4011893211886997) 576460752303423488)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0.00902395919139862 to -0.0069595253377723685
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.014951267602357862 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1077352371243127) 72057594037927936)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.022943005285783934 to -0.010615194948015235
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.022943009866943358 to -0.014951267602357862
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.014951'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.439195'}
+
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010955396470065114 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3157678045458003) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.014951267602357862 to -0.010955396470065114
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010955'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.034459'}
+
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.008957460903918742 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 2581812325700751) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.0069595253377723685 to -0.008957460903918742
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.009956428686991928 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 2869745185579377) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.008957460903918742 to -0.009956428686991928
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010455912578528521 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1506855807759345) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.009956428686991928 to -0.010455912578528521
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010705654524296818 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 6171389660976693) 576460752303423488)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010955396470065114 to -0.010705654524296818
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010706'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.009163'}
+
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010580783551412669 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1524851611501759) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010455912578528521 to -0.010580783551412669
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010643219037854743 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 766924756686483) 72057594037927936)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010705654524296818 to -0.010643219037854743
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010643'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.002839'}
+
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010612001294633706 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3058701124874725) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010580783551412669 to -0.010612001294633706
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010627610166244224 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 6126400151620657) 576460752303423488)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010643219037854743 to -0.010627610166244224
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010628'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.001258'}
+
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010619805730438966 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3060950600342527) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010627610166244224 to -0.010619805730438966
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010620'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000467'}
+
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615903512536336 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1529912931304313) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010619805730438966 to -0.010615903512536336
+
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010616'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000072'}
+
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.01061395240358502 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 6118526987483351) 576460752303423488)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010612001294633706 to -0.01061395240358502
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010614927958060679 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3059544678175151) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.01061395240358502 to -0.010614927958060679
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615415735298507 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 6119370540783777) 576460752303423488)) (and (<= y2 0) (<= y2 0)))
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010615903512536336 to -0.010615415735298507
 
 smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
     Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010615'}
-    Original  scale: {'objv1': '0.000000', 'objv2': '0.000000'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000022'}
 
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.008787357888104398 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1266391734734021) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.006959520828193561 to -0.008787357888104398
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.009701276418059818 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 349525318891139) 36028797018963968)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615171846679594 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 11951620993295) 1125899906842624)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.008787357888104398 to -0.009701276418059818
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010614927958060679 to -0.010615171846679594
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010158235683037527 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 2927912091959647) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_-0.01061529379098905 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 382456265292213) 36028797018963968)) (and (<= y2 0) (<= y2 0)))
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.009701276418059818 to -0.010158235683037527
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010615415735298507 to -0.01061529379098905
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.01038671531552638 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1496883431187457) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010615'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000010'}
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010158235683037527 to -0.01038671531552638
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615232818834322 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 764908137077653) 72057594037927936)) (and (<= y2 0) (<= y2 0)))
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010500955131770809 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 756673561895637) 72057594037927936)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.01061529379098905 to -0.010615232818834322
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.01038671531552638 to -0.010500955131770809
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010615'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000004'}
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010558075039893023 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3043157940186365) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615202332756958 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1529811880648533) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010500955131770809 to -0.010558075039893023
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010586634993954128 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3051389786488273) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010615232818834322 to -0.010615202332756958
 
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010615'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000001'}
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010558075039893023 to -0.010586634993954128
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010600914970984681 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3055505709639227) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010586634993954128 to -0.010600914970984681
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010608054959499957 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 191097729450919) 18014398509481984)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615187089718276 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3059619367790293) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010600914970984681 to -0.010608054959499957
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615171846679594 to -0.010615187089718276
 
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010611624953757597 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3058592652002443) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010608054959499957 to -0.010611624953757597
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010613409950886415 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 382388392799539) 36028797018963968)) (and (<= y2 0) (<= y2 0)))
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615194711237617 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 6119243129087359) 576460752303423488)) (and (<= y2 0) (<= y2 0)))
 
 smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
 
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010611624953757597 to -0.010613409950886415
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010614302449450826 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3059364387593247) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010613409950886415 to -0.010614302449450826
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.01061474869873303 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 1529746505095857) 144115188075855872)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010614302449450826 to -0.01061474869873303
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010614971823374134 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 764889330372737) 72057594037927936)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.01061474869873303 to -0.010614971823374134
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010615083385694685 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3059589477140565) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010614971823374134 to -0.010615083385694685
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.01061513916685496 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3059605554965373) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615083385694685 to -0.01061513916685496
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010615167057435097 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3059613593877777) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.01061513916685496 to -0.010615167057435097
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.010615181002725165 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 3059617613333979) 288230376151711744)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615167057435097 to -0.010615181002725165
-
-smlp_logger - INFO - Querying condition objv2_scaled_-0.0106151879753702 <-> (and (>= (* (/ 70368744177664 7127563281724833) (- (* y1 y2) (/ 2421135159674379 2251799813685248))) (/ (- 47806556610345) 4503599627370496)) (and (<= y2 0) (<= y2 0)))
-
-smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
-
-smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615181002725165 to -0.0106151879753702
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615187089718276 to -0.010615194711237617
 
 smlp_logger - INFO - Optimize single objective objv2_scaled: End
 
 smlp_logger - INFO - Pareto optimization in progress with objectives thresholds: 
     Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010615'}
-    Original  scale: {'objv1': '0.000000', 'objv2': '0.000000'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000001'}
 
 
 smlp_logger - INFO - Pareto optimization completed with objectives thresholds: 
     Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010615'}
-    Original  scale: {'objv1': '0.000000', 'objv2': '0.000000'}
+    Original  scale: {'objv1': '-0.000000', 'objv2': '-0.000001'}
 
 
 smlp_logger - INFO - Pareto optimization: End

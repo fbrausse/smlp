@@ -112,7 +112,6 @@
     "rf_sklearn_verbose": 0,
     "rf_sklearn_warm_start": false,
     "sample_weights_coef": 0,
-    "sat_thresholds": true,
     "save_configuration": true,
     "save_model": "false",
     "save_model_rerun_configuration": true,

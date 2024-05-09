@@ -95,7 +95,7 @@ class SmlpQuery:
 
     def find_candidate(self, solver):
         #res = solver.check()
-        res = self._modelTermsInst.smlp_solver_check(solver, 'ca')
+        res = self._modelTermsInst.smlp_solver_check(solver, 'ca', self._lemma_precision)
         if isinstance(res, smlp.unknown):
             return None
         else:
@@ -170,7 +170,7 @@ class SmlpQuery:
         solver.add(theta); #print('adding theta', theta)
         solver.add(alpha); #print('adding alpha', alpha)
         solver.add(self._smlpTermsInst.smlp_not(query)); #print('adding negated quert', query)
-        return self._modelTermsInst.smlp_solver_check(solver, 'ce')
+        return self._modelTermsInst.smlp_solver_check(solver, 'ce', self._lemma_precision)
         #return solver.check()
     
     # Enhancement !!!: at least add here the delta condition
@@ -201,7 +201,7 @@ class SmlpQuery:
             #candidate_solver.add(smlp.Var(var) == smlp.Cnst(val))
             candidate_solver.add(self._smlpTermsInst.smlp_eq(smlp.Var(var), smlp.Cnst(val)))
         
-        candidate_check_res = self._modelTermsInst.smlp_solver_check(candidate_solver, 'ca') # candidate_solver.check() 
+        candidate_check_res = self._modelTermsInst.smlp_solver_check(candidate_solver, 'ca')
         if isinstance(candidate_check_res, smlp.sat):
             cond_feasible = True
             if universal:
@@ -530,23 +530,23 @@ class SmlpQuery:
         self._query_tracer.info('{},{}'.format('synthesis' if universal else 'query', str(quer_name))) #, str(quer_expr) ,{}
         use_approxiamted_fractions = self._lemma_precision != 0
         assert self._lemma_precision >= 0 and isinstance(self._lemma_precision, int)
-        approx_ca_models = {} # save rounded models to check whether rounded models occure repeaedly
+        approx_ca_models = {} # save rounded ca models to check whether rounded models occure repeaedly
+        approx_ce_models = {} # save rounded ce models to check whether rounded models occure repeaedly
         while True:
             # solve Ex. eta x /\ Ay. theta x y -> alpha y -> (beta y /\ query)
-            print('searching for a candidate')
+            print('searching for a candidate', flush=True)
             
             ca = self.find_candidate(candidate_solver)
             if isinstance(ca, smlp.sat):
-                print('candidate found -- checking stability')
+                print('candidate found -- checking stability', flush=True)
                 #print('ca', ca.model)
                 if use_approxiamted_fractions:
-                    ca_model_approx = self._smlpTermsInst.approximate_witness_term(ca.model, self._lemma_precision, approximate=False, precision=64, value_type=float)
-                    #print('ca_model_approx', ca_model_approx)
+                    ca_model_approx = self._smlpTermsInst.approximate_witness_term(ca.model, self._lemma_precision)
+                    #print('ca_model_approx -------------', ca_model_approx)
                     knob_vals = [v for k,v in ca_model_approx.items() if k in theta_radii_dict]; #print('knob_vals', knob_vals)
-                    #h = hash(str(list(ca_model_approx.values()))); print('h', h)
-                    h = hash(str(knob_vals)); print('h', h) 
+                    h = hash(str(knob_vals))
                     if h in approx_ca_models:
-                        #print('hit!!!')
+                        #print('hit !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
                         approx_ca_models[h] = approx_ca_models[h] + 1
                         #self._query_tracer.info('hits,{}'.format(str(sum(list(approx_ca_models.values())))))
                     else:
@@ -560,14 +560,23 @@ class SmlpQuery:
                     ce = self.find_candidate_counter_example(universal, domain, ca.model, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
                 if isinstance(ce, smlp.sat):
-                    print('candidate not stable -- continue search')
-                    cem = ce.model.copy(); #print('cem', cem)
-                    # drop Assignements to reponses from ce
+                    print('candidate not stable -- continue search', flush=True)
+                    cem = ce.model.copy(); #print('ce model', cem)
+                    # drop Assignements to responses from ce
                     for var in ce.model.keys():
                         if var in model_full_term_dict.keys():
                             del cem[var]
                     if use_approxiamted_fractions:
-                        ce_model_approx = self._smlpTermsInst.approximate_witness_term(ce.model, self._lemma_precision, approximate=False, precision=64, value_type=float)
+                        ce_model_approx = self._smlpTermsInst.approximate_witness_term(cem, self._lemma_precision)
+                        #print('ce_model_approx ++++++++++', ce_model_approx)
+                        knob_vals = [v for k,v in ce_model_approx.items() if k in theta_radii_dict]; #print('knob_vals', knob_vals)
+                        h = hash(str(knob_vals))
+                        if h in approx_ce_models:
+                            #print('hit ??????????????????????????????????????')
+                            approx_ce_models[h] = approx_ce_models[h] + 1
+                            #self._query_tracer.info('hits,{}'.format(str(sum(list(approx_ce_models.values())))))
+                        else:
+                            approx_ce_models[h] = 0
                         #print('ce_model_approx', ce_model_approx)
                         lemma = self.generalize_counter_example(ce_model_approx); #print('lemma', lemma)
                     else:
@@ -579,8 +588,7 @@ class SmlpQuery:
                     #print('candidate stable -- return candidate')
                     self._query_logger.info('Query completed with result: STABLE_SAT (satisfiable)')
                     if witn: # export witness (use numbers as values, not terms)
-                        witness_vals_dict = self._smlpTermsInst.witness_term_to_const(ca.model, sat_approx,  
-                            sat_precision)
+                        witness_vals_dict = self._smlpTermsInst.witness_term_to_const(ca.model, sat_approx, sat_precision)
                         #print('domain witness_vals_dict', witness_vals_dict)
                         # sanity check: the value of query in the sat assignment should be true
                         if quer_expr is not None:
@@ -694,7 +702,6 @@ class SmlpQuery:
             model_features_dict:dict, feat_names:list[str], resp_names:list[str], asrt_names, asrt_exprs, 
             delta:float, alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, #scale_objv:bool, 
-            sat_thresholds:bool,
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         # *_synthrsis_results.json file fields
         QUERY_FEASIBLE = 'configuration_feasible'

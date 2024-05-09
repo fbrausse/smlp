@@ -311,7 +311,7 @@ class SmlpFlows:
                     delta_dict, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, 
-                    args.sat_thresholds, args.approximate_fractions, args.fraction_precision,
+                    args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'optimize':
                 self.optInst.smlp_optimize(syst_expr_dict, args.model, model,
@@ -321,7 +321,7 @@ class SmlpFlows:
                     delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
-                    args.sat_thresholds, args.approximate_fractions, args.fraction_precision,
+                    args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'optsyn':
                 self.optInst.smlp_optsyn(syst_expr_dict, args.model, model, 
@@ -331,7 +331,7 @@ class SmlpFlows:
                     delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
-                    args.sat_thresholds, args.approximate_fractions, args.fraction_precision,
+                    args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')

@@ -1,15 +1,15 @@
 {
 	"objv1": {
 		"value_in_config": 0.0,
-		"threshold_scaled": -0.022943015285783935,
-		"threshold": 0.0,
+		"threshold_scaled": -0.02294301986694336,
+		"threshold": -4.792213439963611e-08,
 		"max_in_data": 10.7007,
 		"min_in_data": 0.24
 	},
 	"objv2": {
 		"value_in_config": 0.0,
-		"threshold_scaled": -0.010615194948015235,
-		"threshold": 0.0,
+		"threshold_scaled": -0.010615202332756958,
+		"threshold": -7.479913781693881e-07,
 		"max_in_data": 102.36396627,
 		"min_in_data": 1.0752000000000002
 	},
@@ -31,16 +31,16 @@
 		"value_in_config": -0.010615194948015235
 	},
 	"threshold_lo_scaled": {
-		"value_in_config": -0.010615194948015235
+		"value_in_config": -0.010615202332756958
 	},
 	"threshold_lo": {
-		"value_in_config": -0.010615194948015235
+		"value_in_config": -0.010615202332756958
 	},
 	"threshold_up_scaled": {
-		"value_in_config": -0.006959520828193561
+		"value_in_config": -0.010615171846679594
 	},
 	"threshold_up": {
-		"value_in_config": -0.006959520828193561
+		"value_in_config": -0.010615171846679594
 	},
 	"max_in_data": {
 		"value_in_config": 1.0
