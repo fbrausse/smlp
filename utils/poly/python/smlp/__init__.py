@@ -60,7 +60,7 @@ def Or(*args) -> form2:
 	"""
 	return libsmlp._mk_or(args)
 
-def destruct(e : form2|term2) -> dict:
+def destruct(e) -> dict:
 	"""
 	Destructure the given term2 or form2 instance `e`. The result is a dict
 	with the following entries:
