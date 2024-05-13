@@ -60,6 +60,28 @@ def Or(*args) -> form2:
 	"""
 	return libsmlp._mk_or(args)
 
+def destruct(e : form2|term2) -> dict:
+	"""
+	Destructure the given term2 or form2 instance `e`. The result is a dict
+	with the following entries:
+
+	- 'id': always, one of:
+	  - term2: 'var', 'add', 'sub', 'mul', 'uadd', 'usub', 'const', 'ite'
+	  - form2: 'prop', 'and', 'or', 'not'
+
+	- 'args': operands to this operation as a tuple (or list in case of
+	          'and' and 'or') of term2 and/or form2 objects (all except
+	          'var', 'const'),
+
+	- 'name': name of symbol ('var' only)
+
+	- 'type': type of term2 constant, one of: 'Z', 'Q', 'A' ('const' only)
+
+	- 'cmp': comparison predicate, one of: '<=', '<', '>=', '>', '==', '!='
+	         ('prop' only)
+	"""
+	return libsmlp._dt(e)
+
 def free_vars(e) -> set:
 	return set(libsmlp._free_vars(e))
 

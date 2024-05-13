@@ -85,6 +85,75 @@ static boost::python::object dt_cnst_form(sptr<form2> t)
 	return {};
 }
 
+static boost::python::dict dt_term(sptr<term2> t)
+{
+	boost::python::dict r;
+	t->match(
+	[&r](const name &n) { r["id"] = "var"; r["name"] = n.id; },
+	[&r](const bop2 &b) {
+		const char *type = nullptr;
+		switch (b.op) {
+		case bop2::ADD: type = "add"; break;
+		case bop2::SUB: type = "sub"; break;
+		case bop2::MUL: type = "mul"; break;
+		}
+		r["id"] = type;
+		r["args"] = boost::python::make_tuple(b.left, b.right);
+	},
+	[&r](const uop2 &u) {
+		const char *type = nullptr;
+		switch (u.op) {
+		case uop2::UADD: type = "uadd"; break;
+		case uop2::USUB: type = "usub"; break;
+		}
+		r["id"] = type;
+		r["args"] = boost::python::make_tuple(u.operand);
+	},
+	[&r](const cnst2 &c) {
+		r["id"] = "const";
+		r["type"] = c.value.match(
+		[](const kay::Z &) { return "Z"; },
+		[](const kay::Q &) { return "Q"; },
+		[](const A &) { return "A"; }
+		);
+	},
+	[&r](const ite2 &i) {
+		r["id"] = "ite";
+		r["args"] = boost::python::make_tuple(i.cond, i.yes, i.no);
+	}
+	);
+	return r;
+}
+
+static boost::python::dict dt_form(sptr<form2> f)
+{
+	boost::python::dict r;
+	f->match(
+	[&r](const prop2 &p) {
+		r["id"] = "prop";
+		r["cmp"] = cmp_s[p.cmp];
+		r["args"] = boost::python::make_tuple(p.left, p.right);
+	},
+	[&r](const lbop2 &b) {
+		const char *type = nullptr;
+		switch (b.op) {
+		case lbop2::AND: type = "and"; break;
+		case lbop2::OR: type = "or"; break;
+		}
+		r["id"] = type;
+		boost::python::list l;
+		for (const sptr<form2> &g : b.args)
+			l.append(g);
+		r["args"] = l;
+	},
+	[&r](const lneg2 &n) {
+		r["id"] = "not";
+		r["args"] = boost::python::make_tuple(n.arg);
+	}
+	);
+	return r;
+}
+
 static kay::Q _mk_Q_F(double d) { return kay::Q(d); }
 static boost::python::object _mk_Q_Z(str s)
 {
@@ -468,6 +537,8 @@ Note: The Python keyword 'not' is not defined for form2 expressions, use '~'."
 	def("_mk_cnst", mk_cnst);
 	def("_dt_cnst", dt_cnst_term);
 	def("_dt_cnst", dt_cnst_form);
+	def("_dt", dt_term);
+	def("_dt", dt_form);
 
 	def("Ite", mk_ite);
 	def("Var", mk_name);
