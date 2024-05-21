@@ -423,12 +423,13 @@ class SmlpData:
         constant_cols = []
         #print('df\n', df)
         for col in df.columns.tolist():
-            #print('col', col, 'df[col]', df[col]); print('df[col].dropna()', df[col].dropna())
+            #print('col', col, 'df[col]\n', df[col]); print('df[col].dropna()\n', df[col].dropna())
             unique_vals = df[col].dropna().unique(); #print('col', col, 'unique', unique_vals)
             if len(unique_vals) == 1:
                 constant_cols.append(col)
         #print('constant_cols', constant_cols, 'keep_feat', keep_feat)
         constant_cols_to_drop = [c for c in constant_cols if c not in keep_feat]
+        #print('constant_cols_to_drop', constant_cols_to_drop); assert False
         df.drop(constant_cols_to_drop, axis=1, inplace=True)
         if len(constant_cols_to_drop) > 0:
             self._data_logger.info('The following constant features have been droped from ' + str(data_name) + ' data:')

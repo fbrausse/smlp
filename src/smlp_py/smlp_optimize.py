@@ -231,7 +231,7 @@ class SmlpOptimize:
             scale_objectives:bool, orig_objv_name:str, objv_bounds:dict, call_info=None, sat_approx=False, sat_precision=64, save_trace=False,
             l0=None, u0=None, l=(-np.inf), u=np.inf):
         self._opt_logger.info('Optimize single objective ' + str(objv_name) + ': Start')
-        self._opt_tracer.info('single_objective_u0_l0_u_l, {} : {} : {} : {} : {}'.format(str(objv_name),str(u0),str(l0),str(u),str(l))); print('objv_expr', objv_expr, 'objv_term', objv_term)
+        self._opt_tracer.info('single_objective_u0_l0_u_l, {} : {} : {} : {} : {}'.format(str(objv_name),str(u0),str(l0),str(u),str(l)))
         #print('l0', l0, 'u0', u0, 'l', l, 'u', u)
         #TODO !!!: we assume objectives were scaled to [0,1] and l0 and u0 are initialized to 0 and 1 respectively
         #assert scale_objectives 
@@ -267,14 +267,51 @@ class SmlpOptimize:
             self._opt_tracer.info('objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
             quer_res = self._queryInst.query_condition(
                 True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
-                eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision); #print('quer_res', quer_res) 
+                eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision)
             stable_witness_status = quer_res['query_status']
             stable_witness_terms = quer_res['witness']
-            
             if stable_witness_status == 'UNSAT':
                 assert T <= u
                 self._opt_logger.info('Decreasing threshold upper bound for objective ' + str(objv_name) + ' from ' + str(u) + ' to ' + str(T))
                 u = T
+                #print('objv_bounds', objv_bounds)
+                # only the last value in P is used, and we want it to contain at least one element even if lower bound
+                # is not emproved within this function -- that is, stable_witness_status is never 'STABLE_SAT'. 
+                # For that reason we update P also in case stable_witness_status == 'UNSAT'. Unlike the case when
+                # stable_witness_status == 'STABLE_SAT', stable_witness_terms here will not include values of objectives
+                # or scaled objectives because these values are taken based on stable witness (stable candidate) which
+                # we don't have in this case. This fact (that stable_witness_terms does not have items with objectives
+                # or scaled objectives names) is used when this function is called from active_objectives_max_min_bounds():
+                # the latter function will extract values (scaled_)threshold_lo/up and replaces the rest by None, which 
+                # info is used to not call the reporting function report_current_thresholds() on the result of 
+                # active_objectives_max_min_bounds() (because the proven lower bound has not improved).
+                if len(P) == 0:
+                    stable_witness_terms = {}
+                    '''
+                    objectives_unscaler_terms_dict = self._scalerTermsInst.feature_unscaler_terms(objv_bounds, [orig_objv_name])
+                    # substitute scaled objective variables with scaled objective terms
+                    # in original objective terms within objectives_unscaler_terms_dict
+                    if objv_expr is not None:
+                        orig_objv_const_term = smlp.subst(objectives_unscaler_terms_dict[orig_objv_name], #objv_term, 
+                            {self._scalerTermsInst._scaled_name(orig_objv_name): objv_witn_val_term})
+                        #print('orig_objv_const_term', orig_objv_const_term)
+                        objv_name_unscaled = self._scalerTermsInst._unscaled_name(objv_name)
+                        if objv_name_unscaled in self.objv_names:
+                            stable_witness_terms[objv_name_unscaled] = orig_objv_const_term 
+                    '''
+                    if l not in [np.inf, -np.inf]:
+                        unscaled_threshold_lo = self._scalerTermsInst.unscale_constant_term(objv_bounds, orig_objv_name, l)
+                        #print('unscaled_threshold_lo: l', l, 'unsc', unscaled_threshold_lo)
+                        stable_witness_terms['threshold_lo_scaled'] = smlp.Cnst(l)
+                        stable_witness_terms['threshold_lo'] = unscaled_threshold_lo
+                    if u not in [np.inf, -np.inf]:
+                        unscaled_threshold_up = self._scalerTermsInst.unscale_constant_term(objv_bounds, orig_objv_name, u)
+                        #print('unscaled_threshold_up: l', l, 'unsc', unscaled_threshold_up)
+                        stable_witness_terms['threshold_up_scaled'] = smlp.Cnst(u)
+                        stable_witness_terms['threshold_up'] = unscaled_threshold_up
+                    stable_witness_vals = self._smlpTermsInst.witness_term_to_const(
+                        stable_witness_terms, sat_approx, sat_precision)
+                    P.append(stable_witness_vals)
             elif stable_witness_status == 'STABLE_SAT':
                 #self._opt_logger.info('Increasing threshold lower bound for objective ' + str(objv_name) + ' from ' + str(l) + ' to ' + str(T))
                 update_progress_report = False
@@ -306,7 +343,7 @@ class SmlpOptimize:
                     self.report_current_thresholds(s, witness_vals_dict, self.objv_bounds_dict, self.objv_names, self.objv_exprs, 
                         False, (call_info['global_iter'], iter_count), scale_objectives)
                 
-                # TODO !!!: could avid computing unscaled_threshold_lo and unscaled_threshold_up in case scale_objectives is True
+                # Enhancement: could avid computing unscaled_threshold_lo and unscaled_threshold_up in case scale_objectives is True
                 # and only add fields 'threshold_lo_scaled' and 'threshold_up_scaled' to stable_witness_terms
                 #print('before updating P: l0', l0, 'u0', u0, 'l', l, 'u', u)
                 if scale_objectives: 
@@ -339,7 +376,7 @@ class SmlpOptimize:
                         stable_witness_terms['threshold_up'] = smlp.Cnst(u)
                 stable_witness_terms['max_in_data'] = smlp.Cnst(objv_bounds[orig_objv_name]['max'])
                 stable_witness_terms['min_in_data'] = smlp.Cnst(objv_bounds[orig_objv_name]['min'])
-                #print('stable_witness_terms', stable_witness_terms)
+                #print('stable_witness_terms', stable_witness_terms, flush=True)
                 stable_witness_vals = self._smlpTermsInst.witness_term_to_const(
                     stable_witness_terms, sat_approx, sat_precision)
                 
@@ -471,6 +508,13 @@ class SmlpOptimize:
         c_up = r['threshold_up'] if 'threshold_up' in r else np.inf; #print('c_up', c_up)
         c_lo = r['threshold_lo']; #print('c_lo', c_lo)
         assert c_lo != np.inf
+        
+        # the known lower bound has not been updated --optimize_single_objective() couldn't 
+        # find a stable lower bound for the single objective (optimization in this function
+        # means maximizing the objective); the known upper bound could have been tightened,
+        # this info is recorded and returned as c_up.
+        if min_name not in r:
+            r = None
         return c_lo, c_up, r
     
     # Convert objectives best-so-far thresholds info from dictionary/json to table/csv format.
@@ -654,8 +698,9 @@ class SmlpOptimize:
             #print('t after joint bonds increase', t)
             assert t.count(None) == 0
             sanity_check_fixed_objv_thresholds(t, fixed_onjv_dict)
-            self.report_current_thresholds(t, witness, objv_bounds_dict, objv_names, objv_exprs, 
-                False, (call_n, 'completed'), scale_objectives)
+            if witness is not None:
+                self.report_current_thresholds(t, witness, objv_bounds_dict, objv_names, objv_exprs, 
+                    False, (call_n, 'completed'), scale_objectives)
             call_n = call_n + 1
             
             # If only a single objective remains active (not fixed), its threshold cannot be increased
@@ -703,6 +748,7 @@ class SmlpOptimize:
                     quer_res['query_status'] = 'UNSAT'
                 else:    
                     self._opt_logger.info('Checking whether to fix objective {} at threshold {}...\n'.format(str(j), str(s[j])))
+                    self._opt_tracer.info('activity check, objective {} threshold {}'.format(str(objv_names[j]), str(s[j])))
                     #print('objv_terms_dict', objv_terms_dict)
                     quer_form = smlp.true
                     for i in objv_enum:
@@ -741,6 +787,7 @@ class SmlpOptimize:
             K = K_pr
         #print('end of while loop')
         #print('s', s)
+        
         self.report_current_thresholds(s, witness, objv_bounds_dict, objv_names, objv_exprs, 
             True, (call_n, 'Final'), scale_objectives)
         

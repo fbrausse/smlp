@@ -88,6 +88,8 @@ class SmlpFlows:
         # set spec file / spec and term params
         self.modelTernaInst.set_spec_file(self.args.spec)
         self.modelTernaInst.set_compress_rules(self.args.compress_rules)
+        self.modelTernaInst.set_simplify_terms(self.args.simplify_terms)
+        #self.modelTernaInst.set_cache_terms(self.args.cache_terms)
         self.dataInst.set_spec_inst(self.specInst)
         self.specInst.set_radii(self.args.radius_absolute, self.args.radius_relative)
         self.specInst.set_deltas(self.args.delta_absolute, self.args.delta_relative)

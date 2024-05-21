@@ -54,6 +54,20 @@ def conditional_cache(func):
     else:
         # Return the original function without caching
         return func
+'''
+
+def conditional_cache(func):
+    def wrapper(self, *args, **kwargs):
+        if self._cache_terms:
+            if not hasattr(self, '_cache'):
+                self._cache = {}
+            if func not in self._cache:
+                self._cache[func] = func(self, *args, **kwargs)
+            return self._cache[func]
+        else:
+            return func(self, *args, **kwargs)
+    return wrapper
+'''
 
 # Class SmlpTerms has methods for generating terms, and classes TreeTerms, PolyTerms and NNKerasTerms are inherited
 # from it but this inheritance is probably not implemented in the best way: TODO !!!: see if that can be improved.
@@ -62,6 +76,7 @@ class SmlpTerms:
         self._smlp_terms_logger = None
         self.report_file_prefix = None
         self.model_file_prefix = None
+        #self._cache_terms = False
         
         # supported operators in ast module for expression parsing and transformation
         # https://docs.python.org/3/library/ast.html -- AST (Abstract Syntax Trees)
@@ -110,7 +125,7 @@ class SmlpTerms:
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
-
+    
     @property
     def ast_operators_smlp_map(self):
         return {
@@ -124,12 +139,15 @@ class SmlpTerms:
             ast.IfExp: self.smlp_ite
         } #self._ast_operators_smlp_map
     
+    
+    #def set_cache_terms(self, cache_terms):
+    #    self._cache_terms = cache_tems
+    
     @property
-    #@conditional_cache #
-    @functools.cache
+    @conditional_cache #@functools.cache
     def smlp_true(self):
         return smlp.true
-    
+
     @property
     @conditional_cache #@functools.cache
     def smlp_false(self):
@@ -153,14 +171,17 @@ class SmlpTerms:
     def smlp_cnst(self, const):
         return smlp.Cnst(const)
     
+    # rationals
     @conditional_cache #@functools.cache
     def smlp_q(self, const):
         return smlp.Q(const)
     
+    # reals
     @conditional_cache #@functools.cache
     def smlp_r(self, const):
         return smlp.R(const)
     
+    # logical not (logic negation)
     @conditional_cache #@functools.cache
     def smlp_not(self, form:smlp.form2):
         #res1 = ~form
@@ -168,6 +189,7 @@ class SmlpTerms:
         #assert res1 == res2
         return res2 #~form
     
+    # logical and (conjunction)
     @conditional_cache #@functools.cache
     def smlp_and(self, form1:smlp.form2, form2:smlp.form2):
         ''' test 83 gets stuck with this simplification
@@ -182,6 +204,7 @@ class SmlpTerms:
         #assert res1 == res2
         return res1 # form1 & form2
     
+    # conjunction of possibly more than two formulas
     #@functools.cache -- error: unhashable type: 'list'
     def smlp_and_multi(self, form_list:list[smlp.form2]):
         res = self.smlp_true
@@ -189,6 +212,7 @@ class SmlpTerms:
             res = form if res is self.smlp_true else self.smlp_and(res, form)
         return res
     
+    # logical or (disjunction)
     @conditional_cache #@functools.cache
     def smlp_or(self, form1:smlp.form2, form2:smlp.form2):
         res1 = op.or_(form1, form2)
@@ -196,14 +220,17 @@ class SmlpTerms:
         #assert res1 == res2
         return res1 #form1 | form2
     
+    # addition
     @conditional_cache #@functools.cache
     def smlp_add(self, term1:smlp.term2, term2:smlp.term2):
         return op.add(term1, term2)
     
+    # subtraction
     @conditional_cache #@conditional_cache #@functools.cache
     def smlp_sub(self, term1:smlp.term2, term2:smlp.term2):
         return op.sub(term1, term2)
     
+    # multiplication
     @conditional_cache #@functools.cache
     def smlp_mult(self, term1:smlp.term2, term2:smlp.term2):
         return op.mul(term1, term2)    
@@ -219,6 +246,7 @@ class SmlpTerms:
     def smlp_pow(self, term1:smlp.term2, term2:smlp.term2):
         return op.pow(term1, term2)
     
+    # equality
     @conditional_cache #@functools.cache
     def smlp_eq(self, term1:smlp.term2, term2:smlp.term2):
         res1 = op.eq(term1, term2)
@@ -226,6 +254,7 @@ class SmlpTerms:
         #assert res1 == res2
         return res1
     
+    # operator != (not equal)
     @conditional_cache #@functools.cache
     def smlp_ne(self, term1:smlp.term2, term2:smlp.term2):
         res1 = op.ne(term1, term2)
@@ -233,29 +262,64 @@ class SmlpTerms:
         #assert res1 == res2
         return res1
         
+    # operator <
     @conditional_cache #@functools.cache
     def smlp_lt(self, term1:smlp.term2, term2:smlp.term2):
         return op.lt(term1, term2)    
     
+    # operator <=
     @conditional_cache #@functools.cache
     def smlp_le(self, term1:smlp.term2, term2:smlp.term2):
         return op.le(term1, term2)
     
+    # operator >
     @conditional_cache #@functools.cache
     def smlp_gt(self, term1:smlp.term2, term2:smlp.term2):
         return op.gt(term1, term2)    
     
+    # operator >=
     @conditional_cache #@functools.cache
     def smlp_ge(self, term1:smlp.term2, term2:smlp.term2):
         return op.ge(term1, term2)
     
+    # if-thne-else operation
     @conditional_cache #@functools.cache
     def smlp_ite(self, form:smlp.form2, term1:smlp.term2, term2:smlp.term2):
         return smlp.Ite(form, term1, term2)
     
+    # this function performs substitution of variables in term2:
+    # it substitutes occurrences of the keys in subst_dict with respective values, in term2 term.
     #@functools.cache
     def smlp_subst(self, term:smlp.term2, subst_dict:dict):
         return smlp.subst(term, subst_dict)
+    
+    # simplifies a ground term to the respective constant; takes als a s
+    #@functools.cache
+    def smlp_cnst_fold(self, term:smlp.term2, subst_dict:dict):
+        return smlp.cnst_fold(term, subst_dict)
+    
+    def smlp_destruct(self, term2_or_form2): #:smlp.term2|smlp.form2
+        return smlp.destruct(term2_or_form2)
+    
+    # this function doesn't take substitutions, but in addition to whatever cnst_fold() is doing, 
+    # it simplifies arithmetics and con-/disjunctions and negations:
+    # simplify() uses the following axioms:
+    # - variables remain variables
+    # - rationals get canonicalized (that means common divisor of numerator and denominator
+    #         removed); and then: if denominator is 1, replace by integer
+    # - addition/subtraction by zero
+    # - multiplication by zero or one
+    # - negation of zero or constants get simplified (folded into the constant)
+    # - if-then-else gets simplified if condition can be simplified to a constant
+    # - comparisons between constants get simplified
+    # - (and ...) with one constant false operand
+    # - (or ...) with one true operand
+    # - empty (and) and (or)
+    # - logical negation of constants
+    #@functools.cache
+    def smlp_simplify(self, term:smlp.term2):
+        #print('term to simplify\n', term); print('result\n', smlp.simplify(term))
+        return smlp.simplify(term)
     
     # https://stackoverflow.com/questions/68390248/ast-get-the-list-of-only-the-variable-names-in-an-expression
     def get_expression_variables(self, expression):
@@ -514,6 +578,7 @@ class SmlpTerms:
     
     # Converts values in sat assignmenet (witness) from terms to python fractions using function 
     # self.ground_smlp_expr_to_value() -- see the description of that function for more detail.
+    # Can also be applied to a dictionary where values are terms.
     def witness_term_to_const(self, witness, approximate=False, precision=64):
         witness_vals_dict = {}
         for k,t in witness.items():
@@ -1264,6 +1329,8 @@ class ModelTerms(ScalerTerms):
         #self._smlpTermsInst = SmlpTerms
         self._nnKerasTermsInst = NNKerasTerms()
         
+        #self._cache_terms = False
+        
         self.report_file_prefix = None
         self.model_file_prefix = None
         self._smlp_terms_logger = None
@@ -1280,11 +1347,19 @@ class ModelTerms(ScalerTerms):
         self._SPEC_DOMAIN_RANGE_TAG = 'range'
         self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
         self._DEF_COMPRESS_RULES = True
+        self._DEF_SIMPLIFY_TERMS = False
+        #self._DEF_CACHE_TERMS = False
         self.model_term_params_dict = {
             'compress_rules': {'abbr':'compress_rules', 'default':str(self._DEF_COMPRESS_RULES), 'type':str_to_bool,
                 'help':'Should rules that represent tree branches be compressed to eliminate redundant repeated splitting ' +
                 'of ranges of model features after training tree based models, in order to build smaller model terms? ' +
-                '[default {}]'.format(str(self._DEF_COMPRESS_RULES))}
+                '[default {}]'.format(str(self._DEF_COMPRESS_RULES))},
+            'simplify_terms': {'abbr':'simplify_terms', 'default':str(self._DEF_SIMPLIFY_TERMS), 'type':str_to_bool,
+                'help':'Should terms be simplified using before building solver instance in model exploration modes? ' +
+                '[default {}]'.format(str(self._DEF_SIMPLIFY_TERMS))},
+            #'cache_terms': {'abbr':'cache_terms', 'default':str(self._DEF_CACHE_TERMS), 'type':str_to_bool,
+            #    'help':'Should terms be cached along building terms and formulas in model exploration modes? ' +
+            #    '[default {}]'.format(str(self._DEF_CACHE_TERMS))}
         }
         
     # set logger from a caller script
@@ -1320,6 +1395,12 @@ class ModelTerms(ScalerTerms):
     def set_compress_rules(self, compress_rules:bool):
         self._compress_rules = compress_rules
         self._treeTermsInst.set_compress_rules(compress_rules)
+    
+    def set_simplify_terms(self, simplify_terms:bool):
+        self._simplify_terms = simplify_terms
+    
+    #def set_cache_terms(self, cache_terms:bool):
+    #    self._cache_terms = cache_terms
     
     # file to dump tree model converted to SMLP term
     @property
@@ -1428,9 +1509,7 @@ class ModelTerms(ScalerTerms):
                 #print('model term before', model_term)
                 for feat_name, feat_term in feature_scaler_terms_dict.items():
                     #print('feat_name', feat_name, 'feat_term', feat_term, flush=True)
-                    ####model_term = smlp.subst(model_term, {feat_name: feat_term})
-                    model_term = self.smlp_subst(model_term, {feat_name: feat_term})
-                    #print('subst done', flush=True)
+                    model_term = self.smlp_cnst_fold(model_term, {feat_name: feat_term}) #self.smlp_subst
                 #print('model term after', model_term, flush=True)
                 model_term_dict[resp_name] = model_term
             #print('model_term_dict', model_term_dict, flush=True)
@@ -1445,7 +1524,7 @@ class ModelTerms(ScalerTerms):
             # in original response terms within responses_unscaler_terms_dict
             for resp_name, resp_term in responses_unscaler_terms_dict.items():
                 #print('resp_name', resp_name, resp_term, flush=True)
-                responses_unscaler_terms_dict[resp_name] = self.smlp_subst(resp_term, #smlp.subst 
+                responses_unscaler_terms_dict[resp_name] = self.smlp_cnst_fold(resp_term, #self.smlp_subst 
                     {self._scaled_name(resp_name): model_term_dict[self._scaled_name(resp_name)]}) #._scalerTermsInst ._scalerTermsInst
             #print('responses_unscaler_terms_dict full model', responses_unscaler_terms_dict, flush=True)
             model_full_term_dict = responses_unscaler_terms_dict
@@ -1509,7 +1588,7 @@ class ModelTerms(ScalerTerms):
                 #print('k', k, 'v', v, type(v)); 
                 x = list(orig_objv_terms_dict.keys())[i]; 
                 #print('x', x); print('arg', orig_objv_terms_dict[x])
-                objv_terms_dict[k] = self.smlp_subst(v, {x: orig_objv_terms_dict[x]})
+                objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]}) #self.smlp_subst
             #objv_terms_dict = scaled_objv_terms_dict
         else:
             objv_terms_dict = orig_objv_terms_dict
@@ -1854,6 +1933,20 @@ class ModelTerms(ScalerTerms):
         if not model_consistent:
             return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, True, False
 
+        if self._simplify_terms:
+            if model_full_term_dict is not None:
+                for r, m in model_full_term_dict.items():
+                    model_full_term_dict[r] = self.smlp_simplify(m)
+            if system_term_dict is not None:
+                for r, m in system_term_dict.items():
+                    system_term_dict[r] = self.smlp_simplify(m)
+            if eta is not None:
+                eta = self.smlp_simplify(eta)
+            if alpha is not None:
+                alpha = self.smlp_simplify(alpha)
+            if beta is not None:
+                beta = self.smlp_simplify(beta)
+        
         return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent
     
     # create base solver instance with model constraints, declare logic and (non/)incremental mode

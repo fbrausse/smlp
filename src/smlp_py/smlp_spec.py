@@ -425,7 +425,7 @@ class SmlpSpec:
                 knobs_without_range_and_grid.append(var_spec[self._SPEC_VARIABLE_LABEL])
         
         if len(non_constant_knobs) > 0:
-                raise Exception('Knobs ' + str(non_constant_knobs) + ' are not assigned constant values as part of specification, in "verify" mode: aborting...')
+            raise Exception('Knobs ' + str(non_constant_knobs) + ' are not assigned constant values as part of specification, in "verify" mode: aborting...')
         if len(knobs_without_range_and_grid) > 0:
             raise Exception('Knobs ' + str(knobs_without_range_and_grid) + ' have neither ranges nor grids specified, in "varify" mode: aborting...')
         return witness

@@ -123,6 +123,7 @@
     "setup_caret_fold": 0,
     "setup_caret_session_id": null,
     "setup_caret_verbose": true,
+    "simplify_terms": false,
     "solver": "z3",
     "solver_logic": "ALL",
     "solver_path": null,

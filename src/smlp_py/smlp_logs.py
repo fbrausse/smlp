@@ -71,12 +71,12 @@ class SmlpLogger:
         # create formatter and add it to the handlers
         if logger_name == 'smlp_logger':
             if log_time:
-                formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                formatter = logging.Formatter('\n%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
             else:
                 formatter = logging.Formatter('\n%(name)s - %(levelname)s - %(message)s')
         elif logger_name == 'smlp_tracer':
             if log_time:
-                formatter = logging.Formatter('%(asctime)s - %(message)s')
+                formatter = logging.Formatter('%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
             else:
                 formatter = logging.Formatter('%(message)s')
         else:
