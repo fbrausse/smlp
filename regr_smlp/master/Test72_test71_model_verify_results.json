@@ -3,13 +3,13 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"y2": 4.877608720213175,
-			"x2": 3.610503274766677,
-			"x0": 6.2645707665143435,
-			"y1": 4.898325311358719,
-			"x1": 1.0
+			"y2": 5.078784562647343,
+			"x2": 7.0,
+			"y1": 5.078988552093506,
+			"x1": 1.0,
+			"x0": 8.601911912575982
 		},
-		"assertion_feasible": false
+		"assertion_feasible": true
 	},
 	"smlp_execution": "completed",
 	"interface_consistent": "true",

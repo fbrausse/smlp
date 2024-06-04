@@ -31,34 +31,34 @@ smlp_logger - INFO - training data
 10   c19   9   5  10.0  3.0   7
 
 smlp_logger - INFO - training data after imputing missing values
-       x   p1   p2   y1   y2
-0   10.0  2.0  3.0  5.0  9.0
-1   12.0  2.0  4.0  9.0  9.0
-2   10.0  3.0  4.0  5.0  9.0
-3   11.0  2.0  6.0  5.0  5.0
-4   10.0  2.0  8.0  9.0  5.0
-5    9.0  4.0  7.0  9.0  9.0
-6    9.0  3.0  6.0  5.0  5.0
-7   10.0  3.0  4.0  5.0  5.0
-8   11.0  4.0  4.0  9.0  9.0
-9   12.0  2.0  7.0  5.0  5.0
-10  10.0  3.0  7.0  9.0  5.0
+       x   p1  p2  y1  y2
+0   10.0  2.0   3   5   9
+1   12.0  2.0   4   9   9
+2   10.0  3.0   4   5   9
+3   11.0  2.0   6   5   5
+4   10.0  2.0   8   9   5
+5    9.0  4.0   7   9   9
+6    9.0  3.0   6   5   5
+7   10.0  3.0   4   5   5
+8   11.0  4.0   4   9   9
+9   12.0  2.0   7   5   5
+10  10.0  3.0   7   9   5
 
 smlp_logger - INFO - PSG Subgroup Discovery started
 
 smlp_logger - INFO - PSG Subgroup Discovery completed
 
 smlp_logger - INFO - Ranges (subgroups) selected by PSG Subgroup Discovery algorithm for response y1:
-0    p1==2.0 AND p2==4.0
-1    p1==2.0 AND p2==8.0
-2    p2==4.0 AND x==12.0
-3                p1==4.0
-4    p1==4.0 AND p2==4.0
-5                p2==8.0
-6    p2==7.0 AND x==10.0
-7    p2==8.0 AND x==10.0
-8    p2==4.0 AND x==11.0
-9    p1==4.0 AND x==11.0
+0                  p2==8
+1      p2==8 AND x==10.0
+2      p2==7 AND x==10.0
+3      p2==4 AND x==12.0
+4      p2==4 AND x==11.0
+5                p1==4.0
+6    p1==4.0 AND x==11.0
+7      p1==4.0 AND p2==4
+8      p1==2.0 AND p2==8
+9      p1==2.0 AND p2==4
 Name: subgroup, dtype: object
 
 smlp_logger - INFO - PSG Subgroup Discovery started
@@ -66,16 +66,16 @@ smlp_logger - INFO - PSG Subgroup Discovery started
 smlp_logger - INFO - PSG Subgroup Discovery completed
 
 smlp_logger - INFO - Ranges (subgroups) selected by PSG Subgroup Discovery algorithm for response y2:
-0    p1==2.0 AND p2==3.0
-1    p1==2.0 AND p2==4.0
-2    p1==4.0 AND p2==7.0
-3     p1==4.0 AND x==9.0
-4    p1==4.0 AND x==11.0
-5     p2==7.0 AND x==9.0
-6    p2==3.0 AND x==10.0
-7                p1==4.0
-8                p2==3.0
-9    p2==4.0 AND x==11.0
+0       p2==7 AND x==9.0
+1      p2==4 AND x==11.0
+2                  p2==3
+3      p2==3 AND x==10.0
+4                p1==4.0
+5     p1==4.0 AND x==9.0
+6    p1==4.0 AND x==11.0
+7      p1==4.0 AND p2==7
+8      p1==2.0 AND p2==4
+9      p1==2.0 AND p2==3
 Name: subgroup, dtype: object
 
 smlp_logger - INFO - Running SMLP in mode "subgroups": End

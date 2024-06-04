@@ -126,7 +126,7 @@
     "simplify_terms": false,
     "solver": "z3",
     "solver_logic": "ALL",
-    "solver_path": null,
+    "solver_path": "../../../external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat",
     "spec": "../specs/smlp_toy_num_resp_noknobs_verify.spec",
     "split_test": 0.2,
     "trace_anonymize": false,

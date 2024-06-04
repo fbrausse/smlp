@@ -4,6 +4,8 @@ smlp_logger - INFO - Model exploration specification:
 
 smlp_logger - INFO - Executing run_smlp.py script: Start
 
+smlp_logger - INFO - Running SMLP in mode "verify": Start
+
 smlp_logger - INFO - Computed spec global constraint expressions:
 
 smlp_logger - INFO - Global alpha : p1==1 or p1==4 or p1==7
@@ -15,8 +17,6 @@ smlp_logger - INFO - Radii  theta : {}
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
 
 smlp_logger - INFO - Assertion asrt1: (y2**3+p2)/2<6
-
-smlp_logger - INFO - Running SMLP in mode "verify": Start
 
 smlp_logger - INFO - PREPARE DATA FOR MODELING
 
@@ -50,32 +50,32 @@ smlp_logger - INFO - training data
 10   c19   9   5  10.0  3.0   7
 
 smlp_logger - INFO - training data after imputing missing values
-       x   p1   p2   y2
-0   10.0  2.0  3.0  9.0
-1   12.0  2.0  4.0  9.0
-2   10.0  3.0  4.0  9.0
-3   11.0  2.0  6.0  5.0
-4   10.0  2.0  8.0  5.0
-5    9.0  4.0  7.0  9.0
-6    9.0  3.0  6.0  5.0
-7   10.0  3.0  4.0  5.0
-8   11.0  4.0  4.0  9.0
-9   12.0  2.0  7.0  5.0
-10  10.0  3.0  7.0  5.0
+       x   p1  p2  y2
+0   10.0  2.0   3   9
+1   12.0  2.0   4   9
+2   10.0  3.0   4   9
+3   11.0  2.0   6   5
+4   10.0  2.0   8   5
+5    9.0  4.0   7   9
+6    9.0  3.0   6   5
+7   10.0  3.0   4   5
+8   11.0  4.0   4   9
+9   12.0  2.0   7   5
+10  10.0  3.0   7   5
 
 smlp_logger - INFO - training data after encoding levels of categorical features with integers
-       x   p1   p2   y2
-0   10.0  2.0  3.0  9.0
-1   12.0  2.0  4.0  9.0
-2   10.0  3.0  4.0  9.0
-3   11.0  2.0  6.0  5.0
-4   10.0  2.0  8.0  5.0
-5    9.0  4.0  7.0  9.0
-6    9.0  3.0  6.0  5.0
-7   10.0  3.0  4.0  5.0
-8   11.0  4.0  4.0  9.0
-9   12.0  2.0  7.0  5.0
-10  10.0  3.0  7.0  5.0
+       x   p1  p2  y2
+0   10.0  2.0   3   9
+1   12.0  2.0   4   9
+2   10.0  3.0   4   9
+3   11.0  2.0   6   5
+4   10.0  2.0   8   5
+5    9.0  4.0   7   9
+6    9.0  3.0   6   5
+7   10.0  3.0   4   5
+8   11.0  4.0   4   9
+9   12.0  2.0   7   5
+10  10.0  3.0   7   5
 
 smlp_logger - INFO - training data after scaling (normalizing) features and responses
            x   p1   p2   y2
@@ -143,9 +143,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test69_smlp_toy_num_resp_mult_training_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on training data --  msqe: 6.998
+smlp_logger - INFO - Prediction on training data --  msqe: 9.925
 
-smlp_logger - INFO - Prediction on training data --  r2_score: -0.866
+smlp_logger - INFO - Prediction on training data --  r2_score: -1.647
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -163,9 +163,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test69_smlp_toy_num_resp_mult_test_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on test data --  msqe: 10.821
+smlp_logger - INFO - Prediction on test data --  msqe: 9.513
 
-smlp_logger - INFO - Prediction on test data --  r2_score: -2.043
+smlp_logger - INFO - Prediction on test data --  r2_score: -1.675
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -183,9 +183,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test69_smlp_toy_num_resp_mult_labeled_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on labeled data --  msqe: 8.040
+smlp_logger - INFO - Prediction on labeled data --  msqe: 9.812
 
-smlp_logger - INFO - Prediction on labeled data --  r2_score: -1.027
+smlp_logger - INFO - Prediction on labeled data --  r2_score: -1.474
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -236,7 +236,7 @@ smlp_logger - INFO - Input, knob and configuration constraints are consistent
 
 smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+p2)/2<6
 
-smlp_logger - INFO - The configuration is inconsistent with assertion asrt1
+smlp_logger - INFO - The configuration is consistent with assertion asrt1
 
 smlp_logger - INFO - Completed with result: FAIL
 

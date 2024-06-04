@@ -4,6 +4,8 @@ smlp_logger - INFO - Model exploration specification:
 
 smlp_logger - INFO - Executing run_smlp.py script: Start
 
+smlp_logger - INFO - Running SMLP in mode "verify": Start
+
 smlp_logger - INFO - Computed spec global constraint expressions:
 
 smlp_logger - INFO - Global alpha : p1==1 or p1==4 or p1==7
@@ -15,8 +17,6 @@ smlp_logger - INFO - Radii  theta : {}
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
 
 smlp_logger - INFO - Assertion asrt1: (y2**3+p2)/2<6
-
-smlp_logger - INFO - Running SMLP in mode "verify": Start
 
 smlp_logger - INFO - PREPARE DATA FOR MODELING
 
@@ -71,7 +71,7 @@ smlp_logger - INFO - Input, knob and configuration constraints are consistent
 
 smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+p2)/2<6
 
-smlp_logger - INFO - The configuration is inconsistent with assertion asrt1
+smlp_logger - INFO - The configuration is consistent with assertion asrt1
 
 smlp_logger - INFO - Completed with result: FAIL
 

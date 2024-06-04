@@ -4,6 +4,8 @@ smlp_logger - INFO - Model exploration specification:
 
 smlp_logger - INFO - Executing run_smlp.py script: Start
 
+smlp_logger - INFO - Running SMLP in mode "certify": Start
+
 smlp_logger - INFO - Computed spec global constraint expressions:
 
 smlp_logger - INFO - Global alpha : None
@@ -28,8 +30,6 @@ smlp_logger - INFO - Witness to query query2
 
 smlp_logger - INFO - Witness to query query3
 {'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}
-
-smlp_logger - INFO - Running SMLP in mode "certify": Start
 
 smlp_logger - INFO - PREPARE DATA FOR MODELING
 

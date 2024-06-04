@@ -436,7 +436,7 @@ class SmlpData:
             self._data_logger.info(str(constant_cols_to_drop))
         return df, constant_cols_to_drop
     
-    # We n=do not amake a direct usage of boolean type in data, convert such columns into object/string type
+    # We do not make a direct usage of boolean type in data, convert such columns into object/string type
     def _cast_boolean_features(self, df:pd.DataFrame):
         col_types = df.dtypes
         for i, resp_name in enumerate(df.columns):

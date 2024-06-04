@@ -4,6 +4,8 @@ smlp_logger - INFO - Model exploration specification:
 
 smlp_logger - INFO - Executing run_smlp.py script: Start
 
+smlp_logger - INFO - Running SMLP in mode "certify": Start
+
 smlp_logger - INFO - Computed spec global constraint expressions:
 
 smlp_logger - INFO - Global alpha : None
@@ -33,8 +35,6 @@ smlp_logger - INFO - Witness to query query_unstable_witness
 
 smlp_logger - INFO - Witness to query query_infeasible_witness
 {'x': 7, 'p1': Fraction(7, 1), 'p2': Fraction(6, 1)}
-
-smlp_logger - INFO - Running SMLP in mode "certify": Start
 
 smlp_logger - INFO - PREPARE DATA FOR MODELING
 
@@ -68,36 +68,36 @@ smlp_logger - INFO - training data
 10  c8   9   5  10.0  3.0   7
 
 smlp_logger - INFO - training data after imputing missing values
-       x   p1   p2   y1   y2
-0   10.0  2.0  3.0  5.0  9.0
-1   12.0  2.0  4.0  9.0  9.0
-2   10.0  3.0  4.0  5.0  9.0
-3   11.0  2.0  6.0  5.0  5.0
-4   10.0  2.0  8.0  9.0  5.0
-5    9.0  4.0  7.0  9.0  9.0
-6    9.0  3.0  6.0  5.0  5.0
-7   10.0  3.0  4.0  5.0  5.0
-8   11.0  4.0  4.0  9.0  9.0
-9   12.0  2.0  7.0  5.0  5.0
-10  10.0  3.0  7.0  9.0  5.0
+       x   p1  p2  y1  y2
+0   10.0  2.0   3   5   9
+1   12.0  2.0   4   9   9
+2   10.0  3.0   4   5   9
+3   11.0  2.0   6   5   5
+4   10.0  2.0   8   9   5
+5    9.0  4.0   7   9   9
+6    9.0  3.0   6   5   5
+7   10.0  3.0   4   5   5
+8   11.0  4.0   4   9   9
+9   12.0  2.0   7   5   5
+10  10.0  3.0   7   9   5
 
 smlp_logger - INFO - Skipping MRMR feature selection for response y1
 
 smlp_logger - INFO - Skipping MRMR feature selection for response y2
 
 smlp_logger - INFO - training data after encoding levels of categorical features with integers
-       x   p1   p2   y1   y2
-0   10.0  2.0  3.0  5.0  9.0
-1   12.0  2.0  4.0  9.0  9.0
-2   10.0  3.0  4.0  5.0  9.0
-3   11.0  2.0  6.0  5.0  5.0
-4   10.0  2.0  8.0  9.0  5.0
-5    9.0  4.0  7.0  9.0  9.0
-6    9.0  3.0  6.0  5.0  5.0
-7   10.0  3.0  4.0  5.0  5.0
-8   11.0  4.0  4.0  9.0  9.0
-9   12.0  2.0  7.0  5.0  5.0
-10  10.0  3.0  7.0  9.0  5.0
+       x   p1  p2  y1  y2
+0   10.0  2.0   3   5   9
+1   12.0  2.0   4   9   9
+2   10.0  3.0   4   5   9
+3   11.0  2.0   6   5   5
+4   10.0  2.0   8   9   5
+5    9.0  4.0   7   9   9
+6    9.0  3.0   6   5   5
+7   10.0  3.0   4   5   5
+8   11.0  4.0   4   9   9
+9   12.0  2.0   7   5   5
+10  10.0  3.0   7   9   5
 
 smlp_logger - INFO - training data after scaling (normalizing) features and responses
            x   p1   p2   y1   y2

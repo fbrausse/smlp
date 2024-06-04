@@ -9,6 +9,7 @@ THRESHOLD = 0.00006
 
 
 def load_files(csv):
+    print('csv to read', csv)
     return pd.read_csv(csv)
 
 
@@ -28,8 +29,8 @@ def set_threshold(t):
 def check_values(csv1, csv2):
     for i in range(0, csv1.shape[0]):
         for j in range(0, csv1.shape[1]):
-            val1 = csv1.iloc[i][j]
-            val2 = csv2.iloc[i][j]
+            val1 = csv1.iloc[i].iloc[j]
+            val2 = csv2.iloc[i].iloc[j]
             if val1 != val2:
                 if isinstance(val1, str) or isinstance(val2, str):
                     return False

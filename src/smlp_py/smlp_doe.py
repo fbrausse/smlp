@@ -362,14 +362,14 @@ class SmlpDoepy:
                 vmx = max(v_nonan)
                 doe_spec_dict[k] = [vmn, vmx]
             else:
-                doe_spec_dict[k] = v_nonan
+                doe_spec_dict[k] = v_nonan_unique
                 doe_spec_dict[k].sort()
         return doe_spec_dict
         
-    # main doypu function, applies doe_algo to generate experiemntal design (tests) in a smart way.
+    # main doepy function, applies doe_algo to generate experiemntal design (tests) in a smart way.
     # All supported doe algorithms require doe_spec as an argument to specify sampling points for 
     # each feature in the data, and most functions also take num_samples as argument to spcify 
-    # how many tests (featuer-value tuples) to generate, while for other algorithms this number
+    # how many tests (feature-value tuples) to generate, while for other algorithms this number
     # is determined directly from doe_spec. Argument report_file_prefix, after adding suffix .csv, 
     # is path to the output file where the denerated design / tests dataframe are saved.
     def sample_doepy(self, doe_algo:str, doe_spec, num_samples:int, report_file_prefix:str, #:Union([dict, str])
@@ -388,8 +388,8 @@ class SmlpDoepy:
         else:
             raise Exception('doe_spec argument in function sample_doepy is ' + 
                 str(type(doe_spec)) + ' (must be either file path or a dictionary')
-        doe_spec_dict = self._process_doe_spec(doe_algo, doe_spec_dict)
-        #print('doe_spec_dict after processing\n', doe_spec_dict)
+        
+        doe_spec_dict = self._process_doe_spec(doe_algo, doe_spec_dict);
         
         if doe_algo == self.FULL_FACTORIAL:
             doe_out_df = build.full_fact(doe_spec_dict)

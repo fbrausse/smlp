@@ -3,12 +3,12 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"y2": 5.0870057804719,
-			"p2": 3.0,
+			"y2": 5.078784562647343,
+			"p2": 7.0,
 			"p1": 1.0,
-			"x": 0.0
+			"x": 8.601911912575982
 		},
-		"assertion_feasible": false
+		"assertion_feasible": true
 	},
 	"smlp_execution": "completed",
 	"interface_consistent": "true",

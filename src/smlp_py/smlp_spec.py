@@ -331,25 +331,25 @@ class SmlpSpec:
     #def set_spec_witness_file(self, witness_file):
     #    self._witness_file = witness_file
     
-    # API to compute from spec tha list of responses in spec
+    # API to compute thelist of responses in spec
     @property
     def get_spec_responses(self):
         return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
             var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_OUTPUT_TAG]
     
-    # API to compute from spec tha list of features in spec: free inputs and control inputs (knobs)
+    # API to compute the list of features in spec: free inputs and control inputs (knobs)
     @property
     def get_spec_features(self):
         return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
             var_spec[self._SPEC_VARIABLE_TYPE] in [self._SPEC_INPUT_TAG, self._SPEC_KNOB_TAG]]
     
-    # API to compute from spec tha list of features in spec: free inputs and control inputs (knobs)
+    # API to compute list of knobs in spec
     @property
     def get_spec_knobs(self):
         return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
             var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_KNOB_TAG]
     
-    # API to compute from spec tha list of features in spec: free inputs and control inputs (knobs)
+    # API to compute the list of inputs in spec
     @property
     def get_spec_inputs(self):
         return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
@@ -601,6 +601,7 @@ class SmlpSpec:
         else:
             return None
     
+    # witnesses (assignments to knobs and inputs) that are inspected in mode "certify"
     @property
     def get_spec_witn_dict(self):
         #print('self.spec_dict.keys()', self.spec_dict.keys(), self._SPEC_DICTIONARY_WITNESSES)
@@ -609,7 +610,8 @@ class SmlpSpec:
         else:
             self._witn_dict = None  
         return self._witn_dict
-        
+    
+    # configurations that are inspected in mode "verify"
     @property
     def get_spec_config_dict(self):
         #print('self.spec_dict.keys()', self.spec_dict.keys(), self._SPEC_DICTIONARY_WITNESSES)
@@ -699,7 +701,6 @@ class SmlpSpec:
         return (alph_expr, beta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs, 
             quer_names, quer_exprs, config_dict, witn_dict, objv_names, objv_exprs, system)
     
-        
         
     # Compute dictionary that maps knobs to respective value grids in the spec file
     @property
@@ -867,13 +868,6 @@ class SmlpSpec:
         self._eta_ranges_dict = eta_dict
         self._spec_logger.info('Knob bounds (eta): ' + str(self._eta_ranges_dict))
         return self._eta_ranges_dict
-
-    
-    # compute list of knobs in spec
-    @property
-    def get_spec_knobs(self):
-        return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
-            var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_KNOB_TAG]
     
     # access definition of global eta constraint
     @property
@@ -926,3 +920,19 @@ class SmlpSpec:
                 constraints_vars = constraints_vars + list(config.keys())
         
         return list_unique_unordered(constraints_vars)
+    
+    def get_spec_stability_ragion_bounds_dict(self, knob_config):
+        input_ranges = {}
+        for k, v in self.get_spec_alpha_bounds_dict.items():
+            input_ranges[k] = [v['min'], v['max']]
+        knobs_ranges = {}
+        for k, v in self.get_spec_theta_radii_dict.items():
+            knov_val = knob_config[k]['value_in_config']; #print('knov_val', knov_val)
+            if v['rad-abs'] is not None:
+                rad = abs(knov_val); #print('rad-abs', rad)
+            elif v['rad-rel'] is not None:
+                rad = v['rad-rel'] * abs(knov_val); #print('rad-rel', rad)
+            else:
+                raise Exception('At least on of the relative or absolute radii must mot be None')
+            knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
+        return input_ranges | knobs_ranges

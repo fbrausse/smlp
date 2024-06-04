@@ -91,10 +91,10 @@ if (p2 > 0.4000000134110451) and (x > 0.1666666716337204) and (x > 0.66666667163
 if (p2 > 0.4000000134110451) and (x <= 0.1666666716337204) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
 if (p2 <= 0.4000000134110451) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
 #TREE 19
-if (p2 > 0.4000000134110451) and (p1 <= 0.75) and (p2 > 0.7000000178813934) and (x <= 0.6666666716337204) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
 if (p2 > 0.4000000134110451) and (p1 <= 0.75) and (p2 <= 0.7000000178813934) then (y1 = 0.0) and (y2 = 0.0) | based on 2 samples
-if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+if (p2 > 0.4000000134110451) and (p1 <= 0.75) and (p2 > 0.7000000178813934) and (x <= 0.6666666716337204) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
 if (p2 > 0.4000000134110451) and (p1 <= 0.75) and (p2 > 0.7000000178813934) and (x > 0.6666666716337204) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
 if (p2 <= 0.4000000134110451) and (p2 > 0.10000000149011612) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
 if (p2 <= 0.4000000134110451) and (p2 <= 0.10000000149011612) then (y1 = 0.0) and (y2 = 1.0) | based on 1 samples
 #TREE 20

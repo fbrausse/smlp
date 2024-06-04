@@ -555,7 +555,7 @@ class SmlpOptimize:
     def report_current_thresholds(self, s, witness_vals_dict, objv_bounds_dict, objv_names, objv_exprs, 
             completed:bool, call_n:tuple[Union[int,str]], scale_objv):
         #print('s', s, 'scale_objv', scale_objv, 'objv_bounds_dict', objv_bounds_dict)
-        #print('witness_vals_dict', witness_vals_dict)
+        #print('witness_vals_dict', witness_vals_dict); print('completed', completed, 'call_n', call_n, 'scale_objv', scale_objv)
         assert s is not None
         assert s.count(None) == 0
         if scale_objv:
@@ -612,7 +612,7 @@ class SmlpOptimize:
                         # compute value of the original system function on input and knob values for witness_vals_dict
                         system_val = eval(self.syst_expr_dict[key], {},  witness_vals_dict); #print('system_val', system_val)
                         self.best_config_dict[key_label][key]['value_in_system'] = system_val
-            self.best_config_df = self.prog_dict_to_df()
+            self.best_config_df = self.prog_dict_to_df(); 
         else:
             assert False
             for i, objv_name in enumerate(objv_names):
@@ -621,7 +621,7 @@ class SmlpOptimize:
                     'threshold_scaled':s_scaled[i], 'threshold':s_origin[i], 
                     'max_in_data': objv_bounds_dict[objv_names[i]]['max'],
                     'min_in_data': objv_bounds_dict[objv_names[i]]['min']}
-        
+        #print('self.best_config_df\n', self.best_config_df); print('self.best_config_dict', self.best_config_dict)
         # dump the final config and/or the updated self.best_config_dict progress report
         with open(self.optimization_progress_file+'.json', 'w') as f: #json.dump(asrt_res_dict, f)
             json.dump(self.best_config_dict, f, indent='\t', cls=np_JSONEncoder)
@@ -961,7 +961,7 @@ class SmlpOptimize:
             self.optimize_pareto_objectives(feat_names, resp_names, model_full_term_dict, #X, y, 
                 objv_names, objv_exprs, objv_bounds_dict, alpha, beta, eta, theta_radii_dict, 
                 epsilon, domain, delta, solver_logic, scale_objv, data_scaler,
-                sat_approx=True, sat_precision=64, save_trace=False)
+                sat_approx=True, sat_precision=64, save_trace=False)            
         else:
             self.optimize_single_objectives(feat_names, resp_names, model_full_term_dict, #X, y, 
                 objv_names, objv_exprs, objv_bounds_dict, alpha, beta, eta, theta_radii_dict, 

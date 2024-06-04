@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from math import ceil
 import json
 import numpy as np
+import random as rn
 
 from sklearn.metrics import mean_squared_error, r2_score
 
@@ -342,9 +343,8 @@ class ModelKeras:
         if seed is not None:
             tf.random.set_seed(seed)
             np.random.seed(seed)
+            rn.seed(seed)
 
-        # TODO !!!: should we drop 'split-test': split_test from hyperparam_persist ; if we want to record 
-        # split_test we can add it to a new (and common for all ML models) data_persist dictionary?
         hyperparam_persist = {
             'train': {
                 'epochs': epochs,

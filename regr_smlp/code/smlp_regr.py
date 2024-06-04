@@ -530,7 +530,7 @@ def main():
             if execute_test:
                 new_prefix = 'Test' + test_id
                 #print('test_data', test_data); print('use_model', use_model ); print('use_config_file', use_config_file)
-                if (test_data == '' and not use_model and not use_config_file):
+                if (test_data == '' and not use_model and not use_config_file and not '-doe_spec' in test_switches):
                     if test_type != 'help':
                         execute_test = False
                         test_errors.append(['Build', 'No test data specified'])

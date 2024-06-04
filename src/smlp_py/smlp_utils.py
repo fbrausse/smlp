@@ -251,7 +251,7 @@ def param_dict_with_algo_name(param_dict, algo):
 
 # Whether a response is numeric or binary. Numeric responses are defined as ones
 # that have float values or int values besides 0 and 1. Responses with values 0 or 1 
-# are defined as binary, It is expected that if response vas of of type object/string
+# are defined as binary. It is expected that if response was of type object/string
 # with 1 or 2 values then these value have been renames to 1 and 0 based of definition
 # of which one of these two strings is positive and which one is nagative, and based
 # on smlp postive and negative values declared by user (where by default 1 is positive 
@@ -267,7 +267,7 @@ def get_response_type(df:DataFrame, resp_name:str):
     resp_vals = set(df[resp_name].tolist()); #print('resp_vals', resp_vals, resp_vals.issubset({0,1}))
     if resp_type == int and resp_vals.issubset({0,1}):
         return "classification"
-    elif resp_type == float:
+    elif resp_type in [int, float]:
         return "regression"
     else:
         raise Exception('Classification vs regression mode cannot be determined for response ' + str(resp_name))

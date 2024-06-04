@@ -35,32 +35,32 @@ smlp_logger - INFO - training data
 10   c19   9   5  10.0  3.0   7
 
 smlp_logger - INFO - training data after imputing missing values
-       x   p1   p2   y2
-0   10.0  2.0  3.0  9.0
-1   12.0  2.0  4.0  9.0
-2   10.0  3.0  4.0  9.0
-3   11.0  2.0  6.0  5.0
-4   10.0  2.0  8.0  5.0
-5    9.0  4.0  7.0  9.0
-6    9.0  3.0  6.0  5.0
-7   10.0  3.0  4.0  5.0
-8   11.0  4.0  4.0  9.0
-9   12.0  2.0  7.0  5.0
-10  10.0  3.0  7.0  5.0
+       x   p1  p2  y2
+0   10.0  2.0   3   9
+1   12.0  2.0   4   9
+2   10.0  3.0   4   9
+3   11.0  2.0   6   5
+4   10.0  2.0   8   5
+5    9.0  4.0   7   9
+6    9.0  3.0   6   5
+7   10.0  3.0   4   5
+8   11.0  4.0   4   9
+9   12.0  2.0   7   5
+10  10.0  3.0   7   5
 
 smlp_logger - INFO - training data after encoding levels of categorical features with integers
-       x   p1   p2   y2
-0   10.0  2.0  3.0  9.0
-1   12.0  2.0  4.0  9.0
-2   10.0  3.0  4.0  9.0
-3   11.0  2.0  6.0  5.0
-4   10.0  2.0  8.0  5.0
-5    9.0  4.0  7.0  9.0
-6    9.0  3.0  6.0  5.0
-7   10.0  3.0  4.0  5.0
-8   11.0  4.0  4.0  9.0
-9   12.0  2.0  7.0  5.0
-10  10.0  3.0  7.0  5.0
+       x   p1  p2  y2
+0   10.0  2.0   3   9
+1   12.0  2.0   4   9
+2   10.0  3.0   4   9
+3   11.0  2.0   6   5
+4   10.0  2.0   8   5
+5    9.0  4.0   7   9
+6    9.0  3.0   6   5
+7   10.0  3.0   4   5
+8   11.0  4.0   4   9
+9   12.0  2.0   7   5
+10  10.0  3.0   7   5
 
 smlp_logger - INFO - training data after scaling (normalizing) features and responses
            x   p1   p2   y2
@@ -118,28 +118,28 @@ smlp_logger - INFO - new data
 8   c12   9   9  11.0  4.0   4
 
 smlp_logger - INFO - new data after imputing missing values
-      x   p1   p2   y2
-0  10.0  2.0  3.0  9.0
-1  12.0  2.0  4.0  9.0
-2  10.0  3.0  4.0  9.0
-3  11.0  2.0  6.0  5.0
-4  10.0  2.0  8.0  5.0
-5   9.0  4.0  7.0  9.0
-6   9.0  3.0  6.0  5.0
-7  10.0  3.0  4.0  5.0
-8  11.0  4.0  4.0  9.0
+      x   p1  p2  y2
+0  10.0  2.0   3   9
+1  12.0  2.0   4   9
+2  10.0  3.0   4   9
+3  11.0  2.0   6   5
+4  10.0  2.0   8   5
+5   9.0  4.0   7   9
+6   9.0  3.0   6   5
+7  10.0  3.0   4   5
+8  11.0  4.0   4   9
 
 smlp_logger - INFO - new data after encoding levels of categorical features with integers
-      x   p1   p2   y2
-0  10.0  2.0  3.0  9.0
-1  12.0  2.0  4.0  9.0
-2  10.0  3.0  4.0  9.0
-3  11.0  2.0  6.0  5.0
-4  10.0  2.0  8.0  5.0
-5   9.0  4.0  7.0  9.0
-6   9.0  3.0  6.0  5.0
-7  10.0  3.0  4.0  5.0
-8  11.0  4.0  4.0  9.0
+      x   p1  p2  y2
+0  10.0  2.0   3   9
+1  12.0  2.0   4   9
+2  10.0  3.0   4   9
+3  11.0  2.0   6   5
+4  10.0  2.0   8   5
+5   9.0  4.0   7   9
+6   9.0  3.0   6   5
+7  10.0  3.0   4   5
+8  11.0  4.0   4   9
 
 smlp_logger - INFO - new data after scaling (normalizing) features and responses
           x   p1   p2   y2
@@ -191,9 +191,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test27_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_training_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on training data --  msqe: 6.998
+smlp_logger - INFO - Prediction on training data --  msqe: 9.925
 
-smlp_logger - INFO - Prediction on training data --  r2_score: -0.866
+smlp_logger - INFO - Prediction on training data --  r2_score: -1.647
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -211,9 +211,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test27_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_test_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on test data --  msqe: 10.821
+smlp_logger - INFO - Prediction on test data --  msqe: 9.513
 
-smlp_logger - INFO - Prediction on test data --  r2_score: -2.043
+smlp_logger - INFO - Prediction on test data --  r2_score: -1.675
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -231,9 +231,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test27_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_labeled_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on labeled data --  msqe: 8.040
+smlp_logger - INFO - Prediction on labeled data --  msqe: 9.812
 
-smlp_logger - INFO - Prediction on labeled data --  r2_score: -1.027
+smlp_logger - INFO - Prediction on labeled data --  r2_score: -1.474
 
 smlp_logger - INFO - Reporting prediction results: end
 
@@ -251,9 +251,9 @@ smlp_logger - INFO - Saving predictions summary into file:
 smlp_logger - INFO - Saving prediction precisions into file: 
 ./Test27_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv
 
-smlp_logger - INFO - Prediction on new data --  msqe: 9.825
+smlp_logger - INFO - Prediction on new data --  msqe: 11.519
 
-smlp_logger - INFO - Prediction on new data --  r2_score: -1.487
+smlp_logger - INFO - Prediction on new data --  r2_score: -1.916
 
 smlp_logger - INFO - Reporting prediction results: end
 

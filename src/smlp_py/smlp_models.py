@@ -60,7 +60,7 @@ class SmlpModels:
                     'default': self._DEF_SAVE_MODEL_CONFIG, 'type':str_to_bool,
                 'help': 'Should a config file enabling to re-run a saved model be written out? ' +
                     '[default: ' + str(self._DEF_SAVE_MODEL_CONFIG) + ']'},
-            'model_per_response': {'abbr':'model_per_response', 'type':str_to_bool,
+            'model_per_response': {'abbr':'model_per_response', 'default': self._MODEL_PER_RESPONSE, 'type':str_to_bool,
                 'help': 'Should a separate model, possible with a different, dedicated feature set, ' +
                     'be built per response (as opposite to building one multi-response model)?' +
                     '[default: ' + str(self._MODEL_PER_RESPONSE) + ']'},
@@ -262,11 +262,11 @@ class SmlpModels:
     def _report_prediction_results(self, algo:str, resp_names:list[str], resp_df:pd.DataFrame, pred_df:pd.DataFrame,
             mm_scaler_resp, interactive_plots:bool, prediction_plots:bool, data_version:str):
         self._model_logger.info('Reporting prediction results: start')
-
         #print('pred\n', pred_df); print('\npred_type', type(pred_df));
         #print('resp\n', resp_df); print('\nresp_type', type(resp_df));
         pred_colnames = [rn+'_'+algo for rn in resp_names]
-
+        assert pred_df.columns.tolist() == pred_colnames
+        
         orig_resp_df = resp_df.copy() if not resp_df is None else None
         orig_pred_df = pred_df.copy(); 
         #print('orig_pred_df\n', orig_pred_df); print('pred_df\n', pred_df); 
@@ -363,7 +363,6 @@ class SmlpModels:
     # combine prediction results as one np.array(). 
     def _model_predict(self, model, X:pd.DataFrame, y:pd.DataFrame, resp_names:list, algo:str, model_per_response:bool):
         self._model_logger.info('Model prediction: start')
-
         model_lib = algo.rsplit('_', 1)[1]
         if model_lib in ['keras', 'sklearn'] and not model_per_response:
             # we have a single model
@@ -390,6 +389,7 @@ class SmlpModels:
                     y_pred[rn] = list(caret_predict_model(model[rn], data=X)['prediction_label']); 
                 elif model_lib in ['keras', 'sklearn']:
                     if algo == 'poly_sklearn':
+                        #print('X', X.columns.tolist())
                         y_pred[rn] = self._instSklearn.poly_sklearn_predict(model[rn], X)
                         #rn_model, rn_poly_reg = model[rn] #, rn_X_train, rn_X_test
                         #y_pred[rn] = rn_model.predict(rn_poly_reg.transform(X))
@@ -433,6 +433,7 @@ class SmlpModels:
                 # caret currently does not support training models with multiple responses 
                 # (or we missed to see in documentation how this is done); thus caret trained
                 # models are always dictionaries with responses as keys and models per response as values
+                #print('model file', [self.model_filename(algo, '', resp_name) for resp_name in resp_names])
                 model = dict([(resp_name, caret_load_model(self.model_filename(algo, '', resp_name))) 
                     for resp_name in resp_names])
             elif model_lib == 'keras':

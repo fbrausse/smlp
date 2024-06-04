@@ -8,7 +8,7 @@ class SmlpConfig:
         self.model_file_prefix = None
         self.model_rerun_config = None
         self.config = None
-    
+        
     # Compute prefix report_name_prefix to be used in all report / log file names of an SMLP run; 
     # as well as prefix model_name_prefix to be used in the names of all output files that are required 
     # to save a trained model info and re-run the saved model on new data (without re-training).
@@ -86,8 +86,8 @@ class SmlpConfig:
         parser = argparse.ArgumentParser(prog=argv[0])
         #print('parser', parser)
         parser.add_argument('-data', '--labeled_data', metavar='DATA', type=str,
-                        help='Path excluding the .csv suffix to input training data ' +
-                            'file containing labels')
+                        help='Path, possibly excluding the .csv, or including gz or bz2 suffix, ' +
+                            ' to input training data file containing labels')
         #parser.add_argument('-model', '--model', metavar='MODEL', type=str,
         #                    help='Type of model to train (NN, Poly, ... ')
         parser.add_argument('-mode', '--analytics_mode', type=str, default=None,

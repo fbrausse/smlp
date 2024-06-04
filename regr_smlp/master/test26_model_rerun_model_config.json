@@ -64,7 +64,7 @@
     "model_caret_return_train_score": false,
     "model_caret_verbose": true,
     "model_name": null,
-    "model_per_response": null,
+    "model_per_response": false,
     "mrmr_feat_count_for_prediction": 2,
     "negative_value": 0,
     "new_data": null,
