@@ -181,7 +181,7 @@ class SmlpData:
             'data_scaler': {'abbr':'data_scaler', 'default':self._DEF_SCALER, 'type':str, 
                 'help':'Should features and responses be scaled and with which scaling optionton? '+
                     'Value "none" implies no scaling; the only other supported option in "min_max" scaler ' +
-                        '[default: {}]'.format(str(self._DEF_SCALER))},
+                    '[default: {}]'.format(str(self._DEF_SCALER))},
             'scale_features': {'abbr':'scale_feat', 'default': self._DEF_SCALE_FEATURES, 'type':str_to_bool,
                 'help': 'Should features be scaled using scaler specified through option "data_scaler"? ' +
                     '[default: ' + str(self._DEF_SCALE_FEATURES) + ']'},

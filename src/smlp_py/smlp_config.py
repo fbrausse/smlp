@@ -9,6 +9,44 @@ class SmlpConfig:
         self.model_rerun_config = None
         self.config = None
         
+        self._DEF_LABELED_DATA = None
+        self._DEF_ANALYTICS_MODE = None #'train'
+        self._DEF_SAVE_CONFIGURATION = False
+        self._DEF_LOG_FILE_PREFIX = None
+        self._DEF_OUTPUT_DIRECTORY = None
+        self._DEF_INTERACTIVE_PLOTS = True
+        self._DEF_SEED = None
+        self._DEF_LOAD_CONFIGURATION = None
+        
+        self.config_params_dict = {
+            'labeled_data': {'abbr':'data', 'default':self._DEF_LABELED_DATA, 'type':str, 
+                'help':'Path, possibly excluding the .csv, or including gz or bz2 suffix, to input ' +
+                    ' training data file containing labels [default {}]'.format(str(self._DEF_LABELED_DATA))},
+            'analytics_mode': {'abbr':'mode', 'default':self._DEF_ANALYTICS_MODE, 'type':str, 
+                'help':'What kind of analysis should be performed; the supported modes are: '+
+                    '"train", "predict", "subgroups", "doe", "discretize", "optimize", "verify", "query", "optsyn" ' +
+                    '[default: {}]'.format(str(self._DEF_ANALYTICS_MODE))},
+            'interactive_plots': {'abbr':'plots', 'default':self._DEF_INTERACTIVE_PLOTS, 'type':str_to_bool, 
+                'help':'Should plots be displayed interactively (or only saved)?'+
+                    '[default: {}]'.format(str(self._DEF_INTERACTIVE_PLOTS))},
+            'seed': {'abbr':'seed', 'default':self._DEF_SEED, 'type':int, 
+                'help':'Initial random seed [default {}]'.format(str(self._DEF_SEED))},
+            'log_files_prefix': {'abbr':'pref', 'default':self._DEF_LOG_FILE_PREFIX, 'type':str, 
+                'help':'String to be used as prefix for the output files ' + 
+                    '[default: {}]'.format(str(self._DEF_LOG_FILE_PREFIX))},
+            'output_directory': {'abbr':'out_dir', 'default':self._DEF_OUTPUT_DIRECTORY, 'type':str, 
+                'help':'Output directory where all reports and output files will be written '+
+                    '[default: the same directory from which data is loaded]'},
+            'save_configuration': {'abbr':'save_config', 'default':self._DEF_SAVE_CONFIGURATION, 'type':str_to_bool, 
+                'help':'Should tool run parameters be saved into a a configuration file? ' +
+                    '[default: {}]'.format(str(self._DEF_SAVE_CONFIGURATION))},
+            'load_configuration': {'abbr':'config', 'default':self._DEF_LOAD_CONFIGURATION, 'type':str, 
+                'help':'Json config file name, to load tool parameter values from, or None. ' +
+                    'Paramters specified through command line will override the correponding '
+                    'config file values if they are specified there as well ' +
+                    '[default: {}]'.format(str(self._DEF_LOAD_CONFIGURATION))}
+        }  # TODO !!!!!! check default of load_configuration; define and use DEF_VALUES in all options
+    
     # Compute prefix report_name_prefix to be used in all report / log file names of an SMLP run; 
     # as well as prefix model_name_prefix to be used in the names of all output files that are required 
     # to save a trained model info and re-run the saved model on new data (without re-training).
@@ -85,34 +123,6 @@ class SmlpConfig:
         #print('argv', argv)
         parser = argparse.ArgumentParser(prog=argv[0])
         #print('parser', parser)
-        parser.add_argument('-data', '--labeled_data', metavar='DATA', type=str,
-                        help='Path, possibly excluding the .csv, or including gz or bz2 suffix, ' +
-                            ' to input training data file containing labels')
-        #parser.add_argument('-model', '--model', metavar='MODEL', type=str,
-        #                    help='Type of model to train (NN, Poly, ... ')
-        parser.add_argument('-mode', '--analytics_mode', type=str, default=None,
-                        help='What kind of analysis should be performed '+
-                            'the supported modes are: "train", "predict", "subgroups",  ' +
-                            '"doe", "discretize", "optimize", "verify", "query", "optsyn" ' +
-                            '[default: train]')
-        parser.add_argument('-plots', '--interactive_plots', type=str_to_bool, default=True,
-                        help='Should plots be displayed interactively (or only saved)?'+
-                            '[default: True]')
-        parser.add_argument('-seed', '--seed', type=int, default=None,
-                        help='Initial random seed')
-        parser.add_argument('-pref', '--log_files_prefix', type=str, default=None,
-                        help='String to be used as prefix for the output files '+
-                            '[default: empty string]')
-        parser.add_argument('-out_dir', '--output_directory', type=str, default=None,
-                        help='Output directory where all reports and output files will be written '+
-                            '[default: the same directory from which data is loaded]')
-        parser.add_argument('-save_config', '--save_configuration', type=str_to_bool, default=False,
-                        help='Should tool run parameters be saved into a a configuration file? ' +
-                            '[default: True]')
-        parser.add_argument('-config', '--load_configuration', type=str, default=None,
-                        help='Json config file name, to load tool parameter values from, or None. ' +
-                            'Paramters specified through command line will override the correponding '
-                            'config file values if they are specified there as well [default: True]')
         
         for p, v in args_dict.items():
             #print('p', p, 'v', v); print('type', v['type'])

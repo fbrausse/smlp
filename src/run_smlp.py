@@ -13,7 +13,6 @@
 import sys
 from smlp_py.smlp_flows import SmlpFlows
 
-
 def main(argv):
     smlpInst = SmlpFlows(argv)
     smlpInst.smlp_flow()

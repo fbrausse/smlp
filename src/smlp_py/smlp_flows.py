@@ -47,6 +47,7 @@ class SmlpFlows:
         # get args
         args_dict = self.modelInst.model_params_dict | \
                     self.dataInst.data_params_dict | \
+                    self.configInst.config_params_dict | \
                     self.loggerInst.logger_params_dict | \
                     self.doeInst.doepy_params_dict | \
                     self.discrInst.discr_params_dict | \
