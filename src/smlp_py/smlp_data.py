@@ -40,7 +40,11 @@ class SmlpData:
         self._DEF_TRAIN_UNIF = 0  # sampling from training data to acheive uniform distribution
         self._DEF_SCALER = 'min_max'  # options: 'min_max', 'max-abs'
         self._DEF_SPLIT_TEST = 0.2 # ratio to split training data into training and validation subsets
-        self._DEF_SAMPLE_WEIGHTS = 0 # degree/exponent of the power function that computes the
+        self._DEF_SAMPLE_WEIGHTS_INTERCEPT = 0 # intercept a of the power function a+bx**c that computes the
+                                     # sample weights based on response values on these samples
+        self._DEF_SAMPLE_WEIGHTS_COEFFICIENT = 0 # coefficient b of the power function a+bx**c that computes the
+                                     # sample weights based on response values on these samples
+        self._DEF_SAMPLE_WEIGHTS_EXPONENT = 0 # degree/exponent c of the power function a+bx**c that computes the
                                      # sample weights based on response values on these samples
         self._RESPONSE_TO_BOOL = None # list of conditions per response to convert numeric responses 
                                       # into binary 1/0 responses
@@ -206,7 +210,7 @@ class SmlpData:
             'train_uniform_n': {'abbr':'train_unif', 'default':self._DEF_TRAIN_UNIF, 'type':int,
                 'help':'Subset random n rows from training data with close to uniform ' + 
                     'distribution to use for training [default: {}]'.format(str(self._DEF_TRAIN_UNIF))}, 
-            'sample_weights_coef': {'abbr':'sw_coef', 'default':self._DEF_SAMPLE_WEIGHTS, 'type':float,
+            'sample_weights_coef': {'abbr':'sw_coef', 'default':self._DEF_SAMPLE_WEIGHTS_COEFFICIENT, 'type':float,
                 'help':'Coefficient in range ]-1, 1[ to compute sample weights for model training; ' +
                     'weights are defined as [sw_coef * (v - mid_range) + 1 for v in resp_vals] ' +
                     'where resp_vals is the response value vector or vector of mean values of all ' +
@@ -215,7 +219,21 @@ class SmlpData:
                     'assign higher weights to samples with high (resp. low) values in resp_vals. ' +
                     'As an example, sw_coef = 0.2 assigns weight=1.2 to samples with max(resp_vals) ' +
                     'and weight=0.8 to samples with min(resp_vals), and sw_coef = 0 implies weight=1 ' +
-                    'for each sample [default: {}]'.format(self._DEF_SAMPLE_WEIGHTS)},
+                    'for each sample [default: {}]'.format(self._DEF_SAMPLE_WEIGHTS_COEFFICIENT)},
+            'sample_weights_exponent': {'abbr':'sw_exp', 'default':self._DEF_SAMPLE_WEIGHTS_EXPONENT, 'type':float,
+                'help':'The Exponent to compute sample weights for model training; ' +
+                    'weights are defined as  [sw_int + sw_coef *((v - mn)/(mx-mn))**sw_exp for v in resp_vals ] ' +
+                    'where resp_vals is the response value vector or vector of mean values of all ' +
+                    'responses per sample, and mn and mx are respectively the min and max of resp_vals. ' +
+                    'The value of sw_coef is chosen non-negative to make sure all weights are non-negative ' +
+                    '[default: {}]'.format(self._DEF_SAMPLE_WEIGHTS_EXPONENT)},
+            'sample_weights_intercept': {'abbr':'sw_int', 'default':self._DEF_SAMPLE_WEIGHTS_INTERCEPT, 'type':float,
+                'help':'The intercept to compute sample weights for model training; ' +
+                    'weights are defined as [sw_int + sw_coef *((v - mn)/(mx-mn))**sw_exp for v in resp_vals ] ' +
+                    'where resp_vals is the response value vector or vector of mean values of all ' +
+                    'responses per sample, and mn and mx are respectively the min and max of resp_vals. ' +
+                    'The value of sw_coef is chosen non-negative to make sure all weights are non-negative ' +
+                    '[default: {}]'.format(self._DEF_SAMPLE_WEIGHTS_INTERCEPT)},
             'response_to_bool':{'abbr':'resp2b', 'default':self._RESPONSE_TO_BOOL, 'type':str,
                 'help':'Semicolon seperated list of conditions to be applied to the responses in the '
                     'order the responses are specified, to convert them into binary responses ' +
@@ -425,7 +443,8 @@ class SmlpData:
         for col in df.columns.tolist():
             #print('col', col, 'df[col]\n', df[col]); print('df[col].dropna()\n', df[col].dropna())
             unique_vals = df[col].dropna().unique(); #print('col', col, 'unique', unique_vals)
-            if len(unique_vals) == 1:
+            # cover here also case when unique_vals is empty -- when all values are missing in a feature
+            if len(unique_vals) <= 1: 
                 constant_cols.append(col)
         #print('constant_cols', constant_cols, 'keep_feat', keep_feat)
         constant_cols_to_drop = [c for c in constant_cols if c not in keep_feat]
@@ -506,12 +525,11 @@ class SmlpData:
 
             resp_conds = df_resp_cond.split(self._CONDITION_SEPARATOR); #print('resp_conds', resp_conds)
             for resp_name, resp_cond in zip(resp_names, resp_conds):
-                #resp = resp_df[resp_name]; 
                 #print(resp_name, resp_cond)
+                # because eval() below is called with global environemnt {} and local environment  
+                # {'resp_name':resp_name, 'resp_df':resp_df}. we limit the variables and functions 
+                # that the evaluated code can access and this way make call to eval() safer.
                 resp_new = eval(resp_cond, {}, {'resp_name':resp_name, 'resp_df':resp_df})
-                #resp_new_unsecure = eval(resp_cond)
-                #print('resp_new\n', resp_new); print('resp_new_unsecure\n', resp_new_unsecure)
-                #assert any(resp_new == resp_new_unsecure)
                 resp_df[resp_name] = [int(e) for e in resp_new]
         #print('processed resp_df\n', resp_df)
         return resp_df
@@ -852,7 +870,7 @@ class SmlpData:
     # Select from data only relevant features -- the responses that must be provided, and
     # required input features which are either specified using feat_names or are computed
     # from the data (features that are not responses are used in analysis as input features).
-    # Sanity cjeck on response names resp_names and feat_names are also performed.
+    # Sanity check on response names resp_names and feat_names are also performed.
     # Besides training and test subsets, the function returns also the MinMaxScaler object 
     # used for data normalization, to be reused for applying the model to unseen datasets
     # and also to rescale back the prediction results to the original scale where needed.

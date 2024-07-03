@@ -113,15 +113,56 @@ smlp_logger - INFO - keras_main: start
 
 smlp_logger - INFO - _keras_train_multi_response: start
 
-smlp_logger - INFO - building NN model using Keras Functional API
+smlp_logger - INFO - layers_spec_list [2.0, 1.0]
 
-smlp_logger - INFO - layers_spec_list [1, 2.0, 1.0]
+smlp_logger - INFO - building NN model using Keras Functional API
 
 smlp_logger - INFO - input layer of size 3
 
 smlp_logger - INFO - dense layer of size 6
 
 smlp_logger - INFO - dense layer of size 3
+
+smlp_logger - INFO - output layer of size 1
+
+smlp_logger - INFO - model summary: start
+
+smlp_logger - INFO - Model: "model"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ input_1 (InputLayer)        [(None, 3)]               0         
+                                                                 
+ dense (Dense)               (None, 6)                 24        
+                                                                 
+ dense_1 (Dense)             (None, 3)                 21        
+                                                                 
+ y2 (Dense)                  (None, 1)                 4         
+                                                                 
+=================================================================
+Total params: 49 (196.00 Byte)
+Trainable params: 49 (196.00 Byte)
+Non-trainable params: 0 (0.00 Byte)
+_________________________________________________________________
+
+
+smlp_logger - INFO - Optimizer: {'name': 'Adam', 'weight_decay': None, 'clipnorm': None, 'global_clipnorm': None, 'clipvalue': None, 'use_ema': False, 'ema_momentum': 0.99, 'ema_overwrite_frequency': None, 'jit_compile': False, 'is_legacy_optimizer': False, 'learning_rate': 0.001, 'beta_1': 0.9, 'beta_2': 0.999, 'epsilon': 1e-07, 'amsgrad': False}
+
+smlp_logger - INFO - Learning rate: 0.001
+
+smlp_logger - INFO - Loss function: mse
+
+smlp_logger - INFO - Metrics: ['mse']
+
+smlp_logger - INFO - Model configuration: {'name': 'model', 'trainable': True, 'layers': [{'module': 'keras.layers', 'class_name': 'InputLayer', 'config': {'batch_input_shape': (None, 3), 'dtype': 'float32', 'sparse': False, 'ragged': False, 'name': 'input_1'}, 'registered_name': None, 'name': 'input_1', 'inbound_nodes': []}, {'module': 'keras.layers', 'class_name': 'Dense', 'config': {'name': 'dense', 'trainable': True, 'dtype': 'float32', 'units': 6, 'activation': 'relu', 'use_bias': True, 'kernel_initializer': {'module': 'keras.initializers', 'class_name': 'GlorotUniform', 'config': {'seed': None}, 'registered_name': None}, 'bias_initializer': {'module': 'keras.initializers', 'class_name': 'Zeros', 'config': {}, 'registered_name': None}, 'kernel_regularizer': None, 'bias_regularizer': None, 'activity_regularizer': None, 'kernel_constraint': None, 'bias_constraint': None}, 'registered_name': None, 'build_config': {'input_shape': (None, 3)}, 'name': 'dense', 'inbound_nodes': [[['input_1', 0, 0, {}]]]}, {'module': 'keras.layers', 'class_name': 'Dense', 'config': {'name': 'dense_1', 'trainable': True, 'dtype': 'float32', 'units': 3, 'activation': 'relu', 'use_bias': True, 'kernel_initializer': {'module': 'keras.initializers', 'class_name': 'GlorotUniform', 'config': {'seed': None}, 'registered_name': None}, 'bias_initializer': {'module': 'keras.initializers', 'class_name': 'Zeros', 'config': {}, 'registered_name': None}, 'kernel_regularizer': None, 'bias_regularizer': None, 'activity_regularizer': None, 'kernel_constraint': None, 'bias_constraint': None}, 'registered_name': None, 'build_config': {'input_shape': (None, 6)}, 'name': 'dense_1', 'inbound_nodes': [[['dense', 0, 0, {}]]]}, {'module': 'keras.layers', 'class_name': 'Dense', 'config': {'name': 'y2', 'trainable': True, 'dtype': 'float32', 'units': 1, 'activation': 'linear', 'use_bias': True, 'kernel_initializer': {'module': 'keras.initializers', 'class_name': 'GlorotUniform', 'config': {'seed': None}, 'registered_name': None}, 'bias_initializer': {'module': 'keras.initializers', 'class_name': 'Zeros', 'config': {}, 'registered_name': None}, 'kernel_regularizer': None, 'bias_regularizer': None, 'activity_regularizer': None, 'kernel_constraint': None, 'bias_constraint': None}, 'registered_name': None, 'build_config': {'input_shape': (None, 3)}, 'name': 'y2', 'inbound_nodes': [[['dense_1', 0, 0, {}]]]}], 'input_layers': [['input_1', 0, 0]], 'output_layers': [['y2', 0, 0]]}
+
+smlp_logger - INFO - Epochs: 20
+
+smlp_logger - INFO - Batch size: 200
+
+smlp_logger - INFO - Callbacks: ["<class 'keras.src.callbacks.ModelCheckpoint'>"]
+
+smlp_logger - INFO - model summary: end
 
 smlp_logger - INFO - _keras_train_multi_response: end
 

@@ -282,8 +282,10 @@ class SmlpSpec:
                 spec_new_dict[self._spec_tokens_dict['SPEC_DICTIONARY_SPEC'][target_version]] = vars
             else:
                 spec_new_dict[k] = v
-        #print('spec_new_dict', spec_new_dict); 
-        with open(spec_file+'_v{}.spec'.format('1.2'), 'w') as f:
+        #print('spec_new_dict', spec_new_dict); print('new soec file', spec_file+'_v{}.spec'.format('1.2'))
+        with open(spec_file.removesuffix('.spec')+'_v{}.spec'.format('1.1'), 'w') as f:
+            json.dump(spec_dict, f, indent='\t', cls=np_JSONEncoder)
+        with open(spec_file.removesuffix('.spec')+'_v{}.spec'.format('1.2'), 'w') as f:
             json.dump(spec_new_dict, f, indent='\t', cls=np_JSONEncoder)
         return spec_new_dict
                     
@@ -314,8 +316,8 @@ class SmlpSpec:
             #self._spec_logger.info(json.stringif(self.spec_dict, ensure_ascii=False, indent='\t', cls=np_JSONEncoder)) #parse_float=Fraction
             #self.set_spec_tokens()
             self.sanity_check_spec()
-            #print(self._SPEC_DICTIONARY_SPEC); 
-            #self.upgrade_spec(spec_file, '1.1', '1.2')
+            #print(self._SPEC_DICTIONARY_SPEC); print('spec_file', spec_file)
+            #self.upgrade_spec(spec_file, '1.1', '1.2'); assert False
 
     # Override relative and absolute radii values supplied in the spec file
     def set_radii(self, rad_abs, rad_rel):

@@ -1,11 +1,13 @@
-import matplotlib.pyplot as plt; plt.rcdefaults()
+import matplotlib
+matplotlib.use('TkAgg')  # Set the backend to 'TkAgg' before importing pyplot, to enable interactive plots
+import matplotlib.pyplot as plt
+plt.rcdefaults()
 from matplotlib import cm
 import seaborn as sns
 from math import ceil
 import os, sys
 import numpy as np
 import pandas as pd
-#from logs_common import *
 from sklearn.metrics import mean_squared_error, r2_score
 
 # the block below defines two distribution plotting functions which do the same

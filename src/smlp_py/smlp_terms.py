@@ -1201,10 +1201,9 @@ class NNKerasTerms: #(SmlpTerms):
             assert False
         return model_type
     
-    # Create SMLP terms from polynomial model. Returns a dictionary with response names from model_resp_names as keys
+    # Create SMLP terms from NN Keras model. Returns a dictionary with response names from model_resp_names as keys
     # and respective model terms as the values.
     def nn_keras_model_to_term(self, model, model_feat_names, model_resp_names, feat_names, resp_names):
-        #print('nn_keras_model_to_term: model_feat_names', model_feat_names, 'model_resp_names', model_resp_names)
         #from pprint import pprint
         #import inspect
         #print('model', model, type(model), model.summary())
@@ -1229,8 +1228,9 @@ class NNKerasTerms: #(SmlpTerms):
             #print('t_biases', biases.transpose().shape, '\n', biases.transpose())
             curr_layer_terms = self._nn_dense_layer_terms(last_layer_terms, weights.transpose(), 
                 biases.transpose(), layer_activation)
-            if layer.get_config()['name'] in resp_names:
-                assert model_type == 'functional'
+            if model_type == 'functional' and layer.get_config()['name'] in resp_names:
+                #assert model_type == 'functional'
+                #print('layer.get_config()[name]', layer.get_config()['name'])
                 resp_index = resp_names.index(layer.get_config()['name'])
                 #print('response', layer.get_config()['name'])
                 # we have an output layer -- do not update last_layer_terms
@@ -1917,22 +1917,9 @@ class ModelTerms(ScalerTerms):
             #print('model', model, flush=True)
             model_full_term_dict = self.compute_models_terms_dict(algo, model, 
                 model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
-            '''
-            try:
-                model_full_term_dict = self.compute_models_terms_dict(algo, model, 
-                    model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
-            except Exception as e:
-                print('error', e)
-            '''
         self._smlp_terms_logger.info('Building model terms: End')
         
         model_consistent = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, 'ALL')
-        '''
-        try:
-            model_consistent = self.check_alpha_eta_consistency(domain, model_full_term_dict, alpha, eta, 'ALL')
-        except Exception as e:
-            print('error', e, flush=True)
-        '''
         if not model_consistent:
             return domain, system_term_dict, model_full_term_dict, eta, alpha, beta, True, False
 

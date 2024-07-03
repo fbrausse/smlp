@@ -44,8 +44,15 @@ def str_to_bool(value):
 def str_to_float_list(value):
     return [float(x) for x in value.split(',')]
 
+def str_to_int_list(value):
+    return [int(x) for x in value.split(',')]
+
 def str_to_str_list(value):
     return [x for x in value.split(',')]
+
+def str_to_str_list_list(value):
+    return [x for x in value.split(';')]
+
 
 def timed(f, desc=None, log=lambda *args: print(*args, file=sys.stderr)):
     now = datetime.datetime.now()

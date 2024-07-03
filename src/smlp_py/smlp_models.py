@@ -212,11 +212,16 @@ class SmlpModels:
     
     # compute sample weights per response or mean value of all responses:
     # resp_vals is either a response column or mean of all responses (per sample).
-    def _sample_weights_per_response_vals(self, resp_vals, sw_coef):
-        mid_range = (resp_vals.max() - resp_vals.min()) / 2
-        w_coef = sw_coef / mid_range
+    def _sample_weights_per_response_vals(self, resp_vals, sw_coef, sw_exp, sw_int):
         #print('resp_vals', resp_vals) ; 
-        sw = [w_coef * (v - mid_range) + 1 for v in resp_vals]; #print('sw', sw)
+        old = False
+        if old:
+            mid_range = (resp_vals.max() - resp_vals.min()) / 2
+            w_coef = sw_coef / mid_range
+            sw = [w_coef * (v - mid_range) + 1 for v in resp_vals]; #print('sw', sw)
+        else:
+            mn = resp_vals.min(); mx = resp_vals.max()
+            sw = [sw_int + sw_coef *((v - mn)/(mx-mn))**sw_exp for v in resp_vals]
         assert any([w >= 0 for w in sw])
         return np.array(sw)
 
@@ -224,27 +229,31 @@ class SmlpModels:
     # and return as a dictionary with the responses as keys and the corresponding 
     # sample weight as the respective values. Required for training with algorithms
     # that can take sample weights per response (e.g., nn_keras).
-    def _compute_sample_weights_dict(self, y_train, sw_coef):
+    def _compute_sample_weights_dict(self, y_train, sw_coef, sw_exp, sw_int):
+        #y_train_weights = y_train.copy()
         if sw_coef == 0:
             return None
         sw_dict = {}
         for resp in y_train.columns.tolist(): 
             #print('y_train', y_train[outp])
             sw = y_train[resp].values; #print('sw', len(sw), type(sw))
-            sw = self._sample_weights_per_response_vals(sw, sw_coef); #print('sw', len(sw))
+            sw = self._sample_weights_per_response_vals(sw, sw_coef, sw_exp, sw_int); #print('sw', len(sw))
             sw_dict[resp] = sw
+            #y_train_weights[resp+'_weights'] = sw
+        #print('Writing sample weights into file', self.report_file_prefix + '_' + 'training' + '_sample_weights.csv')
+        #y_train_weights.to_csv(self.report_file_prefix + '_' + 'training' + '_sample_weights.csv', index=False); assert False
         return sw_dict
 
     # compute sample weights for all responses by applying _sample_weights_per_response_vals
     # to the vector of mean values of all responses (per sample). Required for training
     # for algorithms / packages that cannot take sample weights per response.
-    def _compute_sample_weights_vect(self, y_train, sw_coef):
+    def _compute_sample_weights_vect(self, y_train, sw_coef, sw_exp, sw_int):
         #print('y_train\n', y_train, '\nsw_coef', sw_coef); 
         #print(y_train.shape[0]); print([1] * y_train.shape[0])
         if sw_coef == 0:
             return np.array([1] * y_train.shape[0])
         resp_vals = y_train.mean(axis='columns').values;
-        return self._sample_weights_per_response_vals(resp_vals, sw_coef)
+        return self._sample_weights_per_response_vals(resp_vals, sw_coef, sw_exp, sw_int)
     
     # set a logger to ModelCommon from the caller script
     # then set the same logger to the used instances of ModelKeras, ModelCaret, ModelSklearn
@@ -325,27 +334,30 @@ class SmlpModels:
         return hparams_dict
     
     # training model for all supported algorithms from verious python packages
-    def model_train(self, feat_names_dict:dict, resp_names:list, algo, 
-            X_train:pd.DataFrame, X_test:pd.DataFrame, y_train:pd.DataFrame, y_test:pd.DataFrame,
-            hparams_dict:dict, plots:bool, seed:int, sample_weights_coef:float, model_per_response:bool):
+    def model_train(self, feat_names_dict:dict, resp_names:list[str], algo:str, X_train:pd.DataFrame, X_test:pd.DataFrame, 
+            y_train:pd.DataFrame, y_test:pd.DataFrame, hparams_dict:dict, plots:bool, seed:int, 
+            sample_weights_coef:float, sample_weights_exp:float, sample_weights_int:float, model_per_response:bool):
         self._model_logger.info('Model training: start')
         self.model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
             
         if algo == 'nn_keras':
             keras_algo = algo[:-len('_keras')]
-            sample_weights_dict = self._compute_sample_weights_dict(y_train, sample_weights_coef)
-            model = self._instKeras.keras_main(feat_names_dict, resp_names, keras_algo,
-                X_train, X_test, y_train, y_test, hparams_dict, plots,
+            # sample_weights_dict is more useful than sample_weights_vect (when there are multiple responses), 
+            # but sample_weights_dict can only be used with functional API to assign possibly different weights
+            # to samples for different responses. Since sample_weights_vect can easily be computed from 
+            # sample_weights_dict, we pass only sample_weights_dict as argument to keras_main().
+            sample_weights_dict = self._compute_sample_weights_dict(y_train, sample_weights_coef, sample_weights_exp, sample_weights_int)
+            model = self._instKeras.keras_main(resp_names, keras_algo, X_train, X_test, y_train, y_test, hparams_dict, plots,
                 seed, sample_weights_dict, model_per_response)
         elif algo in ['dt_sklearn', 'et_sklearn', 'rf_sklearn', 'poly_sklearn']:
             sklearn_algo = algo[:-len('_sklearn')]
-            sample_weights_vect = self._compute_sample_weights_vect(y_train, sample_weights_coef)
+            sample_weights_vect = self._compute_sample_weights_vect(y_train, sample_weights_coef, sample_weights_exp, sample_weights_int)
             model = self._instSklearn.sklearn_main(self.get_model_file_prefix, feat_names_dict, resp_names, sklearn_algo,
                 X_train, X_test, y_train, y_test, hparams_dict, plots, 
                 seed, sample_weights_vect, model_per_response)
         elif algo in self._instCaret.SMLP_CARET_MODELS:
             caret_algo = algo[:-len('_caret')]
-            sample_weights_vect = self._compute_sample_weights_vect(y_train, sample_weights_coef)
+            sample_weights_vect = self._compute_sample_weights_vect(y_train, sample_weights_coef, sample_weights_exp, sample_weights_int)
             model = self._instCaret.caret_main(self.get_model_file_prefix, feat_names_dict, resp_names, caret_algo,
                 X_train, X_test, y_train, y_test, hparams_dict, plots,
                 seed, sample_weights_vect, False)       
@@ -416,8 +428,9 @@ class SmlpModels:
     def build_models(self, algo:str, X:pd.DataFrame, y:pd.DataFrame, X_train:pd.DataFrame, y_train:pd.DataFrame, 
             X_test:pd.DataFrame, y_test:pd.DataFrame, X_new:pd.DataFrame, y_new:pd.DataFrame, resp_names:list,
             mm_scaler_feat, mm_scaler_resp, levels_dict:dict, feat_names_dict:dict, 
-            hparams_dict:dict, plots:bool, pred_plots:bool, seed:int, sample_weights_coef:float, save_model:bool, 
-            use_model:bool, model_per_response:bool, model_rerun_config:dict):
+            hparams_dict:dict, plots:bool, pred_plots:bool, seed:int, 
+            sample_weights_coef:float, sample_weights_exp:float, sample_weights_int:float,  
+            save_model:bool, use_model:bool, model_per_response:bool, model_rerun_config:dict):
         if not y_train is None:
             assert resp_names == y_train.columns.tolist()
         if not y_test is None:
@@ -454,7 +467,7 @@ class SmlpModels:
             self._model_logger.info('TRAIN MODEL')
             #feat_names = X_train.columns.tolist()
             model = self.model_train(feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
-                hparams_dict, plots, seed, sample_weights_coef, model_per_response)
+                hparams_dict, plots, seed, sample_weights_coef, sample_weights_exp, sample_weights_int, model_per_response)
 
             if save_model:
                 self._save_model_rerun_config(model_rerun_config)

@@ -168,6 +168,11 @@ class SmlpFlows:
                     raise Exception('Response names should be provided')
             else:
                 resp_names = args.response.split(',')
+                if args.analytics_mode in self.model_exploration_modes:
+                    assert args.spec is not None
+                    resp_wo_spec = [resp for resp in resp_names if resp not in self.specInst.get_spec_responses]
+                    if len(resp_wo_spec) > 0:
+                        raise Exception('Response(s) ' + ' '.join(resp_wo_spec) + ' are not defined in spc file')
             if args.features is None:
                 if args.analytics_mode in self.model_exploration_modes or (args.analytics_mode in self.model_prediction_modes and args.spec is not None):
                     feat_names = self.specInst.get_spec_features
@@ -271,8 +276,8 @@ class SmlpFlows:
                 model = self.modelInst.build_models(args.model, X, y, X_train, y_train, X_test, y_test, X_new, y_new,
                     resp_names, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict, 
                     self.modelInst.get_hyperparams_dict(args, args.model), args.interactive_plots, args.prediction_plots,  
-                    args.seed, args.sample_weights_coef, args.save_model, args.use_model, args.model_per_response, 
-                    self.configInst.model_rerun_config)
+                    args.seed, args.sample_weights_coef, args.sample_weights_exponent, args.sample_weights_intercept, 
+                    args.save_model, args.use_model, args.model_per_response, self.configInst.model_rerun_config)
             
             # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
             # the same; this is mostly important for model exploration modes 

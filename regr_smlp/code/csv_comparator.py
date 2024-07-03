@@ -9,7 +9,6 @@ THRESHOLD = 0.00006
 
 
 def load_files(csv):
-    print('csv to read', csv)
     return pd.read_csv(csv)
 
 
