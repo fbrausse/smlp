@@ -34,13 +34,18 @@ class ModelKeras:
         self.SMLP_KERAS_MODELS = [self._algo_name_local2global(m) for m in self._KERAS_MODELS]
         
         # hyper parameter defaults
-        self._DEF_LAYERS_SPEC = '2,1'
-        self._DEF_EPOCHS     = 2000
-        self._DEF_BATCH_SIZE = 200
+        self._DEF_LAYERS_SPEC = '2,1,2' # '2,1'
+        self._DEF_EPOCHS     = 1000 # 1000
+        self._DEF_BATCH_SIZE = 200 # 200
         self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
+#<<<<<<< Updated upstream
         self._DEF_LEARNING_RATE = 0.001
         self._HID_ACTIVATION = 'relu'
         self._OUT_ACTIVATION = 'linear'
+#=======
+#        self._HID_ACTIVATION = 'relu' # 'relu'
+#        self._OUT_ACTIVATION = 'linear' # 'linear'
+#>>>>>>> Stashed changes
         self._SEQUENTIAL_API = True
         
         # model accuracy parameters
@@ -199,7 +204,7 @@ class ModelKeras:
     @property
     def model_checkpoint_pattern(self):
         assert self.model_file_prefix is not None
-        return self.model_file_prefix + '_model_checkpoint.h5'
+        return self.model_file_prefix + '_model_checkpoint.keras'  #'_model_checkpoint.h5'
     
     # TODO !!!: add description
     @property

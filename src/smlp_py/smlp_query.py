@@ -1,10 +1,16 @@
 from fractions import Fraction
 import json
 
+from icecream import ic
 import smlp
 from smlp_py.smlp_terms import ModelTerms, SmlpTerms
 from smlp_py.smlp_utils import np_JSONEncoder #, str_to_bool
+#=======
+#from smlp_py.smlp_utils import np_JSONEncoder
+#>>>>>>> Stashed changes
+from smlp_py.ext import plot
 
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
 class SmlpQuery:
     def __init__(self):
@@ -538,6 +544,7 @@ class SmlpQuery:
             
             ca = self.find_candidate(candidate_solver)
             if isinstance(ca, smlp.sat):
+#<<<<<<< Updated upstream
                 print('candidate found -- checking stability', flush=True)
                 #print('ca', ca.model)
                 if use_approxiamted_fractions:
@@ -559,6 +566,17 @@ class SmlpQuery:
                 else:
                     ce = self.find_candidate_counter_example(universal, domain, ca.model, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
+#=======
+#                print('candidate found -- checking stability')
+#                ce = self.find_candidate_counter_example(domain, ca.model, quer, model_full_term_dict, alpha, 
+#                    theta_radii_dict, solver_logic)
+#
+#                witness_val = self._smlpTermsInst.witness_term_to_const(ca.model, sat_approx,  
+#                            sat_precision)
+#
+#                plot.save_to_csv(witness_val, data_version='witnesses')
+#                
+#>>>>>>> Stashed changes
                 if isinstance(ce, smlp.sat):
                     print('candidate not stable -- continue search', flush=True)
                     cem = ce.model.copy(); #print('ce model', cem)
@@ -730,6 +748,7 @@ class SmlpQuery:
             alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #None, 
             float_approx, float_precision, data_bounds_json_path)
         
+#<<<<<<< Updated upstream
         # update mode_status_dict based on interface and model consistency results 
         # computed by get_model_exploration_base_components()
         mode_status_dict['interface_consistent'] = str(interface_consistent).lower()
@@ -787,3 +806,7 @@ class SmlpQuery:
         with open(self.synthesis_results_file, 'w') as f:
             json.dump(mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
             
+#=======
+#        self.query_conditions(model_full_term_dict, quer_names, quer_exprs, quer_forms_dict, domain, 
+#            eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
+#>>>>>>> Stashed changes

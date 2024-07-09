@@ -27,15 +27,15 @@ class ModelCaret:
         # params for setup() function: session_id, verbose, fold, data_split_shuffle (set to False to acheive reproducibility?)
         # setup() hyper parameter defaults
         self._DEF_SESSION_ID = None
-        self._DEF_DATA_SPLIT_SHUFFLE = True
-        self._DEF_CV_FOLDS = 0
-        self._DEF_TREE_MAX_DEPTH = 5
-        self._DEF_CROSS_VALIDATION = True
+        self._DEF_DATA_SPLIT_SHUFFLE = True # True
+        self._DEF_CV_FOLDS = 3 #2
+        self._DEF_TREE_MAX_DEPTH = 3 #3
+        self._DEF_CROSS_VALIDATION = True # True
         self._DEF_VERBOSE = True
         self._DEF_RETURN_TRAIN_SCORE = False
 
         # tune_model() default values
-        self._DEF_SEARCH_ALGO = 'random'
+        self._DEF_SEARCH_ALGO = 'random' # 'random'
         self._DEF_TUNER_VERBOSE = True
         
         #  params dictionary for setup() function

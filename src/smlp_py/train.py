@@ -1,4 +1,4 @@
-
+from icecream import ic
 import tensorflow as tf
 from tensorflow import keras
 
@@ -12,6 +12,8 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, MaxAbsScaler
 from sklearn.metrics import mean_squared_error, r2_score
 
 from pandas import read_csv, DataFrame
+
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
 from common import *
 from math import ceil
