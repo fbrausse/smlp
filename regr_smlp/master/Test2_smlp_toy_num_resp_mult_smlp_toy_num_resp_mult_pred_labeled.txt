@@ -159,7 +159,7 @@ smlp_logger - INFO - TRAIN MODEL
 
 smlp_logger - INFO - Model training: start
 
-smlp_logger - INFO - Writing tree rules into file ./Test2_smlp_toy_num_resp_mult_rf_sklearn_tree_rules.txt
+smlp_logger - INFO - Writing tree rules into file ./Test2_smlp_toy_num_resp_mult_rf_sklearn_y1_tree_rules.txt
 
 smlp_logger - INFO - Model training: end
 

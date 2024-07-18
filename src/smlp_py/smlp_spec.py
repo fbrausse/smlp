@@ -357,6 +357,11 @@ class SmlpSpec:
         return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
             var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_INPUT_TAG]
     
+    # API to compute the list of inputs in spec
+    @property
+    def get_spec_interface(self):
+        return self.get_spec_inputs + self.get_spec_knobs + self.get_spec_responses
+    
     # anonymize system/model interface names -- knobs, inputs, outputs.
     # currently is used to anonymize trace logs for debugging.
     @property
@@ -938,3 +943,65 @@ class SmlpSpec:
                 raise Exception('At least on of the relative or absolute radii must mot be None')
             knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
         return input_ranges | knobs_ranges
+    
+    
+    '''
+    This function splits an SMLP spec extracted from spec_file into a number pf spec files with smaller grids 
+    for the knobs in the "knobs" list -- for each of the knobs knobs[i] specified in "knobs" argument, 
+    splits[i] number of sub-grids of nearly equal lengths will be created from the consequtive grid values,
+    and splits[0] * splits(1] * ... * rations[k] (with k = len(splits) -1) spec files with smaller grids
+    will be generated and dumped. The steps performed by this function are as follows:
+    1. Load the JSON content from the spec_file.
+    2. Validate that the knobs and splits lists have the same length.
+    3. Find the dictionaries with the label matching each name in knobs and ensure they have a "grid" key.
+    4. Split the "grid" list into sub-grids based on the corresponding value in splits.
+    5. Generate all possible combinations of the sub-grids.
+    5. Create new dictionaries with the updated "grid" values for each combination.
+    7. Write each new dictionary to a JSON file with a specified naming convention.
+    '''
+    def split_spec(self, spec_file, knobs:list[str], splits:list[int]):
+        # Step 1: Load the JSON content
+        with open(spec_file, 'r') as file:
+            spec_data = json.load(file)
+
+        # Step 2: Validate the lengths of knobs and splits
+        if len(knobs) != len(splits):
+            raise ValueError("The lengths of 'knobs' and 'splits' must be the same.")
+
+        # Step 3: Find the dictionaries with the matching labels and grids
+        variables = spec_data.get(self._SPEC_DICTIONARY_SPEC, [])
+        grids = {}
+        for name in knobs:
+            for variable in variables:
+                if variable.get(self._SPEC_VARIABLE_LABEL) == name and variable.get(self._SPEC_VARIABLE_TYPE) == self._SPEC_KNOB_TAG:
+                    if self._SPEC_KNOBS_GRID in variable:
+                        grids[name] = variable[self._SPEC_KNOBS_GRID]
+                        break
+            else:
+                raise ValueError(f"No knob variable found with label '{name}' or missing 'grid' key.")
+
+        # Step 4: Split the "grid" lists into sub-grids
+        sub_grids = {name: [grids[name][i::splits[idx]] for i in range(splits[idx])] for idx, name in enumerate(knobs)}
+
+        # Step 5: Generate all possible combinations of sub-grids
+        combinations = list(itertools.product(*sub_grids.values()))
+
+        # Step 6: Create new dictionaries for each combination
+        new_spec_files = []
+        for idx, combo in enumerate(combinations):
+            new_spec_data = spec_data.copy()
+            new_spec_data[self._SPEC_DICTIONARY_SPEC] = [var.copy() for var in variables]
+            for var_idx, var in enumerate(new_spec_data[self._SPEC_DICTIONARY_SPEC]):
+                if var[self._SPEC_VARIABLE_LABEL] in knobs:
+                    name_index = knobs.index(var[self._SPEC_VARIABLE_LABEL])
+                    var[self._SPEC_KNOBS_GRID] = combo[name_index]
+
+            # Step 7: Write each new dictionary to a JSON file with suffix ".spec"
+            output_filename = f"{spec_file.rsplit('.', 1)[0]}_{knobs[name_index]}_{splits[name_index]}_{idx}.spec"
+            with open(output_filename, 'w') as outfile:
+                json.dump(new_spec_data, outfile, indent=4)
+            print(f"Created spec file: {output_filename}")
+            new_spec_files.append(output_filename)
+        return new_spec_files
+    # Example usage:
+    # split_spec('spec_file.json', ['p1', 'p2'], [2, 3])

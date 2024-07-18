@@ -847,7 +847,7 @@ def main():
                             txt_file = True
                         # condition before, dropping from it h5 file checks because getting UnicodeDecodeError error on Sles 15, say on Test 13.
                         # (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json') or new_file.endswith('.h5')) and not file_name in files_to_ignore_from_diff:
-                        if (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json')) and not (file_name in files_to_ignore_from_diff): # or file_name.endswith('_model_term.json')
+                        if (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json')) and not (file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')): # or file_name.endswith('_model_term.json')
                             print('comparing {file} to master'.format(file=file_name))
                             p = Popen(
                                 '{diff} -B -I \'Feature selection.*file .*\' -I \'\\[-v-] Input.*\' -I \'usage:.*\' {k} {l}'.format(

@@ -1,9 +1,0 @@
-#Forest semantics: majority vote
-#Number of trees: 1
-
-#TREE 0
-if (x1 <= 0.7450278699398041) and (p1 <= 0.8535353541374207) and (p2 <= 0.625) then (y2 = 0.6311926605504588) | based on 4 samples
-if (x1 > 0.7450278699398041) and (p2 > 0.375) then (y2 = 0.7748715596330276) | based on 1 samples
-if (x1 > 0.7450278699398041) and (p2 <= 0.375) then (y2 = 1.0) | based on 1 samples
-if (x1 <= 0.7450278699398041) and (p1 > 0.8535353541374207) then (y2 = 0.48454128440366984) | based on 1 samples
-if (x1 <= 0.7450278699398041) and (p1 <= 0.8535353541374207) and (p2 > 0.625) then (y2 = 0.8261467889908257) | based on 1 samples

@@ -9,8 +9,8 @@
 		"obj1": 7.0,
 		"threshold_lo_scaled": 0.5,
 		"threshold_lo": 7.0,
-		"threshold_up_scaled": 1.0,
-		"threshold_up": 9.0,
+		"threshold_up_scaled": 0.53125,
+		"threshold_up": 7.125,
 		"max_in_data": 9.0,
 		"min_in_data": 5.0
 	},
@@ -24,8 +24,8 @@
 		"objv2": 5.0,
 		"threshold_lo_scaled": 0.0,
 		"threshold_lo": 5.0,
-		"threshold_up_scaled": 1.0,
-		"threshold_up": 9.0,
+		"threshold_up_scaled": 0.03125,
+		"threshold_up": 5.125,
 		"max_in_data": 9.0,
 		"min_in_data": 5.0
 	},

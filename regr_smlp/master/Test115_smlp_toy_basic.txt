@@ -143,9 +143,9 @@ smlp_logger - INFO - TRAIN MODEL
 
 smlp_logger - INFO - Model training: start
 
-smlp_logger - INFO - Writing tree rules into file ./Test115_smlp_toy_basic_dt_sklearn_tree_rules.txt
+smlp_logger - INFO - Writing tree rules into file ./Test115_smlp_toy_basic_dt_sklearn_y1_tree_rules.txt
 
-smlp_logger - INFO - Writing tree rules into file ./Test115_smlp_toy_basic_dt_sklearn_tree_rules.txt
+smlp_logger - INFO - Writing tree rules into file ./Test115_smlp_toy_basic_dt_sklearn_y2_tree_rules.txt
 
 smlp_logger - INFO - Model training: end
 
@@ -250,6 +250,10 @@ smlp_logger - INFO - System terms dictionary: {'y1': <smlp.libsmlp.term2 (ite (a
 smlp_logger - INFO - Building system terms: End
 
 smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Model operator counts for y1: {'add': 1, 'mul': 26, 'ite': 7, 'and': 18, 'prop': 25, 'const': 85, 'sub': 25, 'var': 25}
+
+smlp_logger - INFO - Model operator counts for y2: {'add': 1, 'mul': 10, 'ite': 4, 'and': 5, 'prop': 9, 'const': 34, 'sub': 9, 'var': 9}
 
 smlp_logger - INFO - Building model terms: End
 

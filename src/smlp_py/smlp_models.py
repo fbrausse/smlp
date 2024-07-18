@@ -21,7 +21,7 @@ from smlp_py.smlp_utils import str_to_bool
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
 # Model training parameter model_per_response controls whther one model is build that covers all responses
 # or a separate model is built for each response. In the latter case, when MRMR option mrmr_pred is on,
-# model for each response is built from the subset of features selected by MRMR algorithm fro that 
+# model for each response is built from the subset of features selected by MRMR algorithm for that 
 # response -- these subsets of features might be different for different responses. Also, in this case
 # (when model_per_response is true) result of training is a dictionary with response names as keys and
 # the model trained for a given response as the correponding value in the dictionary. When model_per_response

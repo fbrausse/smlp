@@ -101,10 +101,10 @@
 			"value_in_config": 0.25
 		},
 		"threshold_up_scaled": {
-			"value_in_config": 0.5
+			"value_in_config": 0.3125
 		},
 		"threshold_up": {
-			"value_in_config": 0.5
+			"value_in_config": 0.3125
 		},
 		"max_in_data": {
 			"value_in_config": 1.0
@@ -153,10 +153,10 @@
 			"value_in_config": 0.25
 		},
 		"threshold_up_scaled": {
-			"value_in_config": 0.5
+			"value_in_config": 0.3125
 		},
 		"threshold_up": {
-			"value_in_config": 0.5
+			"value_in_config": 0.3125
 		},
 		"max_in_data": {
 			"value_in_config": 1.0

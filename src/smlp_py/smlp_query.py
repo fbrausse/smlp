@@ -96,7 +96,7 @@ class SmlpQuery:
     def find_candidate(self, solver):
         #res = solver.check()
         res = self._modelTermsInst.smlp_solver_check(solver, 'ca', self._lemma_precision)
-        if isinstance(res, smlp.unknown):
+        if self._modelTermsInst.solver_status_unknown(res): # isinstance(res, smlp.unknown):
             return None
         else:
             return res
@@ -202,13 +202,13 @@ class SmlpQuery:
             candidate_solver.add(self._smlpTermsInst.smlp_eq(smlp.Var(var), smlp.Cnst(val)))
         
         candidate_check_res = self._modelTermsInst.smlp_solver_check(candidate_solver, 'ca')
-        if isinstance(candidate_check_res, smlp.sat):
+        if self._modelTermsInst.solver_status_sat(candidate_check_res): #isinstance(candidate_check_res, smlp.sat):
             cond_feasible = True
             if universal:
                 self._query_logger.info('The configuration is consistent with assertion ' + str(quer_name))
             else:
                 self._query_logger.info('Witness to query ' + str(quer_name) + ' is a valid witness; checking its stability')
-        elif isinstance(candidate_check_res, smlp.unsat):
+        elif self._modelTermsInst.solver_status_unsat(candidate_check_res): #isinstance(candidate_check_res, smlp.unsat):
             cond_feasible = False
             if universal:
                 # Assertion cannot be satisfied (is constant False) given the knob configuration and the constraints.
@@ -236,17 +236,18 @@ class SmlpQuery:
         witn_term_dict = self._smlpTermsInst.witness_const_to_term(witn_dict)
         ce = self.find_candidate_counter_example(universal, domain, witn_term_dict, quer, model_full_term_dict, alpha, 
             theta_radii_dict, solver_logic)
-        if isinstance(ce, smlp.sat):
+        if self._modelTermsInst.solver_status_sat(ce): #isinstance(ce, smlp.sat):
             if universal:
                 self._query_logger.info('Completed with result: FAIL')
                 #self._query_logger.info('Assertion ' +  str(quer_name) + ' fails (for stability radii ' + str(theta_radii_dict))
                 #status = 'FAIL' if cond_feasible else 'FAIL VACUOUSLY'
+                ce_model = self._modelTermsInst.get_solver_model(ce)
                 return {'assertion_status':'FAIL', 'asrt': False, 'assertion_feasible': cond_feasible, 
-                        'counter_example':self._smlpTermsInst.witness_term_to_const(ce.model, approximate=sat_approx, precision=sat_precision)}
+                        'counter_example':self._smlpTermsInst.witness_term_to_const(ce_model, approximate=sat_approx, precision=sat_precision)}
             else:
                 self._query_logger.info('Witness to query ' + str(quer_name) + ' is not stable for radii ' + str(theta_radii_dict))
                 return 'witness, not stable'
-        elif isinstance(ce, smlp.unsat):
+        elif self._modelTermsInst.solver_status_unsat(ce): #isinstance(ce, smlp.unsat):
             if universal:
                 self._query_logger.info('Completed with result: PASS')
                 #self._query_logger.info('Assertion ' +  str(quer_name) + ' passes (for stability radii ' + str(theta_radii_dict))
@@ -402,13 +403,13 @@ class SmlpQuery:
                     self._query_logger.info('Certifying consistency of witness for query ' + str(quer_name) + ':\n   ' + str(witn_form))
                 witn_status = self.check_concrete_witness_consistency(domain, model_full_term_dict, 
                     alpha, eta, None, witn_form, solver_logic)
-                if isinstance(witn_status, smlp.sat):
+                if self._modelTermsInst.solver_status_sat(witn_status): #isinstance(witn_status, smlp.sat):
                     if universal:
                         self._query_logger.info('Input, knob and configuration constraints are consistent')
                     else:
                         self._query_logger.info('Input, knob and concrete witness constraints are consistent')
                     mode_status_dict[quer_name][CONSISTENCY] = 'true'
-                elif isinstance(witn_status, smlp.unsat):
+                elif self._modelTermsInst.solver_status_unsat(witn_status): #isinstance(witn_status, smlp.unsat):
                     if universal:
                         self._query_logger.info('Input, knob and configuration constraints are inconsistent')
                     else:
@@ -537,11 +538,13 @@ class SmlpQuery:
             print('searching for a candidate', flush=True)
             
             ca = self.find_candidate(candidate_solver)
-            if isinstance(ca, smlp.sat):
+            
+            if self._modelTermsInst.solver_status_sat(ca): # isinstance(ca, smlp.sat):
                 print('candidate found -- checking stability', flush=True)
-                #print('ca', ca.model)
+                #print('ca', ca_model)
+                ca_model = self._modelTermsInst.get_solver_model(ca) #ca.model
                 if use_approxiamted_fractions:
-                    ca_model_approx = self._smlpTermsInst.approximate_witness_term(ca.model, self._lemma_precision)
+                    ca_model_approx = self._smlpTermsInst.approximate_witness_term(ca_model, self._lemma_precision)
                     #print('ca_model_approx -------------', ca_model_approx)
                     knob_vals = [v for k,v in ca_model_approx.items() if k in theta_radii_dict]; #print('knob_vals', knob_vals)
                     h = hash(str(knob_vals))
@@ -557,13 +560,14 @@ class SmlpQuery:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model_approx, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
                 else:
-                    ce = self.find_candidate_counter_example(universal, domain, ca.model, quer, model_full_term_dict, alpha, 
+                    ce = self.find_candidate_counter_example(universal, domain, ca_model, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
-                if isinstance(ce, smlp.sat):
+                if self._modelTermsInst.solver_status_sat(ce): #isinstance(ce, smlp.sat):
                     print('candidate not stable -- continue search', flush=True)
-                    cem = ce.model.copy(); #print('ce model', cem)
+                    ce_model = self._modelTermsInst.get_solver_model(ce) #ce.model
+                    cem = ce_model.copy(); #print('ce model', cem)
                     # drop Assignements to responses from ce
-                    for var in ce.model.keys():
+                    for var in ce_model.keys():
                         if var in model_full_term_dict.keys():
                             del cem[var]
                     if use_approxiamted_fractions:
@@ -584,11 +588,12 @@ class SmlpQuery:
                     theta = self._modelTermsInst.compute_stability_formula_theta(lemma, delta, theta_radii_dict, universal)
                     candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
                     continue
-                elif isinstance(ce, smlp.unsat):
+                elif self._modelTermsInst.solver_status_unsat(ce): #isinstance(ce, smlp.unsat):
                     #print('candidate stable -- return candidate')
                     self._query_logger.info('Query completed with result: STABLE_SAT (satisfiable)')
                     if witn: # export witness (use numbers as values, not terms)
-                        witness_vals_dict = self._smlpTermsInst.witness_term_to_const(ca.model, sat_approx, sat_precision)
+                        ca_model = self._modelTermsInst.get_solver_model(ca) # ca.model
+                        witness_vals_dict = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
                         #print('domain witness_vals_dict', witness_vals_dict)
                         # sanity check: the value of query in the sat assignment should be true
                         if quer_expr is not None:
@@ -596,15 +601,15 @@ class SmlpQuery:
                             assert quer_ce_val
                         return {'query_status':'STABLE_SAT', 'witness':witness_vals_dict, 'feasible':feasible}
                     else:
-                        return {'query_status':'STABLE_SAT', 'witness':ca.model, 'feasible':feasible}
-            elif isinstance(ca, smlp.unsat):
+                        return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
+            elif self._modelTermsInst.solver_status_unsat(ca): #isinstance(ca, smlp.unsat):
                 self._query_logger.info('Query completed with result: UNSAT (unsatisfiable)')
                 if feasible is None:
                     feasible = False
                 #print('candidate does not exist -- query unsuccessful')
                 #print('query unsuccessful: witness does not exist (query is unsat)')
                 return {'query_status':'UNSAT', 'witness':None, 'feasible':feasible}
-            elif isinstance(ca, smlp.unknown):
+            elif self._modelTermsInst.solver_status_unknown(ca): #isinstance(ca, smlp.unknown):
                 self._opt_logger.info('Completed with result: {}'.format('UNKNOWN'))
                 return {'query_status':'UNKNOWN', 'witness':None, 'feasible':feasible}
                 #raise Exception('UNKNOWN return value in candidate search is currently not supported for queries')

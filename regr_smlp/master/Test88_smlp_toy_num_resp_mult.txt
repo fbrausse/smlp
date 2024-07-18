@@ -215,6 +215,10 @@ smlp_logger - INFO - Input and knob interface constraints are consistent
 
 smlp_logger - INFO - Building model terms: Start
 
+smlp_logger - INFO - Model operator counts for y1: {'add': 1, 'mul': 15, 'ite': 5, 'and': 9, 'prop': 14, 'const': 50, 'sub': 14, 'var': 14}
+
+smlp_logger - INFO - Model operator counts for y2: {'add': 1, 'mul': 15, 'ite': 5, 'and': 9, 'prop': 14, 'const': 50, 'sub': 14, 'var': 14}
+
 smlp_logger - INFO - Building model terms: End
 
 smlp_logger - INFO - Model interface constraints are consistent

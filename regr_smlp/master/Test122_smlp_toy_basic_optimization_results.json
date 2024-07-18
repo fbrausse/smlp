@@ -8,8 +8,8 @@
 		"objv1": 0.0,
 		"threshold_lo_scaled": -0.02294301986694336,
 		"threshold_lo": -4.792213439042886e-08,
-		"threshold_up_scaled": -0.022942543029785156,
-		"threshold_up": 4.9401283264250005e-06,
+		"threshold_up_scaled": -0.022943012416362762,
+		"threshold_up": 3.001615406228453e-08,
 		"max_in_data": 10.7007,
 		"min_in_data": 0.24
 	},
@@ -22,8 +22,8 @@
 		"objv2": 0.0,
 		"threshold_lo_scaled": -0.01061519980430603,
 		"threshold_lo": -4.918877031973577e-07,
-		"threshold_up_scaled": -0.010615170001983643,
-		"threshold_up": 2.5267527634331015e-06,
+		"threshold_up_scaled": -0.010615192353725433,
+		"threshold_up": 2.6277241338412693e-07,
 		"max_in_data": 102.36396627,
 		"min_in_data": 1.0752000000000002
 	},

@@ -1,8 +1,0 @@
-#Forest semantics: majority vote
-#Number of trees: 1
-
-#TREE 0
-if (p2 > 0.7000000178813934) and (x <= 0.6666666716337204) then (y1 = 1.0) | based on 3 samples
-if (p2 <= 0.7000000178813934) and (x <= 0.8333333432674408) then (y1 = 0.0) | based on 3 samples
-if (p2 > 0.7000000178813934) and (x > 0.6666666716337204) then (y1 = 0.0) | based on 1 samples
-if (p2 <= 0.7000000178813934) and (x > 0.8333333432674408) then (y1 = 1.0) | based on 1 samples

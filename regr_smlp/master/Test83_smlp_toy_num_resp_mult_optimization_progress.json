@@ -160,10 +160,10 @@
 			"value_in_config": 0.3125
 		},
 		"threshold_up_scaled": {
-			"value_in_config": 0.375
+			"value_in_config": 0.34375
 		},
 		"threshold_up": {
-			"value_in_config": 0.375
+			"value_in_config": 0.34375
 		},
 		"max_in_data": {
 			"value_in_config": 1.0
@@ -299,6 +299,12 @@
 		},
 		"min_in_data": {
 			"value_in_config": 0.0
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 1.03984375
+		},
+		"threshold_up": {
+			"value_in_config": 1.03984375
 		}
 	},
 	"final": {
@@ -352,6 +358,12 @@
 		},
 		"min_in_data": {
 			"value_in_config": 0.0
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 1.03984375
+		},
+		"threshold_up": {
+			"value_in_config": 1.03984375
 		}
 	}
 }
