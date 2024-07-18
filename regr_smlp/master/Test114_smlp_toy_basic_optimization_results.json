@@ -46,6 +46,12 @@
 	"min_in_data": {
 		"value_in_config": 0.0
 	},
+	"threshold_up_scaled": {
+		"value_in_config": 1.03125
+	},
+	"threshold_up": {
+		"value_in_config": 1.03125
+	},
 	"smlp_execution": "completed",
 	"interface_consistent": "true",
 	"model_consistent": "true",

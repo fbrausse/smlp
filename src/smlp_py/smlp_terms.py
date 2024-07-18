@@ -13,6 +13,9 @@ import operator as op
 from fractions import Fraction
 import time
 import functools #for cacheing
+from collections import defaultdict
+import sys
+
 import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
@@ -124,9 +127,6 @@ class SmlpTerms:
             ast.And: self.smlp_and, ast.Or: self.smlp_or, ast.Not: self.smlp_not,
             ast.IfExp: self.smlp_ite
         } 
-
-
-
         
     # set logger from a caller script
     def set_logger(self, logger):
@@ -214,6 +214,10 @@ class SmlpTerms:
     #@functools.cache -- error: unhashable type: 'list'
     def smlp_and_multi(self, form_list:list[smlp.form2]):
         res = self.smlp_true
+        '''
+        for i, form in enumerate(form_list):
+            res = form if i == 0 else self.smlp_and(res, form)
+        '''
         for form in form_list:
             res = form if res is self.smlp_true else self.smlp_and(res, form)
         return res
@@ -226,10 +230,35 @@ class SmlpTerms:
         #assert res1 == res2
         return res1 #form1 | form2
     
+    # disjunction of possibly more than two formulas
+    #@functools.cache -- error: unhashable type: 'list'
+    def smlp_or_multi(self, form_list:list[smlp.form2]):
+        res = self.smlp_false
+        '''
+        for i, form in enumerate(form_list):
+            res = form if i == 0 else self.smlp_or(res, form)
+        '''
+        for form in form_list:
+            res = form if res is self.smlp_false else self.smlp_or(res, form)
+        return res
+    
+    # logical implication
+    @conditional_cache #@functools.cache
+    def smlp_implies(self, form1:smlp.form2, form2:smlp.form2):
+        return self.smlp_or(self.smlp_not(form1), form2)
+
+    
     # addition
     @conditional_cache #@functools.cache
     def smlp_add(self, term1:smlp.term2, term2:smlp.term2):
         return op.add(term1, term2)
+    
+    # sum of possibly more than two formulas
+    #@functools.cache -- error: unhashable type: 'list'
+    def smlp_add_multi(self, term_list:list[smlp.term2]):
+        for i, term in enumerate(term_list):
+            res = term if i == 0 else self.smlp_add(res, term)                
+        return res
     
     # subtraction
     @conditional_cache #@conditional_cache #@functools.cache
@@ -304,9 +333,71 @@ class SmlpTerms:
     def smlp_cnst_fold(self, term:smlp.term2, subst_dict:dict):
         return smlp.cnst_fold(term, subst_dict)
     
+    '''
+    destruct(e: smlp.libsmlp.form2 | smlp.libsmlp.term2) -> dict
+    Destructure the given term2 or form2 instance `e`. The result is a dict
+    with the following entries:
+    - 'id': always, one of:
+      - term2: 'var', 'add', 'sub', 'mul', 'uadd', 'usub', 'const', 'ite'
+      - form2: 'prop', 'and', 'or', 'not'
+    - 'args': operands to this operation as a tuple (or list in case of
+              'and' and 'or') of term2 and/or form2 objects (all except
+              'var', 'const'),
+    - 'name': name of symbol ('var' only)
+    - 'type': type of term2 constant, one of: 'Z', 'Q', 'A' ('const' only)
+    - 'cmp': comparison predicate, one of: '<=', '<', '>=', '>', '==', '!='
+             ('prop' only)
+    '''
     def smlp_destruct(self, term2_or_form2): #:smlp.term2|smlp.form2
+        sys.setrecursionlimit(15000)
         return smlp.destruct(term2_or_form2)
     
+    # this function traverses an object of type smlp.libsmlp.form2 or smlp.libsmlp.term2 
+    # and returns a dictionary with the counts of each operator encountered during the traversal.
+    def smlp_count_operators(self, e):
+        #return {}
+        # Initialize a dictionary to store the counts of operators
+        operator_counts = defaultdict(int)
+
+        # Define a helper function to traverse the object
+        def traverse(obj):
+            # Destructure the given object
+            destructure_result = self.smlp_destruct(obj)
+
+            # Increment the count of the current operator
+            operator_counts[destructure_result['id']] += 1
+
+            # If there are arguments, recursively traverse them
+            if 'args' in destructure_result:
+                for arg in destructure_result['args']:
+                    traverse(arg)
+
+        # Start the traversal with the input object
+        traverse(e)
+        
+        return dict(operator_counts)
+    
+    # Example usage:
+    # Assuming operator_counts_list is a list of dictionaries with operator counts
+    # summed_operator_counts = sum_operator_counts(operator_counts_list)
+    # print(summed_operator_counts)
+    def sum_operator_counts(self, operator_counts_list):
+        # Initialize a dictionary to store the sum of operator counts
+        summed_counts = {}
+
+        # Iterate over each operator_counts dictionary in the list
+        for operator_counts in operator_counts_list:
+            # Iterate over each key-value pair in the current dictionary
+            for operator, count in operator_counts.items():
+                # Add the count to the summed_counts dictionary
+                if operator in summed_counts:
+                    summed_counts[operator] += count
+                else:
+                    summed_counts[operator] = count
+
+        return summed_counts
+
+
     # this function doesn't take substitutions, but in addition to whatever cnst_fold() is doing, 
     # it simplifies arithmetics and con-/disjunctions and negations:
     # simplify() uses the following axioms:
@@ -660,6 +751,18 @@ class TreeTerms:
     def set_compress_rules(self, compress_rules:bool):
         self._compress_rules = compress_rules
     
+    def set_tree_encoding(self, tree_encoding:str):
+        self._tree_encoding = tree_encoding
+        
+    def _tree_model_id(self, algo:str, tree_number:int, resp_name=None):
+        assert algo is not None
+        res1 = '_'.join([algo, 'tree', str(tree_number)]) if tree_number is not None else algo
+        res = '_'.join([res1, str(resp_name)]) if resp_name is not None else res1
+        return res
+    
+    def _tree_resp_id(self, tree_number:int, resp_name:str):
+        return '_'.join(['tree', str(tree_number), resp_name])
+    
     # generate rules from a single decision or regression tree that predicts a single response
     def _get_abstract_rules(self, tree, feature_names, resp_names, class_names, rounding=-1):
         #print('_get_abstract_rules: tree', tree, '\nresp_names', resp_names)
@@ -889,8 +992,8 @@ class TreeTerms:
         #print('antecedent', len(antecedent), antecedent, '\nant_reduced', len(ant_reduced), ant_reduced)
         #print('antecedent size: ', len(antecedent), ' --> ', len(ant_reduced), flush=True)
         return ant_reduced, len(antecedent), len(ant_reduced)
-    
-    def rules_to_term(self, rules, ant_reduction_stats):
+
+    def rules_to_term(self, algo, tree_number:int, rules:list, ant_reduction_stats:dict):
         #print('rules_to_term start', flush=True)
         # Convert the antecedent and consequent of a rule (corresponding to a full branch in a tree)
         # into smlp terms and return a dictionary with response names as the keys and pairs of terms
@@ -916,8 +1019,19 @@ class TreeTerms:
                             
             return res_dict, ant_befor, ant_after
         
+        def rule_to_form(rule, tree_number):
+            res_dict, _, _ = rule_to_term(rule)
+            rhs = self.instSmlpTerms.smlp_true
+            for resp, (ant, val) in res_dict.items():
+                resp_rhs = self.instSmlpTerms.smlp_eq(self.instSmlpTerms.smlp_var(self._tree_resp_id(tree_number, resp)), val) #   '_'.join([resp, 'tree', str(tree_number)]))
+                rhs = resp_rhs if rhs == self.instSmlpTerms.smlp_true else self.instSmlpTerms.smlp_and(rhs, resp_rhs) 
+            form = self.instSmlpTerms.smlp_implies(ant, rhs); #print('rule formula', rule, form)
+            return form
+        
         # returned value
         rules_dict = {}
+        if self._tree_encoding == 'flat' and algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']:
+            rules_dict[self._tree_model_id(algo, tree_number)] = [] # 'Tree_0_dt_sklearn_model
         #print('numer of rules', len(rules), flush=True)
         
         for i, rule in enumerate(rules):
@@ -935,17 +1049,20 @@ class TreeTerms:
             #     (> FMAX_xyz (/ 33554433 67108864)))>, <smlp.libsmlp.term2 0>)}
             #print('rule_dict', rule_dict)
             #print('number of rule terms', len(rule_dict), flush=True)
-            for resp, (ant_term, con_term) in rule_dict.items():            
-                if i == 0:
-                    # The condition along a branch of a decision tree is implied by disjunction 
-                    # of conditions along the rest of the branches, thus can be omitted. In this
-                    # implementation, we choose do omit the condition along the first branch.
-                    # TODO: Ideally, we could implement a sanity check that the condition along 
-                    # the forst branch is implied by the conjunction of conditions along the rest
-                    # of the branches -- using a solver like Z3.
-                    rules_dict[resp] = con_term #self.instSmlpTerms.smlp_ite(ant_term, con_term, smlp.Var('SMLP_UNDEFINED'))
-                else:
-                    rules_dict[resp] = self.instSmlpTerms.smlp_ite(ant_term, con_term, rules_dict[resp])
+            if self._tree_encoding == 'flat' and algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']:
+                rules_dict[self._tree_model_id(algo, tree_number)].append(rule_to_form(rule, tree_number)) # 'Tree_0_dt_sklearn_model
+            else:
+                for resp, (ant_term, con_term) in rule_dict.items():            
+                    if i == 0:
+                        # The condition along a branch of a decision tree is implied by disjunction 
+                        # of conditions along the rest of the branches, thus can be omitted. In this
+                        # implementation, we choose do omit the condition along the first branch.
+                        # TODO: Ideally, we could implement a sanity check that the condition along 
+                        # the forst branch is implied by the conjunction of conditions along the rest
+                        # of the branches -- using a solver like Z3.
+                        rules_dict[resp] = con_term #self.instSmlpTerms.smlp_ite(ant_term, con_term, smlp.Var('SMLP_UNDEFINED'))
+                    else:
+                        rules_dict[resp] = self.instSmlpTerms.smlp_ite(ant_term, con_term, rules_dict[resp])
         #print('rules_dict', rules_dict)
 
         #print('rules_to_term end', flush=True)
@@ -959,6 +1076,14 @@ class TreeTerms:
         else:
             raise Exception('Model trained using algorithm ' + str(algo) + ' is currently not supported in smlp_opt')
         trees = self.trees_to_rules(tree_estimators, feat_names, resp_names, None, False, None)
+        def count_occurrences(int_list):
+            counts = {}
+            for element in int_list:
+                if element in counts:
+                    counts[element] += 1
+                else:
+                    counts[element] = 1
+            return counts
         #print('------- trees ---------\n', trees); 
         #print('tree_term_dict_dict start', flush=True)
         tree_term_dict_dict = {} 
@@ -967,24 +1092,29 @@ class TreeTerms:
         for i, tree_rules in enumerate(trees):
             #print('====== tree_rules ======\n', len(tree_rules), tree_rules)
             branches_count_per_tree.append(len(tree_rules))
-            tree_term_dict, ant_reduction_stats = self.rules_to_term(tree_rules, ant_reduction_stats); #print('tree term_dict', tree_term_dict); 
-            assert list(tree_term_dict.keys()) == resp_names
+            tree_term_dict, ant_reduction_stats = self.rules_to_term(algo, i, tree_rules, ant_reduction_stats); #print('tree term_dict', tree_term_dict); 
+            if self._tree_encoding == 'flat' and algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']:
+                assert list(tree_term_dict.keys()) == [self._tree_model_id(algo, i)]
+            else:
+                #print(list(tree_term_dict.keys()), resp_names)
+                assert list(tree_term_dict.keys()) == resp_names
             tree_term_dict_dict['tree_'+str(i)] = tree_term_dict
+
         if self._compress_rules:
             trees_count = len(trees)
-            branches_count = sum(branches_count_per_tree)
-            ant_len_befor = sum(ant_reduction_stats['before'])
+            branches_count = sum(branches_count_per_tree); #print('branches_count', branches_count)
+            ant_len_befor = sum(ant_reduction_stats['before']); #print('ant_len_befor', ant_len_befor)
             ant_len_after = sum(ant_reduction_stats['after'])
-            unique_conj_befor = sum(list(set(ant_reduction_stats['before'])))
-            unique_conj_after = sum(list(set(ant_reduction_stats['after'])))
+            unique_conj_befor = count_occurrences(ant_reduction_stats['before'])  #sum(list(set(ant_reduction_stats['before'])))
+            unique_conj_after = count_occurrences(ant_reduction_stats['after']) # sum(list(set(ant_reduction_stats['after'])))
             tree_max_depth_befor = max(ant_reduction_stats['before'])
             tree_max_depth_after = max(ant_reduction_stats['after'])
             assert branches_count >= trees_count
-            assert ant_len_befor >= branches_count
+            #assert ant_len_befor >= branches_count
             assert ant_len_befor >= ant_len_after
-            assert ant_len_befor >= unique_conj_befor
-            assert ant_len_after >= unique_conj_after
-            assert unique_conj_befor >= unique_conj_after
+            #assert ant_len_befor >= unique_conj_befor
+            #assert ant_len_after >= unique_conj_after
+            #assert unique_conj_befor >= unique_conj_after
             assert tree_max_depth_befor >= tree_max_depth_after
             self._smlp_terms_logger.info(
                 'Tree rules (branches) antecedent compression statistics for response(s) {}:'.format(','.join(resp_names)) + \
@@ -992,36 +1122,55 @@ class TreeTerms:
                 '\n\ttree branches/rules count  ' + str(branches_count) + \
                 '\n\tantecedent lengths before  ' + str(ant_len_befor) + \
                 '\n\tantecedent lengths after   ' + str(ant_len_after) + \
-                '\n\tunique conjuncts before    ' + str(unique_conj_befor) + \
-                '\n\tunique conjuncts after     ' + str(unique_conj_after) + \
+                '\n\tbranch length counts before ' + str(unique_conj_befor) + \
+                '\n\tbranch length counts after  ' + str(unique_conj_after) + \
                 '\n\ttree max depth before      ' + str(tree_max_depth_befor) + \
                 '\n\ttree max depth after       ' + str(tree_max_depth_after))
 
-        #print('**********tree_term_dict_dict\n', tree_term_dict_dict)
+        #print(tree_term_dict_dict\n', tree_term_dict_dict)
         #print('tree_term_dict_dict end', flush=True)
         number_of_trees = len(trees); #print('number_of_trees (trees)', number_of_trees)
         tree_model_term_dict = {}
         #print('tree_model_term_dict start', flush=True)
         for j, tree_rules in enumerate(trees):
             #print('j', j, flush=True)
-            for resp_name in resp_names:
-                if j == 0:
-                    tree_model_term_dict[resp_name] = tree_term_dict_dict['tree_'+str(j)][resp_name]
-                else:
-                    tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_add(tree_model_term_dict[resp_name], tree_term_dict_dict['tree_'+str(j)][resp_name])
-                    if j == number_of_trees - 1: # the last tree -- compute the mean by dividing the sum on number_of_trees
-                        #tree_model_term_dict[resp_name] = smlp.Div(tree_model_term_dict[resp_name], smlp.Cnst(int(number_of_trees)))
-                        #!!!!tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(smlp.Cnst(smlp.Q(1) / smlp.Q(int(number_of_trees))), tree_model_term_dict[resp_name])
-                        tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(
-                            self.instSmlpTerms.smlp_cnst(self.instSmlpTerms.smlp_q(1) / self.instSmlpTerms.smlp_q(int(number_of_trees))), tree_model_term_dict[resp_name])
-                        #tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_div(tree_model_term_dict[resp_name], self.instSmlpTerms.smlp_cnst(self.instSmlpTerms.smlp_q(int(number_of_trees))))
-                    #print('tree_model_term_dict', tree_model_term_dict)
-        #print('tree_model_term_dict end', flush=True)
+            if self._tree_encoding == 'flat' and algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']:
+                curr_resp = resp_names[0] if len(resp_names) == 1 else None # TODO !!! might require model_per_response to decide instead of using len(resp_names) == 1 
+                tree_model_term_dict[self._tree_model_id(algo, j, curr_resp)] = tree_term_dict_dict['tree_'+str(j)][self._tree_model_id(algo, j)]
+                #print('tree_model_term_dict', tree_model_term_dict)
+                if j == number_of_trees - 1:
+                    model_formulas = []
+                    for formulas in tree_model_term_dict.values():
+                        model_formulas = model_formulas + formulas
+                    tree_model_term_dict = {}
+                    tree_model_term_dict[self._tree_model_id(algo, None, curr_resp)] = model_formulas
+                    #print('tree_model_term_dict w/o resp', tree_model_term_dict);                     
+                    for resp_name in resp_names:
+                        sum_term = self.instSmlpTerms.smlp_add_multi([ self.instSmlpTerms.smlp_var(self._tree_resp_id(i, resp_name)) for i in range(number_of_trees)])
+                        mean_term = self.instSmlpTerms.smlp_mult(self.instSmlpTerms.smlp_cnst(self.instSmlpTerms.smlp_q(1) / self.instSmlpTerms.smlp_q(int(number_of_trees))), sum_term)
+                        resp_j_form = self.instSmlpTerms.smlp_eq(self.instSmlpTerms.smlp_var(resp_name), mean_term)
+                        #print('sum_term', sum_term); print('mean_term', mean_term)
+                        #print('resp_j_form', resp_name, resp_j_form)
+                        tree_model_term_dict[self._tree_model_id(algo, None, curr_resp)].append(resp_j_form)
+            else: 
+                for resp_name in resp_names:
+                    if j == 0:
+                        tree_model_term_dict[resp_name] = tree_term_dict_dict['tree_'+str(j)][resp_name]
+                    else:                            
+                        tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_add(tree_model_term_dict[resp_name], tree_term_dict_dict['tree_'+str(j)][resp_name])
+                        if j == number_of_trees - 1: # the last tree -- compute the mean by dividing the sum on number_of_trees
+                            #tree_model_term_dict[resp_name] = smlp.Div(tree_model_term_dict[resp_name], smlp.Cnst(int(number_of_trees)))
+                            #!!!!tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(smlp.Cnst(smlp.Q(1) / smlp.Q(int(number_of_trees))), tree_model_term_dict[resp_name])
+                            tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(
+                                self.instSmlpTerms.smlp_cnst(self.instSmlpTerms.smlp_q(1) / self.instSmlpTerms.smlp_q(int(number_of_trees))), tree_model_term_dict[resp_name])
+
+        #print('tree_model_term_dict', tree_model_term_dict); print('tree_model_term_dict end', flush=True)
         return tree_model_term_dict
 
     def tree_models_to_term(self, model, algo, feat_names, resp_names):
         #print('tree_models_to_term start', flush=True)
         #print('tree_models_to_term: feat_names', feat_names, 'resp_names', resp_names)
+        #print('tree_models_to_term: ', model, '\ntype',  type(model))
         if isinstance(model, dict):
             # case when model is per response
             tree_model_term_dict = {}
@@ -1033,8 +1182,44 @@ class TreeTerms:
             # there is one model covering all responses (one or multiple responses)
             tree_model_term_dict = self.tree_model_to_term(model, algo, feat_names, resp_names)
         #print('tree_models_to_term end', flush=True)
+        #print('tree_models_to_term: ', tree_model_term_dict)
         return tree_model_term_dict
 
+    def get_tree_model_estimator_count2(self, algo, model):
+        if algo in ['dt_caret', 'dt_sklearn']:
+            n_trees = [1]
+        elif algo in ['rf_caret', 'rf_sklearn', 'et_caret', 'et_sklearn']:
+            if isinstance(model, dict):
+                #m = next(iter(model.values()))
+                n_trees = [len(m.estimators_) for m in model.values()]             
+            else:
+                #m = model
+                n_trees = [len(model.estimators_)]
+            #n_trees = len(m.estimators_)
+        else:
+            raise Exception('Unexpected tree model ' + str(algo))
+        return n_trees
+    
+    def get_tree_model_estimator_count(self, algo, model):
+        def get_estimators(algo, model):
+            if algo in ['rf_caret', 'rf_sklearn', 'et_caret', 'et_sklearn']:
+                est = model.estimators_
+            elif algo in ['dt_caret', 'dt_sklearn']:
+                est = [model]
+            else:
+                raise Exception('Unexpected tree model ' + str(algo))
+            return est
+        
+        if isinstance(model, dict):
+            #m = next(iter(model.values()))
+            n_trees = [len(get_estimators(algo, m)) for m in model.values()]             
+        else:
+            #m = model
+            n_trees = [len(get_estimators(algo, model))]
+
+        return n_trees
+    
+    
 # Method to generate smlp term from sklearn (and caret) representation of a polynomial model    
 class PolyTerms: #(SmlpTerms):
     def __init__(self):
@@ -1329,7 +1514,7 @@ class ScalerTerms(SmlpTerms):
 
 class ModelTerms(ScalerTerms):
     def __init__(self):
-        #self._scalerTermsInst = ScalerTerms()
+        self._scalerTermsInst = ScalerTerms()
         self._treeTermsInst = TreeTerms()
         self._polyTermsInst = PolyTerms()
         #self._smlpTermsInst = SmlpTerms
@@ -1350,10 +1535,16 @@ class ModelTerms(ScalerTerms):
         # variables as reals and add an integer grid constraint to make it range on integers.
         self._declare_integer_as_real_with_grid = False
         
+        # for integer inputs, instead of declaring their range, disclare all their values as disjunction
+        # say if 1 <= x <= 5, we generate constrint x == 1 | x == 2 | ... | x == 5 (and do not generate
+        # constraints 1 <= x and x <= 5. Note this applies to (free) inputs, not knobs (control inputs).
+        self._encode_input_range_as_disjunction = False
+        
         self._SPEC_DOMAIN_RANGE_TAG = 'range'
         self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
         self._DEF_COMPRESS_RULES = True
         self._DEF_SIMPLIFY_TERMS = False
+        self._DEF_TREE_ENCODING = 'nested' # 'flat' #  
         #self._DEF_CACHE_TERMS = False
         self.model_term_params_dict = {
             'compress_rules': {'abbr':'compress_rules', 'default':str(self._DEF_COMPRESS_RULES), 'type':str_to_bool,
@@ -1363,6 +1554,10 @@ class ModelTerms(ScalerTerms):
             'simplify_terms': {'abbr':'simplify_terms', 'default':str(self._DEF_SIMPLIFY_TERMS), 'type':str_to_bool,
                 'help':'Should terms be simplified using before building solver instance in model exploration modes? ' +
                 '[default {}]'.format(str(self._DEF_SIMPLIFY_TERMS))},
+            'tree_encoding': {'abbr':'tree_encoding', 'default':str(self._DEF_TREE_ENCODING), 'type':str,
+                'help':'Strategy to encode tree model to solvers. Flat encoding cretea a formula from ' +
+                'each branch of a tree, while nested encoding builds formula from branches using nested ' +
+                'if-thn-else (ite) exoressions [default {}]'.format(str(self._DEF_COMPRESS_RULES))},
             #'cache_terms': {'abbr':'cache_terms', 'default':str(self._DEF_CACHE_TERMS), 'type':str_to_bool,
             #    'help':'Should terms be cached along building terms and formulas in model exploration modes? ' +
             #    '[default {}]'.format(str(self._DEF_CACHE_TERMS))}
@@ -1405,15 +1600,31 @@ class ModelTerms(ScalerTerms):
     def set_simplify_terms(self, simplify_terms:bool):
         self._simplify_terms = simplify_terms
     
+    def set_tree_encoding(self, tree_encoding:str):
+        self._tree_encoding = tree_encoding
+        self._treeTermsInst.set_tree_encoding(tree_encoding)
+    
     #def set_cache_terms(self, cache_terms:bool):
     #    self._cache_terms = cache_terms
     
     # file to dump tree model converted to SMLP term
-    @property
-    def smlp_model_term_file(self):
+    def smlp_model_term_file(self, resp:str, full:bool):
         assert self.model_file_prefix is not None
-        return self.model_file_prefix + '_smlp_model_term.json'
-    
+        filename_suffix = 'smlp_full_model_term.json' if full else 'smlp_model_term.json'
+        if resp is None:
+            return '_'.join([self.model_file_prefix, filename_suffix])
+        else:
+            return '_'.join([self.model_file_prefix, str(resp), filename_suffix])
+    '''
+    # file to dump tree model converted to SMLP term
+    @property
+    def smlp_full_model_term_file(self, resp:str=None):
+        assert self.model_file_prefix is not None
+        if resp is None:
+            return self.model_file_prefix + '_smlp_full_model_term.json'
+        else:
+            return 
+    '''
     # This function computes a dictionary with response names as keys and an smlp term corresponding to the 
     # model for that response as the value for that key. The response names used as keys are suffixed with 
     # suffix '_scaled' in case reponses were scaled prior to the training, and feature names that serve as 
@@ -1459,14 +1670,15 @@ class ModelTerms(ScalerTerms):
         elif algo == 'poly_sklearn':
             model_term_dict = self._polyTermsInst.poly_model_to_term(model_feat_names, model_resp_names, 
                 model[0].coef_, model[1].powers_, False, None)
-        elif algo in ['dt_sklearn', 'dt_caret']:
+        elif algo in ['dt_sklearn', 'dt_caret', 'rf_sklearn', 'rf_caret', 'et_sklearn', 'et_caret']:
             model_term_dict = self._treeTermsInst.tree_models_to_term(model, algo, model_feat_names, model_resp_names)
-        elif algo in ['rf_sklearn', 'rf_caret', 'et_sklearn', 'et_caret']:
-            model_term_dict = self._treeTermsInst.tree_models_to_term(model, algo, model_feat_names, model_resp_names)
+        #elif algo in ['rf_sklearn', 'rf_caret', 'et_sklearn', 'et_caret']:
+        #    model_term_dict = self._treeTermsInst.tree_models_to_term(model, algo, model_feat_names, model_resp_names)
         else:
             raise Exception('Algo ' + str(algo) + ' is currently not suported in model exploration modes')
         #print('model_term_dict', model_term_dict)
-        with open(self.smlp_model_term_file, 'w') as f:
+        resp_name = resp_names[0] if len(resp_names) == 1 else None
+        with open(self.smlp_model_term_file(resp_name, False), 'w') as f:
             json.dump(str(model_term_dict), f, indent='\t', cls=np_JSONEncoder)
         return model_term_dict
     
@@ -1474,7 +1686,7 @@ class ModelTerms(ScalerTerms):
     # This function takes an ML model (the argument 'model) as well as features and responses scaling info
     # as inputs and for each response in the model generates a term that encodes the "pure" model constraints
     # as well as constraints relating to scaling of features and/or responses if they were scaled prior to
-    # the model training. By "pure" moel we mean a model trained with the original feature and response names
+    # the model training. By "pure" model we mean a model trained with the original feature and response names
     # independently from whether the features and/or responses were scaled prior to the training. Term for a
     # pure model is built using function _compute_pure_model_terms() (see its description for more details on
     # how this is done), and the remaining parts in this function take care of generating terms for feature 
@@ -1497,10 +1709,9 @@ class ModelTerms(ScalerTerms):
         #print('adding model terms: model_feat_names', model_feat_names, 'model_resp_names', model_resp_names, flush=True)
 
         model_term_dict = self._compute_pure_model_terms(algo, model, model_feat_names, model_resp_names, 
-            feat_names, resp_names)
-        #print('model_term_dict', model_term_dict.keys(), flush=True)
+            feat_names, resp_names); #print('model_term_dict', model_term_dict)
         
-        model_full_term_dict = model_term_dict; #print('model_full_term_dict', model_full_term_dict, flush=True)
+        model_full_term_dict = model_term_dict;
         
         # compute features scaling term (skipped when it is identity);
         # substitute them instead of scaled feature variables in the model
@@ -1512,10 +1723,12 @@ class ModelTerms(ScalerTerms):
             #print('feature_scaler_terms_dict', feature_scaler_terms_dict, flush=True)
 
             for resp_name, model_term in model_term_dict.items():
-                #print('model term before', model_term)
                 for feat_name, feat_term in feature_scaler_terms_dict.items():
                     #print('feat_name', feat_name, 'feat_term', feat_term, flush=True)
-                    model_term = self.smlp_cnst_fold(model_term, {feat_name: feat_term}) #self.smlp_subst
+                    if self._tree_encoding == 'flat' and algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']: # rule_form:
+                        model_term = [self.smlp_cnst_fold(form, {feat_name: feat_term}) for form in model_term]
+                    else:
+                        model_term = self.smlp_cnst_fold(model_term, {feat_name: feat_term}) #self.smlp_subst
                 #print('model term after', model_term, flush=True)
                 model_term_dict[resp_name] = model_term
             #print('model_term_dict', model_term_dict, flush=True)
@@ -1523,19 +1736,45 @@ class ModelTerms(ScalerTerms):
             
         # compute responses in original scale from scaled responses that are
         # the outputs of the modes, compose models with unscaled responses
-        if resp_were_scaled:
-            responses_unscaler_terms_dict = self.feature_unscaler_terms(data_bounds, resp_names) #._scalerTermsInst
-            
+        tree_flat_encoding = self._tree_encoding == 'flat' and algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']
+        if resp_were_scaled and not tree_flat_encoding:
+            responses_unscaler_terms_dict = self.feature_unscaler_terms(data_bounds, resp_names)           
             # substitute scaled response variables with scaled response terms (the model outputs)
             # in original response terms within responses_unscaler_terms_dict
             for resp_name, resp_term in responses_unscaler_terms_dict.items():
                 #print('resp_name', resp_name, resp_term, flush=True)
                 responses_unscaler_terms_dict[resp_name] = self.smlp_cnst_fold(resp_term, #self.smlp_subst 
-                    {self._scaled_name(resp_name): model_term_dict[self._scaled_name(resp_name)]}) #._scalerTermsInst ._scalerTermsInst
+                    {self._scaled_name(resp_name): model_term_dict[self._scaled_name(resp_name)]})
             #print('responses_unscaler_terms_dict full model', responses_unscaler_terms_dict, flush=True)
             model_full_term_dict = responses_unscaler_terms_dict
-            
-        #print('model_full_term_dict', model_full_term_dict, flush=True);
+        
+        if resp_were_scaled and tree_flat_encoding:
+            responses_scaler_terms_dict = self.feature_scaler_terms(data_bounds, resp_names)
+            #print('responses_scaler_terms_dict', responses_scaler_terms_dict)
+            tree_counts = self._treeTermsInst.get_tree_model_estimator_count(algo, model)
+            resp_names_numbered_trees = []
+            data_bounds_numbered_trees = {}
+            for j, resp in enumerate(resp_names):
+                tree_count = tree_counts[j] if isinstance(model, dict) else tree_counts[0]
+                for i in range(tree_count):
+                    resp_unscaled = self._scalerTermsInst._unscaled_name(resp)
+                    resp_names_numbered_trees.append(self._treeTermsInst._tree_resp_id(i, resp))
+                    data_bounds_numbered_trees[self._treeTermsInst._tree_resp_id(i, resp)] = data_bounds[resp_unscaled]
+            #print('resp_names_numbered_trees', resp_names_numbered_trees); print('data_bounds_numbered_trees', data_bounds_numbered_trees) ; 
+            responses_scaler_terms_dict_numbered_trees = self.feature_scaler_terms(data_bounds_numbered_trees, resp_names_numbered_trees)
+            #print('responses_scaler_terms_dict_numbered_trees', responses_scaler_terms_dict_numbered_trees)
+            #print('model_full_term_dict befor', model_full_term_dict)
+            assert len(model_full_term_dict) == 1
+            key = list(model_full_term_dict.keys())[0]
+            new_key = self._scalerTermsInst._unscaled_name(key); #print('key', key, 'new_key', new_key)
+            model_full_term_dict_new = {}
+            model_full_term_dict_new[new_key] = [self.smlp_cnst_fold(rule_formula, responses_scaler_terms_dict | responses_scaler_terms_dict_numbered_trees)
+                for rule_formula in model_full_term_dict[key]]
+            model_full_term_dict = model_full_term_dict_new
+        #print('model_full_term_dict', model_full_term_dict, flush=True)
+        resp_name = resp_names[0] if len(resp_names) == 1 else None
+        with open(self.smlp_model_term_file(resp_name, True), 'w') as f:
+            json.dump(str(model_full_term_dict), f, indent='\t', cls=np_JSONEncoder)
         return model_full_term_dict
 
     # Computes a dictionary with response names as keys and an smlp term corresponding to the model for that
@@ -1550,18 +1789,29 @@ class ModelTerms(ScalerTerms):
             data_bounds, data_scaler,scale_features, scale_responses):
         #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names, flush=True)
         assert lists_union_order_preserving_without_duplicates(list(model_features_dict.values())) == feat_names
-
+        #print('model_or_model_dict', model_or_model_dict)
         if isinstance(model_or_model_dict, dict):
             models_full_terms_dict = {}
             for i, resp_name in enumerate(model_or_model_dict.keys()):
                 curr_feat_names = model_features_dict[resp_name]
                 curr_model_full_term_dict = self._compute_model_terms_dict(algo, model_or_model_dict[resp_name], 
                     feat_names, [resp_name], data_bounds, data_scaler, scale_features, scale_responses)
+                #print('join 1', models_full_terms_dict, '----2 -', curr_model_full_term_dict)
                 models_full_terms_dict = models_full_terms_dict | curr_model_full_term_dict
         else:
             models_full_terms_dict = self._compute_model_terms_dict(algo, model_or_model_dict, 
                 feat_names, resp_names, data_bounds, data_scaler, scale_features, scale_responses)
-        #print('models_full_terms_dict', models_full_terms_dict)
+        #print('models_full_terms_dict', models_full_terms_dict); 
+        for key, m in models_full_terms_dict.items():
+            #print('m', m); print(self.smlp_destruct(m)); 
+            if isinstance(m, list): # case where tree rules are coded as formulas
+                assert key.startswith(algo)  #'flat_dt_sklearn_model' 'all_responses'
+                ops = [self.smlp_count_operators(form) for form in m]
+                ops = self.sum_operator_counts(ops)
+            else:
+                ops = self.smlp_count_operators(m); #print('ops', ops)
+            self._smlp_terms_logger.info('Model operator counts for ' + str(key) + ': ' + str(ops))
+        #print('compute_models_terms_dict', models_full_terms_dict)
         return models_full_terms_dict
     
     # This function computes orig_objv_terms_dict with names of objectives as keys and smlp terms
@@ -1606,10 +1856,6 @@ class ModelTerms(ScalerTerms):
         #print('objv_terms_dict', objv_terms_dict)
         return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict
     
-    # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
-    # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
-    # are ignored as only variables which occur as keys in theta_radii_dict are used for building theta.
-
     
     # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
     # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
@@ -1713,7 +1959,10 @@ class ModelTerms(ScalerTerms):
             #print('mn', mn, 'mx', mx)
             if mn is not None and mx is not None:
                 if self._declare_domain_interface_only:
-                    rng = self.smlp_and(self.smlp_var(v) >= self.smlp_cnst(mn), self.smlp_var(v) <= self.smlp_cnst(mx))
+                    if self._encode_input_range_as_disjunction:
+                        rng = self.smlp_or_multi([self.smlp_eq(self.smlp_var(v), self.smlp_cnst(i)) for i in range(mn, mx-1)])
+                    else:
+                        rng = self.smlp_and(self.smlp_var(v) >= self.smlp_cnst(mn), self.smlp_var(v) <= self.smlp_cnst(mx))
                     alpha_form = self.smlp_and(alpha_form, rng)
             elif mn is not None:
                 rng = self.smlp_var(v) >= self.smlp_cnst(mn)
@@ -1743,7 +1992,10 @@ class ModelTerms(ScalerTerms):
             #print('mn', mn, 'mx', mx)
             if mn is not None and mx is not None:
                 if self._declare_domain_interface_only:
-                    rng = self.smlp_and(self.smlp_var(v) >= self.smlp_cnst(mn), self.smlp_var(v) <= self.smlp_cnst(mx))
+                    if self._encode_input_range_as_disjunction and alpha_vs_eta == 'alpha' and v in self._specInst.get_spec_inputs:
+                        rng = self.smlp_or_multi([self.smlp_eq(self.smlp_var(v), self.smlp_cnst(i)) for i in range(mn, mx+1)])
+                    else:
+                        rng = self.smlp_and(self.smlp_var(v) >= self.smlp_cnst(mn), self.smlp_var(v) <= self.smlp_cnst(mx))
                     alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
             elif mn is not None:
                 rng = self.smlp_var(v) >= self.smlp_cnst(mn)
@@ -1890,6 +2142,19 @@ class ModelTerms(ScalerTerms):
         for var in resp_names:
             domain_dict[var] = self.var_domain(var, spec_domain_dict)
         
+        # when we use flat encoding for tree models, we define tree_i_resp variables that represent
+        # responses resp computed by the i-th tree, and we need to declare them within domain
+        if algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret'] and self._tree_encoding == 'flat':
+            tree_counts = self._treeTermsInst.get_tree_model_estimator_count(algo, model)
+            model_per_resp = isinstance(model, dict)
+            assert tree_counts is not None 
+            #print('resp_names', resp_names, 'tree_counts', tree_counts)
+            for j, resp in enumerate(resp_names):
+                tree_count = tree_counts[j] if isinstance(model, dict) else tree_counts[0]
+                for i in range(tree_count):
+                    tree_resp_name = self._treeTermsInst._tree_resp_id(i, resp)
+                    domain_dict[tree_resp_name] = self.var_domain(resp, spec_domain_dict)
+
         #print('domain_dict', domain_dict)
         domain = smlp.domain(domain_dict)
         
@@ -1953,11 +2218,17 @@ class ModelTerms(ScalerTerms):
             base_solver = smlp.solver(incremental, 'ALL')
         base_solver.declare(domain)
         
-        # let solver know definition of responses (the model's function)
-        if model_full_term_dict is not None:
-            for resp_name, resp_term in model_full_term_dict.items():
-                eq_form = self.smlp_eq(self.smlp_var(resp_name), resp_term)
-                base_solver.add(eq_form)
+        if model_full_term_dict is not None :
+            if self._tree_encoding == 'flat' and isinstance(list(model_full_term_dict.values())[0], list): # algo == 'dt_sklearn':
+                for k, v in model_full_term_dict.items():
+                    for rule_formula in v:
+                        #print('rule_formula', rule_formula)
+                        base_solver.add(rule_formula)
+            else:
+                # let solver know definition of responses (the model's function)
+                for resp_name, resp_term in model_full_term_dict.items():
+                    eq_form = self.smlp_eq(self.smlp_var(resp_name), resp_term)
+                    base_solver.add(eq_form)
         return base_solver
     
     # wrapper function on solver.check to measure runtime and return status in a convenient way
@@ -1988,7 +2259,7 @@ class ModelTerms(ScalerTerms):
         
         anonym_interface_dict = self._specInst.get_anonymized_interface; #print('anonym_interface_dict', anonym_interface_dict)
         
-        # genrate columns for trace file to enabe viewing candidates and counter-example in a convenient way
+        # genrate columns for trace file to enable viewing candidates and counter-example in a convenient way
         if call_name == 'interface_consistency':
             if self._trace_anonymize:
                 interface_column_names = list(anonym_interface_dict['knobs'].values()) +  list(anonym_interface_dict['inputs'].values()) \
@@ -2011,9 +2282,13 @@ class ModelTerms(ScalerTerms):
                     name = k if not self._trace_anonymize else anonym_interface_dict['inputs'][k]
                 elif k in anonym_interface_dict['outputs'].keys():
                     name = k if not self._trace_anonymize else anonym_interface_dict['outputs'][k]
-                assignment[name] = sat_model[k] if self._trace_precision == 0 else round(float(sat_model[k]), self._trace_precision)
-                if approx_lemmas:
-                    assignment_approx[name] = sat_model_approx[k] if self._trace_precision == 0 else round(float(sat_model[k]), self._trace_precision)
+                else:
+                    # TODO !!!!!!!!!!!: maybe expose tree values per response? will need to enhance function get_anonymized_interface
+                    name = None # covers case say when we have tree models and domain contain response declaration per model
+                if name is not None:
+                    assignment[name] = sat_model[k] if self._trace_precision == 0 else round(float(sat_model[k]), self._trace_precision)
+                    if approx_lemmas:
+                        assignment_approx[name] = sat_model_approx[k] if self._trace_precision == 0 else round(float(sat_model[k]), self._trace_precision)
             
             #print('sat_model', sat_model); print('assignment', assignment, self._trace_anonymize)
             #print('anonym_interface_dict', anonym_interface_dict)
@@ -2051,7 +2326,26 @@ class ModelTerms(ScalerTerms):
             #return res, assignment_approx
         #print('exit smlp_solver_check', flush=True)
         return res
-
+    
+    def solver_status_sat(self, res):
+        return isinstance(res, smlp.sat)
+        
+    def solver_status_unsat(self, res):
+        return isinstance(res, smlp.unsat)
+        
+    def solver_status_unknown(self, res):
+        return isinstance(res, smlp.unknown)
+        
+    # we return value assignmenets to interface (input, knob, output) variables defined in the Spec file
+    # (and not values assigned to any other variables that might be defined additionally as part of solver domain,
+    # like variables tree_i_resp that we decalre as part of domain for tree models with flat encoding).
+    def get_solver_model(self, res):
+        if self.solver_status_sat(res):
+            reduced_model = dict((k,v) for k,v in res.model.items() if k in self._specInst.get_spec_interface)
+            return reduced_model
+        else:
+            return None
+    
     # function to check that alpha and eta constraints on inputs and knobs are consistent.
     # TODO: model_full_term_dict is not required here but omiting it causes z3 error 
     # result smlp::z3_solver::check(): Assertion `m.num_consts() == size(symbols)' failed.

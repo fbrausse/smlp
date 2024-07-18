@@ -394,9 +394,22 @@ class SmlpOptimize:
             
             if l + epsilon > u:
                 # false when if l = -np.inf and u = np.inf
-                #print('l', l, 'u', u, 'exit while true')
+                #print('l', l, 'u', u, 'epsilon', epsilon, 'exit while true')
                 break
             iter_count +=  + 1
+        
+        # make sure correct upper bound u is recorded in P{-1]. This is not used, it is just useful info for 
+        # banchamrk statistics (this info is more precise when the while loop exit condition u < l + epsilon).
+        if u not in [np.inf, -np.inf]:
+            orig_max = objv_bounds[orig_objv_name]['max']; #print('orig_max', orig_max)
+            orig_min = objv_bounds[orig_objv_name]['min']; #print('orig_min', orig_min)
+            if scale_objectives:
+                P[-1]['threshold_up_scaled'] = u; #print('u', u)
+                P[-1]['threshold_up'] = orig_min + u * (orig_max - orig_min) ; #print( P[-1]['threshold_up'])
+            else:
+                P[-1]['threshold_up'] = u; #print('u', u)
+            
+        #print('P[-1]', P[-1])
         
         self._opt_logger.info('Optimize single objective ' + str(objv_name) + ': End')
         return P[-1]
@@ -617,14 +630,13 @@ class SmlpOptimize:
                         self.best_config_dict[key_label][key]['value_in_system'] = system_val
             self.best_config_df = self.prog_dict_to_df(); 
         else:
-            assert False
+            #assert False
             for i, objv_name in enumerate(objv_names):
                 assert objv_names[i] not in self.best_config_dict[key_label]
                 self.best_config_dict[key_label][objv_names[i]] = {
                     'threshold_scaled':s_scaled[i], 'threshold':s_origin[i], 
                     'max_in_data': objv_bounds_dict[objv_names[i]]['max'],
                     'min_in_data': objv_bounds_dict[objv_names[i]]['min']}
-        #print('self.best_config_df\n', self.best_config_df); print('self.best_config_dict', self.best_config_dict)
         # dump the final config and/or the updated self.best_config_dict progress report
         with open(self.optimization_progress_file+'.json', 'w') as f: #json.dump(asrt_res_dict, f)
             json.dump(self.best_config_dict, f, indent='\t', cls=np_JSONEncoder)

@@ -131,9 +131,9 @@ smlp_logger - INFO - TRAIN MODEL
 
 smlp_logger - INFO - Model training: start
 
-smlp_logger - INFO - Writing tree rules into file ./Test97_smlp_toy_num_resp_mult_et_sklearn_tree_rules.txt
+smlp_logger - INFO - Writing tree rules into file ./Test97_smlp_toy_num_resp_mult_et_sklearn_y1_tree_rules.txt
 
-smlp_logger - INFO - Writing tree rules into file ./Test97_smlp_toy_num_resp_mult_et_sklearn_tree_rules.txt
+smlp_logger - INFO - Writing tree rules into file ./Test97_smlp_toy_num_resp_mult_et_sklearn_y2_tree_rules.txt
 
 smlp_logger - INFO - Model training: end
 
@@ -232,6 +232,10 @@ smlp_logger - INFO - Creating model exploration base components: End
 smlp_logger - INFO - Input and knob interface constraints are consistent
 
 smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Model operator counts for y1: {'add': 100, 'mul': 1955, 'const': 6545, 'ite': 583, 'and': 1370, 'prop': 1953, 'sub': 1953, 'var': 1953}
+
+smlp_logger - INFO - Model operator counts for y2: {'add': 100, 'mul': 716, 'const': 2550, 'ite': 305, 'and': 409, 'prop': 714, 'sub': 714, 'var': 714}
 
 smlp_logger - INFO - Building model terms: End
 

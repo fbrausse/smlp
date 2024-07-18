@@ -413,7 +413,8 @@ class ModelSklearn:
                 assert False
                 
             # save tree model as rules
-            rules_report_file = get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_tree_rules.txt'
+            rules_report_file_suffix = 'tree_rules.txt' if len(resp_names) != 1 else '_'.join([resp_names[0], 'tree_rules.txt'])
+            rules_report_file = '_'.join([get_model_file_prefix(None, self._algo_name_local2global(algo)), rules_report_file_suffix])
             self._instTreeTerms.trees_to_rules(tree_estimators, feat_names, resp_names, 
                 None, True, rules_report_file)
             return model

@@ -9,9 +9,10 @@ lib/libcheck-data.so
 
 # src directory
 /src/.ipynb_checkpoints/*
-#/src/run_smlp.py
+/src/run_smlp.py
 /src/local_paths.py
 /src/process_shai.py
+/src/process_*.py
 
 # smlp_tmp directory
 /src/smlp_tmp/*

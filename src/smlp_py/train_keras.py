@@ -45,6 +45,7 @@ class ModelKeras:
         self._HID_ACTIVATION = 'relu'
         self._OUT_ACTIVATION = 'linear'
         self._SEQUENTIAL_API = True
+        self._WEIGHTS_PRECISION = None
         
         # model accuracy parameters
         self._DEF_LOSS       = 'mse'
@@ -157,6 +158,10 @@ class ModelKeras:
             'sequential_api': {'abbr':'seq_api', 'default': self._SEQUENTIAL_API, 'type':str_to_bool,
                 'help':'Should sequential api be used building NN layers or should functional ' +\
                         'api be used instead? [default: {}]'.format(str(self._SEQUENTIAL_API))},
+            'weights_precision': {'abbr':'weights_precision', 'default': self._WEIGHTS_PRECISION, 'type':int,
+                'help':'Decimal precison (theat is, decimal points after the dot) to use for rounding ' +
+                        'model weights (after a NN model has been trained). The default value {} ' +
+                        'implies that weight will not be rounded [default: {}]'.format(self._OUT_ACTIVATION)},
             'tuner_algo': {'abbr':'tuner', 'default': self._DEF_TUNER_ALGO, 'type':str,
                 'help':'NN Keras tuner algorithm to be invoked. Supported options are ' +
                     'hyperband (Hyperband), bayesian (BayesianOptimization) and random (RandomSearch). '
@@ -290,15 +295,16 @@ class ModelKeras:
         for size in layers_spec_list:
             self._keras_logger.info('dense layer of size ' + str(size))
             x = keras.layers.Dense(units=size, activation=hid_activation)(x)
-
+        
         outputs = []
         # loss = {} -- required if we wanted to use different loss functions for different responses
         for resp in resp_names:
             self._keras_logger.info('output layer of size ' + str(1))
+            # the following line would define a monolothic output layer like this is done for sequential API
+            #outputs = keras.layers.Dense(len(resp_names), activation=out_activation)(x)
             output = keras.layers.Dense(1, name=resp, activation=out_activation)(x)
             outputs.append(output)
-            # loss[resp] = hp.Choice('loss_function', values=losses_grid) if losses_grid is not None else self._DEF_LOSS
-
+        
         # Initialize the Functional model
         model = keras.Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics)
@@ -388,8 +394,20 @@ class ModelKeras:
         self.compare_model_configs_from_files(file1, file2); assert False
         '''
     
+    # round weights after model was trained
+    def round_model_weights(self, model:keras.Model, num_decimal_places:int):
+        for layer in model.layers:
+            # Get the current weights of the layer
+            weights = layer.get_weights(); #print('current weights\n', weights)
+
+            # Round the weights to the specified number of decimal places
+            rounded_weights = [np.round(w, num_decimal_places) for w in weights]
+
+            # Set the rounded weights back to the layer
+            layer.set_weights(rounded_weights); #print('rounded weights\n', rounded_weights)
+    
     # train keras NN model
-    def _nn_train(self, model, epochs, batch_size, model_checkpoint_path,
+    def _nn_train(self, model, epochs, batch_size, weights_precision, model_checkpoint_path,
                  X_train, X_test, y_train, y_test, sample_weights_dict, sequential_api):
         checkpointer = None
         if model_checkpoint_path:
@@ -460,10 +478,12 @@ class ModelKeras:
                                 sample_weight=sample_weights_dict,
                                 callbacks=callbacks,
                                 batch_size=batch_size)
-            
+            #'''
+        if weights_precision is not None:
+            self.round_model_weights(model, int(weights_precision))
         return history
 
-
+    
     def _report_training_regression(self, history, metrics, epochs, interactive, resp_names, out_prefix=None):
         #print('history.history', history.history)
         epochs_range = range(epochs)
@@ -711,7 +731,7 @@ class ModelKeras:
     # Function to build NN Keras model using Keras Tuner for hyperparameter tuning. 
     # NN Keras functional API is used for building the models (even if nn_keras_sequential_api is set to True).
     def train_best_model(self, resp_names:list[str], algo:str, X_train, X_test, y_train, y_test, sequential_api:bool,  
-            interactive_plots, seed, weights_coef, model_per_response:bool, hid_activation, out_activation, epochs,
+            interactive_plots, seed, weights_coef, model_per_response:bool, hid_activation, out_activation, epochs, weights_precision:int,
             layers_grid, losses_grid, lrates_grid, batches_grid, tuner_algo, batch_size, loss_function_str, metrics, learning_rate):
         # search for best hyperparam values using Keras Tuner
         self.search(X_train, y_train, X_test, y_test, X_train.shape[1], resp_names, sequential_api, 
@@ -721,6 +741,9 @@ class ModelKeras:
             loss_function_str, learning_rate, sequential_api); 
         # plot how training iterations improve error/model precision
         self._report_training_regression(history, metrics, epochs, interactive_plots, resp_names, self.report_file_prefix)
+        if weights_precision is not None:
+            assert weights_precision >= 0
+            self.round_model_weights(best_model, int(weights_precision))
         return best_model
 
     # This function extracts individual parameter values from hyperparameter values
@@ -747,6 +770,7 @@ class ModelKeras:
         hid_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('hid_activation', algo)) #HID_ACTIVATION
         out_activation = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('out_activation', algo)) #OUT_ACTIVATION
         sequential_api = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('sequential_api', algo)) #SEQUENTIAL_API
+        weights_precision = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('weights_precision', algo))
         tuner_algo = self._get_parm_val(hparam_dict, self._hparam_name_local_to_global('tuner_algo', algo))
 
         unknown_metrics = set(metrics_str_list).difference(set(self._metrics.keys()))
@@ -789,7 +813,7 @@ class ModelKeras:
                 assert batch_size is not None
                 batches_grid = [batch_size]
             tuned_model = self.train_best_model(resp_names, algo, X_train, X_test, y_train, y_test, sequential_api, 
-                interactive_plots, seed, weights_coef, model_per_response, hid_activation, out_activation, epochs, 
+                interactive_plots, seed, weights_coef, model_per_response, hid_activation, out_activation, epochs, weights_precision,
                 layers_grid, losses_grid, lrates_grid, batches_grid, tuner_algo, batch_size, loss_function_str, metrics, learning_rate)
             
             self._keras_logger.info('_keras_train_multi_response: end')
@@ -836,7 +860,7 @@ class ModelKeras:
             model = self._nn_init_model_functional(resp_names, input_dim, optimizer, 
                 hid_activation, out_activation, layers_spec_list, loss_function, metrics)
         
-        history = self._nn_train(model, epochs, batch_size, self.model_checkpoint_pattern,
+        history = self._nn_train(model, epochs, batch_size, weights_precision, self.model_checkpoint_pattern,
             X_train, X_test, y_train, y_test, weights_coef, sequential_api)
 
         # plot how training iterations improve error/model precision
@@ -865,7 +889,6 @@ class ModelKeras:
             model = self._keras_train_multi_response(resp_names, algo,
                 X_train, X_test, y_train, y_test, hparam_dict, interactive_plots, 
                 seed, weights_coef, model_per_response)
-            
         self._keras_logger.info('keras_main: end')
         return model
 

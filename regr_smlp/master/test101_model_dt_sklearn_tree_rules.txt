@@ -1,7 +1,0 @@
-#Forest semantics: majority vote
-#Number of trees: 1
-
-#TREE 0
-if (p2 > 0.4000000134110451) and (p1 <= 0.75) then (y2 = 0.0) | based on 5 samples
-if (p2 <= 0.4000000134110451) then (y2 = 1.0) | based on 2 samples
-if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y2 = 1.0) | based on 1 samples

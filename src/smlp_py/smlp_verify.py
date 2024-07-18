@@ -62,22 +62,21 @@ class SmlpVerify:
         solver_instance.add(self._smlpTermsInst.smlp_not(asrt_form))
         res = solver_instance.check(); #self.print_result(res)
         
-        if isinstance(res, smlp.unsat):
+        if self._modelTermsInst.solver_status_is_unsat(res): #isinstance(res, smlp.unsat):
             status = 'UNSAT' if asrt_name == self._VACUITY_ASSERTION_NAME else 'PASS'
             self._verify_logger.info('Completed with result: {}'.format(status)) #UNSAT 'PASS'
             asrt_res_dict = {'status':'PASS', 'asrt':None, 'model':None}
-        elif isinstance(res, smlp.sat):
+        elif self._modelTermsInst.solver_status_is_sat(res): #isinstance(res, smlp.sat):
             status = 'SAT' if asrt_name == self._VACUITY_ASSERTION_NAME else 'FAIL'
             self._verify_logger.info('Completed with result: {}'.format(status)) #SAT 'FAIL (SAT)'
-            #print('res/model', res.model, type(res.model), type(res))
-            witness_vals_dict = self._smlpTermsInst.witness_term_to_const(res.model, 
+            witness_vals_dict = self._smlpTermsInst.witness_term_to_const(self._modelTermsInst.get_solver_model(res), #res.model
                 approximate=sat_approx, precision=sat_precision)
             #print('domain witness_vals_dict', witness_vals_dict)
             # sanity check: the value of the negated assertion in the sat assignment should be true
             asrt_ce_val = eval(asrt_expr, {},  witness_vals_dict); #print('asrt_ce_val', asrt_ce_val)
             assert not asrt_ce_val
             asrt_res_dict = {'status':'FAIL', 'asrt': asrt_ce_val, 'model':witness_vals_dict}
-        elif isinstance(res, smlp.unknown):
+        elif self._modelTermsInst.solver_status_is_unknwn(res): #isinstance(res, smlp.unknown):
             self._verify_logger.info('Completed with result: {}'.format('UNKNOWN'))
             # TODO !!!: add reason for UNKNOWN or report that reason as 'status' field
             asrt_res_dict = {'status':'UNKNOWN', 'asrt':None, 'model':None}
