@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 # Fitting sklearn regression tree models
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 #from sklearn.tree import _tree

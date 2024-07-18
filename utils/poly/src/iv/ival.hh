@@ -1,9 +1,7 @@
-/*
- * ival.hh
+/* SPDX-License-Identifier: Apache-2.0
  *
- * Copyright 2018-2022 Franz Brauße <franz.brausse@manchester.ac.uk>
- *
- * See the LICENSE file for terms of distribution.
+ * Copyright 2018-2024 Franz Brausse <franz.brausse@manchester.ac.uk>
+ * Copyright 2022-2024 The University of Manchester
  */
 
 #ifndef IV_IVAL_HH
