@@ -54,3 +54,5 @@ obj/table.c.o
 /regr_smlp/master/Test131_*.*
 /result
 /data
+.idea
+src/logs.log
