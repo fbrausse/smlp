@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Dict, Optional, Tuple
 
-from z3 import And, Or, Not, Implies, Bool
 from maraboupy import Marabou
 from maraboupy import MarabouCore
 from maraboupy import MarabouUtils
@@ -101,12 +100,12 @@ class MarabouVerifier(Verifier):
         # Stack for keeping ipq
         self.ipq_stack = []
 
-        self.model_file_path = "/home/ntinouldinho/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5"
-
-        self.convert_to_pb()
-
         self.parser = parser
 
+
+    def initialize(self):
+        self.model_file_path = "/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5"
+        self.convert_to_pb()
 
 
     def epsilon(self, e, direction):

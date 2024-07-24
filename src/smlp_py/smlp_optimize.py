@@ -13,6 +13,7 @@ import json
 import pandas as pd
 import keras
 import numpy as np
+from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
 
 # single or multi-objective optimization, with stability constraints and any user
 # given constraints on free input, control (knob) and output variables satisfied.
@@ -46,6 +47,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int = 64
+        self._ENABLE_PYSMT = False
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:
@@ -469,7 +471,10 @@ class SmlpOptimize:
             else:
                 min_name = min_name + '_' + objv_name if min_name != '' else objv_name
                 if min_objs is not None:
-                    min_objs = smlp.Ite(objv_term < min_objs, objv_term, min_objs)
+                    if self._ENABLE_PYSMT:
+                        min_objs = TextToPysmtParser.ite_(objv_term < min_objs, objv_term, min_objs)
+                    else:
+                        min_objs = smlp.Ite(objv_term < min_objs, objv_term, min_objs)
                 else:
                     min_objs = objv_term
         

@@ -38,8 +38,8 @@ class ModelKeras:
         
         # hyper parameter defaults
         self._DEF_LAYERS_SPEC = '2,1'
-        self._DEF_EPOCHS     = 2000
-        self._DEF_BATCH_SIZE = 200
+        self._DEF_EPOCHS     = 100
+        self._DEF_BATCH_SIZE = 10
         self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
         self._DEF_LEARNING_RATE = 0.001
         self._HID_ACTIVATION = 'relu'

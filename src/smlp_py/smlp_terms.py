@@ -21,6 +21,10 @@ from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_wit
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
 
+from smlp_py.NN_verifiers.verifiers import MarabouVerifier
+import pysmt
+
+from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
@@ -1476,12 +1480,33 @@ class ScalerTerms(SmlpTerms):
                 (self.smlp_var(orig_feat_name) - self.smlp_cnst(orig_min)))
             ####return self.smlp_div(self.smlp_var(orig_feat_name) - self.smlp_cnst(orig_min), self.smlp_cnst(orig_max) - self.smlp_cnst(orig_min))
             ####return smlp.Cnst(smlp.Q(1) / smlp.Q(orig_max - orig_min)) * (smlp.Var(orig_feat_name) - smlp.Cnst(orig_min))
-    
+
+
+    def pysmt_feature_scaler_to_term(self, orig_feat_var, parser, orig_min, orig_max):
+        parser.add_symbol(orig_feat_var, 'real')
+        orig_feat_var = parser.get_symbol(orig_feat_var)
+        if orig_min == orig_max:
+            return pysmt.shortcuts.Real(0)
+        else:
+            scaling_factor = pysmt.shortcuts.Real(1) / pysmt.shortcuts.Real(orig_max - orig_min)
+            orig_min_cnst = pysmt.shortcuts.Real(orig_min)
+
+            # (orig_feat_var - orig_min_cnst)
+            scaled_expr = pysmt.shortcuts.Minus(orig_feat_var, orig_min_cnst)
+            # scaling_factor * (orig_feat_var - orig_min_cnst)
+            scaled_term = pysmt.shortcuts.Times(scaling_factor, scaled_expr)
+            return scaled_term
+
     # Computes dictionary with features as keys and scaler terms as values
-    def feature_scaler_terms(self, data_bounds, feat_names): 
-        return dict([(self._scaled_name(feat), self.feature_scaler_to_term(feat, self._scaled_name(feat), 
+    def feature_scaler_terms(self, data_bounds, feat_names, parser=None):
+        if parser:
+            return dict([(self._scaled_name(feat), self.pysmt_feature_scaler_to_term(feat, parser,
+                                                                        data_bounds[feat]['min'],
+                                                                        data_bounds[feat]['max'])) for feat in
+                  feat_names])
+        return dict([(self._scaled_name(feat), self.feature_scaler_to_term(feat, self._scaled_name(feat),
             data_bounds[feat]['min'], data_bounds[feat]['max'])) for feat in feat_names])
-        
+
     # Computes term x from column x_scaled using expression x = x_scaled * (max_x - min_x) + x_min.
     # Argument orig_feat_name is name for column x, argument scaled_feat_name is the name of scaled column 
     # x_scaled obtained earlier from x using min_max scaler to range [0, 1] (same as normalization of x),
@@ -1562,6 +1587,18 @@ class ModelTerms(ScalerTerms):
             #    'help':'Should terms be cached along building terms and formulas in model exploration modes? ' +
             #    '[default {}]'.format(str(self._DEF_CACHE_TERMS))}
         }
+
+        self.parser = TextToPysmtParser()
+        self.parser.init_variables(inputs=[("x1", "real"), ('x2', 'int'), ('p1', 'real'), ('p2', 'int'),
+                                           ('y1', 'real'), ('y2', 'real')])
+
+        self.verifier = MarabouVerifier()
+        self.verifier.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Real'), ('p2', 'Integer')],
+                                     outputs=[('y1', 'Real'), ('y2', 'Real')])
+
+        self._ENABLE_PYSMT = True
+        self._RETURN_PYSMT = True
+
         
     # set logger from a caller script
     def set_logger(self, logger):
@@ -1836,15 +1873,30 @@ class ModelTerms(ScalerTerms):
         orig_objv_terms_dict = dict([(objv_name, self.ast_expr_to_term(objv_expr)) \
             for objv_name, objv_expr in zip(objv_names, objv_exprs)]) #self._smlpTermsInst.
         #print('orig_objv_terms_dict', orig_objv_terms_dict)
+
+        if self._ENABLE_PYSMT:
+            pysmt_objv_terms_dict = dict([(objv_name, self.parser.parse(objv_expr)) \
+                                          for objv_name, objv_expr in zip(objv_names, objv_exprs)])
+
         if scale_objv:
-            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names) #._scalerTermsInst
+            if self._ENABLE_PYSMT:
+                scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names,
+                                                                   self.parser)  # ._scalerTermsInst
+            else:
+                scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names)  # ._scalerTermsInst
+
             #print('scaled_objv_terms_dict', scaled_objv_terms_dict)
             objv_terms_dict = {}
             for i, (k, v) in enumerate(scaled_objv_terms_dict.items()):
                 #print('k', k, 'v', v, type(v)); 
                 x = list(orig_objv_terms_dict.keys())[i]; 
                 #print('x', x); print('arg', orig_objv_terms_dict[x])
-                objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]}) #self.smlp_subst
+                if self._ENABLE_PYSMT:
+                    substitution = {self.parser.get_symbol(x): pysmt_objv_terms_dict[x]}
+                    # Apply the substitution
+                    objv_terms_dict[k] = self.parser.simplify(v.substitute(substitution))
+                else:
+                    objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]})
             #objv_terms_dict = scaled_objv_terms_dict
         else:
             objv_terms_dict = orig_objv_terms_dict
@@ -1871,8 +1923,9 @@ class ModelTerms(ScalerTerms):
                 assert delta_rel >= 0
         else:
             delta_rel = delta_abs = None
-            
+
         theta_form = self.smlp_true
+        PYSMT_theta_form = pysmt.shortcuts.TRUE()
         #print('radii_dict', radii_dict)
         radii_dict_local = radii_dict.copy() 
         knobs = radii_dict_local.keys(); #print('knobs', knobs); print('cex', cex); print('delta', delta_dict)
@@ -1891,12 +1944,15 @@ class ModelTerms(ScalerTerms):
                 if delta_rel is not None: # we are generating a lemma
                     rad = rad * (1 + delta_rel) + delta_abs 
                 rad_term = self.smlp_cnst(rad)
+                if self._ENABLE_PYSMT:
+                    verifier_rad_term = float(rad)
             elif radii['rad-rel'] is not None:
                 rad = radii['rad-rel']; #print('rad', rad)
                 if delta_rel is not None: # we are generating a lemma
                     rad = rad * (1 + delta_rel) + delta_abs
                 rad_term = self.smlp_cnst(rad)
-                
+                if self._ENABLE_PYSMT:
+                    verifier_rad_term = float(rad)
                 # TODO !!!  issue a warning when candidates become closer and closer
                 # TODO !!!!!!! warning when distance between previous and current candidate
                 # TODO !!!!!! warning when FINAL rad + delta is 0, as part of sanity checking options
@@ -1920,11 +1976,22 @@ class ModelTerms(ScalerTerms):
                 else: # radius for excluding a candidate -- cex holds values of the candidate 
                     rad_term = rad_term * abs(cex[var])
             elif delta_dict is not None: 
-                raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified') 
+                raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified')
             theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
+            if self._ENABLE_PYSMT:
+                value = float(self.ground_smlp_expr_to_value(cex[var]))
+                PYSMT_var = self.parser.get_symbol(var)
+                type = pysmt.shortcuts.Int if str(PYSMT_var.get_type()) == "Int" else pysmt.shortcuts.Real
+                calc_type = int if str(PYSMT_var.get_type()) == "Int" else float
+                lower = calc_type(value - verifier_rad_term)
+                lower = type(lower)
+                upper = calc_type(value + verifier_rad_term)
+                upper = type(upper)
+                PYSMT_theta_form = self.parser.and_(PYSMT_theta_form, PYSMT_var >= lower, PYSMT_var <= upper)
+                # self.verifier.add_bounds(var, (value - verifier_rad_term, value + verifier_rad_term))
         #print('theta_form', theta_form)
         return theta_form
-    
+
     # Creates eta constraints on control parameters (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
     def compute_grid_range_formulae_eta(self):
@@ -1945,7 +2012,29 @@ class ModelTerms(ScalerTerms):
                 eta_grid_form = self.smlp_and(eta_grid_form, eta_grid_disj)
         #print('eta_grid_form', eta_grid_form); 
         return eta_grid_form
-                
+
+    def pysmt_compute_grid_range_formulae_eta(self):
+        # print('generate eta constraint')
+        eta_grid_form = pysmt.shortcuts.TRUE()
+        eta_grids_dict = self._specInst.get_spec_eta_grids_dict;  # print('eta_grids_dict', eta_grids_dict)
+        for var, grid in eta_grids_dict.items():
+            # self.verifier.add_bounds(var, grid=grid)
+            eta_grid_disj = pysmt.shortcuts.FALSE()
+            var_term = self.parser.get_symbol(var)
+            symbol_type = var_term.get_type()
+            for gv in grid:  # iterate over grid values
+                if eta_grid_disj == pysmt.shortcuts.FALSE():
+                    eta_grid_disj = self.parser.eq_(var_term, self.parser.cast_number(symbol_type, gv))
+                else:
+                    eta_grid_disj = self.parser.or_(eta_grid_disj,
+                                                    self.parser.eq_(var_term, self.parser.cast_number(symbol_type, gv)))
+            if eta_grid_form == pysmt.shortcuts.TRUE():
+                eta_grid_form = eta_grid_disj
+            else:
+                eta_grid_form = self.parser.and_(eta_grid_form, eta_grid_disj)
+        # print('eta_grid_form', eta_grid_form);
+        return eta_grid_form
+
 
     # Compute formulae alpha, beta, eta from respective expression string.
     def compute_input_ranges_formula_alpha(self, model_inputs):
@@ -1974,8 +2063,10 @@ class ModelTerms(ScalerTerms):
                 assert False
         return alpha_form
     
-    def compute_input_ranges_formula_alpha_eta(self, alpha_vs_eta, model_inputs):
+    def compute_input_ranges_formula_alpha_eta(self, alpha_vs_eta, model_inputs, specs=None):
         alpha_or_eta_form = self.smlp_true
+        smt_form = pysmt.shortcuts.TRUE()
+
         if alpha_vs_eta == 'alpha':
             alpha_or_eta_ranges_dict = self._specInst.get_spec_alpha_bounds_dict
         elif alpha_vs_eta == 'eta':
@@ -1992,6 +2083,13 @@ class ModelTerms(ScalerTerms):
             #print('mn', mn, 'mx', mx)
             if mn is not None and mx is not None:
                 if self._declare_domain_interface_only:
+                    if self._ENABLE_PYSMT:
+                        symbol_v = self.parser.get_symbol(v)
+                        form = self.parser.and_(symbol_v >= mn, symbol_v <= mx)
+                        smt_form = self.parser.and_(smt_form, form)
+
+                        # self.verifier.add_bounds(v, (mn, mx), num=specs[v]['range'])
+
                     if self._encode_input_range_as_disjunction and alpha_vs_eta == 'alpha' and v in self._specInst.get_spec_inputs:
                         rng = self.smlp_or_multi([self.smlp_eq(self.smlp_var(v), self.smlp_cnst(i)) for i in range(mn, mx+1)])
                     else:
@@ -2005,6 +2103,15 @@ class ModelTerms(ScalerTerms):
                 alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
             else:
                 assert False
+
+        if self._ENABLE_PYSMT:
+            smt_form = self.parser.simplify(smt_form)
+            # return self.parser.simplify(smt_form)
+            if self._RETURN_PYSMT:
+                return smt_form
+            else:
+                print(smt_form)
+
         return alpha_or_eta_form
     
     # alph_expr is alpha constraint specified in command line. If it is not None 
@@ -2028,6 +2135,12 @@ class ModelTerms(ScalerTerms):
                 raise Exception('Variables ' + str(dont_care_vars) + 
                     ' in input constraints (alpha) are not part of the model')
             alph_glob = self.ast_expr_to_term(alph_expr)
+            if self._ENABLE_PYSMT:
+                if self._RETURN_PYSMT:
+                    return self.parser.parse(alph_expr)
+                else:
+                    print(self.parser.parse(alph_expr))
+
             return alph_glob #self._smlpTermsInst.smlp_and(alph_form, alph_glob)
     
     # The argument model_inps_outps is the union of model input and output varaiables.
@@ -2050,6 +2163,8 @@ class ModelTerms(ScalerTerms):
     
     def compute_eta_formula(self, eta_expr, model_inputs):
         if eta_expr is None:
+            if self._ENABLE_PYSMT and self._RETURN_PYSMT:
+                return pysmt.shortcuts.TRUE()
             return self.smlp_true
         else:
             # eta_expr can only contain knobs (control inputs), not free inputs or outputs (responses)
@@ -2058,6 +2173,12 @@ class ModelTerms(ScalerTerms):
             if len(dont_care_vars) > 0:
                 raise Exception('Variables ' + str(dont_care_vars) + 
                     ' in knob constraints (eta) are not part of the model')
+            if self._ENABLE_PYSMT:
+                if self._RETURN_PYSMT:
+                    return self.parser.parse(eta_expr)
+                else:
+                    print(self.parser.parse(eta_expr))
+
             return self.ast_expr_to_term(eta_expr)
 
     def var_domain(self, var, spec_domain_dict):
@@ -2101,16 +2222,24 @@ class ModelTerms(ScalerTerms):
         
         # get variable domains dictionary; certain sanity checks are performrd within this function.
         spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
-        
+
+        self.verifier.initialize()
         # contraints on features used as control variables and on the responses
-        alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names); #print('alph_ranges')
-        alph_global = self.compute_global_alpha_formula(alph_expr, feat_names); #print('alph_global')
-        alpha = self.smlp_and(alph_ranges, alph_global); #print('alpha')
-        beta = self.compute_beta_formula(beta_expr, feat_names+resp_names); #print('beta')
-        eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names); #print('eta_ranges')
-        eta_grids = self.compute_grid_range_formulae_eta(); #print('eta_grids')
-        eta_global = self.compute_eta_formula(eta_expr, feat_names); #print('eta_global', eta_global)
-        eta = self.smlp_and_multi([eta_ranges, eta_grids, eta_global]); #print('eta', eta)
+        alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names,
+                                                                  spec_domain_dict);  # print('alph_ranges')
+        alph_global = self.compute_global_alpha_formula(alph_expr, feat_names);  # print('alph_global')
+        alpha = self.smlp_and(alph_ranges, alph_global) if (
+                    not self._ENABLE_PYSMT or not self._RETURN_PYSMT) else self.parser.and_(alph_ranges, alph_global)
+        beta = self.compute_beta_formula(beta_expr, feat_names + resp_names);  # print('beta')
+        eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names,
+                                                                 spec_domain_dict);  # print('eta_ranges')
+        eta_grids = self.compute_grid_range_formulae_eta() if (
+                    not self._ENABLE_PYSMT or not self._RETURN_PYSMT) else self.pysmt_compute_grid_range_formulae_eta()
+        eta_global = self.compute_eta_formula(eta_expr, feat_names);  # print('eta_global', eta_global)
+
+        eta = self.smlp_and_multi([eta_ranges, eta_grids, eta_global]) if (
+                    not self._ENABLE_PYSMT or not self._RETURN_PYSMT) else self.parser.simplify(
+            self.parser.and_(eta_ranges, eta_grids, eta_global))
         
         self._smlp_terms_logger.info('Alpha global   constraints: ' + str(alph_global))
         self._smlp_terms_logger.info('Alpha ranges   constraints: ' + str(alph_ranges))
