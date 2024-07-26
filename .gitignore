@@ -58,3 +58,4 @@ obj/table.c.o
 src/logs.log
 *.pb
 /src/variables
+/variables

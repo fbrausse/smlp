@@ -16,7 +16,7 @@ from fractions import Fraction
 from src.smlp_py.smtlib.smt_to_pysmt import smtlib_to_pysmt
 from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
 from tensorflow.python.framework.convert_to_constants import convert_variables_to_constants_v2
-
+import json
 
 _operators_ = [">=", "<=", "<", ">"]
 
@@ -44,10 +44,13 @@ class Variable:
         lower = -np.inf
         upper = np.inf
 
-    def __init__(self, form: Type, name="", is_input=True):
-        if is_input:
+    def __init__(self, form: Type, index=None, name="", is_input=True):
+        if is_input and not index:
             self.index = Variable._input_index
             Variable._input_index += 1
+        elif is_input and index:
+            # auxiliary scaled variable
+            self.index = index
         else:
             self.index = Variable._output_index
             Variable._output_index += 1
@@ -90,9 +93,12 @@ class MarabouVerifier(Verifier):
         # List of variables
         self.variables = []
 
+        self.unscaled_variables = []
+
         self.model_file_path = "./"
         self.log_path = "marabou.log"
-
+        self.data_bounds_file = "/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_data_bounds.json"
+        self.data_bounds = None
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
         self.int_enable = False
@@ -106,7 +112,13 @@ class MarabouVerifier(Verifier):
     def initialize(self):
         self.model_file_path = "/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5"
         self.convert_to_pb()
+        self.load_json()
+        self.add_unscaled_variables()
 
+
+    def load_json(self):
+        with open(self.data_bounds_file, 'r') as file:
+            self.data_bounds = json.load(file)
 
     def epsilon(self, e, direction):
         if direction == 'down':
@@ -142,20 +154,50 @@ class MarabouVerifier(Verifier):
         for input_var in inputs:
             name, type = input_var
             var_type = Variable.Type.Real if type.lower() == "real" else Variable.Type.Int
-            self.variables.append(Variable(var_type, name, is_input=True))
+            self.variables.append(Variable(var_type, name=name, is_input=True))
 
         for output_var in outputs:
             name, type = output_var
             var_type = Variable.Type.Real if type.lower() == "real" else Variable.Type.Int
-            self.variables.append(Variable(var_type, name, is_input=False))
+            self.variables.append(Variable(var_type, name=name, is_input=False))
+
+
+
+    def add_unscaled_variables(self):
+        for variable in self.variables:
+            unscaled_variable = self.network.getNewVariable()
+            self.unscaled_variables.append(Variable(Variable.Type.Real, index=unscaled_variable, name=f"{variable.name}_unscaled", is_input=True))
+
+        self.convert_scaled_unscaled()
+
+
+    def convert_scaled_unscaled(self):
+        for scaled_var, unscaled_var in zip(self.variables, self.unscaled_variables):
+            bounds = self.data_bounds[scaled_var.name]
+            min_value, max_value = bounds["min"], bounds["max"]
+
+            scaling_factor = max_value - min_value
+
+            # Create an equation representing (x_max - x_min) * x_scaled - x_unscaled =  - x_min
+            eq = MarabouUtils.Equation(MarabouCore.Equation.EQ)
+            eq.addAddend(scaling_factor, scaled_var.index)
+            eq.addAddend(-1, unscaled_var.index)
+            eq.setScalar(-min_value)
+
+            # Add the equation to the network
+            self.network.addEquation(eq)
 
 
     def get_variable_by_name(self, name: str) -> Optional[Tuple[Variable, int]]:
         is_output = name.startswith("y")
+        is_unscaled = name.find("_unscaled")
+        repository = self.unscaled_variables if is_unscaled else self.variables
 
-        for index, variable in enumerate(self.variables):
+        for index, variable in enumerate(repository):
             if variable.name == name:
-                if is_output:
+                if is_unscaled:
+                    return variable, variable.index
+                elif is_output:
                     index -= Variable.get_index("input")
                 index = self.network.outputVars[0][0][index] if is_output else self.network.inputVars[0][0][index]
                 return variable, index

@@ -1596,8 +1596,8 @@ class ModelTerms(ScalerTerms):
         self.verifier.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Real'), ('p2', 'Integer')],
                                      outputs=[('y1', 'Real'), ('y2', 'Real')])
 
-        self._ENABLE_PYSMT = True
-        self._RETURN_PYSMT = True
+        self._ENABLE_PYSMT = False
+        self._RETURN_PYSMT = False
 
         
     # set logger from a caller script
