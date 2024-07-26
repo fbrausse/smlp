@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 # This file is part of smlp.
-
+from smlp_py.ext import plot
+import time
 import pandas as pd
 import numpy as np
 import pickle
@@ -19,6 +20,10 @@ from smlp_py.train_keras import ModelKeras
 from smlp_py.train_caret import ModelCaret 
 from smlp_py.train_sklearn import ModelSklearn
 from smlp_py.smlp_utils import str_to_bool
+from smlp_py.smlp_utils import str_to_bool, model_features_sanity_check
+from icecream import ic
+
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
@@ -301,6 +306,10 @@ class SmlpModels:
             msqe_vec = [mean_squared_error(orig_resp_df[resp_names[i]], orig_pred_df[pred_colnames[i]]) 
                 for i in range(len(resp_names))]
             precisions_df = pd.DataFrame(data={'response' : resp_names, 'msqe' : msqe_vec, 'r2_score' : r2_vec})
+            precisions = 'msqe: ' + str(msqe_vec[0]) + '\n' + 'r2_score: ' + str(r2_vec[0])
+            ic(type(msqe_vec))
+            ic(precisions)
+            plot.save_to_csv(precisions, data_version)
             self._model_logger.info('Saving prediction precisions into file: \n' + \
                                     str(self.prediction_precisions_filename(data_version)))
             precisions_df.to_csv(self.prediction_precisions_filename(data_version), index=False)
@@ -322,19 +331,50 @@ class SmlpModels:
         self._model_logger.info('Reporting prediction results: end')
 
 
-    # extract hyperparameters required for training model with slgorithm algo
+    # extract hyperparameters required for training model with algorithm algo
     # from args after it has been populated with command-line and default values.
     def get_hyperparams_dict(self, args, algo):
+        plot.save_to_txt(algo)
+        #with open('default_params.json', 'r') as file:
+            #default_dict = json.load(file)
         if algo in self._instKeras.SMLP_KERAS_MODELS:
             hparams_dict = dict((k, vars(args)[k]) for k in self._keras_dict.keys())
+            plot.param_changed(hparams_dict, algo=0)
+            #keras_dict = default_dict[0]
+            #for k, v in hparams_dict.items():
+            #    if k in keras_dict:
+            #        if v!=keras_dict[k]: 
+            #            param = str(k) + ": " + str(v)
+            #            plot.save_to_txt(param)
+            #            ic(param)
+
         elif algo in self._instSklearn.SMLP_SKLEARN_MODELS:
             #print('sklearn_dict', self._sklearn_dict)
             hparams_dict = dict((k, vars(args)[k]) for k in self._sklearn_dict.keys())
+            plot.param_changed(hparams_dict, algo=1)
+            #sklearn_dict = default_dict[1]
+            #for k in self._sklearn_dict:
+            #    if k in sklearn_dict:
+            #        if hparams_dict[k]!=sklearn_dict[k]:
+            #            param = str(k) + ": " + str(hparams_dict[k])
+            #            plot.save_to_txt(param)
+            #            ic(param)
+
         elif algo in self._instCaret.SMLP_CARET_MODELS:
             hparams_dict = dict((k, vars(args)[k]) for k in self._caret_dict.keys())
+            plot.param_changed(hparams_dict, algo=2)
+            #caret_dict = default_dict[2]
+            #for k in self._caret_dict:
+            #    if k in caret_dict:
+            #        if hparams_dict[k]!=caret_dict[k]:
+            #            param = str(k) + ": " + str(hparams_dict[k])
+            #            plot.save_to_txt(param)
+            #            ic(param)
+
         else:
             raise Exception('Unsupprted model training algo ' + str(algo))
         return hparams_dict
+
     
     # training model for all supported algorithms from verious python packages
     def model_train(self, feat_names_dict:dict, resp_names:list[str], algo:str, X_train:pd.DataFrame, X_test:pd.DataFrame, 
@@ -342,6 +382,11 @@ class SmlpModels:
             sample_weights_coef:float, sample_weights_exp:float, sample_weights_int:float, model_per_response:bool):
         self._model_logger.info('Model training: start')
         self.model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
+#=======
+#
+#        #print('feat_names_dict', feat_names_dict, 'resp_names', resp_names)
+#        model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
+#>>>>>>> Stashed changes
             
         if algo == 'nn_keras':
             keras_algo = algo[:-len('_keras')]
@@ -469,13 +514,14 @@ class SmlpModels:
             # run model training
             self._model_logger.info('TRAIN MODEL')
             #feat_names = X_train.columns.tolist()
+            plot.save_time(time.time())
             model = self.model_train(feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
                 hparams_dict, plots, seed, sample_weights_coef, sample_weights_exp, sample_weights_int, model_per_response)
 
             if save_model:
                 self._save_model_rerun_config(model_rerun_config)
                 if model_lib == 'sklearn':
-                    self._model_logger.info('Seving model in file ' + \
+                    self._model_logger.info('Saving model in file ' + \
                         str(self.model_filename(algo, '.pkl')))
                     pickle.dump(model, open(self.model_filename(algo, '.pkl'), 'wb'))
                 elif model_lib == 'caret':
@@ -508,6 +554,8 @@ class SmlpModels:
             #print('(3)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test);
             y_test_pred = self._model_predict(model, X_test, y_test, resp_names, algo, model_per_response)
             #print('(3b)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
+            plot.prediction_save(X_test, y_test_pred, mm_scaler_resp)
+            plot.save_time(time.time())
             self._report_prediction_results(algo, resp_names, y_test, y_test_pred, mm_scaler_resp, 
                 plots, pred_plots, 'test')
 
