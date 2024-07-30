@@ -12,6 +12,7 @@ import numpy as np
 from maraboupy.MarabouPythonic import *
 from pysmt.walkers import IdentityDagWalker
 from fractions import Fraction
+import smlp
 
 from src.smlp_py.smtlib.smt_to_pysmt import smtlib_to_pysmt
 from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
@@ -78,17 +79,8 @@ class MarabouVerifier(Verifier):
         # Dictionary containing variables
         self.bounds = {}
 
-        # Dictionary containing MarabouCommon.Disjunction for each variable
-        self.disjunctions = dict()
-
-        # List containing yet to be added equations and statements
-        self.unprocessed_eq = []
-
         # List of MarabouCommon.Equation currently applied to network query
-        self.equations = set()
-
-        # Error variable bounding around excluded values,
-        # e.g. var != val -> And(var >= val + epsilon, var <= val - epsilon)
+        self.equations = []
 
         # List of variables
         self.variables = []
@@ -101,18 +93,19 @@ class MarabouVerifier(Verifier):
         self.data_bounds = None
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
-        self.int_enable = False
 
         # Stack for keeping ipq
         self.ipq_stack = []
 
         self.parser = parser
+        self.network_num_vars = None
 
 
     def initialize(self):
         self.model_file_path = "/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5"
         self.convert_to_pb()
         self.load_json()
+        self.network_num_vars = self.network.numVars
         self.add_unscaled_variables()
 
 
@@ -135,6 +128,7 @@ class MarabouVerifier(Verifier):
         # Load the SavedModel
         model = tf.saved_model.load(output_model_file_path)
         concrete_func = model.signatures[tf.saved_model.DEFAULT_SERVING_SIGNATURE_DEF_KEY]
+        print("converted h5 to pb...")
 
         # Convert to ConcreteFunction
         frozen_func = convert_variables_to_constants_v2(concrete_func)
@@ -145,9 +139,7 @@ class MarabouVerifier(Verifier):
             f.write(graph_def.SerializeToString())
 
         self.network = Marabou.read_tf('model.pb')
-        ipq = self.network.getInputQuery()
-        self.ipq_stack.append(ipq)
-        print("converted h5 to pb...")
+
 
 
     def init_variables(self, inputs: List[Tuple[str, str]], outputs: List[Tuple[str, str]]) -> None:
@@ -190,7 +182,7 @@ class MarabouVerifier(Verifier):
 
     def get_variable_by_name(self, name: str) -> Optional[Tuple[Variable, int]]:
         is_output = name.startswith("y")
-        is_unscaled = name.find("_unscaled")
+        is_unscaled = name.find("_unscaled") != -1
         repository = self.unscaled_variables if is_unscaled else self.variables
 
         for index, variable in enumerate(repository):
@@ -205,23 +197,18 @@ class MarabouVerifier(Verifier):
 
     def reset(self):
         self.network.clear()
-        self.network = Marabou.read_tf(self.model_file_path, modelType="savedModel_v2")
-
+        self.network = Marabou.read_tf('model.pb')
+        self.unscaled_variables = []
+        self.add_unscaled_variables()
         # Default bounds for network
+        for equation in self.equations:
+            self.apply_restrictions(equation)
 
-
-        if self.int_enable:
-            for variable in self.variables:
-                if variable.type == Variable.Type.Int:
-                    possible_values = list(range(int(variable.bounds.min), int(variable.bounds.max)))
-                    possible_values = map(lambda p: "{var} == {val}".format(var=variable.name, val=p), possible_values)
-                    self.add_disjunctions(possible_values)
-                    print("{var} is int type adding values in range {min} to {max}".format(var=variable,
-                                                                                           min=variable.bounds.min,
-                                                                                           max=variable.bounds.max))
+    def add_permanent_constraint(self, formula):
+        self.equations.append(formula)
 
     def add_bound(self, variable:str, value, direction="upper", strict=True):
-        var, var_index = self.get_variable_by_name(variable)
+        var, var_index = self.get_variable_by_name(f"{variable}_unscaled")
         if var is None:
             return None
 
@@ -271,10 +258,8 @@ class MarabouVerifier(Verifier):
         self.process_disjunctions(disjunctions)
 
     def transform_pysmt_to_marabou_equation(self, formula):
-        symbol, comparator, scalar = formula
-        symbol, is_output = self.get_variable_by_name(str(symbol))
+        symbols, comparator, scalar = formula
         equation_type = None
-        scalar = float(scalar.constant_value())
 
         if comparator in convert_comparison_operators:
             equation_type = convert_comparison_operators[comparator]
@@ -287,20 +272,29 @@ class MarabouVerifier(Verifier):
                 scalar = self.epsilon(scalar, "up")
 
         equation = MarabouUtils.Equation(equation_type)
-        equation.addAddend(1, symbol.index)
         equation.setScalar(scalar)
+
+        for parameter in symbols:
+            coefficient, symbol = parameter
+            # TODO: do not enforce the unscaled variables
+            name = str(symbol)
+            if name.find("_unscaled") == -1:
+                name += "_unscaled"
+            symbol, index = self.get_variable_by_name(name)
+            equation.addAddend(coefficient, index)
+
         return equation
 
-    def create_equation(self, formula):
+    def create_equation(self, formula, from_and=False):
         equations = []
         if formula.is_and():
-            equation = [self.create_equation(eq) for eq in formula.args()]
+            equation = [self.create_equation(eq, from_and=True) for eq in formula.args()]
             return equation
         elif formula.is_le() or formula.is_lt() or formula.is_equals():
             res = self.parser.extract_components(formula)
             equations.append(self.transform_pysmt_to_marabou_equation(res))
 
-        return equations
+        return equations[0] if from_and else equations
 
     def process_disjunctions(self, disjunctions):
         marabou_disjunction = []
@@ -336,8 +330,8 @@ class MarabouVerifier(Verifier):
     def process_comparison(self, formula):
         if formula.is_le() or formula.is_lt() or formula.is_equals():
             symbol, comparison, constant = self.parser.extract_components(formula)
+            _, symbol = symbol[0]
             symbol = str(symbol)
-            constant = float(constant.constant_value())
 
             if comparison == "<=":
                 self.add_bound(symbol, constant, direction="upper", strict=False)
@@ -348,6 +342,7 @@ class MarabouVerifier(Verifier):
             elif comparison == ">":
                 self.add_bound(symbol, constant, direction="lower", strict=True)
             elif comparison == "=":
+                # TODO: add a marabou equation instead
                 self.add_bound(symbol, constant, direction="lower", strict=False)
                 self.add_bound(symbol, constant, direction="upper", strict=False)
         else:
@@ -408,7 +403,7 @@ class MarabouVerifier(Verifier):
         # self.network.setUpperBound(b1, 1)
     def find_witness(self, witness):
         answers = {}
-        for variable in self.variables:
+        for variable in self.unscaled_variables:
             _, index = self.get_variable_by_name(variable.name)
             answers[variable.name] = witness[index]
         return answers
@@ -417,9 +412,9 @@ class MarabouVerifier(Verifier):
         try:
             results = self.network.solve()
             if results and results[0] == 'unsat':
-                return {}
+                return "UNSAT", {}
             else:  # sat
-                return self.find_witness(results[1])
+                return "SAT", self.find_witness(results[1])
         except Exception as e:
             print(e)
             return None

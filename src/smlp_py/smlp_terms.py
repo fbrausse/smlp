@@ -20,7 +20,7 @@ import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
-import pysmt.shortcuts.Real as pysmtReal
+from pysmt.shortcuts import Real as pysmtReal
 from smlp_py.NN_verifiers.verifiers import MarabouVerifier
 import pysmt
 
@@ -1592,12 +1592,12 @@ class ModelTerms(ScalerTerms):
         self.parser.init_variables(symbols=[("x1", "real"), ('x2', 'int'), ('p1', 'real'), ('p2', 'int'),
                                            ('y1', 'real'), ('y2', 'real')])
 
-        self.verifier = MarabouVerifier()
+        self.verifier = MarabouVerifier(parser=self.parser)
         self.verifier.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Real'), ('p2', 'Integer')],
                                      outputs=[('y1', 'Real'), ('y2', 'Real')])
 
-        self._ENABLE_PYSMT = False
-        self._RETURN_PYSMT = False
+        self._ENABLE_PYSMT = True
+        self._RETURN_PYSMT = True
 
         
     # set logger from a caller script
@@ -2224,6 +2224,8 @@ class ModelTerms(ScalerTerms):
         spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
 
         self.verifier.initialize()
+        self.add_integer_constraints()
+
         # contraints on features used as control variables and on the responses
         alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names,
                                                                   spec_domain_dict);  # print('alph_ranges')
@@ -2378,11 +2380,13 @@ class ModelTerms(ScalerTerms):
             sat_model = self.witness_term_to_const(res.model, approximate=False, precision=None)
             if approx_lemmas:
                 sat_model_approx = self.approximate_witness_term(res.model, lemma_precision)
+            return TextToPysmtParser.SAT
             #print('res.model', res.model, 'sat_model', sat_model)
         elif isinstance(res, smlp.unsat):
             #print('smlp_unsat', smlp.unsat)
             status = 'unsat'
             sat_model = {}
+            return TextToPysmtParser.UNSAT
         else:
             raise Exception('Unexpected solver result ' + str(res))
         
@@ -2486,22 +2490,37 @@ class ModelTerms(ScalerTerms):
     def check_alpha_eta_consistency(self, domain:smlp.domain, model_full_term_dict:dict, 
             alpha:smlp.form2, eta:smlp.form2, solver_logic:str):
         #print('create solver: model', model_full_term_dict, flush=True)
-        solver = self.create_model_exploration_instance_from_smlp_components(
+        if not self._RETURN_PYSMT:
+            solver = self.create_model_exploration_instance_from_smlp_components(
             domain, model_full_term_dict, False, solver_logic)
-        #print('add alpha', alpha, flush=True)
-        solver.add(alpha); #print('alpha', alpha, flush=True)
-        solver.add(eta); #print('eta', eta)
-        #print('create check', flush=True)
-        #res = solver.check(); print('res', res, flush=True)
-        res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency')
+            #print('add alpha', alpha, flush=True)
+            solver.add(alpha); #print('alpha', alpha, flush=True)
+            solver.add(eta); #print('eta', eta)
+            #print('create check', flush=True)
+            #res = solver.check(); print('res', res, flush=True)
+            res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency')
+        else:
+            self.verifier.reset()
+            self.verifier.apply_restrictions(alpha)
+            self.verifier.apply_restrictions(eta)
+            res, witness = self.verifier.solve()
+
         consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'
-        if isinstance(res, smlp.sat):
+        if res=="SAT":
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are consistent')
             interface_consistent = True
-        elif isinstance(res, smlp.unsat):
+        elif res=="UNSAT":
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are inconsistent')
             interface_consistent = False
         else:
             raise Exception('alpha and eta cosnsistency check failed to complete')
         return interface_consistent
+
+    def add_integer_constraints(self):
+        for symbol, values in self._specInst.get_spec_domain_dict.items():
+            if values['range'] == 'int':
+                ranges = values['interval']
+                integer_formula = self.parser.create_integer_disjunction(f'{symbol}_unscaled', (ranges[0], ranges[-1]))
+                self.verifier.add_permanent_constraint(integer_formula)
+
 

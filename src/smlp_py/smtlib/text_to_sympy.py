@@ -1,5 +1,6 @@
 import re
 
+import gmpy2
 from pysmt import *
 from sympy.logic.boolalg import And, Or, Not
 from pysmt.shortcuts import Symbol, And, Or, Not, Implies, Iff, Ite, Equals, Plus, Minus, Times, Div, Pow, Bool, TRUE, \
@@ -83,6 +84,12 @@ def check_inequality(formula):
     return checker.is_inequality and not checker.contains_and_or
 
 class TextToPysmtParser(object):
+    SAT = "SAT"
+    UNSAT = "UNSAT"
+    types = pysmt_types
+    real = Real
+    true = TRUE
+    false = FALSE
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -101,7 +108,7 @@ class TextToPysmtParser(object):
             ast.Pow: Pow,  # Exponentiation
             ast.BitXor: Iff,  # Bitwise XOR (interpreted as logical Iff)
 
-            ast.USub: Minus,  # Unary subtraction (negation)
+            ast.USub: lambda l: -l,  # Unary subtraction (negation)
 
             ast.Eq: Equals,  # Equality
             ast.NotEq: Not,  # Not equal
@@ -114,7 +121,10 @@ class TextToPysmtParser(object):
             ast.Or: Or,  # Logical OR
             ast.Not: Not,  # Logical NOT
 
-            ast.IfExp: Ite  # If expression
+            ast.IfExp: Ite,  # If expression
+            ast.Call: And,
+            'If': Ite,
+            'And': And
         }
 
     def _div_op(self, left, right):
@@ -219,25 +229,56 @@ class TextToPysmtParser(object):
     def extract_components(self, comparison: FNode):
         left = comparison.arg(0)
         right = comparison.arg(1)
+
+        if not right.is_constant() and not left.is_constant():
+            raise ValueError("The right-hand side of the formula must be a constant")
+
         comparator = self.decide_comparator(comparison)
 
-        # if left.is_constant():
-        #     # so the formula is like const <= a*x
-        #     # check if right is like a*x
-        #     right = self.extract_coefficient(right)
-        #
-        # elif right.is_constant():
-        #     # check if left is like a*x
-        #     left = self.extract_coefficient(left)
+        terms_subformula = left if right.is_constant() else right
 
+        terms = []
 
+        def traverse(node):
+            if node.is_times():
+                coeff, var = node.args()
+                if coeff.is_constant() and var.is_symbol():
+                    terms.append((float(coeff.constant_value()), var))
+                elif var.is_constant() and coeff.is_symbol():
+                    terms.append((float(var.constant_value()), coeff))
+                else:
+                    raise ValueError("Invalid term structure in linear inequality")
+            elif node.is_plus():
+                for arg in node.args():
+                    traverse(arg)
+            elif node.is_minus():
+                left, right = node.args()
+                traverse(left)
+                if right.is_times():
+                    coeff, var = right.args()
+                    if coeff.is_constant() and var.is_symbol():
+                        terms.append((-float(coeff.constant_value()), var))
+                    elif var.is_constant() and coeff.is_symbol():
+                        terms.append((-float(var.constant_value()), coeff))
+                    else:
+                        raise ValueError("Invalid term structure in linear inequality")
+                else:
+                    raise ValueError("Invalid term structure in linear inequality")
+            elif node.is_symbol():
+                terms.append((1.0, node))
+            elif node.is_constant():
+                terms.append((node.constant_value(), Real(0)))
+            else:
+                raise ValueError("Unsupported node type in linear inequality")
 
-        if left.is_symbol() and right.is_constant():
-            return left, comparator, right
-        elif right.is_symbol() and left.is_constant():
-            return right, self.opposite_comparator(comparator), left
+        traverse(terms_subformula)
+
+        if right.is_constant():
+            scalar = float(right.constant_value())
+            return terms, comparator, scalar
         else:
-            raise ValueError("Comparison does not contain a simple variable and constant")
+            scalar = float(left.constant_value())
+            return terms, self.opposite_comparator(comparator), scalar
 
     def process_formula(self, formula: FNode):
         components = []
@@ -313,8 +354,9 @@ class TextToPysmtParser(object):
         for input_var in symbols:
             name, type = input_var
             unscaled_name = f"{name}_unscaled"
-            self.add_symbol(name, type)
-            self.add_symbol(unscaled_name, type)
+            # TODO: i replaced the type variable with real, make sure that's ok
+            self.add_symbol(name, 'real')
+            self.add_symbol(unscaled_name, 'real')
 
     def add_symbol(self, name, symbol_type):
         assert symbol_type.lower() in pysmt_types.keys()
@@ -324,17 +366,92 @@ class TextToPysmtParser(object):
         assert name in self.symbols.keys()
         return self.symbols[name]
 
+    def replace_constants_with_floats_and_evaluate(self, formula: FNode) -> FNode:
+        def traverse(node: FNode) -> FNode:
+            if node.is_plus():
+                left, right = node.args()
+                new_left = traverse(left)
+                new_right = traverse(right)
+                if new_left.is_constant() and new_right.is_constant():
+                    return Real(new_left.constant_value() + new_right.constant_value())
+                return Plus(new_left, new_right)
+            elif node.is_minus():
+                left, right = node.args()
+                new_left = traverse(left)
+                new_right = traverse(right)
+                if new_left.is_constant() and new_right.is_constant():
+                    return Real(new_left.constant_value() - new_right.constant_value())
+                return Minus(new_left, new_right)
+            elif node.is_times():
+                left, right = node.args()
+                new_left = traverse(left)
+                new_right = traverse(right)
+                if new_left.is_constant() and new_right.is_constant():
+                    return Real(new_left.constant_value() * new_right.constant_value())
+                return Times(new_left, new_right)
+            elif node.is_div():
+                left, right = node.args()
+                new_left = traverse(left)
+                new_right = traverse(right)
+                if new_left.is_constant() and new_right.is_constant():
+                    return Real(new_left.constant_value() / new_right.constant_value())
+                return Div(new_left, new_right)
+            elif node.is_ite():
+                condition, true_branch, false_branch = node.args()
+                new_condition = traverse(condition)
+                new_true_branch = traverse(true_branch)
+                new_false_branch = traverse(false_branch)
+                return Ite(new_condition, new_true_branch, new_false_branch)
+            elif node.is_le():
+                left, right = node.args()
+                new_left = traverse(left)
+                new_right = traverse(right)
+                return LE(new_left, new_right)
+            elif node.is_lt():
+                left, right = node.args()
+                new_left = traverse(left)
+                new_right = traverse(right)
+                return LT(new_left, new_right)
+            elif node.is_and():
+                new_args = [traverse(arg) for arg in node.args()]
+                return And(new_args)
+            elif node.is_or():
+                new_args = [traverse(arg) for arg in node.args()]
+                return Or(new_args)
+            elif node.is_constant():
+                if isinstance(node.constant_value(), gmpy2.mpq):
+                    return Real(float(node.constant_value()))
+                elif node.is_int_constant():
+                    return Real(float(node.constant_value()))
+                elif node.is_real_constant():
+                    return Real(node.constant_value())
+            else:
+                return node
+
+        return traverse(formula)
+
     def parse(self, expr):
         assert isinstance(expr, str)
         symbol_list = self.symbols
 
         def eval_(node):
             if isinstance(node, ast.Num):
-                return Real(node.n) if isinstance(node.n, float) else Int(node.n)
+                # return Real(node.n) if isinstance(node.n, float) else Int(node.n)
+                return Real(float(node.n))
             elif isinstance(node, ast.BinOp):
-                return self._ast_operators_map[type(node.op)](eval_(node.left), eval_(node.right))
+                left = eval_(node.left)
+                right = eval_(node.right)
+                if left.is_constant() and right.is_constant():
+                    if isinstance(node.op, ast.Mult):
+                        return Real(float(left.constant_value() * right.constant_value()))
+                    elif isinstance(node.op, ast.Div):
+                        return Real(float(left.constant_value() / right.constant_value()))
+                return self._ast_operators_map[type(node.op)](left, right)
             elif isinstance(node, ast.UnaryOp):
-                return self._ast_operators_map[type(node.op)](eval_(node.operand))
+                operand = eval_(node.operand)
+                if operand.is_constant() and isinstance(node.op, ast.USub):
+                    return Real(-operand.constant_value())
+                return self._ast_operators_map[type(node.op)](operand)
             elif isinstance(node, ast.Name):
                 return symbol_list[node.id]
             elif isinstance(node, ast.BoolOp):
@@ -350,6 +467,14 @@ class TextToPysmtParser(object):
                     left = eval_(comparator)
                     result = And(result, self._ast_operators_map[type(op)](left, eval_(comparator)))
                 return result
+            elif isinstance(node, ast.Call):
+                func = node.func.id
+                args = [eval_(arg) for arg in node.args]
+                if func in self._ast_operators_map:
+                    return self._ast_operators_map[func](*args)
+                else:
+                    raise ValueError(f"Unsupported function call: {func}")
+
             elif isinstance(node, ast.IfExp):
                 return self._ast_operators_map[ast.IfExp](eval_(node.test), eval_(node.body), eval_(node.orelse))
             elif isinstance(node, ast.Constant):
@@ -368,6 +493,26 @@ class TextToPysmtParser(object):
 
         return eval_(ast.parse(expr, mode='eval').body)
 
+    def convert_ite_to_conjunctions_disjunctions(self, formula):
+        def traverse(node):
+            if node.is_ite():
+                condition, true_branch, false_branch = node.args()
+                return Or(
+                    And(traverse(condition), traverse(true_branch)),
+                    And(traverse(Not(condition)), traverse(false_branch))
+                )
+            elif node.is_and():
+                new_args = [traverse(arg) for arg in node.args()]
+                return And(new_args)
+            elif node.is_or():
+                new_args = [traverse(arg) for arg in node.args()]
+                return Or(new_args)
+            elif node.is_not():
+                return self.propagate_negation(node)
+            else:
+                return node
+
+        return traverse(formula)
 
 if __name__ == "__main__":
 

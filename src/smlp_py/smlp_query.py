@@ -42,6 +42,7 @@ class SmlpQuery:
         self._trace_runtime = None
         self._trace_precision = None
         self._trace_anonymize = None
+        self._ENABLE_PYSMT = True
 
     def set_logger(self, logger):
         self._query_logger = logger 
@@ -98,11 +99,15 @@ class SmlpQuery:
 
     def find_candidate(self, solver):
         #res = solver.check()
-        res = self._modelTermsInst.smlp_solver_check(solver, 'ca', self._lemma_precision)
-        if self._modelTermsInst.solver_status_unknown(res): # isinstance(res, smlp.unknown):
-            return None
-        else:
+        if self._ENABLE_PYSMT:
+            res, _ = solver.solve()
             return res
+        else:
+            res = self._modelTermsInst.smlp_solver_check(solver, 'ca', self._lemma_precision)
+            if self._modelTermsInst.solver_status_unknown(res): # isinstance(res, smlp.unknown):
+                return None
+            else:
+                return res
         
     def update_consistecy_results(self, mode_status_dict, interface_consistent, model_consistent,
             mode_status, mode_results_file):
@@ -513,7 +518,7 @@ class SmlpQuery:
     # Enhancement !!!: implement timeout ? UNKNOWN return value
     def query_condition(self, universal, model_full_term_dict:dict, quer_name:str, quer_expr:str, quer:smlp.form2, 
             domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict, #beta:smlp.form2, 
-            delta:dict, solver_logic:str, witn:bool, sat_approx:bool, sat_precision:int):
+            delta:dict, solver_logic:str, witn:bool, sat_approx:bool, sat_precision:int, candidate_solver=None):
         # feasibility (existence) of at least one candidate
         feasible = None
         if quer_expr is not None:
@@ -521,15 +526,21 @@ class SmlpQuery:
         else:
             self._query_logger.info('Querying condition {} <-> {}'.format(str(quer_name), str(quer)))
         #print('query', quer, 'eta', eta, 'delta', delta)
-        candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
-            domain, model_full_term_dict, True, solver_logic)
-        
-        # add the remaining user constraints and the query
-        candidate_solver.add(eta)
-        candidate_solver.add(alpha)
-        #candidate_solver.add(beta)
-        candidate_solver.add(quer)
-        test = self._smlpTermsInst.smlp_simplify(quer)
+        if not self._ENABLE_PYSMT:
+            candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+                domain, model_full_term_dict, True, solver_logic)
+
+            # add the remaining user constraints and the query
+            candidate_solver.add(eta)
+            candidate_solver.add(alpha)
+            #candidate_solver.add(beta)
+            candidate_solver.add(quer)
+        else:
+            candidate_solver.reset()
+            candidate_solver.add(eta)
+            candidate_solver.add(alpha)
+            candidate_solver.add(quer)
+
         #print('eta', eta); print('alpha', alpha);  print('quer', quer); 
         #print('solving query', quer)
         self._query_tracer.info('{},{}'.format('synthesis' if universal else 'query', str(quer_name))) #, str(quer_expr) ,{}

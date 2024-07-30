@@ -47,7 +47,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int = 64
-        self._ENABLE_PYSMT = False
+        self._ENABLE_PYSMT = True
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:
@@ -825,7 +825,7 @@ class SmlpOptimize:
             self._opt_logger.info('Pareto optimization synthesis feasibility check: Start')
             self._opt_tracer.info('synthesis_feasibility')
             quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'synthesis_feasibility', 'True', beta, 
-                domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
+                domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision, self.verifier)
             #print('quer_res', quer_res)
             if quer_res['query_status'] == 'UNSAT':
                 self._opt_logger.info('Pareto optimization synthesis feasibility check: End')

@@ -5,6 +5,13 @@ from pysmt.shortcuts import Symbol, And, Not, Or, Implies, simplify, LT, Real, T
 from pysmt.typing import *
 import tf2onnx
 import numpy as np
+from pysmt.shortcuts import Symbol, Times, Minus, Div, Real
+from pysmt.smtlib.parser import get_formula
+# from pysmt.oracles import get_logic
+from pysmt.typing import REAL
+from z3 import simplify, parse_smt2_string
+import z3
+
 from maraboupy.MarabouPythonic import *
 
 
@@ -19,9 +26,27 @@ if __name__ == "__main__":
                                   ('y1', 'real'), ('y2', 'real')])
 
     mb = MarabouVerifier(parser=parser)
-    mb.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Integer'), ('p2', 'Integer')],
+    mb.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Real'), ('p2', 'Integer')],
                       outputs=[('y1', 'Real'), ('y2', 'Real')])
     mb.initialize()
+
+    smlp_formula = '(let ((|:0| (* (/ 281474976710656 2944425288877159) (- y1 (/ 1080863910568919 4503599627370496))))) (let ((|:1| (* (/ 281474976710656 2559564553220679) (- (* (/ 1 2) (+ y1 y2)) (/ 1170935903116329 1125899906842624))))) (>= (ite (< |:0| |:1|) |:0| |:1|) 1)))'
+    smlp_str = f"""
+                (declare-fun y1 () Real)
+                (declare-fun y2 () Real)
+                (assert {smlp_formula})
+                """
+
+    smlp_parsed = z3.parse_smt2_string(smlp_str)
+    smlp_simplified = z3.simplify(smlp_parsed[0])
+    ex = parser.parse(str(smlp_simplified))
+    # ex = parser.replace_constants_with_floats_and_evaluate(ex)
+    marabou_formula = parser.convert_ite_to_conjunctions_disjunctions(ex)
+    print(marabou_formula.serialize())
+
+
+
+
 
     y1 = parser.get_symbol("y1_unscaled")
     y2 = parser.get_symbol("y2_unscaled")
@@ -85,9 +110,10 @@ if __name__ == "__main__":
     )
     mb.apply_restrictions(x2_int)
     mb.apply_restrictions(p2_int)
-    mb.apply_restrictions(beta)
+    # mb.apply_restrictions(beta)
     mb.apply_restrictions(alpha)
     mb.apply_restrictions(eta)
+    # mb.apply_restrictions(marabou_formula)
     # mb.apply_restrictions(solution)
 
     # mb.apply_restrictions(theta)
