@@ -309,10 +309,12 @@ class TextToPysmtParser(object):
         elif symbol_type == INT:
             return Int(number)
 
-    def init_variables(self, inputs: List[Tuple[str, str]]) -> None:
-        for input_var in inputs:
+    def init_variables(self, symbols: List[Tuple[str, str]]) -> None:
+        for input_var in symbols:
             name, type = input_var
+            unscaled_name = f"{name}_unscaled"
             self.add_symbol(name, type)
+            self.add_symbol(unscaled_name, type)
 
     def add_symbol(self, name, symbol_type):
         assert symbol_type.lower() in pysmt_types.keys()

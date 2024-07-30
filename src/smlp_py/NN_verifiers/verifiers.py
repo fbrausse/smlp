@@ -433,7 +433,7 @@ class MarabouVerifier(Verifier):
 if __name__ == "__main__":
     parser = TextToPysmtParser()
     # p2 is an int not a real
-    parser.init_variables(inputs=[("x1", "real"), ('x2', 'int'), ('p1', 'real'), ('p2', 'real'),
+    parser.init_variables(symbols=[("x1", "real"), ('x2', 'int'), ('p1', 'real'), ('p2', 'real'),
                                        ('y1', 'real'), ('y2', 'real')])
 
     mb = MarabouVerifier(parser=parser)

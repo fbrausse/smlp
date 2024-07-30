@@ -529,6 +529,7 @@ class SmlpQuery:
         candidate_solver.add(alpha)
         #candidate_solver.add(beta)
         candidate_solver.add(quer)
+        test = self._smlpTermsInst.smlp_simplify(quer)
         #print('eta', eta); print('alpha', alpha);  print('quer', quer); 
         #print('solving query', quer)
         self._query_tracer.info('{},{}'.format('synthesis' if universal else 'query', str(quer_name))) #, str(quer_expr) ,{}

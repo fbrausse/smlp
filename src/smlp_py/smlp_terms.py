@@ -20,7 +20,7 @@ import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
-
+import pysmt.shortcuts.Real as pysmtReal
 from smlp_py.NN_verifiers.verifiers import MarabouVerifier
 import pysmt
 
@@ -1486,10 +1486,10 @@ class ScalerTerms(SmlpTerms):
         parser.add_symbol(orig_feat_var, 'real')
         orig_feat_var = parser.get_symbol(orig_feat_var)
         if orig_min == orig_max:
-            return pysmt.shortcuts.Real(0)
+            return pysmtReal(0)
         else:
-            scaling_factor = pysmt.shortcuts.Real(1) / pysmt.shortcuts.Real(orig_max - orig_min)
-            orig_min_cnst = pysmt.shortcuts.Real(orig_min)
+            scaling_factor = pysmtReal(1) / pysmtReal(orig_max - orig_min)
+            orig_min_cnst = pysmtReal(orig_min)
 
             # (orig_feat_var - orig_min_cnst)
             scaled_expr = pysmt.shortcuts.Minus(orig_feat_var, orig_min_cnst)
@@ -1589,7 +1589,7 @@ class ModelTerms(ScalerTerms):
         }
 
         self.parser = TextToPysmtParser()
-        self.parser.init_variables(inputs=[("x1", "real"), ('x2', 'int'), ('p1', 'real'), ('p2', 'int'),
+        self.parser.init_variables(symbols=[("x1", "real"), ('x2', 'int'), ('p1', 'real'), ('p2', 'int'),
                                            ('y1', 'real'), ('y2', 'real')])
 
         self.verifier = MarabouVerifier()
@@ -1981,7 +1981,7 @@ class ModelTerms(ScalerTerms):
             if self._ENABLE_PYSMT:
                 value = float(self.ground_smlp_expr_to_value(cex[var]))
                 PYSMT_var = self.parser.get_symbol(var)
-                type = pysmt.shortcuts.Int if str(PYSMT_var.get_type()) == "Int" else pysmt.shortcuts.Real
+                type = pysmt.shortcuts.Int if str(PYSMT_var.get_type()) == "Int" else pysmtReal
                 calc_type = int if str(PYSMT_var.get_type()) == "Int" else float
                 lower = calc_type(value - verifier_rad_term)
                 lower = type(lower)

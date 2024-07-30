@@ -15,11 +15,8 @@ if __name__ == "__main__":
     # model_proto, external_tensor_storage = tf2onnx.convert.from_keras(model, opset=13, output_path="smlp_toy.onnx")
     print("SAVING TO ONNX")
     parser = TextToPysmtParser()
-    parser.init_variables(inputs=[("x1", "real"), ('x2', 'real'), ('p1', 'real'), ('p2', 'real'),
-                                  ('y1', 'real'), ('y2', 'real'),
-                                  ("x1_unscaled", "real"), ('x2_unscaled', 'real'),
-                                  ('p1_unscaled', 'real'), ('p2_unscaled', 'real'),
-                                  ('y1_unscaled', 'real'), ('y2_unscaled', 'real')])
+    parser.init_variables(symbols=[("x1", "real"), ('x2', 'real'), ('p1', 'real'), ('p2', 'real'),
+                                  ('y1', 'real'), ('y2', 'real')])
 
     mb = MarabouVerifier(parser=parser)
     mb.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Integer'), ('p2', 'Integer')],
