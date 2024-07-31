@@ -42,7 +42,7 @@ class SmlpQuery:
         self._trace_runtime = None
         self._trace_precision = None
         self._trace_anonymize = None
-        self._ENABLE_PYSMT = True
+        self._ENABLE_PYSMT = False
 
     def set_logger(self, logger):
         self._query_logger = logger 
@@ -179,7 +179,7 @@ class SmlpQuery:
             self._modelTermsInst.verifier.apply_restrictions(theta)
             self._modelTermsInst.verifier.apply_restrictions(alpha)
             negation = self._modelTermsInst.verifier.parser.propagate_negation(query)
-            self._modelTermsInst.verifier.apply_restrictions(negation)
+            self._modelTermsInst.verifier.apply_restrictions(negation, need_simplification=True)
             res, witness = self._modelTermsInst.verifier.solve()
             return witness
         else:
@@ -547,9 +547,9 @@ class SmlpQuery:
             candidate_solver.add(quer)
         else:
             self._modelTermsInst.verifier.reset()
-            self._modelTermsInst.verifier.apply_restrictions(eta)
+            self._modelTermsInst.verifier.apply_restrictions(eta, need_simplification=True)
             self._modelTermsInst.verifier.apply_restrictions(alpha)
-            self._modelTermsInst.verifier.apply_restrictions(quer)
+            self._modelTermsInst.verifier.apply_restrictions(quer, need_simplification=True)
 
         #print('eta', eta); print('alpha', alpha);  print('quer', quer); 
         #print('solving query', quer)
@@ -564,9 +564,11 @@ class SmlpQuery:
             
             ca = self.find_candidate(self._modelTermsInst.verifier) if self._ENABLE_PYSMT else self.find_candidate(candidate_solver)
 
-            condition = self._modelTermsInst.solver_status_sat(ca["result"]) if self._ENABLE_PYSMT else self._modelTermsInst.solver_status_sat(ca)
+            condition_sat = self._modelTermsInst.solver_status_sat(ca["result"]) if self._ENABLE_PYSMT else self._modelTermsInst.solver_status_sat(ca)
+            condition_unsat = self._modelTermsInst.solver_status_unsat(ca["result"]) if self._ENABLE_PYSMT else self._modelTermsInst.solver_status_unsat(ca)
+            condition_unknown = self._modelTermsInst.solver_status_unsat(ca["result"]) if self._ENABLE_PYSMT else self._modelTermsInst.solver_status_unknown(ca)
 
-            if condition: # isinstance(ca, smlp.sat):
+            if condition_sat: # isinstance(ca, smlp.sat):
                 print('candidate found -- checking stability', flush=True)
                 #print('ca', ca_model)
                 ca_model = self._modelTermsInst.get_solver_model(ca) #ca.model
@@ -637,17 +639,17 @@ class SmlpQuery:
                         return {'query_status':'STABLE_SAT', 'witness':witness_vals_dict, 'feasible':feasible}
                     else:
                         if self._ENABLE_PYSMT:
-                            return {'query_status':'STABLE_SAT', 'witness':ca['witness_var'], 'feasible':feasible}
+                            return {'query_status':'STABLE_SAT', 'witness':ca['witness'], 'feasible':feasible}
                         else:
                             return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
-            elif self._modelTermsInst.solver_status_unsat(ca): #isinstance(ca, smlp.unsat):
+            elif condition_unsat: #isinstance(ca, smlp.unsat):
                 self._query_logger.info('Query completed with result: UNSAT (unsatisfiable)')
                 if feasible is None:
                     feasible = False
                 #print('candidate does not exist -- query unsuccessful')
                 #print('query unsuccessful: witness does not exist (query is unsat)')
                 return {'query_status':'UNSAT', 'witness':None, 'feasible':feasible}
-            elif self._modelTermsInst.solver_status_unknown(ca): #isinstance(ca, smlp.unknown):
+            elif condition_unknown: #isinstance(ca, smlp.unknown):
                 self._opt_logger.info('Completed with result: {}'.format('UNKNOWN'))
                 return {'query_status':'UNKNOWN', 'witness':None, 'feasible':feasible}
                 #raise Exception('UNKNOWN return value in candidate search is currently not supported for queries')

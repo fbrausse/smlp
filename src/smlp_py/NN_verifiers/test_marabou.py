@@ -11,6 +11,8 @@ from pysmt.smtlib.parser import get_formula
 from pysmt.typing import REAL
 from z3 import simplify, parse_smt2_string
 import z3
+from pysmt.smtlib.script import smtlibscript_from_formula
+from io import StringIO
 
 from maraboupy.MarabouPythonic import *
 
@@ -70,6 +72,7 @@ if __name__ == "__main__":
         Equals(p2, Real(3))
     )
 
+    print(smtlibscript_from_formula(solution))
     theta = And(
         GE(p1, Real(6.8)),
         GE(p2, Real(3.8)),
@@ -108,6 +111,13 @@ if __name__ == "__main__":
             p1.Equals(Real(7.0))
         )
     )
+    script = smtlibscript_from_formula(eta)
+
+    outstream = StringIO()
+    script.serialize(outstream)
+    output = outstream.getvalue()
+    smlp_parsed = z3.parse_smt2_string(output)
+    smlp_simplified = z3.simplify(smlp_parsed[0])
     mb.apply_restrictions(x2_int)
     mb.apply_restrictions(p2_int)
     # mb.apply_restrictions(beta)

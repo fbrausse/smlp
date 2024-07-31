@@ -249,14 +249,14 @@ class MarabouVerifier(Verifier):
 
             self.network.addDisjunctionConstraint(disjunction)
 
-    def apply_restrictions(self, formula):
+    def apply_restrictions(self, formula, need_simplification=False):
         formula = self.parser.simplify(formula)
         conjunctions, disjunctions = self.process_formula(formula)
 
         for conjunction in conjunctions:
-            self.process_comparison(conjunction)
+            self.process_comparison(conjunction, need_simplification)
 
-        self.process_disjunctions(disjunctions)
+        self.process_disjunctions(disjunctions, need_simplification)
 
     def transform_pysmt_to_marabou_equation(self, formula):
         symbols, comparator, scalar = formula
@@ -304,7 +304,7 @@ class MarabouVerifier(Verifier):
                     return True, [eq_1, eq_2, eq_3, eq_4]
         return False, []
 
-    def create_equation(self, formula, from_and=False):
+    def create_equation(self, formula, from_and=False, need_simplification=False):
         equations = []
         formula = self.parser.simplify(formula)
 
@@ -312,12 +312,12 @@ class MarabouVerifier(Verifier):
             equation = [self.create_equation(eq, from_and=True) for eq in formula.args()]
             return equation
         elif formula.is_le() or formula.is_lt() or formula.is_equals():
-            res = self.parser.extract_components(formula)
+            res = self.parser.extract_components(formula, need_simplification)
             equations.append(self.transform_pysmt_to_marabou_equation(res))
 
         return equations[0] if from_and else equations
 
-    def process_disjunctions(self, disjunctions):
+    def process_disjunctions(self, disjunctions, need_simplification=False):
         marabou_disjunction = []
         for disjunction in disjunctions:
             # split the disjunction into separate formulas
@@ -325,10 +325,10 @@ class MarabouVerifier(Verifier):
                 res, formulas = self.is_negation_of_ite(formula)
                 if res:
                     for form in formulas:
-                        equation = self.create_equation(form)
+                        equation = self.create_equation(form, from_and=False, need_simplification=need_simplification)
                         marabou_disjunction.append(equation)
                 else:
-                    equation = self.create_equation(formula)
+                    equation = self.create_equation(formula, from_and=False, need_simplification=need_simplification)
                     marabou_disjunction.append(equation)
 
         if len(marabou_disjunction) > 0:
@@ -354,24 +354,29 @@ class MarabouVerifier(Verifier):
         traverse(formula)
         return conjunctions, disjunctions
 
-    def process_comparison(self, formula):
+    def process_comparison(self, formula, need_simplification=False):
         if formula.is_le() or formula.is_lt() or formula.is_equals():
-            symbol, comparison, constant = self.parser.extract_components(formula)
-            _, symbol = symbol[0]
-            symbol = str(symbol)
+            symbols, comparison, constant = self.parser.extract_components(formula, need_simplification)
 
-            if comparison == "<=":
-                self.add_bound(symbol, constant, direction="upper", strict=False)
-            elif comparison == "<":
-                self.add_bound(symbol, constant, direction="upper", strict=True)
-            if comparison == ">=":
-                self.add_bound(symbol, constant, direction="lower", strict=False)
-            elif comparison == ">":
-                self.add_bound(symbol, constant, direction="lower", strict=True)
-            elif comparison == "=":
-                # TODO: add a marabou equation instead
-                self.add_bound(symbol, constant, direction="lower", strict=False)
-                self.add_bound(symbol, constant, direction="upper", strict=False)
+            if len(symbols) > 1:
+                equation = self.transform_pysmt_to_marabou_equation((symbols, comparison, constant))
+                self.network.addEquation(equation)
+            else:
+                _, symbol = symbols[0]
+                symbol = str(symbol)
+
+                if comparison == "<=":
+                    self.add_bound(symbol, constant, direction="upper", strict=False)
+                elif comparison == "<":
+                    self.add_bound(symbol, constant, direction="upper", strict=True)
+                if comparison == ">=":
+                    self.add_bound(symbol, constant, direction="lower", strict=False)
+                elif comparison == ">":
+                    self.add_bound(symbol, constant, direction="lower", strict=True)
+                elif comparison == "=":
+                    # TODO: add a marabou equation instead
+                    self.add_bound(symbol, constant, direction="lower", strict=False)
+                    self.add_bound(symbol, constant, direction="upper", strict=False)
         else:
             return
 

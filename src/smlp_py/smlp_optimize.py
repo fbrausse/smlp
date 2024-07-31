@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # This file is part of smlp.
-
+import pysmt
 import smlp
 from smlp_py.smlp_terms import SmlpTerms, ModelTerms, ScalerTerms
 from smlp_py.smlp_query import SmlpQuery
@@ -14,6 +14,7 @@ import pandas as pd
 import keras
 import numpy as np
 from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
+from pysmt.shortcuts import Real
 
 # single or multi-objective optimization, with stability constraints and any user
 # given constraints on free input, control (knob) and output variables satisfied.
@@ -47,7 +48,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int = 64
-        self._ENABLE_PYSMT = True
+        self._ENABLE_PYSMT = False
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:
@@ -234,7 +235,7 @@ class SmlpOptimize:
     def optimize_single_objective(self, model_full_term_dict:dict, objv_name:str, objv_expr:str, objv_term:smlp.term2, 
             epsilon:float, smlp_domain:smlp.domain, eta:smlp.form2, theta_radii_dict:dict, alpha:smlp.form2, beta:smlp.form2, delta:float, solver_logic:str, 
             scale_objectives:bool, orig_objv_name:str, objv_bounds:dict, call_info=None, sat_approx=False, sat_precision=64, save_trace=False,
-            l0=None, u0=None, l=(-np.inf), u=np.inf):
+            l0=None, u0=None, l=(-np.inf), u=np.inf, pysmt_min_objs=None):
         self._opt_logger.info('Optimize single objective ' + str(objv_name) + ': Start')
         self._opt_tracer.info('single_objective_u0_l0_u_l, {} : {} : {} : {} : {}'.format(str(objv_name),str(u0),str(l0),str(u),str(l)))
         #print('l0', l0, 'u0', u0, 'l', l, 'u', u)
@@ -330,13 +331,15 @@ class SmlpOptimize:
                 l_prev = l # save the value of l, it is for reporting only.
                 #if objv_expr is not None: # the objective is not a symbolic max_min term, we may need its value, at least to see search progress
 
-                # if self._ENABLE_PYSMT:
-                    # substitution = {self.parser.get_symbol(x): pysmt_objv_terms_dict[x]}
-                    # # Apply the substitution
-                    # objv_terms_dict[k] = self.parser.simplify(v.substitute(substitution))
-                # else:
-
-                objv_witn_val_term = smlp.subst(objv_term, stable_witness_terms); #print('objv_witn_val_term', objv_witn_val_term)
+                if self._ENABLE_PYSMT:
+                    substitution = {}
+                    for symbol, value in stable_witness_terms.items():
+                        symbol = self._modelTermsInst.verifier.parser.get_symbol(symbol)
+                        substitution[symbol] = Real(value)
+                    # Apply the substitution
+                    objv_witn_val_term = self._modelTermsInst.verifier.parser.simplify(pysmt_min_objs.substitute(substitution))
+                else:
+                    objv_witn_val_term = smlp.subst(objv_term, stable_witness_terms); #print('objv_witn_val_term', objv_witn_val_term)
                 #using objective values as lower bounds is not sound since objective value in sat model is the ceneter-point value 
                 # and the objective's value is not guaranteed to be a lower bound in entire stability region
                 #objv_witn_val = self._smlpTermsInst.ground_smlp_expr_to_value(objv_witn_val_term, sat_approx, sat_precision)
@@ -481,7 +484,10 @@ class SmlpOptimize:
         #print('thresholds t', t, 'objv_terms_dict', objv_terms_dict)
         for j, (objv_name, objv_term) in enumerate(objv_terms_dict.items()):
             if t[j] is not None:
-                eta_F_t = self._smlpTermsInst.smlp_and(eta_F_t, objv_term > smlp.Cnst(t[j]))
+                if self._ENABLE_PYSMT:
+                    eta_F_t = TextToPysmtParser.and_(eta_F_t, pysmt_objv_term > Real(t[j]))
+                else:
+                    eta_F_t = self._smlpTermsInst.smlp_and(eta_F_t, objv_term > smlp.Cnst(t[j]))
             else:
                 min_name = min_name + '_' + objv_name if min_name != '' else objv_name
                 if self._ENABLE_PYSMT:
@@ -541,7 +547,7 @@ class SmlpOptimize:
         r = self.optimize_single_objective(model_full_term_dict, min_name, None, min_objs, 
             epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
             scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
-            sat_approx, sat_precision, save_trace, l0, u0, l, u)
+            sat_approx, sat_precision, save_trace, l0, u0, l, u, pysmt_min_objs)
 
         #print('r', r)
         c_up = r['threshold_up'] if 'threshold_up' in r else np.inf; #print('c_up', c_up)
@@ -792,13 +798,12 @@ class SmlpOptimize:
                     self._opt_logger.info('Checking whether to fix objective {} at threshold {}...\n'.format(str(j), str(s[j])))
                     self._opt_tracer.info('activity check, objective {} threshold {}'.format(str(objv_names[j]), str(s[j])))
                     #print('objv_terms_dict', objv_terms_dict)
-                    quer_form = self._modelTermsInst.parser.true() if self._ENABLE_PYSMT else smlp.true
+                    quer_form = pysmt.shortcuts.TRUE() if self._ENABLE_PYSMT else smlp.true
                     for i in objv_enum:
                         #print('obv i', list(objv_terms_dict.keys())[i])
                         if self._ENABLE_PYSMT:
                             quer_form = self._modelTermsInst.parser.and_(quer_form,
-                                                                     list(objv_terms_dict.values())[i] > self._modelTermsInst.parser.real(
-                                                                         t[i]))
+                                                                     list(pysmt_objv_terms_dict.values())[i] > pysmt.shortcuts.Real(t[i]))
                         else:
                             quer_form = self._smlpTermsInst.smlp_and(quer_form, list(objv_terms_dict.values())[i] > smlp.Cnst(t[i]))
                     #print('queryform', quer_form)
@@ -807,6 +812,9 @@ class SmlpOptimize:
                                                                                   beta) if self._ENABLE_PYSMT else self._smlpTermsInst.smlp_and(quer_form, beta)
                     else:
                         quer_and_beta = quer_form
+
+                    if self._ENABLE_PYSMT:
+                        quer_and_beta = self._modelTermsInst.parser.simplify(quer_and_beta)
 
                     opt_quer_name = 'thresholds_' + '_'.join(str(x) for x in t) + '_check'
                     quer_res = self._queryInst.query_condition(True, model_full_term_dict, opt_quer_name, 'True', quer_and_beta, 

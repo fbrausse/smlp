@@ -130,8 +130,9 @@ class SmlpTerms:
             ast.LtE: self.smlp_le, ast.Gt: self.smlp_gt, ast.GtE: self.smlp_ge, 
             ast.And: self.smlp_and, ast.Or: self.smlp_or, ast.Not: self.smlp_not,
             ast.IfExp: self.smlp_ite
-        } 
-        
+        }
+        self._ENABLE_PYSMT = False
+
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
@@ -682,10 +683,17 @@ class SmlpTerms:
     # Can also be applied to a dictionary where values are terms.
     def witness_term_to_const(self, witness, approximate=False, precision=64):
         witness_vals_dict = {}
-        if isinstance(witness, dict):
-            return witness
+        # if self._ENABLE_PYSMT:
+        #     return witness
         for k,t in witness.items():
-            witness_vals_dict[k] = self.ground_smlp_expr_to_value(t, approximate, precision)
+            if isinstance(t, smlp.term2):
+                new_value = self.ground_smlp_expr_to_value(t, approximate, precision)
+            elif isinstance(t, pysmt.fnode.FNode) and t.is_constant():
+                new_value = float(t.constant_value())
+            else:
+                new_value = float(t)
+
+            witness_vals_dict[k] = new_value
         return witness_vals_dict
 
     # computes and returns sat assignment witness_approx which approximates input witness/sat assignment 
@@ -1598,8 +1606,8 @@ class ModelTerms(ScalerTerms):
         self.verifier.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Real'), ('p2', 'Integer')],
                                      outputs=[('y1', 'Real'), ('y2', 'Real')])
 
-        self._ENABLE_PYSMT = True
-        self._RETURN_PYSMT = True
+        self._ENABLE_PYSMT = False
+        self._RETURN_PYSMT = False
 
         
     # set logger from a caller script
@@ -1948,8 +1956,7 @@ class ModelTerms(ScalerTerms):
         else:
             delta_rel = delta_abs = None
 
-        theta_form = self.smlp_true
-        PYSMT_theta_form = pysmt.shortcuts.TRUE()
+        theta_form = pysmt.shortcuts.TRUE() if self._ENABLE_PYSMT else self.smlp_true
         #print('radii_dict', radii_dict)
         radii_dict_local = radii_dict.copy() 
         knobs = radii_dict_local.keys(); #print('knobs', knobs); print('cex', cex); print('delta', delta_dict)
@@ -1967,16 +1974,16 @@ class ModelTerms(ScalerTerms):
                 rad = radii['rad-abs']; #print('rad', rad); 
                 if delta_rel is not None: # we are generating a lemma
                     rad = rad * (1 + delta_rel) + delta_abs 
-                rad_term = self.smlp_cnst(rad)
+
                 if self._ENABLE_PYSMT:
-                    verifier_rad_term = float(rad)
+                    rad_term = float(rad)
+                else:
+                    rad_term = self.smlp_cnst(rad)
             elif radii['rad-rel'] is not None:
                 rad = radii['rad-rel']; #print('rad', rad)
                 if delta_rel is not None: # we are generating a lemma
                     rad = rad * (1 + delta_rel) + delta_abs
-                rad_term = self.smlp_cnst(rad)
-                if self._ENABLE_PYSMT:
-                    verifier_rad_term = float(rad)
+
                 # TODO !!!  issue a warning when candidates become closer and closer
                 # TODO !!!!!!! warning when distance between previous and current candidate
                 # TODO !!!!!! warning when FINAL rad + delta is 0, as part of sanity checking options
@@ -1995,32 +2002,33 @@ class ModelTerms(ScalerTerms):
                 # candidate; this is a matter of definition of relative radius, and seems cleaner than computing actual radius 
                 # from relative radius based on variable values in the counter-exaples to candidate rather than variable values 
                 # in the candidate itself.
-                if delta_rel is not None: # radius for a lemma -- cex holds values of candidate counter-example
-                    if isinstance(var_term, smlp.term2):
+
+                if self._ENABLE_PYSMT:
+                    rad_term = float(rad)
+                else:
+                    rad_term = self.smlp_cnst(rad)
+                    if delta_rel is not None: # radius for a lemma -- cex holds values of candidate counter-example
                         rad_term = rad_term * abs(var_term)
-                    else:
-                        rad_term = rad_term * self.smlp_cnst(abs(var_term))
-                else: # radius for excluding a candidate -- cex holds values of the candidate 
-                    if isinstance(cex[var], smlp.term2):
+                    else: # radius for excluding a candidate -- cex holds values of the candidate
                         rad_term = rad_term * abs(cex[var])
-                    else:
-                        rad_term = rad_term * self.smlp_cnst(abs(cex[var]))
-            elif delta_dict is not None: 
+            elif delta_dict is not None:
                 raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified')
-            theta_form = self.smlp_and(theta_form, ((abs(var_term - self.smlp_cnst(abs(cex[var])))) <= rad_term))
             if self._ENABLE_PYSMT:
                 value = float(cex[var])
                 PYSMT_var = self.parser.get_symbol(var)
                 type = pysmt.shortcuts.Int if str(PYSMT_var.get_type()) == "Int" else pysmtReal
                 calc_type = int if str(PYSMT_var.get_type()) == "Int" else float
-                lower = calc_type(value - verifier_rad_term)
+                lower = calc_type(value - rad_term)
                 lower = type(lower)
-                upper = calc_type(value + verifier_rad_term)
+                upper = calc_type(value + rad_term)
                 upper = type(upper)
-                PYSMT_theta_form = self.parser.and_(PYSMT_theta_form, PYSMT_var >= lower, PYSMT_var <= upper)
+                theta_form = self.parser.and_(theta_form, PYSMT_var >= lower, PYSMT_var <= upper)
                 # self.verifier.add_bounds(var, (value - verifier_rad_term, value + verifier_rad_term))
+            else:
+                theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
+
         #print('theta_form', theta_form)
-        return PYSMT_theta_form if self._RETURN_PYSMT else theta_form
+        return theta_form
 
     # Creates eta constraints on control parameters (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
@@ -2410,13 +2418,13 @@ class ModelTerms(ScalerTerms):
             sat_model = self.witness_term_to_const(res.model, approximate=False, precision=None)
             if approx_lemmas:
                 sat_model_approx = self.approximate_witness_term(res.model, lemma_precision)
-            return TextToPysmtParser.SAT
+            # return TextToPysmtParser.SAT
             #print('res.model', res.model, 'sat_model', sat_model)
         elif isinstance(res, smlp.unsat):
             #print('smlp_unsat', smlp.unsat)
             status = 'unsat'
             sat_model = {}
-            return TextToPysmtParser.UNSAT
+            # return TextToPysmtParser.UNSAT
         else:
             raise Exception('Unexpected solver result ' + str(res))
         
@@ -2540,10 +2548,10 @@ class ModelTerms(ScalerTerms):
             res, witness = self.verifier.solve()
 
         consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'
-        if res=="SAT":
+        if (self._ENABLE_PYSMT and res=="SAT") or isinstance(res, smlp.sat):
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are consistent')
             interface_consistent = True
-        elif res=="UNSAT":
+        elif (self._ENABLE_PYSMT and res=="UNSAT") or isinstance(res, smlp.unsat):
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are inconsistent')
             interface_consistent = False
         else:

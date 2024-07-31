@@ -13,6 +13,8 @@ from pysmt.rewritings import CNFizer
 from pysmt.walkers import IdentityDagWalker, DagWalker
 import ast
 import smlp
+from pysmt.smtlib.script import smtlibscript_from_formula
+from io import StringIO
 
 from typing import List, Dict, Optional, Tuple
 
@@ -125,7 +127,8 @@ class TextToPysmtParser(object):
             ast.IfExp: Ite,  # If expression
             ast.Call: And,
             'If': Ite,
-            'And': And
+            'And': And,
+            'Not': Not
         }
 
     def _div_op(self, left, right):
@@ -227,7 +230,11 @@ class TextToPysmtParser(object):
 
         return coeff
 
-    def extract_components(self, comparison: FNode):
+    def extract_components(self, comparison: FNode, need_simplification=False):
+        if need_simplification:
+            smtlib = self.extract_smtlib(comparison)
+            comparison = self.handle_ite_formula(smtlib, handle_ite=False)
+
         left = comparison.arg(0)
         right = comparison.arg(1)
 
@@ -368,18 +375,44 @@ class TextToPysmtParser(object):
         assert name in self.symbols.keys()
         return self.symbols[name]
 
-    def handle_ite_formula(self, formula):
+    def remove_first_and_last_line(self, text):
+        # Split the text into a list of lines
+        lines = text.split('\n')
+
+        # Remove the first and last lines
+        if len(lines) > 1:
+            lines = lines[1:-2]
+        else:
+            # If there's only one line or no line, return an empty string
+            lines = []
+
+        # Join the remaining lines back into a single string
+        return '\n'.join(lines)
+
+    def extract_smtlib(self, formula):
+        script = smtlibscript_from_formula(formula)
+        outstream = StringIO()
+        script.serialize(outstream)
+        output = outstream.getvalue()
+        return self.remove_first_and_last_line(output)
+
+    def handle_ite_formula(self, formula, handle_ite=True):
         smlp_str = f"""
                         (declare-fun y1 () Real)
                         (declare-fun y2 () Real)
                         (assert {formula})
-                        """
+                        """ if not isinstance(formula, str) else formula
 
         smlp_parsed = z3.parse_smt2_string(smlp_str)
         smlp_simplified = z3.simplify(smlp_parsed[0])
-        ex = self.parse(str(smlp_simplified))
+        ex = self.parse(str(smlp_simplified).replace('\n',''))
+        if ex.is_not():
+            ex = self.propagate_negation(ex)
         # ex = parser.replace_constants_with_floats_and_evaluate(ex)
-        marabou_formula = self.convert_ite_to_conjunctions_disjunctions(ex)
+        if handle_ite:
+            marabou_formula = self.convert_ite_to_conjunctions_disjunctions(ex)
+        else:
+            marabou_formula = ex
         return marabou_formula
 
     def replace_constants_with_floats_and_evaluate(self, formula: FNode) -> FNode:
