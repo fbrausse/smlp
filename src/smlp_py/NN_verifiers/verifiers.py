@@ -250,6 +250,7 @@ class MarabouVerifier(Verifier):
             self.network.addDisjunctionConstraint(disjunction)
 
     def apply_restrictions(self, formula):
+        formula = self.parser.simplify(formula)
         conjunctions, disjunctions = self.process_formula(formula)
 
         for conjunction in conjunctions:
@@ -285,8 +286,28 @@ class MarabouVerifier(Verifier):
 
         return equation
 
+    def is_negation_of_ite(self, formula):
+        if formula.is_and():
+            if len(formula.args()) == 2:
+                # this is a custom logical block for handling the negation of objectives which yield a formula that looks like
+                # Or(A,B,C) where C = And(Or(D,E),Or(F,G)) (1) , which needs to be translated into:
+                # let K = Or(D,E), then C=And(K, Or(F,G)), which is equivalent to: Or(And(K,F),And(K,G)) (2).
+                # Then, using (2): And(K,F) = And(F, Or(D,E)), which is equivalent to: Or(And(F,D), And(F,E)) (3)
+                # Same applied to And(G, K) = Or(And(G,D), And(G,E)) (4)
+                # Finally: Or(And(K,F),And(K,G)) = Or(Or(And(F,D), And(F,E)), Or(And(G,D), And(G,E))),
+                # Which can be simplified to Or(And(F,D), And(F,E), And(G,D), And(G,E))
+                left = formula.args()[0]
+                right = formula.args()[1]
+                if left.is_or() and len(left.args()) == 2 and right.is_or() and len(right.args()) == 2:
+                    eq_1, eq_2 = left.args()[0], left.args()[1]
+                    eq_3, eq_4 = right.args()[0], right.args()[1]
+                    return True, [eq_1, eq_2, eq_3, eq_4]
+        return False, []
+
     def create_equation(self, formula, from_and=False):
         equations = []
+        formula = self.parser.simplify(formula)
+
         if formula.is_and():
             equation = [self.create_equation(eq, from_and=True) for eq in formula.args()]
             return equation
@@ -301,8 +322,14 @@ class MarabouVerifier(Verifier):
         for disjunction in disjunctions:
             # split the disjunction into separate formulas
             for formula in disjunction.args():
-                equation = self.create_equation(formula)
-                marabou_disjunction.append(equation)
+                res, formulas = self.is_negation_of_ite(formula)
+                if res:
+                    for form in formulas:
+                        equation = self.create_equation(form)
+                        marabou_disjunction.append(equation)
+                else:
+                    equation = self.create_equation(formula)
+                    marabou_disjunction.append(equation)
 
         if len(marabou_disjunction) > 0:
             self.network.addDisjunctionConstraint(marabou_disjunction)
@@ -402,17 +429,20 @@ class MarabouVerifier(Verifier):
         # self.network.setLowerBound(b1, 0)
         # self.network.setUpperBound(b1, 1)
     def find_witness(self, witness):
-        answers = {}
+        answers = {"result":"SAT", "witness":{}, 'witness_var':{}}
         for variable in self.unscaled_variables:
-            _, index = self.get_variable_by_name(variable.name)
-            answers[variable.name] = witness[index]
+            _, unscaled_index = self.get_variable_by_name(variable.name)
+            name = variable.name.replace("_unscaled", "")
+            scaled_var, _ = self.get_variable_by_name(name)
+            answers['witness_var'][scaled_var] = witness[unscaled_index]
+            answers['witness'][scaled_var.name] = witness[unscaled_index]
         return answers
 
     def solve(self):
         try:
             results = self.network.solve()
             if results and results[0] == 'unsat':
-                return "UNSAT", {}
+                return "UNSAT", {"result":"UNSAT", "witness": {}}
             else:  # sat
                 return "SAT", self.find_witness(results[1])
         except Exception as e:

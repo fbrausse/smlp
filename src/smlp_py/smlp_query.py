@@ -100,8 +100,8 @@ class SmlpQuery:
     def find_candidate(self, solver):
         #res = solver.check()
         if self._ENABLE_PYSMT:
-            res, _ = solver.solve()
-            return res
+            res, witness = solver.solve()
+            return witness
         else:
             res = self._modelTermsInst.smlp_solver_check(solver, 'ca', self._lemma_precision)
             if self._modelTermsInst.solver_status_unknown(res): # isinstance(res, smlp.unknown):
@@ -172,13 +172,23 @@ class SmlpQuery:
     #   theta x y /\ alpha y /\ ! ( beta y /\ obj y >= T) 
     def find_candidate_counter_example(self, universal, domain:smlp.domain, cand:dict, query:smlp.form2, 
             model_full_term_dict:dict, alpha:smlp.form2, theta_radii_dict:dict, solver_logic:str): #, beta:smlp.form2
-        solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
-            domain, model_full_term_dict, False, solver_logic)
+
         theta = self._modelTermsInst.compute_stability_formula_theta(cand, None, theta_radii_dict, universal) 
-        solver.add(theta); #print('adding theta', theta)
-        solver.add(alpha); #print('adding alpha', alpha)
-        solver.add(self._smlpTermsInst.smlp_not(query)); #print('adding negated quert', query)
-        return self._modelTermsInst.smlp_solver_check(solver, 'ce', self._lemma_precision)
+        if self._ENABLE_PYSMT:
+            self._modelTermsInst.verifier.reset()
+            self._modelTermsInst.verifier.apply_restrictions(theta)
+            self._modelTermsInst.verifier.apply_restrictions(alpha)
+            negation = self._modelTermsInst.verifier.parser.propagate_negation(query)
+            self._modelTermsInst.verifier.apply_restrictions(negation)
+            res, witness = self._modelTermsInst.verifier.solve()
+            return witness
+        else:
+            solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+                domain, model_full_term_dict, False, solver_logic)
+            solver.add(theta); #print('adding theta', theta)
+            solver.add(alpha); #print('adding alpha', alpha)
+            solver.add(self._smlpTermsInst.smlp_not(query)); #print('adding negated quert', query)
+            return self._modelTermsInst.smlp_solver_check(solver, 'ce', self._lemma_precision)
         #return solver.check()
     
     # Enhancement !!!: at least add here the delta condition
@@ -518,7 +528,7 @@ class SmlpQuery:
     # Enhancement !!!: implement timeout ? UNKNOWN return value
     def query_condition(self, universal, model_full_term_dict:dict, quer_name:str, quer_expr:str, quer:smlp.form2, 
             domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict, #beta:smlp.form2, 
-            delta:dict, solver_logic:str, witn:bool, sat_approx:bool, sat_precision:int, candidate_solver=None):
+            delta:dict, solver_logic:str, witn:bool, sat_approx:bool, sat_precision:int):
         # feasibility (existence) of at least one candidate
         feasible = None
         if quer_expr is not None:
@@ -536,10 +546,10 @@ class SmlpQuery:
             #candidate_solver.add(beta)
             candidate_solver.add(quer)
         else:
-            candidate_solver.reset()
-            candidate_solver.add(eta)
-            candidate_solver.add(alpha)
-            candidate_solver.add(quer)
+            self._modelTermsInst.verifier.reset()
+            self._modelTermsInst.verifier.apply_restrictions(eta)
+            self._modelTermsInst.verifier.apply_restrictions(alpha)
+            self._modelTermsInst.verifier.apply_restrictions(quer)
 
         #print('eta', eta); print('alpha', alpha);  print('quer', quer); 
         #print('solving query', quer)
@@ -552,9 +562,11 @@ class SmlpQuery:
             # solve Ex. eta x /\ Ay. theta x y -> alpha y -> (beta y /\ query)
             print('searching for a candidate', flush=True)
             
-            ca = self.find_candidate(candidate_solver)
-            
-            if self._modelTermsInst.solver_status_sat(ca): # isinstance(ca, smlp.sat):
+            ca = self.find_candidate(self._modelTermsInst.verifier) if self._ENABLE_PYSMT else self.find_candidate(candidate_solver)
+
+            condition = self._modelTermsInst.solver_status_sat(ca["result"]) if self._ENABLE_PYSMT else self._modelTermsInst.solver_status_sat(ca)
+
+            if condition: # isinstance(ca, smlp.sat):
                 print('candidate found -- checking stability', flush=True)
                 #print('ca', ca_model)
                 ca_model = self._modelTermsInst.get_solver_model(ca) #ca.model
@@ -577,7 +589,11 @@ class SmlpQuery:
                 else:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
-                if self._modelTermsInst.solver_status_sat(ce): #isinstance(ce, smlp.sat):
+
+                is_sat = self._modelTermsInst.solver_status_sat(ce["result"]) if self._ENABLE_PYSMT else self._modelTermsInst.solver_status_sat(ce)
+                is_unsat = self._modelTermsInst.solver_status_unsat(ce["result"]) if self._ENABLE_PYSMT else self._modelTermsInst.solver_status_unsat(ce)
+
+                if is_sat: #isinstance(ce, smlp.sat):
                     print('candidate not stable -- continue search', flush=True)
                     ce_model = self._modelTermsInst.get_solver_model(ce) #ce.model
                     cem = ce_model.copy(); #print('ce model', cem)
@@ -601,9 +617,13 @@ class SmlpQuery:
                     else:
                         lemma = self.generalize_counter_example(cem); #print('lemma', lemma)
                     theta = self._modelTermsInst.compute_stability_formula_theta(lemma, delta, theta_radii_dict, universal)
-                    candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
+                    if self._ENABLE_PYSMT:
+                        theta_negation = self._modelTermsInst.parser.propagate_negation(theta)
+                        self._modelTermsInst.verifier.add_permanent_constraint(theta_negation)
+                    else:
+                        candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
                     continue
-                elif self._modelTermsInst.solver_status_unsat(ce): #isinstance(ce, smlp.unsat):
+                elif is_unsat: #isinstance(ce, smlp.unsat):
                     #print('candidate stable -- return candidate')
                     self._query_logger.info('Query completed with result: STABLE_SAT (satisfiable)')
                     if witn: # export witness (use numbers as values, not terms)
@@ -616,7 +636,10 @@ class SmlpQuery:
                             assert quer_ce_val
                         return {'query_status':'STABLE_SAT', 'witness':witness_vals_dict, 'feasible':feasible}
                     else:
-                        return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
+                        if self._ENABLE_PYSMT:
+                            return {'query_status':'STABLE_SAT', 'witness':ca['witness_var'], 'feasible':feasible}
+                        else:
+                            return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
             elif self._modelTermsInst.solver_status_unsat(ca): #isinstance(ca, smlp.unsat):
                 self._query_logger.info('Query completed with result: UNSAT (unsatisfiable)')
                 if feasible is None:

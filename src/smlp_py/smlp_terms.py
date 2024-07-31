@@ -682,6 +682,8 @@ class SmlpTerms:
     # Can also be applied to a dictionary where values are terms.
     def witness_term_to_const(self, witness, approximate=False, precision=64):
         witness_vals_dict = {}
+        if isinstance(witness, dict):
+            return witness
         for k,t in witness.items():
             witness_vals_dict[k] = self.ground_smlp_expr_to_value(t, approximate, precision)
         return witness_vals_dict
@@ -1874,16 +1876,8 @@ class ModelTerms(ScalerTerms):
             for objv_name, objv_expr in zip(objv_names, objv_exprs)]) #self._smlpTermsInst.
         #print('orig_objv_terms_dict', orig_objv_terms_dict)
 
-        if self._ENABLE_PYSMT:
-            pysmt_objv_terms_dict = dict([(objv_name, self.parser.parse(objv_expr)) \
-                                          for objv_name, objv_expr in zip(objv_names, objv_exprs)])
-
         if scale_objv:
-            if self._ENABLE_PYSMT:
-                scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names,
-                                                                   self.parser)  # ._scalerTermsInst
-            else:
-                scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names)  # ._scalerTermsInst
+            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names)  # ._scalerTermsInst
 
             #print('scaled_objv_terms_dict', scaled_objv_terms_dict)
             objv_terms_dict = {}
@@ -1891,12 +1885,8 @@ class ModelTerms(ScalerTerms):
                 #print('k', k, 'v', v, type(v)); 
                 x = list(orig_objv_terms_dict.keys())[i]; 
                 #print('x', x); print('arg', orig_objv_terms_dict[x])
-                if self._ENABLE_PYSMT:
-                    substitution = {self.parser.get_symbol(x): pysmt_objv_terms_dict[x]}
-                    # Apply the substitution
-                    objv_terms_dict[k] = self.parser.simplify(v.substitute(substitution))
-                else:
-                    objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]})
+
+                objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]})
             #objv_terms_dict = scaled_objv_terms_dict
         else:
             objv_terms_dict = orig_objv_terms_dict
@@ -1907,7 +1897,41 @@ class ModelTerms(ScalerTerms):
                 for objv_name in objv_names]
         #print('objv_terms_dict', objv_terms_dict)
         return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict
-    
+
+    def pysmt_compute_objectives_terms(self, objv_names, objv_exprs, objv_bounds, scale_objv):
+        # print('objv_exprs', objv_exprs)
+        if objv_exprs is None:
+            return None, None, None, None
+
+        pysmt_objv_terms_dict = dict([(objv_name, self.parser.parse(objv_expr)) \
+                                      for objv_name, objv_expr in zip(objv_names, objv_exprs)])
+
+        if scale_objv:
+            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names,
+                                                                   self.parser)  # ._scalerTermsInst
+
+            # print('scaled_objv_terms_dict', scaled_objv_terms_dict)
+            objv_terms_dict = {}
+            for i, (k, v) in enumerate(scaled_objv_terms_dict.items()):
+                # print('k', k, 'v', v, type(v));
+                x = list(pysmt_objv_terms_dict.keys())[i];
+                # print('x', x); print('arg', orig_objv_terms_dict[x])
+                # if self._ENABLE_PYSMT:
+                substitution = {self.parser.get_symbol(x): pysmt_objv_terms_dict[x]}
+                # Apply the substitution
+                objv_terms_dict[k] = self.parser.simplify(v.substitute(substitution))
+                # else:
+            # objv_terms_dict = scaled_objv_terms_dict
+        else:
+            objv_terms_dict = pysmt_objv_terms_dict
+            scaled_objv_terms_dict = None
+
+        if scaled_objv_terms_dict is not None:
+            assert list(scaled_objv_terms_dict.keys()) == [self._scaled_name(objv_name)  # ._scalerTermsInst
+                                                           for objv_name in objv_names]
+        # print('objv_terms_dict', objv_terms_dict)
+        return objv_terms_dict, pysmt_objv_terms_dict, scaled_objv_terms_dict
+
     
     # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
     # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
@@ -1972,14 +1996,20 @@ class ModelTerms(ScalerTerms):
                 # from relative radius based on variable values in the counter-exaples to candidate rather than variable values 
                 # in the candidate itself.
                 if delta_rel is not None: # radius for a lemma -- cex holds values of candidate counter-example
-                    rad_term = rad_term * abs(var_term)
+                    if isinstance(var_term, smlp.term2):
+                        rad_term = rad_term * abs(var_term)
+                    else:
+                        rad_term = rad_term * self.smlp_cnst(abs(var_term))
                 else: # radius for excluding a candidate -- cex holds values of the candidate 
-                    rad_term = rad_term * abs(cex[var])
+                    if isinstance(cex[var], smlp.term2):
+                        rad_term = rad_term * abs(cex[var])
+                    else:
+                        rad_term = rad_term * self.smlp_cnst(abs(cex[var]))
             elif delta_dict is not None: 
                 raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified')
-            theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
+            theta_form = self.smlp_and(theta_form, ((abs(var_term - self.smlp_cnst(abs(cex[var])))) <= rad_term))
             if self._ENABLE_PYSMT:
-                value = float(self.ground_smlp_expr_to_value(cex[var]))
+                value = float(cex[var])
                 PYSMT_var = self.parser.get_symbol(var)
                 type = pysmt.shortcuts.Int if str(PYSMT_var.get_type()) == "Int" else pysmtReal
                 calc_type = int if str(PYSMT_var.get_type()) == "Int" else float
@@ -1990,7 +2020,7 @@ class ModelTerms(ScalerTerms):
                 PYSMT_theta_form = self.parser.and_(PYSMT_theta_form, PYSMT_var >= lower, PYSMT_var <= upper)
                 # self.verifier.add_bounds(var, (value - verifier_rad_term, value + verifier_rad_term))
         #print('theta_form', theta_form)
-        return theta_form
+        return PYSMT_theta_form if self._RETURN_PYSMT else theta_form
 
     # Creates eta constraints on control parameters (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
@@ -2159,7 +2189,7 @@ class ModelTerms(ScalerTerms):
             if len(dont_care_vars) > 0:
                 raise Exception('Variables ' + str(dont_care_vars) + 
                     ' in optimization constraints (beta) are not part of the model')
-            return self.ast_expr_to_term(beta_expr)
+            return self.parser.parse(beta_expr) if self._ENABLE_PYSMT else self.ast_expr_to_term(beta_expr)
     
     def compute_eta_formula(self, eta_expr, model_inputs):
         if eta_expr is None:
@@ -2461,20 +2491,24 @@ class ModelTerms(ScalerTerms):
         return res
     
     def solver_status_sat(self, res):
-        return isinstance(res, smlp.sat)
+        return res=="SAT" if self._ENABLE_PYSMT else isinstance(res, smlp.sat)
         
     def solver_status_unsat(self, res):
-        return isinstance(res, smlp.unsat)
+        return res=="UNSAT" if self._ENABLE_PYSMT else isinstance(res, smlp.unsat)
         
     def solver_status_unknown(self, res):
-        return isinstance(res, smlp.unknown)
+        return res=="UNKNOWN" if self._ENABLE_PYSMT else isinstance(res, smlp.unknown)
         
     # we return value assignmenets to interface (input, knob, output) variables defined in the Spec file
     # (and not values assigned to any other variables that might be defined additionally as part of solver domain,
     # like variables tree_i_resp that we decalre as part of domain for tree models with flat encoding).
     def get_solver_model(self, res):
-        if self.solver_status_sat(res):
-            reduced_model = dict((k,v) for k,v in res.model.items() if k in self._specInst.get_spec_interface)
+        condition = self.solver_status_sat(res["result"]) if self._ENABLE_PYSMT else self.solver_status_sat(res)
+        if condition:
+            if self._ENABLE_PYSMT:
+                reduced_model = dict((k, v) for k, v in res["witness"].items() if k in self._specInst.get_spec_interface)
+            else:
+                reduced_model = dict((k,v) for k,v in res.model.items() if k in self._specInst.get_spec_interface)
             return reduced_model
         else:
             return None

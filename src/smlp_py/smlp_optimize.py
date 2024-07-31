@@ -265,9 +265,13 @@ class SmlpOptimize:
                 T = (l + u) / 2
             #quer_form = objv_term > smlp.Cnst(T)
             quer_form = objv_term >= smlp.Cnst(T)
+            quer_form = self._modelTermsInst.verifier.parser.handle_ite_formula(quer_form) if self._ENABLE_PYSMT else quer_form
             quer_expr = '{} >= {}'.format(objv_expr, str(T)) if objv_expr is not None else None
             quer_name = objv_name + '_' + str(T)
-            quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
+            if not beta == smlp.true:
+                quer_and_beta = self._modelTermsInst.verifier.parser.and_(quer_form, beta) if self._ENABLE_PYSMT else self._smlpTermsInst.smlp_and(quer_form, beta)
+            else:
+                quer_and_beta = quer_form
             #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
             self._opt_tracer.info('objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
             quer_res = self._queryInst.query_condition(
@@ -325,6 +329,13 @@ class SmlpOptimize:
                 #print('objv_term', objv_term, flush=True); print('stable_witness_terms', stable_witness_terms, flush=True)
                 l_prev = l # save the value of l, it is for reporting only.
                 #if objv_expr is not None: # the objective is not a symbolic max_min term, we may need its value, at least to see search progress
+
+                # if self._ENABLE_PYSMT:
+                    # substitution = {self.parser.get_symbol(x): pysmt_objv_terms_dict[x]}
+                    # # Apply the substitution
+                    # objv_terms_dict[k] = self.parser.simplify(v.substitute(substitution))
+                # else:
+
                 objv_witn_val_term = smlp.subst(objv_term, stable_witness_terms); #print('objv_witn_val_term', objv_witn_val_term)
                 #using objective values as lower bounds is not sound since objective value in sat model is the ceneter-point value 
                 # and the objective's value is not guaranteed to be a lower bound in entire stability region
@@ -432,7 +443,9 @@ class SmlpOptimize:
         #assert scale_objectives
         objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict = \
             self._modelTermsInst.compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict, scale_objectives)
-        
+
+        pysmt_objv_terms_dict, pysmt_orig_objv_terms_dict, pysmt_scaled_objv_terms_dict = \
+            self._modelTermsInst.pysmt_compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict, scale_objectives)
         # TODO: set sat_approx to False once dump and load with Fractions will work
         opt_conf = {}
         for i, (objv_name, objv_term) in enumerate(list(objv_terms_dict.items())):
@@ -459,10 +472,11 @@ class SmlpOptimize:
     def active_objectives_max_min_bounds(self, model_full_term_dict:dict, objv_terms_dict:dict, t:list[float], 
             smlp_domain:smlp.domain, alpha:smlp.form2, beta:smlp.form2, eta:smlp.form2, theta_radii_dict, epsilon:float, 
             delta:float, solver_logic:str, direction, scale_objectives, objv_bounds, update_thresholds_dict, 
-            sat_approx:bool, sat_precision:int, save_trace:bool):
+            sat_approx:bool, sat_precision:int, save_trace:bool, pysmt_objv_terms_dict=None):
         assert direction == 'up'
         eta_F_t = eta
         min_objs = None
+        pysmt_min_objs = None
         min_name = ''
         #print('thresholds t', t, 'objv_terms_dict', objv_terms_dict)
         for j, (objv_name, objv_term) in enumerate(objv_terms_dict.items()):
@@ -470,14 +484,18 @@ class SmlpOptimize:
                 eta_F_t = self._smlpTermsInst.smlp_and(eta_F_t, objv_term > smlp.Cnst(t[j]))
             else:
                 min_name = min_name + '_' + objv_name if min_name != '' else objv_name
-                if min_objs is not None:
-                    if self._ENABLE_PYSMT:
-                        min_objs = TextToPysmtParser.ite_(objv_term < min_objs, objv_term, min_objs)
+                if self._ENABLE_PYSMT:
+                    pysmt_objv_term = pysmt_objv_terms_dict[objv_name]
+                    if pysmt_min_objs is not None:
+                        pysmt_min_objs = TextToPysmtParser.ite_(pysmt_objv_term < pysmt_min_objs, pysmt_objv_term, pysmt_min_objs)
                     else:
-                        min_objs = smlp.Ite(objv_term < min_objs, objv_term, min_objs)
+                        pysmt_min_objs = pysmt_objv_term
+                # else:
+                if min_objs is not None:
+                    min_objs = smlp.Ite(objv_term < min_objs, objv_term, min_objs)
                 else:
                     min_objs = objv_term
-        
+
         # When active_objectives_max_min_bounds() is called for the first time from 
         # optimize_pareto_objectives(), the list t which represents the proven lower 
         # bounds of objectives, is composed of None's, and the proven lower
@@ -672,6 +690,10 @@ class SmlpOptimize:
         objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict = \
             self._modelTermsInst.compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict, scale_objectives)
 
+        pysmt_objv_terms_dict = None
+        pysmt_objv_terms_dict, pysmt_orig_objv_terms_dict, pysmt_scaled_objv_terms_dict = \
+            self._modelTermsInst.pysmt_compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict,
+                                                                scale_objectives)
         objv_count = len(objv_names)
         objv_enum = range(objv_count)
         
@@ -705,7 +727,7 @@ class SmlpOptimize:
             self._opt_tracer.info('pareto_iteration,{},{},{}'.format(str(call_n), '__'.join(objv_names), '__'.join([str(e) for e in s])))
             c_lo, c_up, witness = self.active_objectives_max_min_bounds(model_full_term_dict, objv_terms_dict, 
                 s, smlp_domain, alpha, beta, eta, theta_radii_dict, epsilon, delta, solver_logic, direction,
-                scale_objectives, objv_bounds_dict, call_info_dict, sat_approx, sat_precision, save_trace)
+                scale_objectives, objv_bounds_dict, call_info_dict, sat_approx, sat_precision, save_trace, pysmt_objv_terms_dict)
             #print('c_lo', c_lo, 'c_up', c_up); print('witness', witness);
             assert c_lo != np.inf
             
@@ -770,12 +792,22 @@ class SmlpOptimize:
                     self._opt_logger.info('Checking whether to fix objective {} at threshold {}...\n'.format(str(j), str(s[j])))
                     self._opt_tracer.info('activity check, objective {} threshold {}'.format(str(objv_names[j]), str(s[j])))
                     #print('objv_terms_dict', objv_terms_dict)
-                    quer_form = smlp.true
+                    quer_form = self._modelTermsInst.parser.true() if self._ENABLE_PYSMT else smlp.true
                     for i in objv_enum:
                         #print('obv i', list(objv_terms_dict.keys())[i])
-                        quer_form = self._smlpTermsInst.smlp_and(quer_form, list(objv_terms_dict.values())[i] > smlp.Cnst(t[i]))
+                        if self._ENABLE_PYSMT:
+                            quer_form = self._modelTermsInst.parser.and_(quer_form,
+                                                                     list(objv_terms_dict.values())[i] > self._modelTermsInst.parser.real(
+                                                                         t[i]))
+                        else:
+                            quer_form = self._smlpTermsInst.smlp_and(quer_form, list(objv_terms_dict.values())[i] > smlp.Cnst(t[i]))
                     #print('queryform', quer_form)
-                    quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
+                    if not beta == smlp.true:
+                        quer_and_beta = self._modelTermsInst.verifier.parser.and_(quer_form,
+                                                                                  beta) if self._ENABLE_PYSMT else self._smlpTermsInst.smlp_and(quer_form, beta)
+                    else:
+                        quer_and_beta = quer_form
+
                     opt_quer_name = 'thresholds_' + '_'.join(str(x) for x in t) + '_check'
                     quer_res = self._queryInst.query_condition(True, model_full_term_dict, opt_quer_name, 'True', quer_and_beta, 
                         smlp_domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, sat_approx, sat_precision)
@@ -825,7 +857,7 @@ class SmlpOptimize:
             self._opt_logger.info('Pareto optimization synthesis feasibility check: Start')
             self._opt_tracer.info('synthesis_feasibility')
             quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'synthesis_feasibility', 'True', beta, 
-                domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision, self.verifier)
+                domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
             #print('quer_res', quer_res)
             if quer_res['query_status'] == 'UNSAT':
                 self._opt_logger.info('Pareto optimization synthesis feasibility check: End')

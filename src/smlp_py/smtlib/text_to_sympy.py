@@ -1,6 +1,7 @@
 import re
 
 import gmpy2
+import z3
 from pysmt import *
 from sympy.logic.boolalg import And, Or, Not
 from pysmt.shortcuts import Symbol, And, Or, Not, Implies, Iff, Ite, Equals, Plus, Minus, Times, Div, Pow, Bool, TRUE, \
@@ -304,6 +305,7 @@ class TextToPysmtParser(object):
         """
         Apply negation to a formula and propagate the negation inside without leaving any negations in the formula.
         """
+        formula = self.simplify(formula)
         if formula.is_not():
             return self.propagate_negation(formula.arg(0))  # Remove double negation if exists
 
@@ -365,6 +367,20 @@ class TextToPysmtParser(object):
     def get_symbol(self, name):
         assert name in self.symbols.keys()
         return self.symbols[name]
+
+    def handle_ite_formula(self, formula):
+        smlp_str = f"""
+                        (declare-fun y1 () Real)
+                        (declare-fun y2 () Real)
+                        (assert {formula})
+                        """
+
+        smlp_parsed = z3.parse_smt2_string(smlp_str)
+        smlp_simplified = z3.simplify(smlp_parsed[0])
+        ex = self.parse(str(smlp_simplified))
+        # ex = parser.replace_constants_with_floats_and_evaluate(ex)
+        marabou_formula = self.convert_ite_to_conjunctions_disjunctions(ex)
+        return marabou_formula
 
     def replace_constants_with_floats_and_evaluate(self, formula: FNode) -> FNode:
         def traverse(node: FNode) -> FNode:
