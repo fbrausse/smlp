@@ -57,5 +57,4 @@ obj/table.c.o
 .idea
 src/logs.log
 *.pb
-/src/variables
-/variables
+variables/
