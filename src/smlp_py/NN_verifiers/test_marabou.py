@@ -18,6 +18,21 @@ from maraboupy.MarabouPythonic import *
 
 
 if __name__ == "__main__":
+    import numpy as np
+    from tensorflow.keras.models import load_model
+
+    # Load the model from the .h5 file
+    model = load_model("/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5")
+
+    # Prepare your input data
+    input_data = np.array([[1.043789425, 0, 0.191919192, 0]])  # Example input data
+
+    # Pass the inputs to the model and get the outputs
+    outputs = model.predict(input_data)
+
+    # Print the outputs
+    print("Model outputs:", outputs)
+
     from keras.models import load_model
 
     # model = load_model("/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5")
@@ -50,12 +65,12 @@ if __name__ == "__main__":
 
 
 
-    y1 = parser.get_symbol("y1_unscaled")
-    y2 = parser.get_symbol("y2_unscaled")
-    p1 = parser.get_symbol("p1_unscaled")
-    p2 = parser.get_symbol("p2_unscaled")
-    x1 = parser.get_symbol("x1_unscaled")
-    x2 = parser.get_symbol("x2_unscaled")
+    y1 = parser.get_symbol("y1")
+    y2 = parser.get_symbol("y2")
+    p1 = parser.get_symbol("p1")
+    p2 = parser.get_symbol("p2")
+    x1 = parser.get_symbol("x1")
+    x2 = parser.get_symbol("x2")
 
     x2_int = parser.create_integer_disjunction("x2_unscaled", (-1, 1))
     p2_int = parser.create_integer_disjunction("p2_unscaled", (3, 7))
@@ -67,7 +82,7 @@ if __name__ == "__main__":
     #  with x as knob:  y1==4.120704402283359 &
     solution = And(
         Equals(x1, Real(10)),
-        Equals(x2, Real(0)),
+        Equals(x2, Real(-1)),
         Equals(p1, Real(2)),
         Equals(p2, Real(3))
     )
@@ -121,10 +136,10 @@ if __name__ == "__main__":
     mb.apply_restrictions(x2_int)
     mb.apply_restrictions(p2_int)
     # mb.apply_restrictions(beta)
-    mb.apply_restrictions(alpha)
-    mb.apply_restrictions(eta)
+    # mb.apply_restrictions(alpha)
+    # mb.apply_restrictions(eta)
     # mb.apply_restrictions(marabou_formula)
-    # mb.apply_restrictions(solution)
+    mb.apply_restrictions(solution)
 
     # mb.apply_restrictions(theta)
 

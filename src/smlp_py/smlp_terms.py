@@ -131,7 +131,7 @@ class SmlpTerms:
             ast.And: self.smlp_and, ast.Or: self.smlp_or, ast.Not: self.smlp_not,
             ast.IfExp: self.smlp_ite
         }
-        self._ENABLE_PYSMT = False
+        self._ENABLE_PYSMT = True
 
     # set logger from a caller script
     def set_logger(self, logger):
@@ -1606,8 +1606,8 @@ class ModelTerms(ScalerTerms):
         self.verifier.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Real'), ('p2', 'Integer')],
                                      outputs=[('y1', 'Real'), ('y2', 'Real')])
 
-        self._ENABLE_PYSMT = False
-        self._RETURN_PYSMT = False
+        self._ENABLE_PYSMT = True
+        self._RETURN_PYSMT = True
 
         
     # set logger from a caller script

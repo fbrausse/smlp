@@ -42,7 +42,7 @@ class SmlpQuery:
         self._trace_runtime = None
         self._trace_precision = None
         self._trace_anonymize = None
-        self._ENABLE_PYSMT = False
+        self._ENABLE_PYSMT = True
 
     def set_logger(self, logger):
         self._query_logger = logger 

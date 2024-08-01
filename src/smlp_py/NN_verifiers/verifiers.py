@@ -177,6 +177,7 @@ class MarabouVerifier(Verifier):
             eq.setScalar(-min_value)
 
             # Add the equation to the network
+            # self.add_permanent_constraint(eq)
             self.network.addEquation(eq)
 
 
@@ -441,11 +442,13 @@ class MarabouVerifier(Verifier):
             scaled_var, _ = self.get_variable_by_name(name)
             answers['witness_var'][scaled_var] = witness[unscaled_index]
             answers['witness'][scaled_var.name] = witness[unscaled_index]
+        print(answers['witness'])
         return answers
 
     def solve(self):
         try:
-            results = self.network.solve()
+            options = Marabou.createOptions(verbosity=0)
+            results = self.network.solve(options)
             if results and results[0] == 'unsat':
                 return "UNSAT", {"result":"UNSAT", "witness": {}}
             else:  # sat

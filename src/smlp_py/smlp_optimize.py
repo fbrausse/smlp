@@ -48,7 +48,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int = 64
-        self._ENABLE_PYSMT = False
+        self._ENABLE_PYSMT = True
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:
