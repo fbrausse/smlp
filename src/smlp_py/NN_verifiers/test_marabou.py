@@ -20,9 +20,13 @@ from maraboupy.MarabouPythonic import *
 if __name__ == "__main__":
     import numpy as np
     from tensorflow.keras.models import load_model
+    import os
 
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    relative_h5_path = os.path.join(script_dir, '../../../result/abc_smlp_toy_basic_nn_keras_model_complete.h5')
+    absolute_h5_path = os.path.normpath(relative_h5_path)
     # Load the model from the .h5 file
-    model = load_model("/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5")
+    model = load_model(absolute_h5_path)
 
     # Prepare your input data
     input_data = np.array([[1.043789425, 0, 0.191919192, 0]])  # Example input data

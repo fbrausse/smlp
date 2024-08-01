@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import List, Dict, Optional, Tuple
@@ -89,7 +90,7 @@ class MarabouVerifier(Verifier):
 
         self.model_file_path = "./"
         self.log_path = "marabou.log"
-        self.data_bounds_file = "/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_data_bounds.json"
+        self.data_bounds_file = self.find_file_path("../../../result/abc_smlp_toy_basic_data_bounds.json")
         self.data_bounds = None
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
@@ -102,7 +103,7 @@ class MarabouVerifier(Verifier):
 
 
     def initialize(self):
-        self.model_file_path = "/home/kkon/Desktop/smlp/result/abc_smlp_toy_basic_nn_keras_model_complete.h5"
+        self.model_file_path = self.find_file_path('../../../result/abc_smlp_toy_basic_nn_keras_model_complete.h5')
         self.convert_to_pb()
         self.load_json()
         self.network_num_vars = self.network.numVars
@@ -121,6 +122,11 @@ class MarabouVerifier(Verifier):
         else:
             raise ValueError("Direction must be 'up' or 'down'")
 
+    def find_file_path(self, relative_path):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        relative_h5_path = os.path.join(script_dir, relative_path)
+        absolute_h5_path = os.path.normpath(relative_h5_path)
+        return absolute_h5_path
 
     def convert_to_pb(self, output_model_file_path="."):
         model = tf.keras.models.load_model(self.model_file_path)
