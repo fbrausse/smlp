@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 import matplotlib
 matplotlib.use('TkAgg')  # Set the backend to 'TkAgg' before importing pyplot, to enable interactive plots
 import matplotlib.pyplot as plt

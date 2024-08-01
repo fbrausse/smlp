@@ -1,10 +1,17 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 # data processing -- mainly to prepare data for model training
+from smlp_py.ext import plot
 import os
 import logging
 import numpy as np
+from icecream import ic
 import pandas as pd
 import pickle
 import json
+
+ic.configureOutput(f'Debug | ', includeContext=True)
 
 #from mrmr import mrmr_regression
 from sklearn.preprocessing import MinMaxScaler

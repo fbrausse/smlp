@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 import operator
 import numpy as np
 import pandas as pd
@@ -12,7 +15,10 @@ import time
 import functools #for cacheing
 from collections import defaultdict
 import sys
-
+from icecream import ic
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
+ic("Changes here ...")
+from keras.models import Sequential
 import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
@@ -1357,12 +1363,14 @@ class NNKerasTerms: #(SmlpTerms):
         return curr_layer_terms
 
     def _keras_is_sequential(self, model):
+        ic("Changes here ...")
         try:
             # v2.9 has this API
             cl = keras.engine.sequential.Sequential
         except AttributeError:
             # v2.14+ has this API
-            cl = keras.src.engine.sequential.Sequential
+            #cl = keras.src.engine.sequential.Sequential
+            cl = Sequential
         return isinstance(model, cl)
 
     def _keras_is_functional(self, model):

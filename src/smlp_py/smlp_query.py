@@ -1,10 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 from fractions import Fraction
 import json
 
+from icecream import ic
 import smlp
 from smlp_py.smlp_terms import ModelTerms, SmlpTerms
 from smlp_py.smlp_utils import np_JSONEncoder #, str_to_bool
+from smlp_py.ext import plot
 
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
 class SmlpQuery:
     def __init__(self):
@@ -538,8 +544,8 @@ class SmlpQuery:
             print('searching for a candidate', flush=True)
             
             ca = self.find_candidate(candidate_solver)
-            
             if self._modelTermsInst.solver_status_sat(ca): # isinstance(ca, smlp.sat):
+            #if isinstance(ca, smlp.sat):
                 print('candidate found -- checking stability', flush=True)
                 #print('ca', ca_model)
                 ca_model = self._modelTermsInst.get_solver_model(ca) #ca.model
@@ -556,6 +562,9 @@ class SmlpQuery:
                         approx_ca_models[h] = 0
                     #print('ca_model_approx', ca_model_approx)
                 feasible = True
+                ic('Changes here ...')
+                witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
+                plot.save_to_csv(witnessvals, data_version='witnesses')
                 if use_approxiamted_fractions:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model_approx, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
@@ -563,6 +572,7 @@ class SmlpQuery:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
                 if self._modelTermsInst.solver_status_sat(ce): #isinstance(ce, smlp.sat):
+                #if isinstance(ce, smlp.sat):
                     print('candidate not stable -- continue search', flush=True)
                     ce_model = self._modelTermsInst.get_solver_model(ce) #ce.model
                     cem = ce_model.copy(); #print('ce model', cem)
@@ -735,6 +745,7 @@ class SmlpQuery:
             alph_expr, beta_expr, eta_expr, data_scaler, scale_feat, scale_resp, #None, 
             float_approx, float_precision, data_bounds_json_path)
         
+#<<<<<<< Updated upstream
         # update mode_status_dict based on interface and model consistency results 
         # computed by get_model_exploration_base_components()
         mode_status_dict['interface_consistent'] = str(interface_consistent).lower()

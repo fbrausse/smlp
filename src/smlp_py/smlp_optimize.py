@@ -1,8 +1,16 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 import smlp
+from smlp_py.ext import plot
+import time
 from smlp_py.smlp_terms import SmlpTerms, ModelTerms, ScalerTerms
 from smlp_py.smlp_query import SmlpQuery
 from smlp_py.smlp_utils import (str_to_bool, np_JSONEncoder)
+from icecream import ic
             
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
+
 from fractions import Fraction
 from decimal import Decimal
 from typing import Union
@@ -265,6 +273,8 @@ class SmlpOptimize:
             quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
             #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
             self._opt_tracer.info('objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
+            ic("Changes here ...")
+            ic(u0,l0,u,l,T)
             quer_res = self._queryInst.query_condition(
                 True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision)
@@ -644,6 +654,9 @@ class SmlpOptimize:
                 json.dump(self.best_config_dict['final'] | self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
             final_config_df = self.best_config_df.drop_duplicates(subset=self.feat_names, inplace=False)
             final_config_df.to_csv(self.optimization_results_file+'.csv', index=False)            
+            ic("changes here")
+            ic(final_config_df, s_origin_dict)
+            plot.predicted_final(s_origin_dict)
     
     # pareto optimization, reduced to single objective optimization and condition queries.
     def optimize_pareto_objectives(self, feat_names:list[str], resp_names:list[str], 
@@ -651,6 +664,7 @@ class SmlpOptimize:
             beta:smlp.form2, eta:smlp.form2, theta_radii_dict:dict,
             epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, scale_objv:bool, data_scaler:str, 
             sat_approx=False, sat_precision=64, save_trace=False):
+        plot.save_time(time.time())
         self._opt_logger.info('Pareto optimization: Start')
         
         assert epsilon > 0 and epsilon < 1
@@ -803,6 +817,7 @@ class SmlpOptimize:
         self.report_current_thresholds(s, witness, objv_bounds_dict, objv_names, objv_exprs, 
             True, (call_n, 'Final'), scale_objectives)
         
+        plot.save_time(time.time())
         self._opt_logger.info('Pareto optimization: End')
         return s
     

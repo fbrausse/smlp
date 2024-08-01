@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 import os
 import json
 from fractions import Fraction
@@ -943,7 +946,7 @@ class SmlpSpec:
                 raise Exception('At least on of the relative or absolute radii must mot be None')
             knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
         return input_ranges | knobs_ranges
-    
+   
     
     '''
     This function splits an SMLP spec extracted from spec_file into a number pf spec files with smaller grids 

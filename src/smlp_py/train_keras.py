@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: Apache-2.0
+# This file is part of smlp.
+
 import os
 #os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0" # edded because of warning: 
 os.unsetenv("TF_ENABLE_ONEDNN_OPTS")
@@ -12,6 +15,8 @@ import pandas as pd
 import random as rn
 import io
 from contextlib import redirect_stdout
+from icecream import ic
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
 #from tensorflow.keras.initializers import GlorotUniform
 
@@ -34,9 +39,9 @@ class ModelKeras:
         self.SMLP_KERAS_MODELS = [self._algo_name_local2global(m) for m in self._KERAS_MODELS]
         
         # hyper parameter defaults
-        self._DEF_LAYERS_SPEC = '2,1'
-        self._DEF_EPOCHS     = 2000
-        self._DEF_BATCH_SIZE = 200
+        self._DEF_LAYERS_SPEC = '5,2,5,2' # '2,1'
+        self._DEF_EPOCHS     = 2000 # 1000
+        self._DEF_BATCH_SIZE = 150 # 200
         self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
         self._DEF_LEARNING_RATE = 0.001
         self._HID_ACTIVATION = 'relu'
@@ -204,7 +209,7 @@ class ModelKeras:
     @property
     def model_checkpoint_pattern(self):
         assert self.model_file_prefix is not None
-        return self.model_file_prefix + '_model_checkpoint.h5'
+        return self.model_file_prefix + '_model_checkpoint.keras'  #'_model_checkpoint.h5'
     
     # TODO !!!: add description
     @property
@@ -372,8 +377,11 @@ class ModelKeras:
                 if str(v) in str(model.loss) or str(k) in str(model.loss):
                     self._keras_logger.info("Loss function: " + str(k))
         if hasattr(model, 'compiled_metrics'):
-            compiled_metrics = model.compiled_metrics._metrics  # Access the private _metrics attribute
-            self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+            ic("Changes here ...")
+            #compiled_metrics = model.compiled_metrics._metrics  # Access the private _metrics attribute
+            #self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+            compiled_metrics = model.compiled_metrics  # Access the private _metrics attribute
+            self._keras_logger.info("Metrics: " + str(compiled_metrics))
         else:
             self._keras_logger.info("Metrics: " + str([]))
         #self._keras_logger.info("Metrics: " + str(model.metrics))
