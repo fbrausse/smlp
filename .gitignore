@@ -60,3 +60,4 @@ src/logs.log
 *.h5
 *.onnx
 variables/
+saved_model/
