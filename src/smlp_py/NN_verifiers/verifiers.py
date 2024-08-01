@@ -170,10 +170,13 @@ class MarabouVerifier(Verifier):
 
             scaling_factor = max_value - min_value
 
+            _, scaled_var_index = self.get_variable_by_name(scaled_var.name)
+            _, unscaled_var_index = self.get_variable_by_name(unscaled_var.name)
+
             # Create an equation representing (x_max - x_min) * x_scaled - x_unscaled =  - x_min
             eq = MarabouUtils.Equation(MarabouCore.Equation.EQ)
-            eq.addAddend(scaling_factor, scaled_var.index)
-            eq.addAddend(-1, unscaled_var.index)
+            eq.addAddend(scaling_factor, scaled_var_index)
+            eq.addAddend(-1, unscaled_var_index)
             eq.setScalar(-min_value)
 
             # Add the equation to the network
@@ -447,8 +450,7 @@ class MarabouVerifier(Verifier):
 
     def solve(self):
         try:
-            options = Marabou.createOptions(verbosity=0)
-            results = self.network.solve(options)
+            results = self.network.solve()
             if results and results[0] == 'unsat':
                 return "UNSAT", {"result":"UNSAT", "witness": {}}
             else:  # sat
