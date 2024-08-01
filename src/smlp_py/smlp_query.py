@@ -8,6 +8,7 @@ from icecream import ic
 import smlp
 from smlp_py.smlp_terms import ModelTerms, SmlpTerms
 from smlp_py.smlp_utils import np_JSONEncoder #, str_to_bool
+#from smlp_py.smlp_utils import np_JSONEncoder
 from smlp_py.ext import plot
 
 ic.configureOutput(prefix=f'Debug | ', includeContext=True)

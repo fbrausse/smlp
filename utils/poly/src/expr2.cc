@@ -190,15 +190,17 @@ struct map_graph {
 				return make2t(cnst2 { move(r) });
 			},
 			[&](const bop2 &b) {
+				using expr2_ops::operator-;
 				sptr<term2> l = simplify(b.left);
 				sptr<term2> r = simplify(b.right);
 				switch (b.op) {
 				case bop2::ADD:
 				case bop2::SUB:
-					if (*l == *zero)
-						return r;
 					if (*r == *zero)
 						return l;
+					if (*l == *zero)
+						return b.op == bop2::ADD
+						       ? r : simplify(-r);
 					if (*l == *r)
 						return b.op == bop2::SUB
 						     ? zero

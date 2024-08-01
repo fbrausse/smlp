@@ -1385,7 +1385,12 @@ class NNKerasTerms: #(SmlpTerms):
     # determine the model type -- sequential vs functional
     def _get_nn_keras_model_type(self, model):
         #print('keras model', model, type(model))
+#<<<<<<< Updated upstream
         if self._keras_is_sequential(model):
+#=======
+#        #print('keras terms', keras)
+#        if isinstance(model, keras.Sequential):
+#>>>>>>> Stashed changes
             model_type = 'sequential'
         elif self._keras_is_functional(model):
             model_type = 'functional'

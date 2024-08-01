@@ -310,6 +310,7 @@ class SmlpModels:
             ic("Changes here ...")
             if data_version == 'test':
                 plot.save_to_txt(precisions)
+
             self._model_logger.info('Saving prediction precisions into file: \n' + \
                                     str(self.prediction_precisions_filename(data_version)))
             precisions_df.to_csv(self.prediction_precisions_filename(data_version), index=False)
@@ -382,11 +383,6 @@ class SmlpModels:
             sample_weights_coef:float, sample_weights_exp:float, sample_weights_int:float, model_per_response:bool):
         self._model_logger.info('Model training: start')
         self.model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
-#=======
-#
-#        #print('feat_names_dict', feat_names_dict, 'resp_names', resp_names)
-#        model_features_sanity_check(feat_names_dict, None, X_train, X_test, None)
-#>>>>>>> Stashed changes
             
         if algo == 'nn_keras':
             keras_algo = algo[:-len('_keras')]
