@@ -151,6 +151,10 @@ smlp_logger - INFO - Building system terms: End
 
 smlp_logger - INFO - Building model terms: Start
 
+smlp_logger - INFO - Model operator counts for y1: {'ite': 1, 'and': 1, 'prop': 2, 'var': 3, 'const': 3, 'usub': 1}
+
+smlp_logger - INFO - Model operator counts for y2: {'ite': 1, 'and': 1, 'prop': 2, 'var': 3, 'const': 3, 'usub': 1}
+
 smlp_logger - INFO - Building model terms: End
 
 smlp_logger - INFO - Model interface constraints are consistent

@@ -100,6 +100,7 @@ class SmlpFlows:
         self.modelTernaInst.set_compress_rules(self.args.compress_rules)
         self.modelTernaInst.set_simplify_terms(self.args.simplify_terms)
         self.modelTernaInst.set_tree_encoding(self.args.tree_encoding)
+        self.modelTernaInst.set_nnet_encoding(self.args.nnet_encoding)
         #self.modelTernaInst.set_cache_terms(self.args.cache_terms)
         self.dataInst.set_spec_inst(self.specInst)
         self.specInst.set_radii(self.args.radius_absolute, self.args.radius_relative)
