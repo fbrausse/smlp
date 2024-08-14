@@ -39,10 +39,10 @@ class ModelKeras:
         self.SMLP_KERAS_MODELS = [self._algo_name_local2global(m) for m in self._KERAS_MODELS]
         
         # hyper parameter defaults
-        self._DEF_LAYERS_SPEC = '5,2,5,2' # '2,1'
-        self._DEF_EPOCHS     = 2000 # 1000
-        self._DEF_BATCH_SIZE = 150 # 200
-        self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
+        self._DEF_LAYERS_SPEC = '4,1,4,1' # '2,1'
+        self._DEF_EPOCHS     = 1000 # 1000
+        self._DEF_BATCH_SIZE = 100 # 200
+        self._DEF_OPTIMIZER  = 'rmsprop'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
         self._DEF_LEARNING_RATE = 0.001
         self._HID_ACTIVATION = 'relu'
         self._OUT_ACTIVATION = 'linear'
@@ -250,6 +250,10 @@ class ModelKeras:
     def _nn_init_model_sequential(self, resp_names:list[str], input_dim:int, optimizer:str, hid_activation:str, out_activation:str, 
             layers_spec_list:list[int], loss_function, metrics):
         self._keras_logger.info('building NN model using Keras Sequential API')
+
+        ic("Changes here ...")
+        #with tf.device('/GPU:0'):
+        
         # Initialize the Sequential model
         model = keras.Sequential()
         

@@ -33,11 +33,11 @@ class ModelSklearn:
         self._instTreeTerms = TreeTerms()
         self._instPolyTerms = PolyTerms()
         # trees (rf, dt, et) common
-        self._DEF_MIN_SAMPLES_SPLIT = 3 #2
+        self._DEF_MIN_SAMPLES_SPLIT = 2 #2
         self._DEF_MIN_SAMPLES_LEAF = 1 #1
-        self._DEF_MAX_DEPTH = None #None
+        self._DEF_MAX_DEPTH = 10 #None
         self._DEF_RAND_STATE = None
-        self._DEF_CRITERION = 'squared_error' #'squared_error'
+        self._DEF_CRITERION = 'poisson' #'squared_error'
         self._DEF_MAX_LEAF_NODES = None
         self._DEF_MIN_WEIGHT_FRACTION_LEAF = 0.0
         self._DEF_MIN_IMPURITY_DECREASE = 0.0
@@ -45,7 +45,7 @@ class ModelSklearn:
         # dt
         self._DEF_MAX_FEATURS_DT = None
         # rf
-        self._DEF_N_ESTIMATORS = 100 #100
+        self._DEF_N_ESTIMATORS = 30 #100
         self._DEF_SPLITTER_RF = 'best' # 'best'
         self._DEF_MAX_FEATURS_RF = 1.0 #1.0
         self._DEF_BOOTSTRAP = True
@@ -54,12 +54,12 @@ class ModelSklearn:
         self._DEF_MAX_SAMPLES = None
         # et
         #self._DEF_SPLITTER_ET = 'random'
-        self._DEF_MAX_FEATURS_ET = 1 #1.0
+        self._DEF_MAX_FEATURS_ET = 2 #1.0
         # linear / polynomial regression
-        self._DEF_POLY_DEGREE = 3 # 2
+        self._DEF_POLY_DEGREE = 20 # 2
         self._DEF_FIT_INTERCEPT = True #True
         self._DEF_COPY_X = True #True
-        self._DEF_N_JOBS = None #None
+        self._DEF_N_JOBS = 3 #None
         self._DEF_POSITIVE = False #False
 
         # TODO !!!: Is there a way to get this dictionary through SKLEARN API?

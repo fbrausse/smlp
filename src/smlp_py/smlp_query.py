@@ -13,6 +13,8 @@ from smlp_py.ext import plot
 
 ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
+plot_instance = plot.plot_exp()
+
 class SmlpQuery:
     def __init__(self):
         self._smlpTermsInst = SmlpTerms()
@@ -552,7 +554,7 @@ class SmlpQuery:
                 ca_model = self._modelTermsInst.get_solver_model(ca) #ca.model
                 if use_approxiamted_fractions:
                     ca_model_approx = self._smlpTermsInst.approximate_witness_term(ca_model, self._lemma_precision)
-                    #print('ca_model_approx -------------', ca_model_approx)
+                    ic('ca_model_approx -------------', ca_model_approx)
                     knob_vals = [v for k,v in ca_model_approx.items() if k in theta_radii_dict]; #print('knob_vals', knob_vals)
                     h = hash(str(knob_vals))
                     if h in approx_ca_models:
@@ -561,7 +563,7 @@ class SmlpQuery:
                         #self._query_tracer.info('hits,{}'.format(str(sum(list(approx_ca_models.values())))))
                     else:
                         approx_ca_models[h] = 0
-                    #print('ca_model_approx', ca_model_approx)
+                    ic('ca_model_approx', ca_model_approx)
                 feasible = True
                 ic('Changes here ...')
                 witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
@@ -576,6 +578,7 @@ class SmlpQuery:
                 #if isinstance(ce, smlp.sat):
                     print('candidate not stable -- continue search', flush=True)
                     ce_model = self._modelTermsInst.get_solver_model(ce) #ce.model
+                    #ic(ce_model['z'])
                     cem = ce_model.copy(); #print('ce model', cem)
                     # drop Assignements to responses from ce
                     for var in ce_model.keys():
@@ -615,6 +618,10 @@ class SmlpQuery:
                         return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
             elif self._modelTermsInst.solver_status_unsat(ca): #isinstance(ca, smlp.unsat):
                 self._query_logger.info('Query completed with result: UNSAT (unsatisfiable)')
+                ic("Changes here ...")
+                solver = "unsat"
+                lower_bound = None
+                plot_instance.witnesses(lower_bound, solver)
                 if feasible is None:
                     feasible = False
                 #print('candidate does not exist -- query unsuccessful')

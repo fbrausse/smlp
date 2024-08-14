@@ -12,7 +12,9 @@ import os
 from smlp_py.smlp_plots import *
 from smlp_py.smlp_terms import TreeTerms
 from smlp_py.smlp_utils import str_to_bool
+from icecream import ic
 
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
 # TODO: couldn't manage to disable cross-validation, looks like at least two folds is a must.
 # TODO: sample weights do not work with cross-validation. See https://github.com/pycaret/pycaret/issues/1350
@@ -30,9 +32,9 @@ class ModelCaret:
         # params for setup() function: session_id, verbose, fold, data_split_shuffle (set to False to acheive reproducibility?)
         # setup() hyper parameter defaults
         self._DEF_SESSION_ID = None
-        self._DEF_DATA_SPLIT_SHUFFLE = True # True
-        self._DEF_CV_FOLDS = 3 #2
-        self._DEF_TREE_MAX_DEPTH = 3 #3
+        self._DEF_DATA_SPLIT_SHUFFLE = False # True
+        self._DEF_CV_FOLDS = 2 #2
+        self._DEF_TREE_MAX_DEPTH = 2 #3
         self._DEF_CROSS_VALIDATION = True # True
         self._DEF_VERBOSE = True
         self._DEF_RETURN_TRAIN_SCORE = False
@@ -153,7 +155,9 @@ class ModelCaret:
         df_train = pd.concat([X_train, y_train], axis=1)
 
         #print('df_train\n', df_train); print(resp_name)
-        exp_clf = setup(df_train, target=resp_name, session_id=seed, data_split_shuffle=data_split_shuffle)
+
+        exp_clf = setup(df_train, target=resp_name, use_gpu=True, session_id=seed, data_split_shuffle=data_split_shuffle)
+        ic(exp_clf)
 
         # create multiple models to find best (this step is optional, useful but time consuming)
         if models_compare:

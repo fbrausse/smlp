@@ -17,7 +17,7 @@ from collections import defaultdict
 import sys
 from icecream import ic
 ic.configureOutput(prefix=f'Debug | ', includeContext=True)
-ic("Changes here ...")
+ic("Changes here and line 355")
 from keras.models import Sequential
 import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
@@ -208,7 +208,9 @@ class SmlpTerms:
             return form1
         '''
         res1 = op.and_(form1, form2)
-        #res2 = form1 & form2
+        ic("Here")
+        #ic(res1)
+        #ic(form1, form2)
         #print('res1', res1, type(res1)); print('res2', res2, type(res2))
         #assert res1 == res2
         return res1 # form1 & form2
@@ -352,7 +354,8 @@ class SmlpTerms:
              ('prop' only)
     '''
     def smlp_destruct(self, term2_or_form2): #:smlp.term2|smlp.form2
-        sys.setrecursionlimit(15000)
+        #ic("Changes here...")
+        #sys.setrecursionlimit(15000)
         return smlp.destruct(term2_or_form2)
     
     # this function traverses an object of type smlp.libsmlp.form2 or smlp.libsmlp.term2 
@@ -365,6 +368,8 @@ class SmlpTerms:
         # Define a helper function to traverse the object
         def traverse(obj):
             # Destructure the given object
+            # ic("Changes here...")
+            sys.setrecursionlimit(20000)
             destructure_result = self.smlp_destruct(obj)
 
             # Increment the count of the current operator
@@ -1797,7 +1802,8 @@ class ModelTerms(ScalerTerms):
     # reponses have been scaled prior to training.
     def compute_models_terms_dict(self, algo, model_or_model_dict, model_features_dict, feat_names, resp_names, 
             data_bounds, data_scaler,scale_features, scale_responses):
-        #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names, flush=True)
+
+        #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names)
         assert lists_union_order_preserving_without_duplicates(list(model_features_dict.values())) == feat_names
         #print('model_or_model_dict', model_or_model_dict)
         if isinstance(model_or_model_dict, dict):

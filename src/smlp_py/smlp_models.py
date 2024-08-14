@@ -25,6 +25,7 @@ from icecream import ic
 
 ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
+plot_instance = plot.plot_exp()
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
 # Model training parameter model_per_response controls whther one model is build that covers all responses
@@ -309,7 +310,7 @@ class SmlpModels:
             precisions = 'msqe: ' + str(msqe_vec[0]) + '\n' + 'r2_score: ' + str(r2_vec[0])
             ic("Changes here ...")
             if data_version == 'test':
-                plot.save_to_txt(precisions)
+                plot_instance.save_to_txt(precisions)
 
             self._model_logger.info('Saving prediction precisions into file: \n' + \
                                     str(self.prediction_precisions_filename(data_version)))
@@ -335,12 +336,14 @@ class SmlpModels:
     # extract hyperparameters required for training model with algorithm algo
     # from args after it has been populated with command-line and default values.
     def get_hyperparams_dict(self, args, algo):
-        plot.save_to_txt(algo)
+
+        plot_instance.save_to_txt(algo)
         #with open('default_params.json', 'r') as file:
             #default_dict = json.load(file)
+
         if algo in self._instKeras.SMLP_KERAS_MODELS:
             hparams_dict = dict((k, vars(args)[k]) for k in self._keras_dict.keys())
-            plot.param_changed(hparams_dict, algo, n=0)
+            plot_instance.param_changed(hparams_dict, algo, n=0)
             #keras_dict = default_dict[0]
             #for k, v in hparams_dict.items():
             #    if k in keras_dict:
@@ -352,7 +355,7 @@ class SmlpModels:
         elif algo in self._instSklearn.SMLP_SKLEARN_MODELS:
             #print('sklearn_dict', self._sklearn_dict)
             hparams_dict = dict((k, vars(args)[k]) for k in self._sklearn_dict.keys())
-            plot.param_changed(hparams_dict, algo, n=1)
+            plot_instance.param_changed(hparams_dict, algo, n=1)
             #sklearn_dict = default_dict[1]
             #for k in self._sklearn_dict:
             #    if k in sklearn_dict:
@@ -363,7 +366,7 @@ class SmlpModels:
 
         elif algo in self._instCaret.SMLP_CARET_MODELS:
             hparams_dict = dict((k, vars(args)[k]) for k in self._caret_dict.keys())
-            plot.param_changed(hparams_dict, algo, n=2)
+            plot_instance.param_changed(hparams_dict, algo, n=2)
             #caret_dict = default_dict[2]
             #for k in self._caret_dict:
             #    if k in caret_dict:
@@ -409,6 +412,8 @@ class SmlpModels:
             raise Exception('Unsuported algorithm ' + str(algo))
 
         self._model_logger.info('Model training: end')
+#        ic("Training end time:", time.time())
+        plot_instance.save_time(time.time())
         return model
 
     # function for prediction for the ML module.
@@ -510,7 +515,8 @@ class SmlpModels:
             # run model training
             self._model_logger.info('TRAIN MODEL')
             #feat_names = X_train.columns.tolist()
-            plot.save_time(time.time())
+            #ic("Training start time:", time.time())
+            plot_instance.save_time(time.time())
             model = self.model_train(feat_names_dict, resp_names, algo, X_train, X_test, y_train, y_test,
                 hparams_dict, plots, seed, sample_weights_coef, sample_weights_exp, sample_weights_int, model_per_response)
 
@@ -550,8 +556,7 @@ class SmlpModels:
             #print('(3)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test);
             y_test_pred = self._model_predict(model, X_test, y_test, resp_names, algo, model_per_response)
             #print('(3b)'); print('y\n', y);  print('y_train\n', y_train); print('y_test\n', y_test); 
-            plot.prediction_save(X_test, y_test_pred, mm_scaler_resp)
-            plot.save_time(time.time())
+            plot_instance.prediction_save(X_test, y_test_pred, mm_scaler_resp)
             self._report_prediction_results(algo, resp_names, y_test, y_test_pred, mm_scaler_resp, 
                 plots, pred_plots, 'test')
 

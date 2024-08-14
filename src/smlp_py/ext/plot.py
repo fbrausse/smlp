@@ -21,48 +21,281 @@ ic(exp)
 Set = f'experiment_outputs/Set{setno}/Set_{setno}_'
 witnesses_csv_path = f'Set{setno}_{exp}_witnesses.csv'
 witnesses_html_path = f'Set{setno}_{exp}_witnesses.html'
-txt_file = f'Set{setno}_{exp}_experiments.txt'
+#txt_file = f'Set{setno}_{exp}_experiments.txt'
 opt_out = f'Set{setno}_{exp}_optimization_output.png'
 
+class plot_exp:
 
-def save_time(t, times=[]):
-    """
-    Saves the time taken for training and optimization to a text file.
+    def __init__(self):
 
-    Parameters:
-    - t: Current time.
-    - times: List of times, should include start and end times for training and optimization.
-    """
-    times.append(t)
-    if len(times) == 4:
-        # Calculate training and optimization times
-        train_time = f"Training time: {times[1] - times[0]}"
-        opt_time = f"Optimization time: {times[3] - times[2]}"
-        # Save times to text file
-        save_to_txt(train_time)
-        save_to_txt(opt_time)
+        self.txt_file = f'Set{setno}_{exp}_experiments.txt'
 
-def param_changed(hparams_dict, algo, n):
-    """
-    Logs changed hyperparameters compared to default values.
+    def save_to_txt(self, data):
+        """
+        Saves data and dataset statistics to a text file.
+        
+        Parameters:
+        - data: Data to be saved. Can be a list or a single value.
+        """
+        global setno, exp
+        
+        # Load original data for bounds
+        orig_data = pd.read_csv('smlp_toy_basic.csv')
+        x_bounds = f"\nmin x: {orig_data.iloc[:, 0].min()} max x: {orig_data.iloc[:, 0].max()}"
+        y_bounds = f"\nmin y: {orig_data.iloc[:, 1].min()} max y: {orig_data.iloc[:, 1].max()}"
+        
+        if len(orig_data.columns) > 2:
+            z_bounds = f"\nmin z: {orig_data.iloc[:, 2].min()} max z: {orig_data.iloc[:, 2].max()}"
+    
+        orig_len = f"\nlength of dataset: {len(orig_data)}"
+    
+        # Save data to text file
+        with open(self.txt_file, 'a') as f:
+            if isinstance(data, list):
+                f.write(f"{setno}\n{exp}\n")
+                for index, arg in enumerate(data[1:], start=1):
+                    f.write(f"Argument {index}: {arg}\n")
+                f.write(x_bounds + y_bounds + (z_bounds if len(orig_data.columns) > 2 else '') + orig_len + "\n")
+    
+                resp_index = data.index('-resp')
+                resp = data[resp_index + 1]
+                feat_index = data.index('-feat')
+                feat = data[feat_index + 1]
+                resp_list = resp.split(',')
+                feat_list = feat.split(',')
+                #if len(feat_list) > 1:
+                #    for f in feat_list:
+                #        ic(f)
+                #else:
+                #    ic(feat_list[0])
+    
+                #if len(resp_list) > 1:
+                #    for f in resp_list:
+                #        ic(f)
+                #else:
+                #    ic(resp_list[0])
+    
+            else:
+                f.write(f"\n{data}\n")
 
-    Parameters:
-    - hparams_dict: Dictionary of hyperparameters to check.
-    - algo: Algorithm name to filter relevant parameters.
-    - n: Section in default_params.json to compare against.
-    """
-    # Load default parameters from JSON
-    with open('default_params.json', 'r') as file:
-        default_dict = json.load(file)
+    def param_changed(self, hparams_dict, algo, n):
+        """
+        Logs changed hyperparameters compared to default values.
+    
+        Parameters:
+        - hparams_dict: Dictionary of hyperparameters to check.
+        - algo: Algorithm name to filter relevant parameters.
+        - n: Section in default_params.json to compare against.
+        """
+        # Load default parameters from JSON
+        with open('default_params.json', 'r') as file:
+            default_dict = json.load(file)
+    
+        default_dict = default_dict[n]
+    
+        # Check for changes in hyperparameters
+        if n == 2:
+            for k in hparams_dict:
+                if k in hparams_dict and k in default_dict:
+                    if hparams_dict[k] != default_dict[k]:
+                        param = f"{k}: {hparams_dict[k]}"
+                        self.save_to_txt(param)
+                        ic(param)
 
-    default_dict = default_dict[n]
+        else: 
+            for k in hparams_dict:
+                if algo in k and k in default_dict:
+                    if hparams_dict[k] != default_dict[k]:
+                        param = f"{k}: {hparams_dict[k]}"
+                        self.save_to_txt(param)
 
-    # Check for changes in hyperparameters
-    for k in hparams_dict:
-        if algo in k and k in default_dict:
-            if hparams_dict[k] != default_dict[k]:
-                param = f"{k}: {hparams_dict[k]}"
-                save_to_txt(param)
+    def save_time(self, t, times=[]):
+        """
+        Saves the time taken for training and optimization to a text file.
+    
+        Parameters:
+        - t: Current time.
+        - times: List of times, should include start and end times for training and optimization.
+        """
+        times.append(t)
+        if len(times) == 2:
+            # Calculate training time
+            train_time = f"Training time: {times[1] - times[0]}"
+            # Save times to text file
+            ic(train_time)
+            self.save_to_txt(train_time)
+    
+        elif len(times) == 4:
+            # Calculate optimization time
+            syn_time = f"Optimization synthesis feasibility check time: {times[3] - times[2]}"
+            # Save times to text file
+            self.save_to_txt(syn_time)
+    
+        elif len(times) == 6:
+            # Calculate optimization time
+            opt_time = f"Pareto optimization completion time: {times[5] - times[4]}"
+            # Save times to text file
+            ic(opt_time)
+            self.save_to_txt(opt_time)
+
+    # Plot and save prediction data
+    def prediction_save(self, X_test, y_test_pred, mm_scaler_resp):
+        """
+        Plots test data against original data and saves the plot.
+        
+        Parameters:
+        - X_test: Test features.
+        - y_test_pred: Predicted values.
+        - mm_scaler_resp: Scaler used to inverse transform predictions.
+        """
+        ind = X_test.index
+        data_version = 'test'
+        
+        # Inverse transform the data
+        y_test_pred = mm_scaler_resp.inverse_transform(y_test_pred)
+        X_test = mm_scaler_resp.inverse_transform(X_test)
+        
+        # Convert to DataFrame
+        y_test_pred = pd.DataFrame(y_test_pred)
+        X_test = pd.DataFrame(X_test)
+        
+        # Load original data
+        orig_file = pd.read_csv("smlp_toy_basic.csv")
+        
+        # Extract original and predicted data
+        x = orig_file.iloc[ind, :-1]
+        y = y_test_pred.iloc[:, 0]
+        
+        # Create prediction DataFrame
+        prediction_df = pd.concat([x, y], axis=1)
+        
+        # Call the main plotting function
+        main(x, y, data_version)
+
+    def witnesses(self, lower_bound, solver):
+        """
+        Creates and saves plots based on witnesses data and original data.
+        """
+        orig = pd.read_csv('/home/x/temp/smlp/smlp_toy_basic.csv')
+    
+        if os.path.exists(witnesses_csv_path):
+    
+            df = pd.read_csv(witnesses_csv_path)
+            df.drop_duplicates(inplace=True)
+            df.to_csv(witnesses_csv_path, index=False)
+            num_witn = "Number of witnesses explored: " + str(len(df))
+            self.save_to_txt(num_witn)
+    
+            if solver == "sat":
+    
+                lower_bound = float(lower_bound['objective'])
+                # Check if 3D plotting is required
+                if len(orig.columns) > 2:
+                    
+                    # Extract data for plotting
+                    z_orig = orig.iloc[:, 2]
+                    y_orig = orig.iloc[:, 1]
+                    x_orig = orig.iloc[:, 0]
+                    z_additional = df.iloc[:, 2]
+                    y_additional = df.iloc[:, 1]
+                    x_additional = df.iloc[:, 0]
+                    
+                    # Create 3D scatter plot
+                    fig1 = go.Figure(data=[
+                        go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
+                        go.Scatter3d(x=x_additional, y=y_additional, z=z_additional, mode='markers', marker=dict(color=z_additional, colorscale='Hot', colorbar=dict(title='title')), name='Optimal value')
+                    ])
+                    
+                    # Update layout
+                    fig1.update_layout(
+                        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                        title='Scatter Plot of Optimal values on Original dataset'
+                    )
+                    
+                    # Save figure and open HTML file
+                    fig1.write_html(witnesses_html_path)
+                    subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
+                
+                else:
+                    
+                    # Extract data for plotting
+                    x1 = orig.iloc[:, 0]
+                    y1 = orig.iloc[:, 1]
+                    x = df.iloc[:, 0]
+                    y = df.iloc[:, 1]
+                    
+                    distances = np.abs(y - lower_bound)
+                    norm = Normalize(vmin=distances.min(), vmax=distances.max())
+                    # Reset index for consistency
+                    x.reset_index(drop=True, inplace=True)
+                    y.reset_index(drop=True, inplace=True)
+                    
+                    # Create scatter plot
+                    plt.scatter(x1, y1, color='#8ad347', label='Objective function')
+                    #plt.scatter(x, y, color='#00ffff', label='Witnesses')
+                    scatter = plt.scatter(x, y, c=distances, cmap='viridis', norm=norm, label='Witnesses', edgecolor='k')
+    
+                    cbar = plt.colorbar(scatter, label='Distance from approximated maximum')
+    
+                    plt.axhline(y=lower_bound, color='0', linestyle='--', label=f'Threshold lower bound (y = {lower_bound})')
+                    plt.xlabel('X')
+                    plt.ylabel('Y', rotation=0)
+                    plt.title('Optimization')
+                    plt.grid(True)
+                    plt.legend()
+                    plt.savefig(opt_out)
+    
+            else: 
+                # Check if 3D plotting is required
+                if len(orig.columns) > 2:
+                    # Extract data for plotting
+                    z_orig = orig.iloc[:, 2]
+                    y_orig = orig.iloc[:, 1]
+                    x_orig = orig.iloc[:, 0]
+                    z_additional = df.iloc[:, 2]
+                    y_additional = df.iloc[:, 1]
+                    x_additional = df.iloc[:, 0]
+                    
+                    # Create 3D scatter plot
+                    fig1 = go.Figure(data=[
+                        go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
+                        go.Scatter3d(x=x_additional, y=y_additional, z=z_additional, mode='markers', marker=dict(color=z_additional, colorscale='Hot', colorbar=dict(title='title')), name='Optimal value')
+                    ])
+                    
+                    # Update layout
+                    fig1.update_layout(
+                        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                        title='Scatter Plot of Optimal values on Original dataset'
+                    )
+                    
+                    # Save figure and open HTML file
+                    fig1.write_html(witnesses_html_path)
+                    subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
+                
+                else:
+                    # Extract data for plotting
+                    x1 = orig.iloc[:, 0]
+                    y1 = orig.iloc[:, 1]
+                    x = df.iloc[:, 0]
+                    y = df.iloc[:, 1]
+                    
+                    # Reset index for consistency
+                    x.reset_index(drop=True, inplace=True)
+                    y.reset_index(drop=True, inplace=True)
+                    
+                    # Create scatter plot
+                    plt.scatter(x1, y1, color='#8ad347', label='Objective function')
+                    plt.scatter(x, y, color='#00ffff', label='Witnesses')
+                
+                    plt.xlabel('X')
+                    plt.ylabel('Y', rotation=0)
+                    plt.title('Optimization')
+                    plt.grid(True)
+                    plt.legend()
+                    plt.savefig(opt_out)
+        else:
+            ic("No witnesses to plot")
+
 
 def save_to_csv(data, data_version):
     """
@@ -73,7 +306,6 @@ def save_to_csv(data, data_version):
     - data_version: Indicates which version of data is being saved.
     """
     global setno, exp
-
     # Create DataFrame based on data version
     if data_version == 'witnesses':
         if len(data) == 3:
@@ -86,80 +318,6 @@ def save_to_csv(data, data_version):
             df.to_csv(witnesses_csv_path, mode='a', header=False, index=False)
         else:
             df.to_csv(witnesses_csv_path, mode='w', header=True, index=False)
-
-def predicted_final(objective):
-    """
-    Logs the final predicted objective value.
-
-    Parameters:
-    - objective: The final predicted objective value.
-    """
-    global low_bound
-    low_bound = objective
-    ic(objective)
-
-# Plot and save prediction data
-def prediction_save(X_test, y_test_pred, mm_scaler_resp):
-    """
-    Plots test data against original data and saves the plot.
-    
-    Parameters:
-    - X_test: Test features.
-    - y_test_pred: Predicted values.
-    - mm_scaler_resp: Scaler used to inverse transform predictions.
-    """
-    ind = X_test.index
-    data_version = 'test'
-    
-    # Inverse transform the data
-    y_test_pred = mm_scaler_resp.inverse_transform(y_test_pred)
-    X_test = mm_scaler_resp.inverse_transform(X_test)
-    
-    # Convert to DataFrame
-    y_test_pred = pd.DataFrame(y_test_pred)
-    X_test = pd.DataFrame(X_test)
-    
-    # Load original data
-    orig_file = pd.read_csv("smlp_toy_basic.csv")
-    
-    # Extract original and predicted data
-    x = orig_file.iloc[ind, :-1]
-    y = y_test_pred.iloc[:, 0]
-    
-    # Create prediction DataFrame
-    prediction_df = pd.concat([x, y], axis=1)
-    
-    # Call the main plotting function
-    main(x, y, data_version)
-
-def save_to_txt(data):
-    """
-    Saves data and dataset statistics to a text file.
-    
-    Parameters:
-    - data: Data to be saved. Can be a list or a single value.
-    """
-    global setno, exp
-    
-    # Load original data for bounds
-    orig_data = pd.read_csv('smlp_toy_basic.csv')
-    x_bounds = f"\nmin x: {orig_data.iloc[:, 0].min()} max x: {orig_data.iloc[:, 0].max()}"
-    y_bounds = f"\nmin y: {orig_data.iloc[:, 1].min()} max y: {orig_data.iloc[:, 1].max()}"
-    
-    if len(orig_data.columns) > 2:
-        z_bounds = f"\nmin z: {orig_data.iloc[:, 2].min()} max z: {orig_data.iloc[:, 2].max()}"
-
-    orig_len = f"\nlength of dataset: {len(orig_data)}"
-
-    # Save data to text file
-    with open(txt_file, 'a') as f:
-        if isinstance(data, list):
-            f.write(f"{setno}\n{exp}\n")
-            for index, arg in enumerate(data[1:], start=1):
-                f.write(f"Argument {index}: {arg}\n")
-            f.write(x_bounds + y_bounds + (z_bounds if len(orig_data.columns) > 2 else '') + orig_len + "\n")
-        else:
-            f.write(f"\n{data}\n")
 
 def copy_from():
     """
@@ -202,75 +360,6 @@ def copy_data(setno):
                 
     except FileNotFoundError:
         print("Source folder not found.")
-
-def witnesses():
-    """
-    Creates and saves plots based on witnesses data and original data.
-    """
-    orig = pd.read_csv('/home/x/temp/smlp/smlp_toy_basic.csv')
-    ic(low_bound['objective'])
-    lower_bound = float(low_bound['objective'])
-    
-    # Check if 3D plotting is required
-    if len(orig.columns) > 2:
-        df = pd.read_csv(witnesses_csv_path)
-        df.drop_duplicates(inplace=True)
-        
-        # Extract data for plotting
-        z_orig = orig.iloc[:, 2]
-        y_orig = orig.iloc[:, 1]
-        x_orig = orig.iloc[:, 0]
-        z_additional = df.iloc[:, 2]
-        y_additional = df.iloc[:, 1]
-        x_additional = df.iloc[:, 0]
-        
-        # Create 3D scatter plot
-        fig1 = go.Figure(data=[
-            go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
-            go.Scatter3d(x=x_additional, y=y_additional, z=z_additional, mode='markers', marker=dict(color=z_additional, colorscale='Hot', colorbar=dict(title='title')), name='Optimal value')
-        ])
-        
-        # Update layout
-        fig1.update_layout(
-            scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
-            title='Scatter Plot of Optimal values on Original dataset'
-        )
-        
-        # Save figure and open HTML file
-        fig1.write_html(witnesses_html_path)
-        subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
-    
-    else:
-        df = pd.read_csv(witnesses_csv_path)
-        df.drop_duplicates(inplace=True)
-        df.to_csv(witnesses_csv_path, index=False)
-        
-        # Extract data for plotting
-        x1 = orig.iloc[:, 0]
-        y1 = orig.iloc[:, 1]
-        x = df.iloc[:, 0]
-        y = df.iloc[:, 1]
-        
-        distances = np.abs(y - lower_bound)
-        norm = Normalize(vmin=distances.min(), vmax=distances.max())
-        # Reset index for consistency
-        x.reset_index(drop=True, inplace=True)
-        y.reset_index(drop=True, inplace=True)
-        
-        # Create scatter plot
-        plt.scatter(x1, y1, color='#8ad347', label='Objective function')
-        #plt.scatter(x, y, color='#00ffff', label='Witnesses')
-        scatter = plt.scatter(x, y, c=distances, cmap='viridis', norm=norm, label='Witnesses', edgecolor='k')
-
-        cbar = plt.colorbar(scatter, label='Distance from approximated maximum')
-
-        plt.axhline(y=lower_bound, color='0', linestyle='--', label=f'Threshold lower bound (y = {lower_bound})')
-        plt.xlabel('X')
-        plt.ylabel('Y', rotation=0)
-        plt.title('Optimization')
-        plt.grid(True)
-        plt.legend()
-        plt.savefig(opt_out)
 
 def main(x, y, data_version):
     """
