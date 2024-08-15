@@ -94,6 +94,7 @@
     "nnet_encoding": "nested",
     "objectives_expressions": null,
     "objectives_names": "None",
+    "optimization_strategy": "lazy",
     "optimize_pareto": true,
     "output_directory": "./",
     "poly_sklearn_copy_X": true,

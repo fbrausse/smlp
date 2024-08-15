@@ -46,6 +46,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int = 64
+        self._DEF_OPTIMIZATION_STRATEGY:str = 'lazy' # TODO !!! define enum type for lazy/eager and API functions to get the strategy value, so neither strings no enum types will be ued outside this file
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:
@@ -101,7 +102,10 @@ class SmlpOptimize:
                 'help': 'Should solver problem instance vacuity check be performed? ' + 
                     'Vacuity checks whether the constraints are consistent and therefore at least ' +
                     'one satisfiable assignment exist to solver constraints. Relevant in "verify", "query", ' +
-                    '"optimize" and "optsyn" modes [default: ' + str(self._DEF_VACUITY_CHECK) + ']'}
+                    '"optimize" and "optsyn" modes [default: ' + str(self._DEF_VACUITY_CHECK) + ']'},
+            'optimization_strategy': {'abbr':'opt_strategy', 'default':str(self._DEF_OPTIMIZATION_STRATEGY), 'type':str,
+                'help':'Strategy (algorithm) to use for single objective optimization in the "optimize" and "optsyn" modes. ' +
+                    'Supported options are "lazy" and "eager" [default {}]'.format(str(self._DEF_OPTIMIZATION_STRATEGY))},
         }
         
         # initialize the fields in the more status dictionary mode_status_dict as unknown/running
@@ -223,6 +227,179 @@ class SmlpOptimize:
                 raise Exception('Objective ' + str(o) + ' is constant ' + str(b['min']) + ' on training set')
         return objv_bounds_dict
 
+    # internal optimization procedure for eager single objective optimization
+    def bin_opt_max(self, smlp_domain:smlp.domain, model_full_term_dict:dict, phi_cond:smlp.form2, objv_name:str, objv_expr:str, 
+            objv_term:smlp.term2, l0:float, u0:float, epsilon:float, solver_logic:str):
+        self._opt_tracer.info('bin_opt_max start, objective_thresholds_u0_l0, {} : {}'.format(str(u0),str(l0)))
+        assert l0 < u0
+        l = (-np.inf) # lower bound 
+        u = np.inf # upper bound 
+        p_cand = None # initializing, assertion ensures it gets assigned
+        while True:
+            self._opt_tracer.info('bin_opt_max iter, objective_thresholds_u0_l0_u_l, {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l)))
+            #print('top of while loop: l0', l0, 'u0', u0, 'l', l, 'u', u)
+            if u == np.inf:
+                (T, u0) = (u0, 2*u0 - l0)
+            elif l == -np.inf:
+                (T, l0) = (l0, 2*l0 - u0)
+            else:
+                T = (l + u) / 2
+            assert l0 < u0
+            assert l < u
+            
+            quer_form = self._smlpTermsInst.smlp_ge(objv_term, smlp.Cnst(T)); #print('quer_form', quer_form)
+            quer_expr = '{} >= {}'.format(objv_expr, str(T)) if objv_expr is not None else None
+            quer_name = objv_name + '_' + str(T)
+            #quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
+            #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
+            self._opt_tracer.info('adjusted thesholds, objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
+            max_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+                smlp_domain, model_full_term_dict, True, solver_logic)
+            max_solver.add(phi_cond) 
+            #print('objv_expr', objv_expr, 'objv_term', objv_term, flush=True); 
+            max_solver.add(quer_form)    
+            #print('solving threshold', T, flush=True)
+            #res = self._queryInst.find_candidate(max_solver); print('res', res)
+            res = self._queryInst._modelTermsInst.smlp_solver_check(max_solver, 'max_ca', self._queryInst._lemma_precision); #print('res', res, flush=True)
+            assert res is not None
+            assert not self._modelTermsInst.solver_status_unknown(res)
+            if self._modelTermsInst.solver_status_unsat(res):
+                self._opt_tracer.info('bin_opt_max iter, unsat')
+                u = T
+            else:
+                self._opt_tracer.info('bin_opt_max iter, sat')
+                l = T
+                p_cand = self._modelTermsInst.get_solver_knobs_model(res); #print('p_cand', p_cand, flush=True)
+            assert l < u
+            if l + epsilon > u:
+                break
+        self._opt_tracer.info('bin_opt_max end, p_cand_l_u, {} : {} : {}'.format(str(p_cand), str(l),str(u)))
+        assert p_cand is not None
+        assert l < u
+        return p_cand, l, u   
+    
+    # internal optimization procedure for eager single objective optimization (finding min reduced to finding max)
+    def bin_opt_min(self, smlp_domain:smlp.domain, model_full_term_dict:dict, phi_cond:smlp.form2, objv_name:str, objv_expr:str, 
+            objv_term:smlp.term2, l0:float, u0:float, epsilon:float, solver_logic:str):
+        self._opt_tracer.info('bin_opt_min start, objective_thresholds_u0_l0, {} : {}'.format(str(u0),str(l0)))
+        assert l0 < u0
+        p_cand, l_prime, u_prime = self.bin_opt_max(smlp_domain, model_full_term_dict, phi_cond, '_negated_'+objv_name, None if objv_expr is None else '-('+objv_expr+')', 
+            self._smlpTermsInst.smlp_neg(objv_term), (-u0), (-l0), epsilon, solver_logic)
+        self._opt_tracer.info('bin_opt_min end, p_cand_l_u, {} : {} : {}'.format(str(p_cand), str((-u_prime)),str((-l_prime))))
+        return p_cand, (-u_prime), (-l_prime)
+    
+    
+    # an improved / eager optimization procedure
+    def optimize_single_objective_eager(self, model_full_term_dict:dict, objv_name:str, objv_expr:str, objv_term:smlp.term2, 
+            epsilon:float, smlp_domain:smlp.domain, eta:smlp.form2, theta_radii_dict:dict, alpha:smlp.form2, beta:smlp.form2, delta:float, solver_logic:str, 
+            scale_objectives:bool, orig_objv_name:str, objv_bounds:dict, call_info=None, sat_approx=False, sat_precision=64, save_trace=False,
+            l0=None, u0=None): #, l=(-np.inf), u=np.inf): #TODO !!! l, u are not needed???
+
+        self._opt_logger.info('Optimize single objective with eager strategy ' + str(objv_name) + ': Start')
+        self._opt_tracer.info('single_objective_u0_l0, {} : {}'.format(str(u0),str(l0)))
+        #print('eta', eta); print('alpha', alpha); print('beta', beta); print('objv_term', objv_term)
+        phi_cand = self._smlpTermsInst.smlp_and_multi([eta, alpha, beta]); #print('phi_cand', phi_cand)
+        
+        P = [] # known candidates and bounds
+        L = self._smlpTermsInst.smlp_true # lemmas
+        u_cand = np.inf # upper bound for candidate # TODO !!! use argument u or delete this argument
+        l_stab = (-np.inf) # lower bound for stability # TODO !!! use argument l or delete this argument
+        u_e = u0 # upper bound estimat
+        l_e = l0 # ower bound estimate
+        assert l_e < u_e
+        #iter_count = 0
+        while True:
+            self._opt_tracer.info('eager opt iter, objective_thresholds_ue_le_ucand_lstab, {} : {} : {} : {}'.format(str(u_e),str(l_e),str(u_cand),str(l_stab)))
+            if l_stab + epsilon > u_cand:
+                break
+            phi_cond = self._smlpTermsInst.smlp_and(phi_cand, L); #print('phi_cond', phi_oand)
+            # TODO !!!!!!! temp workaround to use model_full_term_dict instead of None !!!!!!!!!!
+            #candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+            #    smlp_domain, model_full_term_dict, True, solver_logic)
+            candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+                smlp_domain, None, True, solver_logic)
+            candidate_solver.add(phi_cond)
+            #print('solving phi_cond', flush=True)
+            # TODO !!!! use self._modelTermsInst.smlp_solver_check() directly
+            res = self._queryInst._modelTermsInst.smlp_solver_check(candidate_solver, 'ca_eager', self._queryInst._lemma_precision)
+            assert res is not None
+            assert not self._modelTermsInst.solver_status_unknown(res)
+            if self._modelTermsInst.solver_status_unsat(res):
+                break
+            p_cand, l_cand, u_cand = self.bin_opt_max(smlp_domain, model_full_term_dict, phi_cond, objv_name, objv_expr, objv_term, l_e, u_e, epsilon, solver_logic)
+            u_e = u_cand
+            l_e = l_cand
+            # TODO !!!!!!    verify the next line of code, inserted to fix algorithm
+            assert l_e < u_e
+            # Here we do not use delta (use delta = None) because theta_form is not used in lemma generation
+            theta_p_cand = self._modelTermsInst.compute_stability_formula_theta(p_cand, None, theta_radii_dict, True)
+            #print('theta_p_cand', theta_p_cand); print('l_stab', l_stab); print('objv_term', objv_term, flush=True)
+            # creating formula objv_term <= l_stab
+            if l_stab == (-np.inf):
+                low_thresh_form = self._smlpTermsInst.smlp_false
+            else:
+                low_thresh_form = self._smlpTermsInst.smlp_le(objv_term, self._smlpTermsInst.smlp_cnst(l_stab)); 
+            #print('low_thresh_form', low_thresh_form, flush=True)
+            beta_implies_thresh_form = self._smlpTermsInst.smlp_implies(beta, low_thresh_form); 
+            #print('beta_implies_thresh_form', beta_implies_thresh_form, flush=True)
+            #phi_cex_cand = self._smlpTermsInst.smlp_and_multi([theta_p_cand, alpha, beta_implies_thresh_form])
+            #print('phi_cex_cand', phi_cex_cand)
+            cex_cand_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+                smlp_domain, model_full_term_dict, True, solver_logic)
+            # adding the conjuncts of formula phi_cex_cand to cex_cand_solver:
+            # phi_cex_cand = self._smlpTermsInst.smlp_and_multi([theta_p_cand, alpha, beta_implies_thresh_form])
+            cex_cand_solver.add(alpha)
+            cex_cand_solver.add(theta_p_cand)
+            cex_cand_solver.add(beta_implies_thresh_form)
+            # TODO !!!!!! give a proper name to solver problem below
+            #print('solving phi_cex_cand', flush=True)
+            res = self._modelTermsInst.smlp_solver_check(cex_cand_solver, 'phi_cex_cand', self._queryInst._lemma_precision)
+            assert not self._modelTermsInst.solver_status_unknown(res)
+            if self._modelTermsInst.solver_status_sat(res):
+                p_cex, y_cex = (self._modelTermsInst.get_solver_knobs_model(res), self._modelTermsInst.get_solver_resps_model(res))
+                #print('SAT:', 'p_cex', p_cex, 'y_cex', y_cex, flush=True)
+            else:
+                #print('UNSAT', flush=True)
+                phi_cex = self._smlpTermsInst.smlp_and(theta_p_cand, alpha)
+                #print('theta_p_cand', theta_p_cand, 'phi_cex', phi_cex, flush=True)
+                l_stab_prev = l_stab # remember l_stab before it gets updated -- just fpr reporting
+                # TODO !!!!! 
+                p_cex, l_stab, u_cex = self.bin_opt_min(smlp_domain, model_full_term_dict, phi_cex, objv_name, objv_expr, objv_term, l_e, u_e, epsilon, solver_logic)
+                #p_cex, l_stab, u_cex = self.bin_opt_min(smlp_domain, model_full_term_dict, phi_cex, objv_name, objv_expr, objv_term, u_e, l_e, epsilon, solver_logic)
+                #print('p_cex', p_cex, 'l_stab', l_stab, 'u_cex', u_cex, flush=True)
+                
+                self._opt_logger.info('Increasing threshold lower bound for objective ' + str(objv_name) + ' from ' + str(l_stab_prev) + ' to ' + str(l_stab))
+                #if objv_expr is not None:
+                '''
+                stable_witness_terms[objv_name] = objv_witn_val_term
+                if call_info is not None and call_info['update_thresholds'] and update_progress_report:
+                    witness_vals_dict = self._smlpTermsInst.witness_term_to_const(stable_witness_terms, sat_approx,  
+                        sat_precision); #print('witness_vals_dict', witness_vals_dict)
+                    #if objv_name in witness_vals_dict:
+                    del witness_vals_dict[objv_name]; #print('witness_vals_dict after del', witness_vals_dict)
+                    #print('call_info', call_info, 'iter', iter_count)
+                    s = call_info['objv_thresholds']
+                    for i in call_info['active_objv']:
+                        s[i] = l
+                    #print('s for single objv', s)
+                    self.report_current_thresholds(s, witness_vals_dict, self.objv_bounds_dict, self.objv_names, self.objv_exprs, 
+                        False, (call_info['global_iter'], iter_count), scale_objectives)
+                '''
+                l_e = l_stab; #print('l_e', l_e, flush=True)
+                assert l_e < u_e
+                P.append((p_cand, l_cand, u_cand, l_stab))
+            
+            theta_p_cex_delta = self._modelTermsInst.compute_stability_formula_theta(p_cex, delta, theta_radii_dict, True)
+            L = self._smlpTermsInst.smlp_and(L, self._smlpTermsInst.smlp_not(theta_p_cex_delta))
+        # compute and return max value of l_stab within P
+        # TODO !!!! what if P is empty?
+        assert len(P) > 0
+        #print('P', P)
+        l_res = max([tup[3] for tup in P]); 
+        #print('optimize_single_objective_eager and with l_res', l_res, flush=True)
+        self._opt_logger.info('Optimize single objective with eager strategy ' + str(objv_name) + ': end')
+        return l_res
+    
     # Optimization for single objective.
     # assuming in first implementation that objectives are scaled to [0,1] -- not using
     # objv_bounds, data_scaler, objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict, 
@@ -262,7 +439,9 @@ class SmlpOptimize:
             else:
                 T = (l + u) / 2
             #quer_form = objv_term > smlp.Cnst(T)
-            quer_form = objv_term >= smlp.Cnst(T)
+            #quer_form = objv_term >= smlp.Cnst(T) 
+            # TODO !!!! use the following, avoid usage of >=
+            quer_form = self._smlpTermsInst.smlp_ge(objv_term, smlp.Cnst(T));
             quer_expr = '{} >= {}'.format(objv_expr, str(T)) if objv_expr is not None else None
             quer_name = objv_name + '_' + str(T)
             quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
@@ -279,7 +458,7 @@ class SmlpOptimize:
                 u = T
                 #print('objv_bounds', objv_bounds)
                 # only the last value in P is used, and we want it to contain at least one element even if lower bound
-                # is not emproved within this function -- that is, stable_witness_status is never 'STABLE_SAT'. 
+                # is not improved within this function -- that is, stable_witness_status is never 'STABLE_SAT'. 
                 # For that reason we update P also in case stable_witness_status == 'UNSAT'. Unlike the case when
                 # stable_witness_status == 'STABLE_SAT', stable_witness_terms here will not include values of objectives
                 # or scaled objectives because these values are taken based on stable witness (stable candidate) which
@@ -417,9 +596,10 @@ class SmlpOptimize:
     # optimize multiple objectives but each one separately -- the objectives might have optimal value
     # in different sub-spaces in the configuration space. This function essentially simply iterates in
     # the objectives and finds a stable optimum for each one using function optimize_single_objective().
+    # TODO !!! strategy "eager" is not supported yet
     def optimize_single_objectives(self, feat_names:list, resp_names:list, #X:pd.DataFrame, y:pd.DataFrame, 
             model_full_term_dict:dict, objv_names:list, objv_exprs:list, objv_bounds_dict:dict, alpha:smlp.form2, beta:smlp.form2, 
-            eta:smlp.form2, theta_radii_dict:dict, epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, scale_objv:bool,  
+            eta:smlp.form2, theta_radii_dict:dict, epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, strategy:str,  scale_objv:bool,  
             data_scaler:str, sat_approx=False, sat_precision=64, save_trace=False):
         #assert X is not None
         #assert y is not None
@@ -456,7 +636,7 @@ class SmlpOptimize:
     # algorithm to determaine what is the best greatest lower bound that we can find and fix for these objectives.
     def active_objectives_max_min_bounds(self, model_full_term_dict:dict, objv_terms_dict:dict, t:list[float], 
             smlp_domain:smlp.domain, alpha:smlp.form2, beta:smlp.form2, eta:smlp.form2, theta_radii_dict, epsilon:float, 
-            delta:float, solver_logic:str, direction, scale_objectives, objv_bounds, update_thresholds_dict, 
+            delta:float, solver_logic:str, strategy:str, direction, scale_objectives, objv_bounds, update_thresholds_dict, 
             sat_approx:bool, sat_precision:int, save_trace:bool):
         assert direction == 'up'
         eta_F_t = eta
@@ -515,12 +695,20 @@ class SmlpOptimize:
         update_thresholds_dict['objv_thresholds'] = t
         #print('t', t, 't_vals', t)
         #print('update_thresholds_dict', update_thresholds_dict)
-        r = self.optimize_single_objective(model_full_term_dict, min_name, None, min_objs, 
-            epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
-            scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
-            sat_approx, sat_precision, save_trace, l0, u0, l, u)
-
-        #print('r', r)
+        if strategy == 'lazy':
+            r = self.optimize_single_objective(model_full_term_dict, min_name, None, min_objs, 
+                epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
+                scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
+                sat_approx, sat_precision, save_trace, l0, u0, l, u)
+        elif strategy == 'eager':
+            r = {}
+            r['threshold_lo'] = self.optimize_single_objective_eager(model_full_term_dict, min_name, None, min_objs, 
+                epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
+                scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
+                sat_approx, sat_precision, save_trace, l0, u0) #, l, u)
+        else:
+            raise Exception('Unsupported optimization strategy ' + str(strategy))
+        
         c_up = r['threshold_up'] if 'threshold_up' in r else np.inf; #print('c_up', c_up)
         c_lo = r['threshold_lo']; #print('c_lo', c_lo)
         assert c_lo != np.inf
@@ -652,7 +840,7 @@ class SmlpOptimize:
     def optimize_pareto_objectives(self, feat_names:list[str], resp_names:list[str], 
             model_full_term_dict:dict, objv_names:list, objv_exprs:list, objv_bounds_dict:dict, alpha:smlp.form2, 
             beta:smlp.form2, eta:smlp.form2, theta_radii_dict:dict,
-            epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, scale_objv:bool, data_scaler:str, 
+            epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, strategy:str, scale_objv:bool, data_scaler:str, 
             sat_approx=False, sat_precision=64, save_trace=False):
         self._opt_logger.info('Pareto optimization: Start')
         
@@ -699,7 +887,7 @@ class SmlpOptimize:
             call_info_dict = {'global_iter': call_n, 'update_thresholds': True, 'active_objv': K} 
             self._opt_tracer.info('pareto_iteration,{},{},{}'.format(str(call_n), '__'.join(objv_names), '__'.join([str(e) for e in s])))
             c_lo, c_up, witness = self.active_objectives_max_min_bounds(model_full_term_dict, objv_terms_dict, 
-                s, smlp_domain, alpha, beta, eta, theta_radii_dict, epsilon, delta, solver_logic, direction,
+                s, smlp_domain, alpha, beta, eta, theta_radii_dict, epsilon, delta, solver_logic, strategy, direction,
                 scale_objectives, objv_bounds_dict, call_info_dict, sat_approx, sat_precision, save_trace)
             #print('c_lo', c_lo, 'c_up', c_up); print('witness', witness);
             assert c_lo != np.inf
@@ -821,7 +1009,7 @@ class SmlpOptimize:
             self._opt_tracer.info('synthesis_feasibility')
             quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'synthesis_feasibility', 'True', beta, 
                 domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
-            #print('quer_res', quer_res)
+            #print('beta', beta); print('quer_res', quer_res)
             if quer_res['query_status'] == 'UNSAT':
                 self._opt_logger.info('Pareto optimization synthesis feasibility check: End')
                 return True, None
@@ -853,7 +1041,7 @@ class SmlpOptimize:
     #     computing optimal confoguurations (in optimize and optsyn modes)
     def smlp_optimize(self, syst_expr_dict:dict, algo:str, model:dict, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, 
             feat_names:list[str], resp_names:list[str], 
-            objv_names:list[str], objv_exprs, pareto:bool, #asrt_names:list[str], asrt_exprs, 
+            objv_names:list[str], objv_exprs, pareto:bool, strategy:str, #asrt_names:list[str], asrt_exprs, 
             quer_names:list[str], quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,  
@@ -906,19 +1094,19 @@ class SmlpOptimize:
         if pareto:
             self.optimize_pareto_objectives(feat_names, resp_names, model_full_term_dict, #X, y, 
                 objv_names, objv_exprs, objv_bounds_dict, alpha, beta, eta, theta_radii_dict, 
-                epsilon, domain, delta, solver_logic, scale_objv, data_scaler,
+                epsilon, domain, delta, solver_logic, strategy, scale_objv, data_scaler,
                 sat_approx=True, sat_precision=64, save_trace=False)
         else:
             self.optimize_single_objectives(feat_names, resp_names, model_full_term_dict, #X, y, 
                 objv_names, objv_exprs, objv_bounds_dict, alpha, beta, eta, theta_radii_dict, 
-                epsilon, domain, delta, solver_logic, scale_objv, data_scaler, 
+                epsilon, domain, delta, solver_logic, strategy, scale_objv, data_scaler, 
                 sat_approx=True, sat_precision=64, save_trace=False)
         
     # SMLP optsyn mode that performs multi-objective optimization (pareto or per-objective) and insures
     # that with the selected configuration of knobs all assertions are also satisfied (in addition to
     # any other model interface constraints or configuration stability constraints)
     def smlp_optsyn(self, syst_expr_dict:dict, algo, model, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
-            objv_names, objv_exprs, pareto, asrt_names, asrt_exprs, quer_names, quer_exprs, delta:float, epsilon:float, 
+            objv_names, objv_exprs, pareto:bool, strategy:str, asrt_names, asrt_exprs, quer_names, quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
@@ -975,10 +1163,10 @@ class SmlpOptimize:
         if pareto:
             self.optimize_pareto_objectives(feat_names, resp_names, model_full_term_dict, #X, y, 
                 objv_names, objv_exprs, objv_bounds_dict, alpha, beta, eta, theta_radii_dict, 
-                epsilon, domain, delta, solver_logic, scale_objv, data_scaler,
+                epsilon, domain, delta, solver_logic, strategy, scale_objv, data_scaler,
                 sat_approx=True, sat_precision=64, save_trace=False)            
         else:
             self.optimize_single_objectives(feat_names, resp_names, model_full_term_dict, #X, y, 
                 objv_names, objv_exprs, objv_bounds_dict, alpha, beta, eta, theta_radii_dict, 
-                epsilon, domain, delta, solver_logic, scale_objv, data_scaler, 
+                epsilon, domain, delta, solver_logic, strategy, scale_objv, data_scaler, 
                 sat_approx=True, sat_precision=64, save_trace=False)

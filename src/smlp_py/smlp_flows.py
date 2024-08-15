@@ -353,7 +353,7 @@ class SmlpFlows:
                 self.optInst.smlp_optimize(syst_expr_dict, args.model, model,
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
-                    quer_names, quer_exprs, 
+                    args.optimization_strategy, quer_names, quer_exprs, 
                     delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
@@ -362,7 +362,8 @@ class SmlpFlows:
                 
                 #self.logger.info('self.optInst.best_config_dict {}'.format(str(self.optInst.best_config_dict)))
                 if syst_expr_dict is not None:
-                    if 'final' in self.optInst.best_config_dict:
+                    # TODO !!!! support also for the eager strategy
+                    if 'final' in self.optInst.best_config_dict and args.optimization_strategy == 'lazy':
                         stability_region_dict = self.specInst.get_spec_stability_ragion_bounds_dict(self.optInst.best_config_dict['final'])
                         self.refineInst.compute_rmse(stability_region_dict, model, args.model, model_features_dict, resp_names, 
                             args.model_per_response, syst_expr_dict, mm_scaler_resp, args.interactive_plots, args.prediction_plots)
@@ -370,7 +371,7 @@ class SmlpFlows:
                 self.optInst.smlp_optsyn(syst_expr_dict, args.model, model, 
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
-                    asrt_names, asrt_exprs, quer_names, quer_exprs, 
+                    args.optimization_strategy, asrt_names, asrt_exprs, quer_names, quer_exprs, 
                     delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 

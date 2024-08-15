@@ -270,6 +270,11 @@ class SmlpTerms:
     def smlp_sub(self, term1:smlp.term2, term2:smlp.term2):
         return op.sub(term1, term2)
     
+    # negation of terms
+    @conditional_cache #@conditional_cache #@functools.cache
+    def smlp_neg(self, term:smlp.term2):
+        return op.neg(term)
+    
     # multiplication
     @conditional_cache #@functools.cache
     def smlp_mult(self, term1:smlp.term2, term2:smlp.term2):
@@ -2635,6 +2640,23 @@ class ModelTerms(ScalerTerms):
         else:
             return None
     
+    # we return value assignmenets to interface (input, knob, output) variables defined in the Spec file
+    # (and not values assigned to any other variables that might be defined additionally as part of solver domain,
+    # like variables tree_i_resp that we decalre as part of domain for tree models with flat encoding).
+    def get_solver_knobs_model(self, res):
+        if self.solver_status_sat(res):
+            reduced_model = dict((k,v) for k,v in res.model.items() if k in self._specInst.get_spec_knobs)
+            return reduced_model
+        else:
+            return None
+    
+    # we return value assignmenets only to the response (output) variables defined in the Spec file   
+    def get_solver_resps_model(self, res):
+        if self.solver_status_sat(res):
+            reduced_model = dict((k,v) for k,v in res.model.items() if k in self._specInst.get_spec_responses)
+            return reduced_model
+        else:
+            return None
     # function to check that alpha and eta constraints on inputs and knobs are consistent.
     # TODO: model_full_term_dict is not required here but omiting it causes z3 error 
     # result smlp::z3_solver::check(): Assertion `m.num_consts() == size(symbols)' failed.
