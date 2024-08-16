@@ -43,20 +43,12 @@ class Variable:
         Int = 1
 
     class Bounds:
-        lower = -np.inf
-        upper = np.inf
+        def __init__(self, lower=-np.inf, upper=np.inf):
+            self.lower = lower
+            self.upper = upper
 
     def __init__(self, form: Type, index=None, name="", is_input=True):
-        if is_input and not index:
-            self.index = Variable._input_index
-            Variable._input_index += 1
-        elif is_input and index:
-            # auxiliary scaled variable
-            self.index = index
-        else:
-            self.index = Variable._output_index
-            Variable._output_index += 1
-
+        self.index = index
         self.form = form
         self.name = name
         self.is_input = is_input
@@ -73,7 +65,7 @@ class Variable:
         self.bounds.upper = upper
 
 class MarabouVerifier(Verifier):
-    def __init__(self, model_path=None, parser=None):
+    def __init__(self, parser=None, variable_ranges=None, is_temp=False):
         # MarabouNetwork containing network instance
         self.network = None
 
@@ -86,6 +78,8 @@ class MarabouVerifier(Verifier):
         # List of variables
         self.variables = []
 
+        self.variable_ranges = variable_ranges
+
         self.unscaled_variables = []
 
         self.model_file_path = "./"
@@ -95,19 +89,36 @@ class MarabouVerifier(Verifier):
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
 
-        # Stack for keeping ipq
-        self.ipq_stack = []
+        self.input_index = 0
+        self.output_index = 0
 
         self.parser = parser
         self.network_num_vars = None
+        self.init_variables(is_temp=is_temp)
+
+        if self.variable_ranges:
+            self.initialize()
 
 
-    def initialize(self):
+    def initialize(self, variable_ranges=None):
+        if variable_ranges:
+            self.variable_ranges = variable_ranges
+
         self.model_file_path = self.find_file_path('../../../result/abc_smlp_toy_basic_nn_keras_model_complete.h5')
         self.convert_to_pb()
         self.load_json()
         self.network_num_vars = self.network.numVars
         self.add_unscaled_variables()
+        self.create_integer_range()
+
+    def reset(self):
+        self.network.clear()
+        self.network = Marabou.read_tf('model.pb')
+        self.unscaled_variables = []
+        self.add_unscaled_variables()
+        # Default bounds for network
+        for equation in self.equations:
+            self.apply_restrictions(equation)
 
 
     def load_json(self):
@@ -148,17 +159,35 @@ class MarabouVerifier(Verifier):
 
 
 
-    def init_variables(self, inputs: List[Tuple[str, str]], outputs: List[Tuple[str, str]]) -> None:
-        for input_var in inputs:
-            name, type = input_var
-            var_type = Variable.Type.Real if type.lower() == "real" else Variable.Type.Int
-            self.variables.append(Variable(var_type, name=name, is_input=True))
+    def init_variables(self, is_temp=False) -> None:
+        self.create_variables(is_input=True, is_temp=is_temp)
+        self.create_variables(is_input=False, is_temp=is_temp)
 
-        for output_var in outputs:
-            name, type = output_var
+    def create_variables(self, is_input=True, is_temp=False):
+        store = self.parser.inputs if is_input else self.parser.outputs
+        for var in store:
+            name, type = var
             var_type = Variable.Type.Real if type.lower() == "real" else Variable.Type.Int
-            self.variables.append(Variable(var_type, name=name, is_input=False))
+            if name.startswith(('x', 'p', 'y')):
+                index = self.input_index if is_input else self.output_index
+                self.variables.append(Variable(var_type, name=name, index=index, is_input=is_input))
 
+                if is_input:
+                    self.input_index += 1
+                else:
+                    self.output_index += 1
+
+    def create_integer_range(self):
+        integer_variables = [variable for variable in self.variables if variable.form == Variable.Type.Int]
+        for variable in integer_variables:
+            int_range = self.variable_ranges.get(variable.name)
+            if not int_range:
+                raise Exception(f"Need integer rangers for variable {variable.name}")
+            ranges = int_range['interval']
+            lower, upper = ranges[0], ranges[-1]
+            variable.bounds = Variable.Bounds(lower=lower, upper=upper)
+            integer_formula = self.parser.create_integer_disjunction(f'{variable.name}_unscaled', (lower, upper))
+            self.add_permanent_constraint(integer_formula)
 
 
     def add_unscaled_variables(self):
@@ -200,22 +229,15 @@ class MarabouVerifier(Verifier):
                 if is_unscaled:
                     return variable, variable.index
                 elif is_output:
-                    index -= Variable.get_index("input")
+                    index -= self.input_index
                 index = self.network.outputVars[0][0][index] if is_output else self.network.inputVars[0][0][index]
                 return variable, index
         return None
 
-    def reset(self):
-        self.network.clear()
-        self.network = Marabou.read_tf('model.pb')
-        self.unscaled_variables = []
-        self.add_unscaled_variables()
-        # Default bounds for network
-        for equation in self.equations:
-            self.apply_restrictions(equation)
 
     def add_permanent_constraint(self, formula):
         self.equations.append(formula)
+        self.apply_restrictions(formula)
 
     def add_bound(self, variable:str, value, direction="upper", strict=True):
         var, var_index = self.get_variable_by_name(f"{variable}_unscaled")
@@ -232,32 +254,14 @@ class MarabouVerifier(Verifier):
             self.network.setLowerBound(var_index, value)
             var.set_lower_bound(value)
 
+    def add_equality(self, variable, value):
+        var, var_index = self.get_variable_by_name(f"{variable}_unscaled")
 
-    # TODO: CHECK IF MARABOU NATIVELY SUPPORTS INTEGERS: it does not
-    def add_bounds(self, variable, bounds=None, num="real", grid=None):
-        var, is_output = self.get_variable_by_name(variable)
-        if var is None:
-            return None
+        eq = MarabouUtils.Equation(MarabouCore.Equation.EQ)
+        eq.addAddend(1, var_index)
+        eq.setScalar(value)
+        self.network.addEquation(eq)
 
-        # TODO: handle case when one of the two is None
-        if bounds:
-            lower, upper = bounds
-            self.network.setLowerBound(var.index, lower)
-            self.network.setUpperBound(var.index, upper)
-
-            if num == "int":
-                # add all distinct integer values
-                grid = range(lower, upper+1)
-
-        if num in ["int", "grid"] and grid is not None:
-            disjunction = []
-            for i in grid:
-                eq1 = MarabouUtils.Equation(MarabouCore.Equation.EQ)
-                eq1.addAddend(1, var.index)
-                eq1.setScalar(i)
-                disjunction.append([eq1])
-
-            self.network.addDisjunctionConstraint(disjunction)
 
     def apply_restrictions(self, formula, need_simplification=False):
         formula = self.parser.simplify(formula)
@@ -311,7 +315,7 @@ class MarabouVerifier(Verifier):
                 if left.is_or() and len(left.args()) == 2 and right.is_or() and len(right.args()) == 2:
                     eq_1, eq_2 = left.args()[0], left.args()[1]
                     eq_3, eq_4 = right.args()[0], right.args()[1]
-                    return True, [eq_1, eq_2, eq_3, eq_4]
+                    return True, [And(eq_1, eq_3), And(eq_1, eq_4), And(eq_2, eq_3), And(eq_2, eq_4)]
         return False, []
 
     def create_equation(self, formula, from_and=False, need_simplification=False):
@@ -385,64 +389,13 @@ class MarabouVerifier(Verifier):
                     self.add_bound(symbol, constant, direction="lower", strict=True)
                 elif comparison == "=":
                     # TODO: add a marabou equation instead
-                    self.add_bound(symbol, constant, direction="lower", strict=False)
-                    self.add_bound(symbol, constant, direction="upper", strict=False)
+                    self.add_equality(symbol, constant)
+                    # self.add_bound(symbol, constant, direction="lower", strict=False)
+                    # self.add_bound(symbol, constant, direction="upper", strict=False)
         else:
             return
 
-    def alpha(self):
-        # (((-1 <= x2) & (0.0 <= x1) & (x2 <= 1) & (x1 <= 10.0)) & (((p2 < 5) & (x1 = 10.0)) & (x2 < 12)))
-        #     p2<5 and x1==10 and x2<12
-        # (p2≥5)∨(x1#10)∨(x2≥12)
 
-        p1, is_output = self.get_variable_by_name("p1")
-        p2, is_output = self.get_variable_by_name("p2")
-        x1, is_output = self.get_variable_by_name("x1")
-        x2, is_output = self.get_variable_by_name("x2")
-        y1, is_output = self.get_variable_by_name("y1")
-        y2, is_output = self.get_variable_by_name("y2")
-
-        #
-        # self.network.setUpperBound(p2.index, 5-epsilon)
-        v = Var(p2.index)
-
-        # self.network.addConstraint(v <= self.epsilon(5, "down"))
-        #
-        # self.network.setUpperBound(x1.index, self.epsilon(10,'up'))
-        # self.network.setLowerBound(x1.index, self.epsilon(10, "down"))
-        #
-        # self.network.setUpperBound(x2.index, self.epsilon(12, "down"))
-        #
-        # self.network.setLowerBound(y1.index, 4)
-        # self.network.setUpperBound(y2.index, 8)
-
-        #     p1==4.0 or (p1==8.0 and p2 > 3)
-        eq1 = MarabouUtils.Equation(MarabouCore.Equation.EQ)
-        eq1.addAddend(1, p1.index)
-        eq1.setScalar(4)
-
-        eq2 = MarabouUtils.Equation(MarabouCore.Equation.EQ)
-        eq2.addAddend(1, p1.index)
-        eq2.setScalar(8)
-
-        eq3 = MarabouUtils.Equation(MarabouCore.Equation.GE)
-        eq3.addAddend(1, p2.index)
-        eq3.setScalar(self.epsilon(3, "up"))
-
-        self.network.addDisjunctionConstraint([[eq1], [eq2, eq3]])
-
-        # b1 = self.network.getNewVariable()
-        #
-        # # Define the epsilon value
-        # epsilon = 1e-5
-        #
-        # # Constraint for (y1 + y2) / 2 > 1 when b1 = 1
-        # # This is equivalent to y1 + y2 > 2
-        # self.network.addInequality([y1, y2, b1], [1, 1, -2], -epsilon)  # y1 + y2 - 2*b1 > 0 -> y1 + y2 > 2 when b1 = 1
-        #
-        # # Ensure b1 is binary
-        # self.network.setLowerBound(b1, 0)
-        # self.network.setUpperBound(b1, 1)
     def find_witness(self, witness):
         answers = {"result":"SAT", "witness":{}, 'witness_var':{}}
         for variable in self.unscaled_variables:
@@ -582,3 +535,85 @@ if __name__ == "__main__":
     #
     exitCode1, vals1, stats1 = mb.solve()
     print(exitCode1)
+
+
+# TODO: CHECK IF MARABOU NATIVELY SUPPORTS INTEGERS: it does not
+    # def add_bounds(self, variable, bounds=None, num="real", grid=None):
+    #     var, is_output = self.get_variable_by_name(variable)
+    #     if var is None:
+    #         return None
+    #
+    #     # TODO: handle case when one of the two is None
+    #     if bounds:
+    #         lower, upper = bounds
+    #         self.network.setLowerBound(var.index, lower)
+    #         self.network.setUpperBound(var.index, upper)
+    #
+    #         if num == "int":
+    #             # add all distinct integer values
+    #             grid = range(lower, upper+1)
+    #
+    #     if num in ["int", "grid"] and grid is not None:
+    #         disjunction = []
+    #         for i in grid:
+    #             eq1 = MarabouUtils.Equation(MarabouCore.Equation.EQ)
+    #             eq1.addAddend(1, var.index)
+    #             eq1.setScalar(i)
+    #             disjunction.append([eq1])
+    #
+    #         self.network.addDisjunctionConstraint(disjunction)
+
+
+# def alpha(self):
+#     # (((-1 <= x2) & (0.0 <= x1) & (x2 <= 1) & (x1 <= 10.0)) & (((p2 < 5) & (x1 = 10.0)) & (x2 < 12)))
+#     #     p2<5 and x1==10 and x2<12
+#     # (p2≥5)∨(x1#10)∨(x2≥12)
+#
+#     p1, is_output = self.get_variable_by_name("p1")
+#     p2, is_output = self.get_variable_by_name("p2")
+#     x1, is_output = self.get_variable_by_name("x1")
+#     x2, is_output = self.get_variable_by_name("x2")
+#     y1, is_output = self.get_variable_by_name("y1")
+#     y2, is_output = self.get_variable_by_name("y2")
+#
+#     #
+#     # self.network.setUpperBound(p2.index, 5-epsilon)
+#     v = Var(p2.index)
+#
+#     # self.network.addConstraint(v <= self.epsilon(5, "down"))
+#     #
+#     # self.network.setUpperBound(x1.index, self.epsilon(10,'up'))
+#     # self.network.setLowerBound(x1.index, self.epsilon(10, "down"))
+#     #
+#     # self.network.setUpperBound(x2.index, self.epsilon(12, "down"))
+#     #
+#     # self.network.setLowerBound(y1.index, 4)
+#     # self.network.setUpperBound(y2.index, 8)
+#
+#     #     p1==4.0 or (p1==8.0 and p2 > 3)
+#     eq1 = MarabouUtils.Equation(MarabouCore.Equation.EQ)
+#     eq1.addAddend(1, p1.index)
+#     eq1.setScalar(4)
+#
+#     eq2 = MarabouUtils.Equation(MarabouCore.Equation.EQ)
+#     eq2.addAddend(1, p1.index)
+#     eq2.setScalar(8)
+#
+#     eq3 = MarabouUtils.Equation(MarabouCore.Equation.GE)
+#     eq3.addAddend(1, p2.index)
+#     eq3.setScalar(self.epsilon(3, "up"))
+#
+#     self.network.addDisjunctionConstraint([[eq1], [eq2, eq3]])
+#
+#     # b1 = self.network.getNewVariable()
+#     #
+#     # # Define the epsilon value
+#     # epsilon = 1e-5
+#     #
+#     # # Constraint for (y1 + y2) / 2 > 1 when b1 = 1
+#     # # This is equivalent to y1 + y2 > 2
+#     # self.network.addInequality([y1, y2, b1], [1, 1, -2], -epsilon)  # y1 + y2 - 2*b1 > 0 -> y1 + y2 > 2 when b1 = 1
+#     #
+#     # # Ensure b1 is binary
+#     # self.network.setLowerBound(b1, 0)
+#     # self.network.setUpperBound(b1, 1)
