@@ -1599,12 +1599,10 @@ class ModelTerms(ScalerTerms):
         }
 
         self.parser = TextToPysmtParser()
-        self.parser.init_variables(symbols=[("x1", "real"), ('x2', 'int'), ('p1', 'real'), ('p2', 'int'),
-                                           ('y1', 'real'), ('y2', 'real')])
+        self.parser.init_variables(symbols=[("x1", "real", True), ('x2', 'int', True), ('p1', 'real', True), ('p2', 'int', True),
+                                           ('y1', 'real', False), ('y2', 'real', False)])
 
         self.verifier = MarabouVerifier(parser=self.parser)
-        self.verifier.init_variables(inputs=[("x1", "Real"), ('x2', 'Integer'), ('p1', 'Real'), ('p2', 'Integer')],
-                                     outputs=[('y1', 'Real'), ('y2', 'Real')])
 
         self._ENABLE_PYSMT = True
         self._RETURN_PYSMT = True
@@ -2261,8 +2259,7 @@ class ModelTerms(ScalerTerms):
         # get variable domains dictionary; certain sanity checks are performrd within this function.
         spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
 
-        self.verifier.initialize()
-        self.add_integer_constraints()
+        self.verifier.initialize(variable_ranges=spec_domain_dict)
 
         # contraints on features used as control variables and on the responses
         alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names,
@@ -2401,7 +2398,9 @@ class ModelTerms(ScalerTerms):
         return base_solver
     
     # wrapper function on solver.check to measure runtime and return status in a convenient way
-    def smlp_solver_check(self, solver, call_name:str, lemma_precision:int=0):
+    def smlp_solver_check(self, solver, call_name:str, lemma_precision:int=0, equations=None):
+        if equations:
+            print('FORM2 FORMULA', equations)
         approx_lemmas =  lemma_precision > 0
         start = time.time()
         #print('solver chack start', flush=True)
@@ -2540,11 +2539,12 @@ class ModelTerms(ScalerTerms):
             solver.add(eta); #print('eta', eta)
             #print('create check', flush=True)
             #res = solver.check(); print('res', res, flush=True)
-            res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency')
+            res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency', equations={'alpha':alpha, 'eta':eta})
         else:
             self.verifier.reset()
             self.verifier.apply_restrictions(alpha)
             self.verifier.apply_restrictions(eta)
+            print('PYSMT FORMULA',{'alpha':alpha, 'eta':eta})
             res, witness = self.verifier.solve()
 
         consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'

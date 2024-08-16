@@ -266,7 +266,7 @@ class SmlpOptimize:
                 T = (l + u) / 2
             #quer_form = objv_term > smlp.Cnst(T)
             quer_form = objv_term >= smlp.Cnst(T)
-            quer_form = self._modelTermsInst.verifier.parser.handle_ite_formula(quer_form) if self._ENABLE_PYSMT else quer_form
+            quer_form = self._modelTermsInst.verifier.parser.handle_ite_formula(quer_form, is_form2=True) if self._ENABLE_PYSMT else quer_form
             quer_expr = '{} >= {}'.format(objv_expr, str(T)) if objv_expr is not None else None
             quer_name = objv_name + '_' + str(T)
             if not beta == smlp.true:

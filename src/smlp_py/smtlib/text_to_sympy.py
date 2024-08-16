@@ -18,6 +18,8 @@ from io import StringIO
 
 from typing import List, Dict, Optional, Tuple
 
+from z3 import Tactic, Goal
+
 pysmt_types = {
     "int": INT,
     "real": REAL,
@@ -103,6 +105,8 @@ class TextToPysmtParser(object):
 
     def __init__(self):
         self.symbols = {}
+        self.inputs = []
+        self.outputs = []
         self._ast_operators_map = {
             ast.Add: Plus,  # Addition
             ast.Sub: Minus,  # Subtraction
@@ -128,7 +132,8 @@ class TextToPysmtParser(object):
             ast.Call: And,
             'If': Ite,
             'And': And,
-            'Not': Not
+            'Not': Not,
+            'Or': Or
         }
 
     def _div_op(self, left, right):
@@ -359,17 +364,21 @@ class TextToPysmtParser(object):
         elif symbol_type == INT:
             return Int(number)
 
-    def init_variables(self, symbols: List[Tuple[str, str]]) -> None:
+    def init_variables(self, symbols: List[Tuple[str, str, bool]]) -> None:
         for input_var in symbols:
-            name, type = input_var
+            name, type, is_input = input_var
             unscaled_name = f"{name}_unscaled"
             # TODO: i replaced the type variable with real, make sure that's ok
-            self.add_symbol(name, 'real')
-            self.add_symbol(unscaled_name, 'real')
+            self.add_symbol(name, 'real', is_input=is_input, nn_type=type)
+            self.add_symbol(unscaled_name, 'real', is_input=is_input, nn_type=type)
 
-    def add_symbol(self, name, symbol_type):
+    def add_symbol(self, name, symbol_type, is_input=True, nn_type='real'):
         assert symbol_type.lower() in pysmt_types.keys()
         self.symbols[name] = Symbol(name, pysmt_types[symbol_type])
+
+        if name.find("_unscaled") == -1:
+            store = self.inputs if is_input else self.outputs
+            store.append((name, nn_type))
 
     def get_symbol(self, name):
         assert name in self.symbols.keys()
@@ -396,14 +405,34 @@ class TextToPysmtParser(object):
         output = outstream.getvalue()
         return self.remove_first_and_last_line(output)
 
-    def handle_ite_formula(self, formula, handle_ite=True):
-        smlp_str = f"""
+    def handle_ite_formula(self, formula, is_form2=False, handle_ite=True):
+        # smlp_str = self.extract_smtlib(formula) if not isinstance(formula, str) else formula
+        # smlp_str = f"""
+        #                         (declare-fun y1 () Real)
+        #                         (declare-fun y2 () Real)
+        #                         (assert {formula})
+        #                         """ if not isinstance(formula, str) else formula
+        flag=False
+        if is_form2:
+            smlp_str = f"""
                         (declare-fun y1 () Real)
                         (declare-fun y2 () Real)
                         (assert {formula})
-                        """ if not isinstance(formula, str) else formula
+                        """
+        elif isinstance(formula, str):
+            smlp_str = formula
+        else:
+            smlp_str = self.extract_smtlib(formula)
+            flag=False
 
         smlp_parsed = z3.parse_smt2_string(smlp_str)
+        if flag:
+            # Apply the tactic to the formula
+            goal = Goal()
+            goal.add(smlp_parsed)
+            t = Tactic('tseitin-cnf')
+            smlp_parsed = t(goal)[0]
+
         smlp_simplified = z3.simplify(smlp_parsed[0])
         ex = self.parse(str(smlp_simplified).replace('\n',''))
         if ex.is_not():
