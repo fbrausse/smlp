@@ -13,22 +13,23 @@ from matplotlib.colors import Normalize
 # Configure icecream for debugging output
 ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
-# Constants
-setno = '1'
 exp = str(round(random.random(), 4))  # Generate a random experiment identifier
-ic(exp)
-
-Set = f'experiment_outputs/Set{setno}/Set_{setno}_'
-witnesses_csv_path = f'Set{setno}_{exp}_witnesses.csv'
-witnesses_html_path = f'Set{setno}_{exp}_witnesses.html'
-#txt_file = f'Set{setno}_{exp}_experiments.txt'
-opt_out = f'Set{setno}_{exp}_optimization_output.png'
 
 class plot_exp:
 
-    def __init__(self):
+    def __init__(self, exp=exp, setno='2'):
 
-        self.txt_file = f'Set{setno}_{exp}_experiments.txt'
+        self.exp = exp
+        self.setno = setno
+        self.txt_file = f'Set{self.setno}_{self.exp}_experiments.txt'
+        self.Set = f'experiment_outputs/Set{self.setno}/Set_{self.setno}_'
+        self.witnesses_csv_path = f'Set{self.setno}_{self.exp}_witnesses.csv'
+        self.witnesses_html_path = f'Set{self.setno}_{self.exp}_witnesses.html'
+        self.opt_out = f'Set{self.setno}_{self.exp}_optimization_output.png'
+        self.source_file_1 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.csv'
+        self.source_file_2 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.spec'
+        self.destination_folder = '.'    
+        self.spec_file = "smlp_toy_basic.spec"
 
     def save_to_txt(self, data):
         """
@@ -37,8 +38,6 @@ class plot_exp:
         Parameters:
         - data: Data to be saved. Can be a list or a single value.
         """
-        global setno, exp
-        
         # Load original data for bounds
         orig_data = pd.read_csv('smlp_toy_basic.csv')
         x_bounds = f"\nmin x: {orig_data.iloc[:, 0].min()} max x: {orig_data.iloc[:, 0].max()}"
@@ -52,10 +51,11 @@ class plot_exp:
         # Save data to text file
         with open(self.txt_file, 'a') as f:
             if isinstance(data, list):
-                f.write(f"{setno}\n{exp}\n")
+                f.write(f"{self.setno}\n{self.exp}\n")
                 for index, arg in enumerate(data[1:], start=1):
                     f.write(f"Argument {index}: {arg}\n")
-                f.write(x_bounds + y_bounds + (z_bounds if len(orig_data.columns) > 2 else '') + orig_len + "\n")
+                f.write(x_bounds + y_bounds + (z_bounds if len(orig_data.columns) > 2 else '') + orig_len + "\n \n")
+                f.flush()
     
                 resp_index = data.index('-resp')
                 resp = data[resp_index + 1]
@@ -74,9 +74,19 @@ class plot_exp:
                 #        ic(f)
                 #else:
                 #    ic(resp_list[0])
+                with open(self.spec_file, 'r') as spec:
+                    spec = json.load(spec)
+                for key, value in spec.items():
+                    if key == 'variables':
+                        for v in value:
+                            for ite, val in v.items():
+                                if str(ite) == "rad-abs":
+                                    ic("here")
+                                    f.write(f"For {v['label']} {ite}: {val}\n")
     
             else:
                 f.write(f"\n{data}\n")
+                f.flush()
 
     def param_changed(self, hparams_dict, algo, n):
         """
@@ -135,7 +145,6 @@ class plot_exp:
             # Calculate optimization time
             opt_time = f"Pareto optimization completion time: {times[5] - times[4]}"
             # Save times to text file
-            ic(opt_time)
             self.save_to_txt(opt_time)
 
     # Plot and save prediction data
@@ -170,7 +179,101 @@ class plot_exp:
         prediction_df = pd.concat([x, y], axis=1)
         
         # Call the main plotting function
-        main(x, y, data_version)
+        self.plott(x, y, data_version)
+
+    def copy_from(self):
+        """
+        Copies source files to the current directory.
+        """
+        shutil.copy2(self.source_file_1, self.destination_folder)
+        shutil.copy2(self.source_file_2, self.destination_folder)
+
+    def save_to_csv(self, data, data_version):
+        """
+        Saves model precision data to a CSV file. Appends if the file exists.
+    
+        Parameters:
+        - data: Dictionary containing data to be saved.
+        - data_version: Indicates which version of data is being saved.
+        """
+        # Create DataFrame based on data version
+        if data_version == 'witnesses':
+            if len(data) == 3:
+                df = pd.DataFrame({'x': data['x'], 'y': data['y'], 'z': data['z']}, index=[0])
+            else:
+                df = pd.DataFrame({'x': data['x'], 'y': data['y']}, index=[0])
+    
+            # Append to or create the CSV file
+            if os.path.exists(self.witnesses_csv_path):
+                df.to_csv(self.witnesses_csv_path, mode='a', header=False, index=False)
+            else:
+                df.to_csv(self.witnesses_csv_path, mode='w', header=True, index=False)
+
+    def plott(self, x, y, data_version):
+        """
+        Main function to create and save plots based on data version.
+        
+        Parameters:
+        - x: X data for plotting.
+        - y: Y data for plotting.
+        - data_version: Version of data to determine plot type.
+        """
+        # Load original data
+        orig_data = pd.read_csv('smlp_toy_basic.csv')
+        Set = f'Set{self.setno}_'
+        
+        if len(orig_data.columns) > 2:
+            if data_version == 'optimized':
+                z_orig = orig_data.iloc[:, 2]
+                y_orig = orig_data.iloc[:, 1]
+                x_orig = orig_data.iloc[:, 0]
+                x_additional = x.iloc[:, 0]
+                y_additional = x.iloc[:, 1]
+                z_additional = y
+                
+                # Create 3D scatter plot
+                fig1 = go.Figure(data=[
+                    go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='red', opacity=0.25), name='Original data'),
+                    go.Scatter3d(x=x_additional, y=y_additional, z=z_additional, mode='markers', marker=dict(color='blue'), name='Optimal value')
+                ])
+                
+                # Update layout
+                fig1.update_layout(
+                    scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                    title='Scatter Plot of Optimal values on Original dataset'
+                )
+                
+                # Save figure as HTML
+                fig1.write_html(f"Set{self.setno}_{self.exp}_scatter_plot_optimized.html")
+            
+            else:
+                z = y
+                y = x.iloc[:, 1]
+                x = x.iloc[:, 0]
+                
+                # Create 3D scatter plot
+                fig0 = go.Figure(data=[go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color='blue'))])
+                
+                # Update layout
+                fig0.update_layout(
+                    scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                    title='Scatter Plot of Predicted data on test set'
+                )
+                
+                # Save figure as HTML
+                fig0.write_html(f"Set{self.setno}_{self.exp}_scatter_plot_predicted.html")
+        
+        else:
+            plt.scatter(x, y, color='#0000ff', marker='x', s=5, label='Original data')
+            x = orig_data.iloc[:, 0]
+            y = orig_data.iloc[:, 1]
+            plt.scatter(x, y, color='#ff0000', marker='o', s=2, label='Model Reconstruction', alpha=0.9)
+            plt.xlabel('X')
+            plt.ylabel('Y', rotation=0)
+            plt.title('Scatter Plot representing Original data and Model Reconstruction of Original Data/Graph')
+            plt.grid(True)
+            plt.legend()
+            plt.savefig(f"{Set}{exp}_{data_version}.png")
 
     def witnesses(self, lower_bound, solver):
         """
@@ -178,11 +281,11 @@ class plot_exp:
         """
         orig = pd.read_csv('/home/x/temp/smlp/smlp_toy_basic.csv')
     
-        if os.path.exists(witnesses_csv_path):
+        if os.path.exists(self.witnesses_csv_path):
     
-            df = pd.read_csv(witnesses_csv_path)
+            df = pd.read_csv(self.witnesses_csv_path)
             df.drop_duplicates(inplace=True)
-            df.to_csv(witnesses_csv_path, index=False)
+            df.to_csv(self.witnesses_csv_path, index=False)
             num_witn = "Number of witnesses explored: " + str(len(df))
             self.save_to_txt(num_witn)
     
@@ -213,8 +316,8 @@ class plot_exp:
                     )
                     
                     # Save figure and open HTML file
-                    fig1.write_html(witnesses_html_path)
-                    subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
+                    fig1.write_html(self.witnesses_html_path)
+                    #subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
                 
                 else:
                     
@@ -243,7 +346,7 @@ class plot_exp:
                     plt.title('Optimization')
                     plt.grid(True)
                     plt.legend()
-                    plt.savefig(opt_out)
+                    plt.savefig(self.opt_out)
     
             else: 
                 # Check if 3D plotting is required
@@ -269,8 +372,7 @@ class plot_exp:
                     )
                     
                     # Save figure and open HTML file
-                    fig1.write_html(witnesses_html_path)
-                    subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
+                    fig1.write_html(self.witnesses_html_path)
                 
                 else:
                     # Extract data for plotting
@@ -292,44 +394,12 @@ class plot_exp:
                     plt.title('Optimization')
                     plt.grid(True)
                     plt.legend()
-                    plt.savefig(opt_out)
+                    plt.savefig(self.opt_out)
         else:
             ic("No witnesses to plot")
 
 
-def save_to_csv(data, data_version):
-    """
-    Saves model precision data to a CSV file. Appends if the file exists.
 
-    Parameters:
-    - data: Dictionary containing data to be saved.
-    - data_version: Indicates which version of data is being saved.
-    """
-    global setno, exp
-    # Create DataFrame based on data version
-    if data_version == 'witnesses':
-        if len(data) == 3:
-            df = pd.DataFrame({'x': data['x'], 'y': data['y'], 'z': data['z']}, index=[0])
-        else:
-            df = pd.DataFrame({'x': data['x'], 'y': data['y']}, index=[0])
-
-        # Append to or create the CSV file
-        if os.path.exists(witnesses_csv_path):
-            df.to_csv(witnesses_csv_path, mode='a', header=False, index=False)
-        else:
-            df.to_csv(witnesses_csv_path, mode='w', header=True, index=False)
-
-def copy_from():
-    """
-    Copies source files to the current directory.
-    """
-    global setno
-    source_file_1 = f'experiment_outputs/Set{setno}/smlp_toy_basic.csv'
-    source_file_2 = f'experiment_outputs/Set{setno}/smlp_toy_basic.spec'
-    destination_folder = '.'    
-    
-    shutil.copy2(source_file_1, destination_folder)
-    shutil.copy2(source_file_2, destination_folder)
 
 def copy_data(setno):
     """
@@ -339,8 +409,8 @@ def copy_data(setno):
     - setno: Set number for paths.
     """
     source_folder = "."
-    destination_folder = f'experiment_outputs/Set{setno}/'
-    Set = f'experiment_outputs/Set{setno}/'
+    destination_folder = f'experiment_outputs/Set{self.setno}/'
+    Set = f'experiment_outputs/Set{self.setno}/'
     source_folders = 'toy_out_dir'
     extensions = ['.png', '.html', '.txt']
     
@@ -360,72 +430,4 @@ def copy_data(setno):
                 
     except FileNotFoundError:
         print("Source folder not found.")
-
-def main(x, y, data_version):
-    """
-    Main function to create and save plots based on data version.
-    
-    Parameters:
-    - x: X data for plotting.
-    - y: Y data for plotting.
-    - data_version: Version of data to determine plot type.
-    """
-    global setno
-    
-    # Load original data
-    orig_data = pd.read_csv('smlp_toy_basic.csv')
-    Set = f'Set{setno}_'
-    
-    if len(orig_data.columns) > 2:
-        if data_version == 'optimized':
-            z_orig = orig_data.iloc[:, 2]
-            y_orig = orig_data.iloc[:, 1]
-            x_orig = orig_data.iloc[:, 0]
-            x_additional = x.iloc[:, 0]
-            y_additional = x.iloc[:, 1]
-            z_additional = y
-            
-            # Create 3D scatter plot
-            fig1 = go.Figure(data=[
-                go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='red', opacity=0.25), name='Original data'),
-                go.Scatter3d(x=x_additional, y=y_additional, z=z_additional, mode='markers', marker=dict(color='blue'), name='Optimal value')
-            ])
-            
-            # Update layout
-            fig1.update_layout(
-                scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
-                title='Scatter Plot of Optimal values on Original dataset'
-            )
-            
-            # Save figure as HTML
-            fig1.write_html(f"Set{setno}_{exp}_scatter_plot_optimized.html")
-        
-        else:
-            z = y
-            y = x.iloc[:, 1]
-            x = x.iloc[:, 0]
-            
-            # Create 3D scatter plot
-            fig0 = go.Figure(data=[go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color='blue'))])
-            
-            # Update layout
-            fig0.update_layout(
-                scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
-                title='Scatter Plot of Predicted data on test set'
-            )
-            
-            # Save figure as HTML
-            fig0.write_html(f"Set{setno}_{exp}_scatter_plot_predicted.html")
-    
-    else:
-        plt.scatter(x, y, color='#0000ff', marker='x', s=5, label='Original data')
-        x = orig_data.iloc[:, 0]
-        y = orig_data.iloc[:, 1]
-        plt.scatter(x, y, color='#ff0000', marker='o', s=2, label='Model Reconstruction', alpha=0.9)
-        plt.xlabel('X')
-        plt.ylabel('Y', rotation=0)
-        plt.title('Scatter Plot representing Original data and Model Reconstruction of Original Data/Graph')
-        plt.grid(True)
-        plt.legend()
-        plt.savefig(f"{Set}{exp}_{data_version}.png")
 

@@ -567,7 +567,9 @@ class SmlpQuery:
                 feasible = True
                 ic('Changes here ...')
                 witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
-                plot.save_to_csv(witnessvals, data_version='witnesses')
+#                ic(ca_model, sat_approx, sat_precision)
+#                ic(witnessvals)
+                plot_instance.save_to_csv(witnessvals, data_version='witnesses')
                 if use_approxiamted_fractions:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model_approx, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
@@ -603,6 +605,8 @@ class SmlpQuery:
                     candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
                     continue
                 elif self._modelTermsInst.solver_status_unsat(ce): #isinstance(ce, smlp.unsat):
+                    #print(self._modelTermsInst.solver_status_unsat(ce))
+                    #print(ce)
                     #print('candidate stable -- return candidate')
                     self._query_logger.info('Query completed with result: STABLE_SAT (satisfiable)')
                     if witn: # export witness (use numbers as values, not terms)
