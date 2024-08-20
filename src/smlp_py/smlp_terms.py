@@ -17,19 +17,19 @@ from collections import defaultdict
 import sys
 
 import smlp
-from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
+from src.smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates,
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
 from pysmt.shortcuts import Real as pysmtReal
-from smlp_py.NN_verifiers.verifiers import MarabouVerifier
+from src.smlp_py.NN_verifiers.verifiers import MarabouVerifier
 import pysmt
 
 from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
-from smlp_py.solver import Solver
+from src.smlp_py.solvers.universal_solver import Solver
 
-from smlp_py.smlp_operations import SMLPOperations
+from src.smlp_py.solvers.z3.operations import SMLPOperations
 
-from src.smlp_py.solver import Form2_Solver
+from src.smlp_py.solvers.z3.solver import Form2_Solver
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes

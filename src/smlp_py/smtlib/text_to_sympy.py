@@ -600,6 +600,7 @@ if __name__ == "__main__":
     parser.add_symbol('x1', 'int')
     parser.add_symbol('x2', 'real')
     parser.add_symbol('p2', 'real')
+    parser.add_symbol('p1', 'real')
     parser.add_symbol('y1', 'real')
     parser.add_symbol('y2', 'real')
 
@@ -661,7 +662,7 @@ if __name__ == "__main__":
     print(simplified_formula)
 
 
-    formula = parser.parse('(y1+y2)/2')
+    formula = parser.parse("p1==4 or (p1==8 and p2 > 3)")
     # formula = parser.parse('p2<5.0 and x1==10 and x2<12.0')
     x = Symbol('x', REAL)
     y = Symbol('y', REAL)

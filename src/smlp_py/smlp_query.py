@@ -9,9 +9,9 @@ from smlp_py.smlp_terms import ModelTerms, SmlpTerms
 from smlp_py.smlp_utils import np_JSONEncoder #, str_to_bool
 
 from src.smlp_py.NN_verifiers.verifiers import MarabouVerifier
-from smlp_py.solver import Solver
+from src.smlp_py.solvers.universal_solver import Solver
 
-from smlp_py.solver import Pysmt_Solver
+from src.smlp_py.solvers.marabou.solver import Pysmt_Solver
 
 
 class SmlpQuery:

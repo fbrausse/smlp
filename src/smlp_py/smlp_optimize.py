@@ -15,7 +15,7 @@ import keras
 import numpy as np
 from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
 from pysmt.shortcuts import Real
-from smlp_py.solver import Solver
+from src.smlp_py.solvers.universal_solver import Solver
 
 # single or multi-objective optimization, with stability constraints and any user
 # given constraints on free input, control (knob) and output variables satisfied.
