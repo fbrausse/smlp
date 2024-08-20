@@ -363,7 +363,7 @@ class SmlpFlows:
                 #self.logger.info('self.optInst.best_config_dict {}'.format(str(self.optInst.best_config_dict)))
                 if syst_expr_dict is not None:
                     # TODO !!!! support also for the eager strategy
-                    if 'final' in self.optInst.best_config_dict and args.optimization_strategy == 'lazy':
+                    if 'final' in self.optInst.best_config_dict:
                         stability_region_dict = self.specInst.get_spec_stability_ragion_bounds_dict(self.optInst.best_config_dict['final'])
                         self.refineInst.compute_rmse(stability_region_dict, model, args.model, model_features_dict, resp_names, 
                             args.model_per_response, syst_expr_dict, mm_scaler_resp, args.interactive_plots, args.prediction_plots)
