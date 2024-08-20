@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 # This file is part of smlp.
+import time
 
 # imports from SMLP modules
 from smlp_py.smlp_logs import SmlpLogger, SmlpTracer
@@ -121,6 +122,8 @@ class SmlpFlows:
             self.optInst.set_tracer(self.tracer, self.args.trace_runtime, 
                 self.args.trace_precision, self.args.trace_anonymize)
             self.queryInst.set_lemma_precision(self.args.lemma_precision)
+
+        self.use_pysmt = self.args.use_pysmt
     
 
     # TODO !!!: is this the right place to define data_fname and new_data_fname and error_file ???
@@ -349,6 +352,8 @@ class SmlpFlows:
                     args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'optimize':
+                start = time.time()
+                use_pysmt = args.use_pysmt
                 self.optInst.smlp_optimize(syst_expr_dict, args.model, model,
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
@@ -357,8 +362,9 @@ class SmlpFlows:
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
                     args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
-                
+                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None, use_pysmt=use_pysmt)
+                end = time.time()
+                print(f"TOTAL TIME IS {end-start}")
                 #self.logger.info('self.optInst.best_config_dict {}'.format(str(self.optInst.best_config_dict)))
                 if syst_expr_dict is not None:
                     if 'final' in self.optInst.best_config_dict:

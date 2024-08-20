@@ -232,6 +232,8 @@ class PYSMTOperations:
 
     @conditional_cache  # @functools.cache
     def smlp_cnst(cls, const):
+        if isinstance(const, FNode):
+            return const
         return pysmt.shortcuts.Real(const)
 
     # logical not (logic negation)
@@ -257,3 +259,9 @@ class PYSMTOperations:
 
     def smlp_eq(self, term1: smlp.term2, term2: smlp.term2):
         return pysmt.shortcuts.Equals(term1, term2)
+
+    def smlp_q(self, const):
+        return pysmt.shortcuts.Real(const)
+
+    def smlp_mult(self, *args):
+        return pysmt.shortcuts.Times(*args)

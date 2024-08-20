@@ -368,9 +368,11 @@ class TextToPysmtParser(object):
         for input_var in symbols:
             name, type, is_input = input_var
             unscaled_name = f"{name}_unscaled"
+            scaled_name = f"{name}_scaled"
             # TODO: i replaced the type variable with real, make sure that's ok
             self.add_symbol(name, 'real', is_input=is_input, nn_type=type)
             self.add_symbol(unscaled_name, 'real', is_input=is_input, nn_type=type)
+            self.add_symbol(scaled_name, 'real', is_input=is_input, nn_type=type)
 
     def add_symbol(self, name, symbol_type, is_input=True, nn_type='real'):
         assert symbol_type.lower() in pysmt_types.keys()

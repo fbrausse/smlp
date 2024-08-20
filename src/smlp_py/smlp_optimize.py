@@ -15,6 +15,7 @@ import keras
 import numpy as np
 from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
 from pysmt.shortcuts import Real
+from smlp_py.solver import Solver
 
 # single or multi-objective optimization, with stability constraints and any user
 # given constraints on free input, control (knob) and output variables satisfied.
@@ -48,7 +49,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int = 64
-        self._ENABLE_PYSMT = True
+        self._ENABLE_PYSMT = False
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:
@@ -267,10 +268,13 @@ class SmlpOptimize:
             #quer_form = objv_term > smlp.Cnst(T)
             quer_form = objv_term >= smlp.Cnst(T)
             quer_form = self._modelTermsInst.verifier.parser.handle_ite_formula(quer_form, is_form2=True) if self._ENABLE_PYSMT else quer_form
+            # quer_form = solver.create_query()
+
             quer_expr = '{} >= {}'.format(objv_expr, str(T)) if objv_expr is not None else None
             quer_name = objv_name + '_' + str(T)
             if not beta == smlp.true:
                 quer_and_beta = self._modelTermsInst.verifier.parser.and_(quer_form, beta) if self._ENABLE_PYSMT else self._smlpTermsInst.smlp_and(quer_form, beta)
+                # quer_and_beta = solver.create_query_and_beta(quer_form, beta)
             else:
                 quer_and_beta = quer_form
             #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
@@ -447,8 +451,6 @@ class SmlpOptimize:
         objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict = \
             self._modelTermsInst.compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict, scale_objectives)
 
-        pysmt_objv_terms_dict, pysmt_orig_objv_terms_dict, pysmt_scaled_objv_terms_dict = \
-            self._modelTermsInst.pysmt_compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict, scale_objectives)
         # TODO: set sat_approx to False once dump and load with Fractions will work
         opt_conf = {}
         for i, (objv_name, objv_term) in enumerate(list(objv_terms_dict.items())):
@@ -798,14 +800,15 @@ class SmlpOptimize:
                     self._opt_logger.info('Checking whether to fix objective {} at threshold {}...\n'.format(str(j), str(s[j])))
                     self._opt_tracer.info('activity check, objective {} threshold {}'.format(str(objv_names[j]), str(s[j])))
                     #print('objv_terms_dict', objv_terms_dict)
-                    quer_form = pysmt.shortcuts.TRUE() if self._ENABLE_PYSMT else smlp.true
+                    # quer_form = pysmt.shortcuts.TRUE() if self._ENABLE_PYSMT else smlp.true
+                    quer_form = Solver._instance.smlp_true
                     for i in objv_enum:
                         #print('obv i', list(objv_terms_dict.keys())[i])
-                        if self._ENABLE_PYSMT:
-                            quer_form = self._modelTermsInst.parser.and_(quer_form,
-                                                                     list(pysmt_objv_terms_dict.values())[i] > pysmt.shortcuts.Real(t[i]))
-                        else:
-                            quer_form = self._smlpTermsInst.smlp_and(quer_form, list(objv_terms_dict.values())[i] > smlp.Cnst(t[i]))
+                        # if self._ENABLE_PYSMT:
+                        #     quer_form = self._modelTermsInst.parser.and_(quer_form,
+                        #                                              list(pysmt_objv_terms_dict.values())[i] > pysmt.shortcuts.Real(t[i]))
+                        # else:
+                        quer_form = self._smlpTermsInst.smlp_and(quer_form, list(objv_terms_dict.values())[i] > Solver.smlp_cnst(t[i]))
                     #print('queryform', quer_form)
                     if not beta == smlp.true:
                         quer_and_beta = self._modelTermsInst.verifier.parser.and_(quer_form,
@@ -902,7 +905,7 @@ class SmlpOptimize:
             quer_names:list[str], quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,  
-            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None, use_pysmt=False):
         self.objv_names = objv_names
         self.objv_exprs = objv_exprs
         self.feat_names = feat_names
@@ -912,7 +915,12 @@ class SmlpOptimize:
         # output to user initial values of mode status
         with open(self.optimization_results_file+'.json', 'w') as f:
             json.dump(self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
-            
+
+        # initiliase Solver
+        solver = Solver(specs=(feat_names, resp_names, self._modelTermsInst._specInst.get_spec_domain_dict), version=Solver.Version.PYSMT if use_pysmt else Solver.Version.FORM2)
+
+
+
         domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = \
         self._modelTermsInst.create_model_exploration_base_components(
             syst_expr_dict, algo, model, model_features_dict, feat_names, resp_names, 

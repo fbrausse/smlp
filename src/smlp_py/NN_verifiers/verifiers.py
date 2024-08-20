@@ -83,7 +83,6 @@ class MarabouVerifier(Verifier):
         self.unscaled_variables = []
 
         self.model_file_path = "./"
-        self.log_path = "marabou.log"
         self.data_bounds_file = self.find_file_path("../../../result/abc_smlp_toy_basic_data_bounds.json")
         self.data_bounds = None
         # Adds conjunction of equations between bounds in form:
@@ -168,7 +167,7 @@ class MarabouVerifier(Verifier):
         for var in store:
             name, type = var
             var_type = Variable.Type.Real if type.lower() == "real" else Variable.Type.Int
-            if name.startswith(('x', 'p', 'y')):
+            if name.startswith(('x', 'p', 'y')) and name.find("_scaled") == -1:
                 index = self.input_index if is_input else self.output_index
                 self.variables.append(Variable(var_type, name=name, index=index, is_input=is_input))
 
@@ -200,6 +199,8 @@ class MarabouVerifier(Verifier):
 
     def convert_scaled_unscaled(self):
         for scaled_var, unscaled_var in zip(self.variables, self.unscaled_variables):
+            if scaled_var.name.find("_scaled") != -1:
+                continue
             bounds = self.data_bounds[scaled_var.name]
             min_value, max_value = bounds["min"], bounds["max"]
 
@@ -222,7 +223,11 @@ class MarabouVerifier(Verifier):
     def get_variable_by_name(self, name: str) -> Optional[Tuple[Variable, int]]:
         is_output = name.startswith("y")
         is_unscaled = name.find("_unscaled") != -1
+        is_scaled = name.find("_scaled") != -1
         repository = self.unscaled_variables if is_unscaled else self.variables
+
+        if is_scaled:
+            return None
 
         for index, variable in enumerate(repository):
             if variable.name == name:

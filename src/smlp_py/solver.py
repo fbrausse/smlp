@@ -78,10 +78,48 @@ class AbstractSolver(ABC):
     def check(self, *args, **kwargs):
         pass
 
+    @abstractmethod
+    def add_not_query(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def create_counter_example(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def substitute(self, *args, **kwargs):
+        pass
+
+
+    def get_witness(self, *args, **kwargs):
+        result = kwargs["result"]
+        witness = kwargs["witness"]
+        interface = kwargs["interface"]
+
+        condition = result == "sat"
+
+        if condition:
+            reduced_model = dict((k, v) for k, v in witness.items() if k in interface)
+            return reduced_model
+        else:
+            return None
+
+    def convert_results_to_string(self, res):
+        if isinstance(res, smlp.sat):
+            return "sat"
+        elif isinstance(res, smlp.unsat):
+            return "unsat"
+        elif isinstance(res, smlp.unknown):
+            return "unknown"
+        elif type(res) == str:
+            return res.lower()
+        else:
+            raise Exception("Unsupported result format")
 
 
 class Pysmt_Solver(AbstractSolver, PYSMTOperations):
     verifier = None
+    temp_solver = None
 
     def __init__(self, specs):
         super().__init__()
@@ -144,6 +182,7 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
         rad_term = kwargs["rad_term"]
         theta_form = kwargs["theta_form"]
 
+        rad_term = float(rad_term)
         value = float(witness)
         PYSMT_var = self.verifier.parser.get_symbol(var)
         type = pysmt.shortcuts.Int if str(PYSMT_var.get_type()) == "Int" else Real
@@ -179,15 +218,62 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
         return self.parse(expression)
 
     def create_solver(self, *args, **kwargs):
-        self.verifier.reset()
+        temp = kwargs.get('temp', False)
+        if temp:
+            self.temp_solver = MarabouVerifier(parser=self.verifier.parser,
+                                     variable_ranges=self.verifier.variable_ranges,
+                                     is_temp=True)
+
+        else:
+            self.verifier.reset()
         return self
 
-    def add_formula(self, formula):
-        self.verifier.apply_restrictions(formula)
+    def add_formula(self, formula, **kwargs):
+        need_simplification = kwargs.get("need_simplification", False)
+        self.verifier.apply_restrictions(formula, need_simplification=need_simplification)
 
     def check(self, *args, **kwargs):
+        temp = kwargs.get("temp", False)
+        if temp:
+            result = self.temp_solver.solve()
+            self.temp_solver = None
+            return result
+        else:
+            return self.verifier.solve()
+
+    def generate_theta(self, *args, **kwargs):
+        pass
+
+    def add_not_query(self, *args, **kwargs):
+        query = kwargs["query"]
+        temp = kwargs.get("temp", False)
 
 
+    def create_counter_example(self, *args, **kwargs):
+        formulas = kwargs["formulas"]
+        query = kwargs["query"]
+
+        self.temp_solver = MarabouVerifier( parser=self.verifier.parser,
+                                            variable_ranges=self.verifier.variable_ranges,
+                                            is_temp=True)
+        for formula in formulas:
+            self.temp_solver.apply_restrictions(formula)
+
+        negation = self.temp_solver.parser.propagate_negation(query)
+        z3_equiv = self.temp_solver.parser.handle_ite_formula(negation, handle_ite=False)
+        self.temp_solver.apply_restrictions(negation, need_simplification=True)
+        return self
+
+    def substitute(self, *args, **kwargs):
+        var = kwargs["var"]
+        substitutions = kwargs["substitutions"]
+
+        for x in list(substitutions.keys()):
+            temp = substitutions[x]
+            del substitutions[x]
+            substitutions[self.smlp_var(x)] = temp
+
+        return self.simplify(var.substitute(substitutions))
 
 class Form2_Solver(AbstractSolver, SMLPOperations):
     verifier = None
@@ -221,7 +307,7 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
         var_term = kwargs["var_term"]
         candidate = kwargs["candidate"]
 
-        rad_term = smlp.Cnst(rad)
+        rad_term = self.smlp_cnst(rad)
         if delta_rel is not None:  # radius for a lemma -- cex holds values of candidate counter-example
             rad_term = rad_term * abs(var_term)
         else:  # radius for excluding a candidate -- cex holds values of the candidate
@@ -234,15 +320,12 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
         witness = kwargs["witness"]
         var_term = kwargs["var_term"]
         rad_term = kwargs["rad_term"]
-        smlp_and_ = kwargs["smlp_and_"]
 
-        return smlp_and_(theta_form, ((abs(var_term - witness)) <= rad_term))
+        return self.smlp_and(theta_form, ((abs(var_term - witness)) <= rad_term))
 
     def get_rad_term(self, *args, **kwargs):
-        smlp_cnst = kwargs["smlp_cnst"]
         rad = kwargs["rad"]
-
-        return smlp_cnst(rad)
+        return self.smlp_cnst(rad)
 
     def create_alpha_or_eta_form(self, *args, **kwargs):
         alpha_or_eta_form = kwargs["alpha_or_eta_form"]
@@ -275,14 +358,37 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
         model_full_term_dict = kwargs["model_full_term_dict"]
         incremental = kwargs["incremental"]
         solver_logic = kwargs["solver_logic"]
-        formulas = kwargs["formulas"]
 
         self.verifier = create_solver(domain, model_full_term_dict, incremental, solver_logic)
         return self
 
-    def add_formula(self, formula):
+    def add_formula(self, *args, **kwargs):
+        formula = kwargs["formula"]
+
         self.verifier.add(formula)
 
+    def check(self):
+        return self.verifier.check(), None
+
+    def generate_theta(self, *args, **kwargs):
+        pass
+
+    def create_counter_example(self, *args, **kwargs):
+        formulas = kwargs["formulas"]
+        query = kwargs["query"]
+
+        self.create_solver(*args, **kwargs)
+        for formula in formulas:
+            self.add_formula(formula)
+
+        self.add_formula(self.smlp_not(query))
+        return self
+
+    def substitute(self, *args, **kwargs):
+        var = kwargs["var"]
+        substitutions = kwargs["substitutions"]
+
+        return self.smlp_cnst_fold(var, substitutions)
 
 class Solver:
     class Version(Enum):
