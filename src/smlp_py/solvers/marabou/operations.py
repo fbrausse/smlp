@@ -26,6 +26,8 @@ class PYSMTOperations:
     def smlp_cnst(cls, const):
         if isinstance(const, FNode):
             return const
+        elif isinstance(const, str):
+            const = float(const)
         return pysmt.shortcuts.Real(const)
 
     # logical not (logic negation)
@@ -57,3 +59,6 @@ class PYSMTOperations:
 
     def smlp_mult(self, *args):
         return pysmt.shortcuts.Times(*args)
+
+    def smlp_ite(self, *args):
+        return pysmt.shortcuts.Ite(*args)

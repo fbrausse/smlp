@@ -95,6 +95,8 @@ class MarabouVerifier(Verifier):
         self.network_num_vars = None
         self.init_variables(is_temp=is_temp)
 
+        self.applied_equations = []
+
         if self.variable_ranges:
             self.initialize()
 
@@ -115,6 +117,7 @@ class MarabouVerifier(Verifier):
         self.network = Marabou.read_tf('model.pb')
         self.unscaled_variables = []
         self.add_unscaled_variables()
+        self.applied_equations = []
         # Default bounds for network
         for equation in self.equations:
             self.apply_restrictions(equation)
@@ -269,6 +272,7 @@ class MarabouVerifier(Verifier):
 
 
     def apply_restrictions(self, formula, need_simplification=False):
+        self.applied_equations.append(formula)
         formula = self.parser.simplify(formula)
         conjunctions, disjunctions = self.process_formula(formula)
 
@@ -325,7 +329,7 @@ class MarabouVerifier(Verifier):
 
     def create_equation(self, formula, from_and=False, need_simplification=False):
         equations = []
-        formula = self.parser.simplify(formula)
+        formula = self.parser.simplify(formula) if not need_simplification else self.parser.z3_simplify(formula)
 
         if formula.is_and():
             equation = [self.create_equation(eq, from_and=True) for eq in formula.args()]
@@ -333,6 +337,10 @@ class MarabouVerifier(Verifier):
         elif formula.is_le() or formula.is_lt() or formula.is_equals():
             res = self.parser.extract_components(formula, need_simplification)
             equations.append(self.transform_pysmt_to_marabou_equation(res))
+        elif formula.is_not():
+           negation = self.parser.propagate_negation(formula)
+           res = self.parser.extract_components(negation, need_simplification)
+           equations.append(self.transform_pysmt_to_marabou_equation(res))
 
         return equations[0] if from_and else equations
 
@@ -342,13 +350,12 @@ class MarabouVerifier(Verifier):
             # split the disjunction into separate formulas
             for formula in disjunction.args():
                 res, formulas = self.is_negation_of_ite(formula)
-                if res:
-                    for form in formulas:
-                        equation = self.create_equation(form, from_and=False, need_simplification=need_simplification)
-                        marabou_disjunction.append(equation)
-                else:
+                formulas = formulas if res else [formula]
+                for formula in formulas:
+                    # formula = self.parser.z3_simplify(formula)
                     equation = self.create_equation(formula, from_and=False, need_simplification=need_simplification)
-                    marabou_disjunction.append(equation)
+                    if equation:
+                        marabou_disjunction.append(equation)
 
         if len(marabou_disjunction) > 0:
             self.network.addDisjunctionConstraint(marabou_disjunction)
@@ -374,6 +381,7 @@ class MarabouVerifier(Verifier):
         return conjunctions, disjunctions
 
     def process_comparison(self, formula, need_simplification=False):
+        formula = self.parser.z3_simplify(formula)
         if formula.is_le() or formula.is_lt() or formula.is_equals():
             symbols, comparison, constant = self.parser.extract_components(formula, need_simplification)
 
@@ -414,6 +422,7 @@ class MarabouVerifier(Verifier):
 
     def solve(self):
         try:
+            # Options(verbose=0, cores=5)
             results = self.network.solve()
             if results and results[0] == 'unsat':
                 return "UNSAT", {"result":"UNSAT", "witness": {}}
@@ -424,7 +433,7 @@ class MarabouVerifier(Verifier):
             return None
 
     def add_disjunction(self,):
-        pass
+        return
 
 
 

@@ -25,18 +25,6 @@ class ClassProperty:
 
 class AbstractSolver(ABC):
 
-    # @abstractmethod
-    # def true(self):
-    #     pass
-
-    # @abstractmethod
-    # def GE(self, *args, **kwargs):
-    #     pass
-
-    # @abstractmethod
-    # def LE(self, *args, **kwargs):
-    #     pass
-
     @abstractmethod
     def create_query(self, *args, **kwargs):
         pass
@@ -82,15 +70,23 @@ class AbstractSolver(ABC):
         pass
 
     @abstractmethod
-    def add_not_query(self, *args, **kwargs):
-        pass
-
-    @abstractmethod
     def create_counter_example(self, *args, **kwargs):
         pass
 
     @abstractmethod
     def substitute(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def handle_ite_formula(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def calculate_eta_F_t(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def apply_theta(self, *args, **kwargs):
         pass
 
     def get_witness(self, *args, **kwargs):

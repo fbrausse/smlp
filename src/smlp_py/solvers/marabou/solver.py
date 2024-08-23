@@ -54,7 +54,7 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
         substitution = {}
         for symbol, value in stable_witness_terms.items():
             symbol = self.verifier.parser.get_symbol(symbol)
-            substitution[symbol] = Real(value)
+            substitution[symbol] = Real(float(value))
         # Apply the substitution
         return self.verifier.parser.simplify(objv_term.substitute(substitution))
 
@@ -97,6 +97,9 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
     def simplify(self, expression):
         return self.verifier.parser.simplify(expression)
 
+    def z3_simplify(self, expression):
+        return self.verifier.parser.simplify(expression)
+
     def parse(self, expression):
         return self.verifier.parser.parse(expression)
 
@@ -134,10 +137,6 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
     def generate_theta(self, *args, **kwargs):
         pass
 
-    def add_not_query(self, *args, **kwargs):
-        query = kwargs["query"]
-        temp = kwargs.get("temp", False)
-
 
     def create_counter_example(self, *args, **kwargs):
         formulas = kwargs["formulas"]
@@ -164,3 +163,26 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
             substitutions[self.smlp_var(x)] = temp
 
         return self.simplify(var.substitute(substitutions))
+
+    def calculate_eta_F_t(self, *args, **kwargs):
+        eta = kwargs["eta"]
+        term = kwargs["term"]
+        val = kwargs["val"]
+
+        return self.smlp_and(eta, term > self.smlp_cnst(val))
+
+
+    def handle_ite_formula(self, *args, **kwargs):
+        formula = kwargs["formula"]
+
+        return  self.verifier.parser.handle_ite_formula(formula, is_form2=False)
+
+    def apply_theta(self, *args, **kwargs):
+        formula = kwargs["formula"]
+        solver = kwargs["solver"]
+
+        theta_negation = self.verifier.parser.propagate_negation(formula)
+        # self._modelTermsInst.verifier.add_permanent_constraint(theta_negation)
+        solver.verifier.apply_restrictions(theta_negation)
+        print("PYSMT THETA ADDED ", theta_negation)
+

@@ -175,7 +175,7 @@ class TextToPysmtParser(object):
             raise ValueError("Input formula is not a conjunction")
 
     def is_comparison(self, node: FNode) -> bool:
-        return node.is_le() or node.is_lt() or node.is_ge() or node.is_gt() or node.is_equals()
+        return node.is_le() or node.is_lt() or node.is_equals()
 
     def create_integer_disjunction(self, variable, values):
         variable = self.get_symbol(variable)
@@ -220,6 +220,18 @@ class TextToPysmtParser(object):
         else:
             return None
 
+    def apply_comparator(self, comparator, a, b):
+        match comparator:
+            case '<=':
+                return a <= b
+            case '<':
+                return a < b
+            case "=":
+                return a == b
+            case _:
+                return None
+
+
     def extract_coefficient(self, symbol):
         coeff = []
         # possible formats
@@ -236,9 +248,9 @@ class TextToPysmtParser(object):
         return coeff
 
     def extract_components(self, comparison: FNode, need_simplification=False):
-        if need_simplification:
-            smtlib = self.extract_smtlib(comparison)
-            comparison = self.handle_ite_formula(smtlib, handle_ite=False)
+        # if need_simplification:
+        #     smtlib = self.extract_smtlib(comparison)
+        #     comparison = self.handle_ite_formula(smtlib, handle_ite=False)
 
         left = comparison.arg(0)
         right = comparison.arg(1)
@@ -383,7 +395,10 @@ class TextToPysmtParser(object):
             store.append((name, nn_type))
 
     def get_symbol(self, name):
-        assert name in self.symbols.keys()
+        # assert name in self.symbols.keys()
+        if name not in self.symbols.keys():
+            self.symbols[name] = Symbol(name, pysmt_types['real'])
+
         return self.symbols[name]
 
     def remove_first_and_last_line(self, text):
@@ -407,6 +422,19 @@ class TextToPysmtParser(object):
         output = outstream.getvalue()
         return self.remove_first_and_last_line(output)
 
+    def z3_simplify(self, formula):
+        if isinstance(formula, str):
+            smlp_str = formula
+        else:
+            smlp_str = self.extract_smtlib(formula)
+        smlp_parsed = z3.parse_smt2_string(smlp_str)
+        smlp_simplified = z3.simplify(smlp_parsed[0])
+        ex = self.parse(str(smlp_simplified).replace('\n', ''))
+        if ex.is_not():
+            ex = self.propagate_negation(ex)
+
+        return ex
+
     def handle_ite_formula(self, formula, is_form2=False, handle_ite=True):
         # smlp_str = self.extract_smtlib(formula) if not isinstance(formula, str) else formula
         # smlp_str = f"""
@@ -414,7 +442,7 @@ class TextToPysmtParser(object):
         #                         (declare-fun y2 () Real)
         #                         (assert {formula})
         #                         """ if not isinstance(formula, str) else formula
-        flag=False
+
         if is_form2:
             smlp_str = f"""
                         (declare-fun y1 () Real)
@@ -425,15 +453,13 @@ class TextToPysmtParser(object):
             smlp_str = formula
         else:
             smlp_str = self.extract_smtlib(formula)
-            flag=False
 
         smlp_parsed = z3.parse_smt2_string(smlp_str)
-        if flag:
-            # Apply the tactic to the formula
-            goal = Goal()
-            goal.add(smlp_parsed)
-            t = Tactic('tseitin-cnf')
-            smlp_parsed = t(goal)[0]
+        # if flag:
+        #     goal = Goal()
+        #     goal.add(smlp_parsed)
+        #     t = Tactic('tseitin-cnf')
+        #     smlp_parsed = t(goal)[0]
 
         smlp_simplified = z3.simplify(smlp_parsed[0])
         ex = self.parse(str(smlp_simplified).replace('\n',''))
@@ -574,12 +600,23 @@ class TextToPysmtParser(object):
         return eval_(ast.parse(expr, mode='eval').body)
 
     def convert_ite_to_conjunctions_disjunctions(self, formula):
-        def traverse(node):
-            if node.is_ite():
+        def traverse(node, from_ite=False, value=0, position=None, comparator=None):
+            if from_ite:
                 condition, true_branch, false_branch = node.args()
+                true_branch = traverse(true_branch)
+                false_branch = traverse(false_branch)
+                condition = traverse(condition)
+                not_condition = traverse(Not(condition))
+
+
+                true_branch = self.apply_comparator(comparator, true_branch, value) if position == "right" else self.apply_comparator(comparator, value, true_branch)
+                false_branch = self.apply_comparator(comparator, false_branch, value) if position == "right" else self.apply_comparator(comparator, value, false_branch)
+
+                true_branch = self.z3_simplify(true_branch)
+                false_branch = self.z3_simplify(false_branch)
                 return Or(
-                    And(traverse(condition), traverse(true_branch)),
-                    And(traverse(Not(condition)), traverse(false_branch))
+                    And(condition, true_branch),
+                    And(not_condition, false_branch)
                 )
             elif node.is_and():
                 new_args = [traverse(arg) for arg in node.args()]
@@ -589,6 +626,15 @@ class TextToPysmtParser(object):
                 return Or(new_args)
             elif node.is_not():
                 return self.propagate_negation(node)
+            elif self.is_comparison(node):
+                left, right = node.args()
+                comparator = self.decide_comparator(node)
+                if left.is_constant() and right.is_ite():
+                    return traverse(right, from_ite=True, value=left, position='left', comparator=comparator)
+                elif right.is_constant() and left.is_ite():
+                    return traverse(left, from_ite=True, value=right, position='right', comparator=comparator)
+                else:
+                    return node
             else:
                 return node
 

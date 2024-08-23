@@ -2,6 +2,7 @@
 # This file is part of smlp.
 import pysmt
 import smlp
+from oauthlib.uri_validate import query
 from smlp_py.smlp_terms import SmlpTerms, ModelTerms, ScalerTerms
 from smlp_py.smlp_query import SmlpQuery
 from smlp_py.smlp_utils import (str_to_bool, np_JSONEncoder)
@@ -266,14 +267,15 @@ class SmlpOptimize:
             else:
                 T = (l + u) / 2
             #quer_form = objv_term > smlp.Cnst(T)
-            quer_form = objv_term >= smlp.Cnst(T)
-            quer_form = self._modelTermsInst.verifier.parser.handle_ite_formula(quer_form, is_form2=True) if self._ENABLE_PYSMT else quer_form
+            quer_form = objv_term >= Solver.smlp_cnst(T)
+            quer_form = Solver.handle_ite_formula(formula=quer_form)
             # quer_form = solver.create_query()
 
             quer_expr = '{} >= {}'.format(objv_expr, str(T)) if objv_expr is not None else None
             quer_name = objv_name + '_' + str(T)
-            if not beta == smlp.true:
-                quer_and_beta = self._modelTermsInst.verifier.parser.and_(quer_form, beta) if self._ENABLE_PYSMT else self._smlpTermsInst.smlp_and(quer_form, beta)
+            if not beta == Solver._instance.smlp_true:
+                quer_and_beta = Solver.smlp_and(quer_form, beta)
+                # self._modelTermsInst.verifier.parser.and_(quer_form, beta) if self._ENABLE_PYSMT else self._smlpTermsInst.smlp_and(quer_form, beta)
                 # quer_and_beta = solver.create_query_and_beta(quer_form, beta)
             else:
                 quer_and_beta = quer_form
@@ -335,16 +337,19 @@ class SmlpOptimize:
                 l_prev = l # save the value of l, it is for reporting only.
                 #if objv_expr is not None: # the objective is not a symbolic max_min term, we may need its value, at least to see search progress
 
-                if self._ENABLE_PYSMT:
-                    substitution = {}
-                    for symbol, value in stable_witness_terms.items():
-                        symbol = self._modelTermsInst.verifier.parser.get_symbol(symbol)
-                        substitution[symbol] = Real(value)
-                    # Apply the substitution
-                    objv_witn_val_term = self._modelTermsInst.verifier.parser.simplify(pysmt_min_objs.substitute(substitution))
-                else:
-                    objv_witn_val_term = smlp.subst(objv_term, stable_witness_terms); #print('objv_witn_val_term', objv_witn_val_term)
-                #using objective values as lower bounds is not sound since objective value in sat model is the ceneter-point value 
+                objv_witn_val_term = Solver.substitute_objective_with_witness(stable_witness_terms=stable_witness_terms, objv_term=objv_term)
+                # if self._ENABLE_PYSMT:
+                #     substitution = {}
+                #     for symbol, value in stable_witness_terms.items():
+                #         symbol = self._modelTermsInst.verifier.parser.get_symbol(symbol)
+                #         substitution[symbol] = Real(value)
+                #     # Apply the substitution
+                #     objv_witn_val_term = self._modelTermsInst.verifier.parser.simplify(pysmt_min_objs.substitute(substitution))
+                # else:
+                #     objv_witn_val_term = smlp.subst(objv_term, stable_witness_terms); #print('objv_witn_val_term', objv_witn_val_term)
+
+
+                #using objective values as lower bounds is not sound since objective value in sat model is the ceneter-point value
                 # and the objective's value is not guaranteed to be a lower bound in entire stability region
                 #objv_witn_val = self._smlpTermsInst.ground_smlp_expr_to_value(objv_witn_val_term, sat_approx, sat_precision)
                 #assert objv_witn_val >= T
@@ -486,21 +491,22 @@ class SmlpOptimize:
         #print('thresholds t', t, 'objv_terms_dict', objv_terms_dict)
         for j, (objv_name, objv_term) in enumerate(objv_terms_dict.items()):
             if t[j] is not None:
-                if self._ENABLE_PYSMT:
-                    eta_F_t = TextToPysmtParser.and_(eta_F_t, pysmt_objv_term > Real(t[j]))
-                else:
-                    eta_F_t = self._smlpTermsInst.smlp_and(eta_F_t, objv_term > smlp.Cnst(t[j]))
+                eta_F_t = Solver.calculate_eta_F_t(eta=eta_F_t, term=objv_term, val=t[j])
+                # if self._ENABLE_PYSMT:
+                #     eta_F_t = TextToPysmtParser.and_(eta_F_t, pysmt_objv_term > Real(t[j]))
+                # else:
+                #     eta_F_t = self._smlpTermsInst.smlp_and(eta_F_t, objv_term > smlp.Cnst(t[j]))
             else:
                 min_name = min_name + '_' + objv_name if min_name != '' else objv_name
-                if self._ENABLE_PYSMT:
-                    pysmt_objv_term = pysmt_objv_terms_dict[objv_name]
-                    if pysmt_min_objs is not None:
-                        pysmt_min_objs = TextToPysmtParser.ite_(pysmt_objv_term < pysmt_min_objs, pysmt_objv_term, pysmt_min_objs)
-                    else:
-                        pysmt_min_objs = pysmt_objv_term
+                # if self._ENABLE_PYSMT:
+                #     pysmt_objv_term = pysmt_objv_terms_dict[objv_name]
+                #     if pysmt_min_objs is not None:
+                #         pysmt_min_objs = TextToPysmtParser.ite_(pysmt_objv_term < pysmt_min_objs, pysmt_objv_term, pysmt_min_objs)
+                #     else:
+                #         pysmt_min_objs = pysmt_objv_term
                 # else:
                 if min_objs is not None:
-                    min_objs = smlp.Ite(objv_term < min_objs, objv_term, min_objs)
+                    min_objs = Solver.smlp_ite(objv_term < min_objs, objv_term, min_objs)
                 else:
                     min_objs = objv_term
 
@@ -699,9 +705,9 @@ class SmlpOptimize:
             self._modelTermsInst.compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict, scale_objectives)
 
         pysmt_objv_terms_dict = None
-        pysmt_objv_terms_dict, pysmt_orig_objv_terms_dict, pysmt_scaled_objv_terms_dict = \
-            self._modelTermsInst.pysmt_compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict,
-                                                                scale_objectives)
+        # pysmt_objv_terms_dict, pysmt_orig_objv_terms_dict, pysmt_scaled_objv_terms_dict = \
+        #     self._modelTermsInst.pysmt_compute_objectives_terms(objv_names, objv_exprs, objv_bounds_dict,
+        #                                                         scale_objectives)
         objv_count = len(objv_names)
         objv_enum = range(objv_count)
         
@@ -808,16 +814,14 @@ class SmlpOptimize:
                         #     quer_form = self._modelTermsInst.parser.and_(quer_form,
                         #                                              list(pysmt_objv_terms_dict.values())[i] > pysmt.shortcuts.Real(t[i]))
                         # else:
-                        quer_form = self._smlpTermsInst.smlp_and(quer_form, list(objv_terms_dict.values())[i] > Solver.smlp_cnst(t[i]))
+                        quer_form = Solver.smlp_and(quer_form, list(objv_terms_dict.values())[i] > Solver.smlp_cnst(t[i]))
                     #print('queryform', quer_form)
-                    if not beta == smlp.true:
-                        quer_and_beta = self._modelTermsInst.verifier.parser.and_(quer_form,
-                                                                                  beta) if self._ENABLE_PYSMT else self._smlpTermsInst.smlp_and(quer_form, beta)
+                    if not beta == Solver._instance.smlp_true:
+                        quer_and_beta = Solver.smlp_and(quer_form, beta)
                     else:
                         quer_and_beta = quer_form
 
-                    if self._ENABLE_PYSMT:
-                        quer_and_beta = self._modelTermsInst.parser.simplify(quer_and_beta)
+                    quer_and_beta = Solver.z3_simplify(quer_and_beta)
 
                     opt_quer_name = 'thresholds_' + '_'.join(str(x) for x in t) + '_check'
                     quer_res = self._queryInst.query_condition(True, model_full_term_dict, opt_quer_name, 'True', quer_and_beta, 
@@ -916,9 +920,9 @@ class SmlpOptimize:
         with open(self.optimization_results_file+'.json', 'w') as f:
             json.dump(self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
 
-        # initiliase Solver
-        solver = Solver(specs=(feat_names, resp_names, self._modelTermsInst._specInst.get_spec_domain_dict), version=Solver.Version.PYSMT if use_pysmt else Solver.Version.FORM2)
-
+        # initialise Solver
+        Solver(specs=(feat_names, resp_names, self._modelTermsInst._specInst.get_spec_domain_dict),
+               version=Solver.Version.PYSMT if use_pysmt else Solver.Version.FORM2)
 
 
         domain, syst_term_dict, model_full_term_dict, eta, alpha, beta, interface_consistent, model_consistent = \

@@ -89,12 +89,19 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
         self.verifier = create_solver(domain, model_full_term_dict, incremental, solver_logic)
         return self
 
-    def add_formula(self, *args, **kwargs):
+    def simplify(self, *args, **kwargs):
         formula = kwargs["formula"]
 
+        return formula
+
+    def z3_simplify(self, expression):
+        return expression
+
+
+    def add_formula(self,formula, **kwargs):
         self.verifier.add(formula)
 
-    def check(self):
+    def check(self, *args, **kwargs):
         return self.verifier.check(), None
 
     def generate_theta(self, *args, **kwargs):
@@ -116,3 +123,23 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
         substitutions = kwargs["substitutions"]
 
         return self.smlp_cnst_fold(var, substitutions)
+
+    def calculate_eta_F_t(self, *args, **kwargs):
+        eta = kwargs["eta"]
+        term = kwargs["term"]
+        val = kwargs["val"]
+
+        return self.smlp_and(eta, term > self.smlp_cnst(val))
+
+    def handle_ite_formula(self, *args, **kwargs):
+        formula = kwargs["formula"]
+
+        return formula
+
+    def apply_theta(self, *args, **kwargs):
+        formula = kwargs["formula"]
+        solver = kwargs["solver"]
+
+        solver.add(self.smlp_not(formula))
+
+

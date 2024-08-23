@@ -565,7 +565,7 @@ class SmlpQuery:
         candidate_solver.add_formula(eta, need_simplification=True)
         candidate_solver.add_formula(alpha)
         candidate_solver.add_formula(quer, need_simplification=True)
-
+        print("IN QUERY CONDITION")
         # res = self.smlp_solver_check(solver,
         #                              'interface_consistency' if model_full_term_dict is None else 'model_consistency',
         #                              equations={'alpha': alpha, 'eta': eta})
@@ -646,14 +646,14 @@ class SmlpQuery:
                     else:
                         lemma = self.generalize_counter_example(cem); #print('lemma', lemma)
                     theta = self._modelTermsInst.compute_stability_formula_theta(lemma, delta, theta_radii_dict, universal)
-                    if self._ENABLE_PYSMT:
-                        theta_negation = self._modelTermsInst.parser.propagate_negation(theta)
-                        # self._modelTermsInst.verifier.add_permanent_constraint(theta_negation)
-                        self._modelTermsInst.verifier.apply_restrictions(theta_negation)
-                        print("PYSMT THETA ADDED ", theta_negation)
-                    else:
-                        candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
-                        print("FORM2 THETA ADDED ", self._smlpTermsInst.smlp_not(theta))
+                    Solver.apply_theta(solver=candidate_solver, formula=theta)
+                    # if self._ENABLE_PYSMT:
+                    #     theta_negation = self._modelTermsInst.parser.propagate_negation(theta)
+                    #     # self._modelTermsInst.verifier.add_permanent_constraint(theta_negation)
+                    #     self._modelTermsInst.verifier.apply_restrictions(theta_negation)
+                    #     print("PYSMT THETA ADDED ", theta_negation)
+                    # else:
+                    #     candidate_solver.add(self._smlpTermsInst.smlp_not(theta))
                     continue
                 elif c_result == "unsat": #isinstance(ce, smlp.unsat):
                     #print('candidate stable -- return candidate')
@@ -671,11 +671,12 @@ class SmlpQuery:
                             assert quer_ce_val
                         return {'query_status':'STABLE_SAT', 'witness':witness_vals_dict, 'feasible':feasible}
                     else:
-                        if self._ENABLE_PYSMT:
-                            return {'query_status':'STABLE_SAT', 'witness':ca['witness'], 'feasible':feasible}
-                        else:
-                            return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
-            elif result == "unsat": #isinstance(ca, smlp.unsat):
+                        return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
+                        # if self._ENABLE_PYSMT:
+                        #     return {'query_status':'STABLE_SAT', 'witness':ca['witness'], 'feasible':feasible}
+                        # else:
+                        #     return {'query_status':'STABLE_SAT', 'witness':ca_model, 'feasible':feasible}
+            elif result == "unsat":
                 self._query_logger.info('Query completed with result: UNSAT (unsatisfiable)')
                 if feasible is None:
                     feasible = False

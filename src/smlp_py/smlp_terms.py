@@ -5,6 +5,8 @@ import operator
 import numpy as np
 import pandas as pd
 import keras
+from Cython.Compiler.TreePath import operations
+from pysmt.fnode import FNode
 from sklearn.tree import _tree
 import json
 import ast
@@ -1294,21 +1296,22 @@ class ScalerTerms(SmlpTerms):
     # x_scaled obtained from x using min_max scaler to range [0, 1] (which is the same as normalizin x),
     # orig_min stands for min(x) and orig_max stands for max(x). Note that 1 / (max(x) - min(x)) is a
     # rational constant, it is defined to smlp instance as a fraction (thus there is no loss of precision).
-    def feature_scaler_to_term(self, orig_feat_name, scaled_feat_name, orig_min, orig_max): 
+    def feature_scaler_to_term(self, orig_feat_name, scaled_feat_name, orig_min, orig_max, allow_solver=False):
         #print('feature_scaler_to_term', 'orig_min', orig_min, type(orig_min), 'orig_max', orig_max, type(orig_max), flush=True)
+        operations = Solver if allow_solver else self
         if orig_min == orig_max:
-            return Solver.smlp_cnst(0) #smlp.Cnst(0) # same as returning smlp.Cnst(smlp.Q(0))
+            return operations.smlp_cnst(0) #smlp.Cnst(0) # same as returning smlp.Cnst(smlp.Q(0))
         else:
-            return Solver.smlp_mult(
-                Solver.smlp_cnst(Solver.smlp_q(1) / Solver.smlp_q(orig_max - orig_min)),
-                (Solver.smlp_var(orig_feat_name) - Solver.smlp_cnst(orig_min)))
+            return operations.smlp_mult(
+                operations.smlp_cnst(operations.smlp_q(1) / operations.smlp_q(orig_max - orig_min)),
+                (operations.smlp_var(orig_feat_name) - operations.smlp_cnst(orig_min)))
             ####return self.smlp_div(self.smlp_var(orig_feat_name) - self.smlp_cnst(orig_min), self.smlp_cnst(orig_max) - self.smlp_cnst(orig_min))
             ####return smlp.Cnst(smlp.Q(1) / smlp.Q(orig_max - orig_min)) * (smlp.Var(orig_feat_name) - smlp.Cnst(orig_min))
 
     # Computes dictionary with features as keys and scaler terms as values
-    def feature_scaler_terms(self, data_bounds, feat_names):
+    def feature_scaler_terms(self, data_bounds, feat_names, allow_solver=False):
         return dict([(self._scaled_name(feat), self.feature_scaler_to_term(feat, self._scaled_name(feat),
-            data_bounds[feat]['min'], data_bounds[feat]['max'])) for feat in feat_names])
+            data_bounds[feat]['min'], data_bounds[feat]['max'], allow_solver=allow_solver)) for feat in feat_names])
 
     # Computes term x from column x_scaled using expression x = x_scaled * (max_x - min_x) + x_min.
     # Argument orig_feat_name is name for column x, argument scaled_feat_name is the name of scaled column 
@@ -1672,12 +1675,14 @@ class ModelTerms(ScalerTerms):
         #print('objv_exprs', objv_exprs)
         if objv_exprs is None:
             return None, None, None, None
-        orig_objv_terms_dict = dict([(objv_name, Solver.parse_ast(objv_expr)) \
+        orig_objv_terms_dict = dict([(objv_name, Solver.parse_ast(parser=self.ast_expr_to_term, expression=objv_expr)) \
             for objv_name, objv_expr in zip(objv_names, objv_exprs)]) #self._smlpTermsInst.
         #print('orig_objv_terms_dict', orig_objv_terms_dict)
 
         if scale_objv:
-            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names)  # ._scalerTermsInst
+            # allow_pysmt = isinstance(next(iter(orig_objv_terms_dict), FNode)
+
+            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names, allow_solver=True)  # ._scalerTermsInst
 
             #print('scaled_objv_terms_dict', scaled_objv_terms_dict)
             objv_terms_dict = {}
@@ -1686,7 +1691,7 @@ class ModelTerms(ScalerTerms):
                 x = list(orig_objv_terms_dict.keys())[i]; 
                 #print('x', x); print('arg', orig_objv_terms_dict[x])
 
-                objv_terms_dict[k] = Solver.substitute(var=v, substitutions={Solver.smlp_cnst(x): orig_objv_terms_dict[x]})
+                objv_terms_dict[k] = Solver.substitute(var=v, substitutions={x: orig_objv_terms_dict[x]})
                 # objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]})
             #objv_terms_dict = scaled_objv_terms_dict
         else:
