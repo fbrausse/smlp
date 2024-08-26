@@ -1,17 +1,14 @@
 import smlp
 from src.smlp_py.solvers.abstract_solver import AbstractSolver
 from src.smlp_py.solvers.z3.operations import SMLPOperations
-
+from memory_profiler import profile
 
 class Form2_Solver(AbstractSolver, SMLPOperations):
     verifier = None
-    smlp_term_instance = None
-    terms = None
 
     def __init__(self):
         super().__init__()
         # self.verifier = verifier
-        # self.smlp_term_instance = smlp_term_instance
 
     @property
     def smlp_true(self):
@@ -21,7 +18,7 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
         return query_form
 
     def create_query_and_beta(self, query, beta):
-        return self.smlp_term_instance.smlp_and(query, beta)
+        return self.smlp_and(query, beta)
 
     def substitute_objective_with_witness(self, *args, **kwargs):
         stable_witness_terms = kwargs["stable_witness_terms"]
@@ -107,6 +104,7 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
     def generate_theta(self, *args, **kwargs):
         pass
 
+    @profile
     def create_counter_example(self, *args, **kwargs):
         formulas = kwargs["formulas"]
         query = kwargs["query"]
@@ -140,6 +138,6 @@ class Form2_Solver(AbstractSolver, SMLPOperations):
         formula = kwargs["formula"]
         solver = kwargs["solver"]
 
-        solver.add(self.smlp_not(formula))
+        solver.add_formula(self.smlp_not(formula))
 
 

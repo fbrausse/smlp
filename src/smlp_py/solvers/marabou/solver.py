@@ -5,7 +5,7 @@ from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
 from src.smlp_py.solvers.abstract_solver import AbstractSolver, ClassProperty
 from src.smlp_py.solvers.marabou.operations import PYSMTOperations
 from pysmt.shortcuts import Real
-
+from memory_profiler import profile
 
 class Pysmt_Solver(AbstractSolver, PYSMTOperations):
     verifier = None
@@ -137,7 +137,7 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
     def generate_theta(self, *args, **kwargs):
         pass
 
-
+    @profile
     def create_counter_example(self, *args, **kwargs):
         formulas = kwargs["formulas"]
         query = kwargs["query"]
@@ -149,7 +149,7 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
             self.temp_solver.apply_restrictions(formula)
 
         negation = self.temp_solver.parser.propagate_negation(query)
-        z3_equiv = self.temp_solver.parser.handle_ite_formula(negation, handle_ite=False)
+        # z3_equiv = self.temp_solver.parser.handle_ite_formula(negation, handle_ite=False)
         self.temp_solver.apply_restrictions(negation, need_simplification=True)
         return self
 
