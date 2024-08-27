@@ -1,0 +1,19 @@
+rm -r build && mkdir build && meson setup -Dboost-prefix=/home/x/.local/lib --prefix /home/x/.local build && meson
+
+mkdir build && meson setup --prefix /home/x/.local/lib -Dboost-prefix=/home/x/smlp/utils/poly/boost_1_84_0/libs build && meson install -C build
+
+mkdir build && meson setup -Dboost-prefix=/home/x/miniconda3/envs/python3.11/lib --prefix=/home/x/temp/smlp/utils/poly build && meson install -C build
+
+mkdir build && meson setup build && meson compile -C build && ninja -C build install
+
+export BOOST_INCLUDEDIR=/home/x/boost_1_81_0
+export BOOST_LIBRARYDIR=/home/x/boost_1_81_0/stage/lib
+
+
+src/run_smlp.py -data smlp_toy_basic.csv -out_dir toy_out_dir -pref abc -mode optimize -pareto t -resp y -feat x -model nn_keras -data_scaler min_max -epsilon 0.05 -delta_abs 0.1 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic.spec
+
+src/run_smlp.py -data smlp_toy_basic.csv -out_dir toy_out_dir -pref abc -mode optimize -pareto t -resp z -feat x,y -model nn_keras -data_scaler min_max -epsilon 0.05 -delta_abs 0.1 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic.spec
+
+src/run_smlp.py -data smlp_toy_basic.csv -out_dir toy_out_dir -pref abc -mode optimize -pareto t -resp z -feat x,y -model poly_sklearn -data_scaler min_max -epsilon 0.05 -delta_abs 0.1 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic.spec
+
+src/run_smlp.py -data smlp_toy_basic.csv -out_dir toy_out_dir -pref abc -mode optimize -pareto t -resp z -feat x,y -model dt_sklearn -data_scaler min_max -epsilon 0.05 -delta_abs 0.1 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic.spec

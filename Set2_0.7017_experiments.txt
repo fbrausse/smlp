@@ -1,0 +1,73 @@
+2
+0.7017
+Argument 1: -data
+Argument 2: smlp_toy_basic.csv
+Argument 3: -out_dir
+Argument 4: toy_out_dir
+Argument 5: -pref
+Argument 6: abc
+Argument 7: -mode
+Argument 8: optimize
+Argument 9: -pareto
+Argument 10: t
+Argument 11: -resp
+Argument 12: z
+Argument 13: -feat
+Argument 14: x,y
+Argument 15: -model
+Argument 16: rf_sklearn
+Argument 17: -data_scaler
+Argument 18: min_max
+Argument 19: -epsilon
+Argument 20: 0.8
+Argument 21: -delta_abs
+Argument 22: 0.0001
+Argument 23: -save_model_config
+Argument 24: f
+Argument 25: -mrmr_pred
+Argument 26: 0
+Argument 27: -plots
+Argument 28: f
+Argument 29: -seed
+Argument 30: 10
+Argument 31: -log_time
+Argument 32: f
+Argument 33: -spec
+Argument 34: smlp_toy_basic.spec
+
+min x: 1.5001 max x: 4.5
+min y: 1.5 max y: 4.4999
+min z: -2.4615 max z: 2.0
+length of dataset: 35000
+ 
+For x rad-abs: 0.0001
+For y rad-abs: 0.0001
+
+rf_sklearn
+
+rf_sklearn_n_estimators: 1
+
+rf_sklearn_criterion: absolute_error
+
+rf_sklearn_max_depth: 8
+
+rf_sklearn_min_samples_split: 7
+
+rf_sklearn_min_samples_leaf: 4
+
+Training time: 4.610073089599609
+
+msqe: 0.028719567396785713
+r2_score: 0.9670645433254317
+
+Optimization synthesis feasibility check time: 0.2414689064025879
+
+Number of witnesses explored: 1
+
+Number of witnesses explored: 1
+
+Pareto optimization completion time: 0.41617274284362793
+
+Maximum memory usage: 1217.9141
+
+7.320500373840332

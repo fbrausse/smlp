@@ -17,14 +17,16 @@ exp = str(round(random.random(), 4))  # Generate a random experiment identifier
 
 class plot_exp:
 
-    def __init__(self, exp=exp, setno='2'):
+    def __init__(self, exp=exp, setno='1'):
 
         self.exp = exp
         self.setno = setno
         self.txt_file = f'Set{self.setno}_{self.exp}_experiments.txt'
         self.Set = f'experiment_outputs/Set{self.setno}/Set_{self.setno}_'
         self.witnesses_csv_path = f'Set{self.setno}_{self.exp}_witnesses.csv'
+        self.stable_witnesses_csv_path = f'Set{self.setno}_{self.exp}_stable_witnesses.csv'
         self.witnesses_html_path = f'Set{self.setno}_{self.exp}_witnesses.html'
+        self.stable_witnesses_html_path = f'Set{self.setno}_{self.exp}_stable_witnesses.html'
         self.opt_out = f'Set{self.setno}_{self.exp}_optimization_output.png'
         self.source_file_1 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.csv'
         self.source_file_2 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.spec'
@@ -209,6 +211,18 @@ class plot_exp:
             else:
                 df.to_csv(self.witnesses_csv_path, mode='w', header=True, index=False)
 
+        else:
+            if len(data) == 3:
+                df = pd.DataFrame({'x': data['x'], 'y': data['y'], 'z': data['z']}, index=[0])
+            else:
+                df = pd.DataFrame({'x': data['x'], 'y': data['y']}, index=[0])
+    
+            # Append to or create the CSV file
+            if os.path.exists(self.stable_witnesses_csv_path):
+                df.to_csv(self.stable_witnesses_csv_path, mode='a', header=False, index=False)
+            else:
+                df.to_csv(self.stable_witnesses_csv_path, mode='w', header=True, index=False)
+
     def plott(self, x, y, data_version):
         """
         Main function to create and save plots based on data version.
@@ -290,6 +304,12 @@ class plot_exp:
             self.save_to_txt(num_witn)
     
             if solver == "sat":
+
+                df_sat = pd.read_csv(self.stable_witnesses_csv_path)
+                df_sat.drop_duplicates(inplace=True)
+                df_sat.to_csv(self.stable_witnesses_csv_path, index=False)
+                num_witn = "Number of stable witnesses found: " + str(len(df_sat))
+                self.save_to_txt(num_witn)
     
                 lower_bound = float(lower_bound['objective'])
                 # Check if 3D plotting is required
@@ -302,6 +322,10 @@ class plot_exp:
                     z_additional = df.iloc[:, 2]
                     y_additional = df.iloc[:, 1]
                     x_additional = df.iloc[:, 0]
+
+                    z_sat = df_sat.iloc[:, 2]
+                    y_sat = df_sat.iloc[:, 1]
+                    x_sat = df_sat.iloc[:, 0]
                     
                     # Create 3D scatter plot
                     fig1 = go.Figure(data=[
@@ -318,7 +342,21 @@ class plot_exp:
                     # Save figure and open HTML file
                     fig1.write_html(self.witnesses_html_path)
                     #subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
-                
+
+                    fig2 = go.Figure(data=[
+                        go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
+                        go.Scatter3d(x=x_sat, y=y_sat, z=z_sat, mode='markers', marker=dict(color=z_sat, colorscale='Hot', colorbar=dict(title='title')), name='Stable value')
+                    ])
+                    
+                    # Update layout
+                    fig2.update_layout(
+                        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                        title='Scatter Plot of stable values on Original dataset'
+                    )
+                    
+                    # Save figure and open HTML file
+                    fig2.write_html(self.stable_witnesses_html_path)
+                    
                 else:
                     
                     # Extract data for plotting
