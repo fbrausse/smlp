@@ -125,9 +125,10 @@ ext_solver::ext_solver(const char *cmd, const char *logic)
 
 void ext_solver::declare(const domain &d)
 {
-	assert(!n_vars);
+	assert(size(symbols) == 0);
 	dump_smt2(in, d);
-	n_vars = size(d);
+	for (const auto &[id, rng] : d)
+		symbols.emplace(id);
 }
 
 static bool matches(const es::arg &a, const std::string_view &v)
@@ -507,8 +508,15 @@ result ext_solver::check()
 		return unknown { get_info(":reason-unknown") };
 	assert(*res == "sat");
 
-	fprintf(in, "(get-model)\n");
+	fprintf(in, "(get-value (");
+	bool fst = true;
+	for (const str &s : symbols)
+		fprintf(in, "%s%s", fst ? fst = false, "" : " ", s.c_str());
+	fprintf(in, "))\n");
+
 	hmap<str,sptr<term2>> m;
+#if 0
+	fprintf(in, "(get-model)\n");
 	if (name == "Yices") {
 		for (size_t i=0; i<n_vars; i++) {
 			opt<sexpr> n = out_s.next();
@@ -519,17 +527,20 @@ result ext_solver::check()
 		}
 		return sat { move(m) };
 	}
+#endif
 	opt<sexpr> no = out_s.next();
 	assert(no);
 	const sexpr &n = *no;
 	size_t off = 0;
+#if 0
 	if (name == "cvc4" || name == "ksmt" ||
 	    (name == "MathSAT5" && parsed_version >= split_version {5,6,8})) {
 		assert(std::get<slit>(n[0]) == "model");
 		off = 1;
 	}
-	assert(size(n) == off+n_vars);
-	for (size_t i=0; i<n_vars; i++) {
+#endif
+	assert(size(n) == off + size(symbols));
+	for (size_t i=0; i < size(symbols); i++) {
 		auto [it,ins] = m.insert(parse_smt2_asgn(std::get<sexpr>(n[off+i])));
 		assert(ins);
 	}

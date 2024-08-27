@@ -269,6 +269,14 @@ extern opt<str> ext_solver_cmd;
 extern opt<str> inc_solver_cmd;
 extern long intervals;
 
+enum class assert_mode {
+	NONE,
+	LOG_FAIL,
+	ASSERT,
+};
+
+extern assert_mode check_full_model_result;
+
 void set_loglvl(char *arg);
 
 void signal_backtrace_handler(int);
