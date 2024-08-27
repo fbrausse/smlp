@@ -134,7 +134,7 @@ class SmlpSpec:
         self._SPEC_VARIABLE_RANGE = None
         self._SPEC_DICTIONARY_SYSTEM = None
         
-        # tracks changes ib spec file token names per spec version
+        # tracks changes in spec file token names per spec version
         self._spec_tokens_dict = {
             'SPEC_VARIABLE_LABEL' : {'1.1': 'label', '1.2': 'label'},
             'SPEC_VARIABLE_TYPE' : {'1.1': 'type', '1.2': 'interface'},
@@ -167,6 +167,8 @@ class SmlpSpec:
             self._SPEC_KNOBS_GRID = 'grid'
             self._SPEC_KNOBS_ABSOLUTE_RADIUS = 'rad-abs'
             self._SPEC_KNOBS_RELATIVE_RADIUS = 'rad-rel'
+            self._SPEC_KNOBS_ABSOLUTE_DELTA = 'delta-abs'
+            self._SPEC_KNOBS_RELATIVE_DELTA = 'delta-rel'
             self._SPEC_VARIABLE_RANGE = 'range'
             self._SPEC_RANGE_REAL = 'float'
             self._SPEC_DICTIONARY_SPEC = 'spec'
@@ -204,6 +206,11 @@ class SmlpSpec:
         # eta global and grid constraints can only be defined on knobs
         eta_expr = self.get_spec_global_eta_expr
         for var_spec in self.spec:
+            for k in var_spec.keys():
+                if k not in [self._SPEC_VARIABLE_LABEL, self._SPEC_VARIABLE_TYPE, self._SPEC_VARIABLE_RANGE, 
+                            self._SPEC_INPUTS_BOUNDS, self._SPEC_KNOBS_GRID, 
+                            self._SPEC_KNOBS_ABSOLUTE_RADIUS, self._SPEC_KNOBS_RELATIVE_RADIUS]:
+                    raise Exception('Unexpected varibeled specification field ' + '"{}"'.format(str(k)))
             #print('var_spec', var_spec)
             if self._SPEC_VARIABLE_LABEL not in var_spec.keys():
                 raise Exception('A variable does not have the label (name) declared in spec file')
@@ -939,7 +946,7 @@ class SmlpSpec:
         for k, v in self.get_spec_theta_radii_dict.items():
             knov_val = knob_config[k]['value_in_config']; #print('knov_val', knov_val)
             if v['rad-abs'] is not None:
-                rad = abs(knov_val); #print('rad-abs', rad)
+                rad = abs(v['rad-abs']); #print('rad-abs', rad)
             elif v['rad-rel'] is not None:
                 rad = v['rad-rel'] * abs(knov_val); #print('rad-rel', rad)
             else:
@@ -947,6 +954,24 @@ class SmlpSpec:
             knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
         return input_ranges | knobs_ranges
    
+    def get_spec_stability_intervals_dict(self, knob_config):
+        #print('knob_config', knob_config)
+        input_ranges = {}
+        for k, v in self.get_spec_alpha_bounds_dict.items():
+            input_ranges[k] = [v['min'], v['max']]
+        knobs_ranges = {}
+        for k, v in self.get_spec_theta_radii_dict.items():
+            if k not in knob_config: # TODO !!!! this should not happen with full assighnement to knobs
+                continue
+            knov_val = knob_config[k]; #print('knov_val', knov_val)
+            if v['rad-abs'] is not None:
+                rad = abs(v['rad-abs']); #print('rad-abs', rad)
+            elif v['rad-rel'] is not None:
+                rad = v['rad-rel'] * abs(knov_val); #print('rad-rel', rad)
+            else:
+                raise Exception('At least on of the relative or absolute radii must mot be None')
+            knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
+        return input_ranges | knobs_ranges
     
     '''
     This function splits an SMLP spec extracted from spec_file into a number pf spec files with smaller grids 
@@ -1003,7 +1028,7 @@ class SmlpSpec:
             output_filename = f"{spec_file.rsplit('.', 1)[0]}_{knobs[name_index]}_{splits[name_index]}_{idx}.spec"
             with open(output_filename, 'w') as outfile:
                 json.dump(new_spec_data, outfile, indent=4)
-            print(f"Created spec file: {output_filename}")
+            self._spec_logger.info('Created spec file ' + str(output_filename))
             new_spec_files.append(output_filename)
         return new_spec_files
     # Example usage:

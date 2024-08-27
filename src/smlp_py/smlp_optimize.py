@@ -11,7 +11,7 @@ from decimal import Decimal
 from typing import Union
 import json
 import pandas as pd
-import keras
+#import keras
 import numpy as np
 
 # single or multi-objective optimization, with stability constraints and any user
@@ -1090,11 +1090,11 @@ class SmlpOptimize:
             self._opt_logger.info('Skipping pareto optimization synthesis feasibility check')
             return False, None
     
-        
+    
     # SMLP optimization of multiple objectives -- pareto optimization or optimization per objective
     # TODO !!!: X and y are used to estimate bounds on objectives from training data, and the latter is not
     #     available in model re-run mode. Need to estimate objectove bounds in a different way and pass to this
-    #     function (and to smlp_optsyn() instead of passing X,y; The bounds on objectives are nt strictly necessary,
+    #     function (and to smlp_optsyn() instead of passing X,y; The bounds on objectives are not strictly necessary,
     #     any approximation may be used, but accurate approximation might reduce iterations count needed for
     #     computing optimal confoguurations (in optimize and optsyn modes)
     def smlp_optimize(self, syst_expr_dict:dict, algo:str, model:dict, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, 

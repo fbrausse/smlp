@@ -44,6 +44,20 @@ smlp_logger - INFO - training data after imputing missing values
 9    c11  12.0  2.0   7  10.0  fail  fail
 10   c19  10.0  3.0   7  11.0  pass  fail
 
+smlp_logger - INFO - training data after processing responses
+   categ     x   p1  p2   num  PF  PF1
+0    c14  10.0  2.0   3   2.4   1    0
+1    c15  12.0  2.0   4   1.2   0    0
+2     c1  10.0  3.0   4  -0.5   1    0
+3     c9  11.0  2.0   6  -0.5   1    1
+4     c5  10.0  2.0   8   0.0   0    1
+5    c10   9.0  4.0   7   2.5   0    0
+6    c13   9.0  3.0   6   3.3   1    1
+7     c4  10.0  3.0   4   2.8   1    1
+8    c15  11.0  4.0   4   9.0   1    0
+9    c11  12.0  2.0   7  10.0   1    1
+10   c19  10.0  3.0   7  11.0   0    1
+
 smlp_logger - INFO - data after discretization
    categ  x  p1  p2  num
 0    c14  1   0   0    3

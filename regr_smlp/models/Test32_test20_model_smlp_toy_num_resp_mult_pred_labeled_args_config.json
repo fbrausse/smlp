@@ -111,6 +111,7 @@
     "radius_absolute": null,
     "radius_relative": null,
     "response": "y1,y2",
+    "response_map": null,
     "response_plots": false,
     "response_to_bool": null,
     "rf_sklearn_bootstrap": true,

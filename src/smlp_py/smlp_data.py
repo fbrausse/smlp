@@ -51,6 +51,8 @@ class SmlpData:
                                      # sample weights based on response values on these samples
         self._RESPONSE_TO_BOOL = None # list of conditions per response to convert numeric responses 
                                       # into binary 1/0 responses
+        self._RESPONSE_MAP = None # python expression with just one variable x to be applied as lambfa function
+                                      # to the values of each of the responses
         self._CONDITION_SEPARATOR = ';' # separator used in self._RESPONSE_TO_BOOL to seperate conditions 
         self._DEF_SCALE_FEATURES = True
         self._DEF_SCALE_RESPONSES = True
@@ -237,6 +239,13 @@ class SmlpData:
                     'responses per sample, and mn and mx are respectively the min and max of resp_vals. ' +
                     'The value of sw_coef is chosen non-negative to make sure all weights are non-negative ' +
                     '[default: {}]'.format(self._DEF_SAMPLE_WEIGHTS_INTERCEPT)},
+            'response_map':{'abbr':'respmap', 'default':self._RESPONSE_MAP, 'type':str,
+                'help':'Python expression with just one variable x to be applied as lambda function ' +
+                    'to the values of each of the responses, as part of preprocessing. ' +
+                    'This transformation is applied before the transformation of responses specified ' +
+                    'using option resp2b, and the user responsibility to ensure these two transformations ' +
+                    'in the described order achieve the right transformation of the response columns ' +
+                    '[default: {}]'.format(str(self._RESPONSE_MAP))},
             'response_to_bool':{'abbr':'resp2b', 'default':self._RESPONSE_TO_BOOL, 'type':str,
                 'help':'Semicolon seperated list of conditions to be applied to the responses in the '
                     'order the responses are specified, to convert them into binary responses ' +
@@ -451,7 +460,7 @@ class SmlpData:
                 constant_cols.append(col)
         #print('constant_cols', constant_cols, 'keep_feat', keep_feat)
         constant_cols_to_drop = [c for c in constant_cols if c not in keep_feat]
-        #print('constant_cols_to_drop', constant_cols_to_drop); assert False
+        #print('constant_cols_to_drop', constant_cols_to_drop)
         df.drop(constant_cols_to_drop, axis=1, inplace=True)
         if len(constant_cols_to_drop) > 0:
             self._data_logger.info('The following constant features have been droped from ' + str(data_name) + ' data:')
@@ -466,9 +475,35 @@ class SmlpData:
                 df[resp_name].map({True:'True', False:'False'})
         return df
     
+    
+    #Applies a transformation to specified columns in a DataFrame.
+    #Parameters:
+    # df (pd.DataFrame): The DataFrame to transform.
+    # resp_names (list of str): The list of column names to apply the transformation to.
+    # transformation (str): The transformation to apply, specified as a string that can be evaluated.
+    #Returns:
+    #pd.DataFrame: The DataFrame with transformed columns.
+    def _apply_transformation_to_columns(self, df, resp_names, transformation):        
+        # Define a lambda function that evaluates the transformation expression
+        # The placeholder '{}' will be replaced by the column value
+        if transformation is None:
+            return df
+        transform_lambda = eval('lambda x: ' + transformation.format('x')); #print('transform_lambda', transform_lambda)
+
+        # Apply the transformation to each column in resp_names
+        for column in resp_names:
+            if column in df.columns:
+                #print('col val before', df[column].tolist()[0:2])
+                df[column] = df[column].apply(transform_lambda)
+                #print('col val after', df[column].tolist()[0:2])
+            else:
+                raise Exception('Response ' + str(column) + ' does not occur in data')
+        
+        return df
+    
     # This function should be called after rows with missing values in at least one of the responses  
     # have been dropped. Constant responses (with exactly one non-NaN value) are dropped here. 
-    def _preprocess_responses(self, resp_df:pd.DataFrame, pos_value:int, neg_value:int, resp_to_bool:str, is_training:bool):
+    def _preprocess_responses(self, resp_df:pd.DataFrame, pos_value:int, neg_value:int, resp_map:str, resp_to_bool:str, is_training:bool):
         resp_names = resp_df.columns.tolist()
         resp_types = resp_df.dtypes
         for i, resp_name in enumerate(resp_names):
@@ -509,6 +544,8 @@ class SmlpData:
                             'values; please encode it into a number of binary responses')
                     else:
                         raise Exception('Response ' + str(resp_name) + 'has unsupported type ' + str(resp_type))
+        # Apply resp_map as lambda function to values of each of the responses
+        resp_df = self._apply_transformation_to_columns(resp_df, resp_names, resp_map)
         
         # Apply resp_to_bool condition to numeric responses, so that if high values are positive (which is 
         # the default) then for samples that satisfy resp_to_bool the generated response will have value
@@ -534,7 +571,7 @@ class SmlpData:
                 # that the evaluated code can access and this way make call to eval() safer.
                 resp_new = eval(resp_cond, {}, {'resp_name':resp_name, 'resp_df':resp_df})
                 resp_df[resp_name] = [int(e) for e in resp_new]
-        #print('processed resp_df\n', resp_df)
+        
         return resp_df
         
     # Save feature names to be used in model training per response as a dictionary
@@ -710,7 +747,7 @@ class SmlpData:
         return
         
     def preprocess_data(self, data_file:str, feat_names:list[str], resp_names:list[str], feat_names_dict:dict, 
-            keep_feat:list[str], impute_resp:bool, data_version_str:str, pos_value:int, neg_value:int, resp_to_bool):
+            keep_feat:list[str], impute_resp:bool, data_version_str:str, pos_value:int, neg_value:int, resp_map:str, resp_to_bool:str):
         self._data_logger.info('loading ' + data_version_str + ' data')
         data = pd.read_csv(data_file)
         self._data_logger.info('data summary\n' + str(data.describe()))
@@ -721,6 +758,13 @@ class SmlpData:
         is_training = data_version_str == 'training'
         new_labeled = self._sanity_check_responses(data, resp_names, is_training)
         
+        # preprocess_data() is sometimes called directly -- not from within process_data.
+        # Also in that case we want to ensure that keep_feat contains all variables that occur
+        # within constraints in the specification (we do not include here variables that are
+        # declared as variables in the specification, thus are part of domain, but do not occur
+        # explicitly in alpha, eta and beta constraints, in assertions, queries, objectives....)
+        keep_feat = list_unique_unordered(keep_feat + self._specInst.get_spec_constraint_vars())
+
         # if feature names are not provided, we assume all features in the data besides
         # the responses should be used in the analysis as input features.
         if feat_names is None and is_training:
@@ -772,10 +816,11 @@ class SmlpData:
         # seprate features and responses, process them separately
         X, y = self._get_response_features(data, feat_names, resp_names, is_training, new_labeled)
         if is_training or new_labeled:
-            y = self._preprocess_responses(y, pos_value, neg_value, resp_to_bool, is_training)
+            y = self._preprocess_responses(y, pos_value, neg_value, resp_map, resp_to_bool, is_training)
+            self._data_logger.info(data_version_str + ' data after processing responses\n' + str(pd.concat([X,y], axis=1)))
         if not y is None:
-            assert set(resp_names) == set(y.columns.tolist())
-            
+            assert set(resp_names) == set(y.columns.tolist())    
+        
         return X, y, feat_names, resp_names, feat_names_dict
     
 
@@ -880,7 +925,7 @@ class SmlpData:
     def _prepare_data_for_modeling(self, data_file:str, is_training:bool, split_test:float, 
             feat_names:list[str], resp_names:list[str], keep_feat:list[str], out_prefix:str, 
             train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots:bool, 
-            response_plots:bool, mrmr_features_n:int, pos_value:int, neg_value:int, resp_to_bool:str, 
+            response_plots:bool, mrmr_features_n:int, pos_value:int, neg_value:int, resp_map:str, resp_to_bool:str, 
             scaler_type:str, scale_features:bool, scale_responses:bool, impute_responses:bool, 
             mm_scaler_feat=None, mm_scaler_resp=None, levels_dict=None, model_features_dict=None):
         data_version_str = 'training' if is_training else 'new'
@@ -896,7 +941,7 @@ class SmlpData:
         # where a response value is missing; imputing missing values in features.
         X, y, feat_names, resp_names, model_features_dict = self.preprocess_data(data_file, 
             feat_names, resp_names, model_features_dict, keep_feat, impute_responses, data_version_str, 
-            pos_value, neg_value, resp_to_bool)
+            pos_value, neg_value, resp_map, resp_to_bool)
         if not y is None:
             assert set(resp_names) == set(y.columns.tolist())
         
@@ -962,17 +1007,17 @@ class SmlpData:
             feat_names:list[str], resp_names:list[str], keep_feat:list[str],  
             train_first_n:int, train_random_n:int, train_uniform_n:int, interactive_plots:bool, response_plots:bool,
             scaler_type:str, scale_features:bool, scale_responses:bool, impute_responses:bool, mrmr_features_n:int, 
-            pos_value, neg_value, resp_to_bool, save_model:bool, use_model:bool):
+            pos_value, neg_value, resp_map:str, resp_to_bool, save_model:bool, use_model:bool):
         
         #scale = not self._get_data_scaler(scaler_type) is None
-        keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); #print('keep_feat', keep_feat)
+        keep_feat = keep_feat + self._specInst.get_spec_constraint_vars()
         if data_file is not None:
             split_test = self._DEF_SPLIT_TEST if split_test is None else split_test
             X, y, X_train, y_train, X_test, y_test, mm_scaler_feat, mm_scaler_resp, \
             feat_names, resp_names, levels_dict, model_features_dict = self._prepare_data_for_modeling(
                 data_file, True, split_test, feat_names, resp_names, keep_feat, report_file_prefix, 
                 train_first_n, train_random_n, train_uniform_n, interactive_plots, response_plots,
-                mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type, 
+                mrmr_features_n, pos_value, neg_value, resp_map, resp_to_bool, scaler_type, 
                 scale_features, scale_responses, impute_responses, None, None, None, None)
             
             # santy check that: mm_scaler_feat is not None --> scaler_type != 'none'
@@ -1000,7 +1045,7 @@ class SmlpData:
         if new_data_file is not None:
             X_new, y_new = self._prepare_data_for_modeling(
                 new_data_file, False, None, feat_names, resp_names, keep_feat, report_file_prefix,  None, None, None, 
-                interactive_plots, response_plots, mrmr_features_n, pos_value, neg_value, resp_to_bool, scaler_type,
+                interactive_plots, response_plots, mrmr_features_n, pos_value, neg_value, resp_map, resp_to_bool, scaler_type,
                 scale_features, scale_responses, impute_responses, mm_scaler_feat, mm_scaler_resp, levels_dict, model_features_dict)
         else:
             X_new, y_new = None, None

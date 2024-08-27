@@ -67,6 +67,19 @@ smlp_logger - INFO - training data after imputing missing values
 8   7.0   6  10.7007   9.5661
 9  10.0   7   8.7932   6.4015
 
+smlp_logger - INFO - training data after processing responses
+     p1  p2       y1       y2
+0   0.1   4   5.0233   8.0000
+1   3.9   3   0.6936  12.0200
+2   2.0   4   0.6882   8.1400
+3   1.1   3   0.2400   8.0000
+4   4.0   3   0.3240   8.0000
+5   4.0   5   6.0300   8.0000
+6   7.1   6   0.9100  10.1250
+7   7.0   7   0.9600   1.1200
+8   7.0   6  10.7007   9.5661
+9  10.0   7   8.7932   6.4015
+
 smlp_logger - INFO - training data after encoding levels of categorical features with integers
      p1  p2       y1       y2
 0   0.1   4   5.0233   8.0000
@@ -688,8 +701,6 @@ smlp_logger - INFO - Pareto optimization completed with objectives thresholds:
 
 
 smlp_logger - INFO - Pareto optimization: End
-
-smlp_logger - WARNING - factor p1 contains duplicate elements in the DOE spec; they will be dropped
 
 smlp_logger - WARNING - factor p2 contains duplicate elements in the DOE spec; they will be dropped
 

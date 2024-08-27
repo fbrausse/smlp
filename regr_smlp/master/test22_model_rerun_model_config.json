@@ -112,6 +112,7 @@
     "radius_absolute": null,
     "radius_relative": null,
     "response": "PF ,|PF |",
+    "response_map": null,
     "response_plots": true,
     "response_to_bool": null,
     "rf_sklearn_bootstrap": true,

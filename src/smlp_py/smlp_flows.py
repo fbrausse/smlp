@@ -12,6 +12,7 @@ from smlp_py.smlp_doe import SmlpDoepy
 from smlp_py.smlp_discretize import SmlpDiscretize
 from smlp_py.smlp_terms import ModelTerms
 from smlp_py.smlp_spec import SmlpSpec
+from smlp_py.smlp_frontier import SmlpFrontier
 from smlp_py.smlp_solver import SmlpSolver
 from smlp_py.smlp_verify import SmlpVerify
 from smlp_py.smlp_query import SmlpQuery
@@ -35,6 +36,7 @@ class SmlpFlows:
         self.doeInst = SmlpDoepy();
         self.discrInst = SmlpDiscretize()
         self.specInst = SmlpSpec()
+        self.frontierInst = SmlpFrontier()
         self.modelTernaInst = ModelTerms()
         self.modelTernaInst.set_smlp_spec_inst(self.specInst)
         self.solverInst = SmlpSolver()
@@ -76,6 +78,7 @@ class SmlpFlows:
         self.doeInst.set_logger(self.logger)
         self.discrInst.set_logger(self.logger)
         self.specInst.set_logger(self.logger)
+        self.frontierInst.set_logger(self.logger)
         self.optInst.set_logger(self.logger)
         self.verifyInst.set_logger(self.logger)
         self.queryInst.set_logger(self.logger)
@@ -85,6 +88,7 @@ class SmlpFlows:
         self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.dataInst.set_model_file_prefix(self.configInst.model_file_prefix)
+        self.frontierInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.modelInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.modelInst.set_model_file_prefix(self.configInst.model_file_prefix)
         self.optInst.set_report_file_prefix(self.configInst.report_file_prefix)
@@ -105,6 +109,7 @@ class SmlpFlows:
         self.dataInst.set_spec_inst(self.specInst)
         self.specInst.set_radii(self.args.radius_absolute, self.args.radius_relative)
         self.specInst.set_deltas(self.args.delta_absolute, self.args.delta_relative)
+        self.frontierInst.set_spec_inst(self.specInst)
         
         # set external solver to SMLP
         self.solverInst.set_solver_path(self.args.solver_path)
@@ -112,8 +117,9 @@ class SmlpFlows:
         # ML model exploration modes. They require a spec file for model exploration.
         self.model_prediction_modes = ['train', 'predict']
         self.model_exploration_modes = ['optimize', 'synthesize', 'verify', 'query', 'optsyn', 'certify']
+        self.data_exploration_modes = ['frontier']
         self.supervised_modes = ['subgroups', 'discretize'] + self.model_prediction_modes + \
-            self.model_exploration_modes
+            self.model_exploration_modes + self.data_exploration_modes
         
         # create and set tracer (to profile steps of system/model exploration algorithm)
         if self.args.analytics_mode in self.model_exploration_modes:
@@ -167,7 +173,8 @@ class SmlpFlows:
         # extract response and feature names
         if args.analytics_mode in self.supervised_modes:
             if args.response is None:
-                if args.analytics_mode in self.model_exploration_modes or (args.analytics_mode in self.model_prediction_modes and args.spec is not None):
+                if args.analytics_mode in self.model_exploration_modes or args.analytics_mode in self.data_exploration_modes \
+                    or (args.analytics_mode in self.model_prediction_modes and args.spec is not None):
                     resp_names = self.specInst.get_spec_responses
                 else:
                     raise Exception('Response names should be provided')
@@ -179,14 +186,15 @@ class SmlpFlows:
                     if len(resp_wo_spec) > 0:
                         raise Exception('Response(s) ' + ' '.join(resp_wo_spec) + ' are not defined in spc file')
             if args.features is None:
-                if args.analytics_mode in self.model_exploration_modes or (args.analytics_mode in self.model_prediction_modes and args.spec is not None):
+                if args.analytics_mode in self.model_exploration_modes or args.analytics_mode in self.data_exploration_modes \
+                    or (args.analytics_mode in self.model_prediction_modes and args.spec is not None):
                     feat_names = self.specInst.get_spec_features
                 else:
                     feat_names = None
             else:
                 feat_names = args.features.split(',')
-
-        if args.analytics_mode in self.model_exploration_modes or \
+        
+        if args.analytics_mode in self.model_exploration_modes or args.analytics_mode in self.data_exploration_modes or \
             (args.model == 'system' and args.analytics_mode in self.model_prediction_modes):
             # We want to set to SmlpSpec object self.specInst expressions of assertions, queries, optimization 
             # objectives, in order to compute variables input feature names that way depend on. This is to
@@ -239,7 +247,7 @@ class SmlpFlows:
         if args.analytics_mode == 'discretize':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
-                args.positive_value, args.negative_value, args.response_to_bool)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
             self.discrInst.smlp_discretize_df(X, algo=args.discretization_algo, 
                 bins=args.discretization_bins, labels=args.discretization_labels,
                 result_type=args.discretization_type)
@@ -249,11 +257,23 @@ class SmlpFlows:
         if args.analytics_mode == 'subgroups':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
-                args.positive_value, args.negative_value, args.response_to_bool)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
             #data = pd.concat([X,y], axis=1); print('data\n',data)
             fs_ranking_df, fs_summary_df, results_dict = self.psgInst.smlp_subgroups(X, y, resp_names, 
                 args.positive_value, args.negative_value, args.psg_quality_target, args.psg_max_dimension, 
                 args.psg_top_ranked, args.interactive_plots); #print('fs_ranking_df\n', fs_ranking_df); 
+            self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
+            self.logger.info('Executing run_smlp.py script: End')
+            return None
+        
+        if args.analytics_mode == 'frontier':
+            X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
+                feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+            self.frontierInst.select_pareto_frontier(
+                X, y, None, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
+                args.optimization_strategy, quer_names, quer_exprs, 
+                delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
@@ -268,7 +288,7 @@ class SmlpFlows:
                 feat_names, resp_names, args.keep_features, args.train_first_n, args.train_random_n, args.train_uniform_n, 
                 args.interactive_plots, args.response_plots, args.data_scaler,
                 args.scale_features, args.scale_responses, args.impute_responses, args.mrmr_feat_count_for_prediction, 
-                args.positive_value, args.negative_value, args.response_to_bool, args.save_model, args.use_model)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool, args.save_model, args.use_model)
 
             # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
             # the same; this is mostly important for model exploration modes 
@@ -293,11 +313,11 @@ class SmlpFlows:
                 self.logger.info('Executing run_smlp.py script: End')
                 return model
         
-        # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
-        # the same; this is mostly important for model exploration modes 
-        self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
-        
         if args.analytics_mode in self.model_exploration_modes:
+            # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
+            # the same; this is mostly important for model exploration modes 
+            self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
+            
             if args.analytics_mode == 'verify':
                 if True or len(self.specInst.get_spec_knobs)> 0:
                     if config_dict is None:
@@ -362,7 +382,6 @@ class SmlpFlows:
                 
                 #self.logger.info('self.optInst.best_config_dict {}'.format(str(self.optInst.best_config_dict)))
                 if syst_expr_dict is not None:
-                    # TODO !!!! support also for the eager strategy
                     if 'final' in self.optInst.best_config_dict:
                         stability_region_dict = self.specInst.get_spec_stability_ragion_bounds_dict(self.optInst.best_config_dict['final'])
                         self.refineInst.compute_rmse(stability_region_dict, model, args.model, model_features_dict, resp_names, 
@@ -377,6 +396,8 @@ class SmlpFlows:
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
                     args.approximate_fractions, args.fraction_precision,
                     self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+            
+                
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
         
