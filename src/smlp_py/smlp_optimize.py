@@ -270,7 +270,7 @@ class SmlpOptimize:
             quer_name = objv_name + '_' + str(T)
             #quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
             #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
-            self._opt_tracer.info('adjusted thesholds, objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
+            self._opt_tracer.info('adjusted thresholds, objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
             max_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
                 smlp_domain, model_full_term_dict, True, solver_logic)
             max_solver.add(phi_cond) 

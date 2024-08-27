@@ -17,14 +17,14 @@
 		"p1": {
 			"value_in_config": 0.0
 		},
-		"y2": {
-			"value_in_config": 0.0,
-			"value_in_system": 0
-		},
 		"p2": {
 			"value_in_config": 0.0
 		},
 		"y1": {
+			"value_in_config": 0.0,
+			"value_in_system": 0
+		},
+		"y2": {
 			"value_in_config": 0.0,
 			"value_in_system": 0
 		}

@@ -627,6 +627,21 @@ class SmlpTerms:
     
 # Methods to generate smlp term and formula from rules associated to branches of an sklearn
 # (or caret) regression tree model (should work for classification trees as well, not tested)
+#
+# Three encodings of trees to terms are suported:
+# 1. Flat Encoding: In the flat encoding for tree models, each rule (branch) of
+# the tree is translated into a separate formula. This encoding does not nest
+# the conditions but rather treats each path from the root to a leaf as an
+# independent formula. 
+#  
+#2. Nested Encoding: The nested encoding builds a single monolithic term for each
+# response that represents the entire tree for that response. It uses nested
+# if-then-else (ITE) expressions to capture the branching logic of the tree. 
+#  
+# 3. ABC Encoding: The ABC encoding is a method that introduces additional variables
+# to represent the antecedents (conditions) of the tree branches. This encoding
+# is useful for breaking down complex tree structures into simpler components that
+# can be shared across responses and handled separately by the solver.
 class TreeTerms:
     def __init__(self):
         self._smlp_terms_logger = None
@@ -1299,6 +1314,15 @@ class PolyTerms: #(SmlpTerms):
 
 
 # Method to generate smlp term from a Tensorflow Keras model built using Sequential or Functional API 
+# Two encodings of tf Keras models to terms are supported:
+# 1. Flat Encoding: For neural networks, the flat encoding creates a formula for each
+# internal node (neuron) of the network. This encoding exposes the internal structure
+# of the neural network to the solver, allowing each neuron's computation to be
+# represented as a separate logical formula.
+#  
+# 2. Nested Encoding: The nested encoding for neural networks builds a monolithic term
+# for each response of the network. This term captures the entire computation from
+# the input layer to the output layer in a single expression.
 class NNKerasTerms: #(SmlpTerms):
     def __init__(self):
         self._smlp_terms_logger = None

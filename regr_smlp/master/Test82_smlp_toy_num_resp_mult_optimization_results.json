@@ -20,20 +20,20 @@
 		"max_in_data": 9.0,
 		"min_in_data": 5.0
 	},
-	"y2": {
-		"value_in_config": 9.0
-	},
-	"y1": {
-		"value_in_config": 9.0
-	},
-	"p2": {
-		"value_in_config": 7.0
+	"x": {
+		"value_in_config": 11.499999925494194
 	},
 	"p1": {
 		"value_in_config": 4.0
 	},
-	"x": {
-		"value_in_config": 11.499999925494194
+	"p2": {
+		"value_in_config": 7.0
+	},
+	"y1": {
+		"value_in_config": 9.0
+	},
+	"y2": {
+		"value_in_config": 9.0
 	},
 	"obj1_scaled_objv2_scaled_objv3_scaled": {
 		"value_in_config": 1.0
