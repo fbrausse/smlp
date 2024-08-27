@@ -2,10 +2,15 @@
 # This file is part of smlp.
 
 import smlp
+from smlp_py.ext import plot
+import time
 from smlp_py.smlp_terms import SmlpTerms, ModelTerms, ScalerTerms
 from smlp_py.smlp_query import SmlpQuery
 from smlp_py.smlp_utils import (str_to_bool, np_JSONEncoder)
+from icecream import ic
             
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
+
 from fractions import Fraction
 from decimal import Decimal
 from typing import Union
@@ -16,6 +21,8 @@ import numpy as np
 
 # single or multi-objective optimization, with stability constraints and any user
 # given constraints on free input, control (knob) and output variables satisfied.
+plot_instance = plot.plot_exp()
+
 class SmlpOptimize:
     def __init__(self):
         self._opt_logger = None 
@@ -482,6 +489,8 @@ class SmlpOptimize:
             quer_and_beta = self._smlpTermsInst.smlp_and(quer_form, beta) if not beta == smlp.true else quer_form
             #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
             self._opt_tracer.info('objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
+            ic("Here ...")
+            #ic(u0,l0,u,l,T)
             quer_res = self._queryInst.query_condition(
                 True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision)
@@ -781,6 +790,7 @@ class SmlpOptimize:
             key_label = 'final'
             self._opt_logger.info('Pareto optimization completed with objectives thresholds: ' + 
                 '\n    Scaled to [0,1]: {}\n    Original  scale: {}\n'.format(s_scaled_dict, s_origin_dict))
+            ic("Changes here ...")
         elif call_n is None:
             key_label = 'vacuity'
             self._opt_logger.info('Pareto optimization vacuity completed with objectives thresholds: ' + 
@@ -838,6 +848,9 @@ class SmlpOptimize:
                 json.dump(self.best_config_dict['final'] | self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
             final_config_df = self.best_config_df.drop_duplicates(subset=self.feat_names, inplace=False)
             final_config_df.to_csv(self.optimization_results_file+'.csv', index=False)            
+            ic("changes here")
+            solver = 'sat'
+            plot_instance.witnesses(s_origin_dict, solver)
     
     
     def update_optimization_reports(self, stable_witness_terms, l, u, call_info, iter_count, scale_objectives, 
@@ -901,6 +914,8 @@ class SmlpOptimize:
             beta:smlp.form2, eta:smlp.form2, theta_radii_dict:dict,
             epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, strategy:str, scale_objv:bool, data_scaler:str, 
             sat_approx=False, sat_precision=64, save_trace=False):
+        plot_instance.save_time(time.time())
+        ic("Optimization start time:", time.time())
         self._opt_logger.info('Pareto optimization: Start')
         assert epsilon > 0 and epsilon < 1
         assert objv_names is not None and objv_exprs is not None
@@ -1052,6 +1067,7 @@ class SmlpOptimize:
         self.report_current_thresholds(s, witness, objv_bounds_dict, objv_names, objv_exprs, 
             True, (call_n, 'Final'), scale_objectives)
         
+        plot_instance.save_time(time.time())
         self._opt_logger.info('Pareto optimization: End')
         return s
     
@@ -1063,12 +1079,14 @@ class SmlpOptimize:
             domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict, delta:float, solver_logic:str, 
             float_approx:bool, float_precision:int):
         if feasibility:
+            plot_instance.save_time(time.time())
             self._opt_logger.info('Pareto optimization synthesis feasibility check: Start')
             self._opt_tracer.info('synthesis_feasibility')
             quer_res = self._queryInst.query_condition(True, model_full_term_dict, 'synthesis_feasibility', 'True', beta, 
                 domain, eta, alpha, theta_radii_dict, delta, solver_logic, True, float_approx, float_precision)
             #print('beta', beta); print('quer_res', quer_res)
             if quer_res['query_status'] == 'UNSAT':
+                plot_instance.save_time(time.time())
                 self._opt_logger.info('Pareto optimization synthesis feasibility check: End')
                 return True, None
             elif quer_res['query_status'] == 'STABLE_SAT':
@@ -1084,6 +1102,7 @@ class SmlpOptimize:
                 self.report_current_thresholds(s, witness_vals_dict, objv_bounds_dict, objv_names, objv_exprs, 
                     False, None, False)
                 
+                plot_instance.save_time(time.time())
                 self._opt_logger.info('Pareto optimization synthesis feasibility check: End')
                 return False, s
         else:
@@ -1140,7 +1159,13 @@ class SmlpOptimize:
         contradiction, thresholds = self.check_synthesis_feasibility(vacuity, objv_names, objv_exprs, objv_bounds_dict, scale_objv, 
             feat_names, resp_names, model_full_term_dict, beta, 
             domain, eta, alpha, theta_radii_dict, delta, solver_logic, float_approx, float_precision)
+        ic("Here ...")
+#        ic(vacuity, objv_names, objv_exprs, objv_bounds_dict, scale_objv, 
+#            feat_names, resp_names, model_full_term_dict, beta, 
+#            domain, eta, alpha, theta_radii_dict, delta, solver_logic, float_approx, float_precision)
+#        ic(contradiction, thresholds)
         self.mode_status_dict['synthesis_feasible'] = str(not contradiction).lower()
+#        ic(self.mode_status_dict['synthesis_feasible'])
         if contradiction:
             # instance is contradictory -- more precisely, stable witness does not exist; abort
             self._opt_logger.info('Model configuration optimization instance is inconsistent with synthesis constraints; aborting...')

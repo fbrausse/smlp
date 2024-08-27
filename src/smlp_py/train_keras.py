@@ -15,6 +15,8 @@ import pandas as pd
 import random as rn
 import io
 from contextlib import redirect_stdout
+from icecream import ic
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
 
 #from tensorflow.keras.initializers import GlorotUniform
 
@@ -37,10 +39,10 @@ class ModelKeras:
         self.SMLP_KERAS_MODELS = [self._algo_name_local2global(m) for m in self._KERAS_MODELS]
         
         # hyper parameter defaults
-        self._DEF_LAYERS_SPEC = '2,1'
-        self._DEF_EPOCHS     = 2000
-        self._DEF_BATCH_SIZE = 200
-        self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
+        self._DEF_LAYERS_SPEC = '4,1,4,1' # '2,1'
+        self._DEF_EPOCHS     = 1000 # 1000
+        self._DEF_BATCH_SIZE = 100 # 200
+        self._DEF_OPTIMIZER  = 'rmsprop'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
         self._DEF_LEARNING_RATE = 0.001
         self._HID_ACTIVATION = 'relu'
         self._OUT_ACTIVATION = 'linear'
@@ -207,7 +209,7 @@ class ModelKeras:
     @property
     def model_checkpoint_pattern(self):
         assert self.model_file_prefix is not None
-        return self.model_file_prefix + '_model_checkpoint.h5'
+        return self.model_file_prefix + '_model_checkpoint.keras'  #'_model_checkpoint.h5'
     
     # TODO !!!: add description
     @property
@@ -248,6 +250,10 @@ class ModelKeras:
     def _nn_init_model_sequential(self, resp_names:list[str], input_dim:int, optimizer:str, hid_activation:str, out_activation:str, 
             layers_spec_list:list[int], loss_function, metrics):
         self._keras_logger.info('building NN model using Keras Sequential API')
+
+        ic("Changes here ...")
+        #with tf.device('/GPU:0'):
+        
         # Initialize the Sequential model
         model = keras.Sequential()
         
@@ -375,8 +381,11 @@ class ModelKeras:
                 if str(v) in str(model.loss) or str(k) in str(model.loss):
                     self._keras_logger.info("Loss function: " + str(k))
         if hasattr(model, 'compiled_metrics'):
-            compiled_metrics = model.compiled_metrics._metrics  # Access the private _metrics attribute
-            self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+            ic("Changes here ...")
+            #compiled_metrics = model.compiled_metrics._metrics  # Access the private _metrics attribute
+            #self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+            compiled_metrics = model.compiled_metrics  # Access the private _metrics attribute
+            self._keras_logger.info("Metrics: " + str(compiled_metrics))
         else:
             self._keras_logger.info("Metrics: " + str([]))
         #self._keras_logger.info("Metrics: " + str(model.metrics))

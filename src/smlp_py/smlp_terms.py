@@ -17,6 +17,10 @@ from collections import defaultdict
 import sys
 from enum import Enum
 
+from icecream import ic
+ic.configureOutput(prefix=f'Debug | ', includeContext=True)
+ic("Changes here and line 355")
+from keras.models import Sequential
 import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
@@ -206,7 +210,9 @@ class SmlpTerms:
             return form1
         '''
         res1 = op.and_(form1, form2)
-        #res2 = form1 & form2
+        ic("Here")
+        #ic(res1)
+        #ic(form1, form2)
         #print('res1', res1, type(res1)); print('res2', res2, type(res2))
         #assert res1 == res2
         return res1 # form1 & form2
@@ -359,6 +365,8 @@ class SmlpTerms:
              ('prop' only)
     '''
     def smlp_destruct(self, term2_or_form2): #:smlp.term2|smlp.form2
+        #ic("Changes here...")
+        #sys.setrecursionlimit(15000)
         return smlp.destruct(term2_or_form2)
     
     # this function traverses an object of type smlp.libsmlp.form2 or smlp.libsmlp.term2 
@@ -373,6 +381,9 @@ class SmlpTerms:
             #print('obj', obj)
             # Destructure the given object
             destructure_result = self.smlp_destruct(obj); #print('destructure_result', destructure_result)
+            ic("Changes here...")
+            #sys.setrecursionlimit(20000)
+            destructure_result = self.smlp_destruct(obj)
 
             # Increment the count of the current operator
             operator_counts[destructure_result['id']] += 1; #print('operator_counts', dict(operator_counts))
@@ -1400,7 +1411,8 @@ class NNKerasTerms: #(SmlpTerms):
             cl = keras.engine.sequential.Sequential
         except AttributeError:
             # v2.14+ has this API
-            cl = keras.src.engine.sequential.Sequential
+            #cl = keras.src.engine.sequential.Sequential
+            cl = Sequential
         return isinstance(model, cl)
 
     def _nn_keras_is_functional(self, model):
@@ -1416,6 +1428,7 @@ class NNKerasTerms: #(SmlpTerms):
     def get_nn_keras_model_type(self, model):
         #print('keras model', model, type(model))
         if self._nn_keras_is_sequential(model):
+
             model_type = 'sequential'
         elif self._nn_keras_is_functional(model):
             model_type = 'functional'
@@ -2048,7 +2061,8 @@ class ModelTerms(ScalerTerms):
     # reponses have been scaled prior to training.
     def compute_models_terms_dict(self, algo, model_or_model_dict, model_features_dict, feat_names, resp_names, 
             data_bounds, data_scaler,scale_features, scale_responses):
-        #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names, flush=True)
+
+        #print('model_features_dict', model_features_dict); print('feat_names', feat_names, 'resp_names', resp_names)
         assert lists_union_order_preserving_without_duplicates(list(model_features_dict.values())) == feat_names
         #print('model_or_model_dict', model_or_model_dict)
         if isinstance(model_or_model_dict, dict):
