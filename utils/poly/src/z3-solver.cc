@@ -198,6 +198,9 @@ result z3_solver::check()
 
 	switch (r) {
 	case z3::sat: {
+		/* TODO: info whether constant is part of model can be useful
+		 *       for generalization of counter-examples. Provide that
+		 *       info! ("don't care variable") */
 		z3::model m = slv.get_model();
 		dbg(mod_z3, "model #const: %u, #symbs: %zu\n", m.num_consts(), size(symbols));
 		assert(m.num_consts() == size(symbols));

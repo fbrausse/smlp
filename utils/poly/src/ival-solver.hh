@@ -31,9 +31,11 @@ dbl_interval_eval(const domain &dom, const sptr<term2> &t);
 
 struct crit_solver : acc_solver {
 
-	result check() const override { return check(dom, make2f(asserts)); }
+	result check() const override { return do_check(dom, make2f(asserts)); }
 
-	static result check(const domain &dom, const sptr<form2> &orig);
+
+private:
+	static result do_check(const domain &dom, const sptr<form2> &orig);
 };
 
 struct ival_solver : acc_solver {
