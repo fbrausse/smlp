@@ -292,7 +292,12 @@ class SmlpOptimize:
             assert l < u
             if l + epsilon > u:
                 break
-        self._opt_tracer.info('bin_opt_max end, p_cand_l_u, {} : {} : {}'.format(str(p_cand), str(l),str(u)))
+        #self._opt_tracer.info('bin_opt_max end, p_cand_l_u, {} : {} : {}'.format(str(p_cand), str(l),str(u)))
+        if self._trace_precision > 0:
+            p_cand_trace = self._modelTermsInst.witness_term_to_const(p_cand, approximate=True, precision=self._trace_precision)
+        else:
+            p_cand_trace = self._modelTermsInst.witness_term_to_const(p_cand, approximate=False, precision=None)
+        self._opt_tracer.info('bin_opt_max end, p_cand_l_u, {} : {} : {}'.format(str(p_cand_trace), str(l),str(u)))
         assert p_cand is not None
         assert l < u
         return p_cand, y_cand, l, u   

@@ -1,0 +1,30 @@
+SMLP public benchmark suite
+
+Currently contains two groups of benchmarks CEC22 and Intel benchmarks. They are in directories repo/bench/cec22 and repo/bench/intel, respectively. Each of these directories contain data, specs and logs sub-directories for data files (csv files, bzip2-ed), spec files and SMLP logs, respectively. We do not provide benchmark scripts, therefore we do not impose any structure on the logs sub-directory. For Intel benchmarks we provide example commands, and these commands assume a dedicated sub-directory for each test case (dataset and respective spec file).
+
+1. CEC22 benchmarks:
+Source of the functions and data samples: https://www.kaggle.com/code/kooaslansefat/cec-2022-benchmark. These functions, which are considered difficult for finding a minimum, include:
+a. ackley
+b. elliptic
+c. bentcigar
+d. griewank
+e. hgbat
+f. high_conditioned_elliptic
+g. rastrigin
+h. rosenbrock
+For most of these functions, we generated two datasets and spec files -- one for finding min, one for finding max (SMLP will run optimization with goal to find stable maximum). For other functions, only the data and spec files for finding a minimum are supported, which corresponds to the original goal of CEC22 competition.
+
+
+2.Intel benchmarks:
+
+Intel real-life datasets and respective spec files, with parameter and output names anonymized (in some cases the input names are not anonymized). These datasets come from the signal integrity / electrical validation domain.
+
+
+1. s2_tx_anonym -- data and spec from signal integrity domain. Contains free inputs of integer type (they model categorical input variables). Knob and output names are anonymized. Example command:
+./smlp/root/venv_3.11.1/bin/python ./smlp/repo/src/run_smlp.py  -data ./smlp/repo/bench/intel/data/s2_tx_anonym.csv.bz2 -split 1 -pred_plots f -resp_plots f -spec ./smlp/repo/bench/intel/specs/s2_tx_all_anonym.spec -out_dir ./smlp/repo/bench/intel/logs/s2_tx_anonym -delta_abs 0 -rad_rel 0.1 -epsilon 0.005 -mode optimize -model dt_sklearn -mrmr_pred 0 -plots f -pref lazy_flat_dt_sklearn_dt_sklearn_lay2,1_epo2000_bat200_lr0.001_mse_spl1_swc0_swe0_swi0_solz3_radr0.1_dela0_eps0.005  -tree_encoding flat -opt_strategy lazy
+
+2. s2_tx_piv_anonym -- data and spec from signal integrity domain. It is obtained from s2_tx dataset by eliminating inputs and instead creating multiple ouptputs and multiple objectives for each output of s2_tx and every value combination of inputs in s2_tx. Knob and output names are anonymized. Example command:
+./smlp/root/venv_3.11.1/bin/python ./smlp/repo/src/run_smlp.py  -data ./smlp/repo/bench/intel/data/s2_tx_piv_anonym.csv.bz2 -split 1 -pred_plots f -resp_plots f -spec ./smlp/repo/bench/intel/specs/s2_tx_all_piv_anonym.spec -out_dir ./smlp/repo/bench/intel/logs/s2_tx_piv_anonym -delta_abs 0 -rad_rel 0.1 -epsilon 0.005 -mode optimize -model dt_sklearn -mrmr_pred 0 -plots f -pref lazy_flat_dt_sklearn_dt_sklearn_lay2,1_epo2000_bat200_lr0.001_mse_spl1_swc0_swe0_swi0_solz3_radr0.1_dela0_eps0.005 -tree_encoding flat -opt_strategy lazy
+
+3. read_bowtie_anonym -- data and spec from signal integrity domain. Does not contain (free) inputs -- only contains knobs and outputs. Knob and output names are anonymized. Example command: 
+./smlp/root/venv_3.11.1/bin/python ./smlp/repo/src/run_smlp.py -data ./smlp/repo/bench/intel/data/read_bowtie_anonym.csv.bz2 -split 1 -pred_plots f -resp_plots f -spec ./smlp/repo/bench/intel/specs/read_bowtie_anonym.spec -out_dir ./smlp/repo/bench/logs/read_bowtie_anonym -delta_abs 0 -rad_rel 0.1 -epsilon 0.005 -mode optimize -model dt_sklearn -mrmr_pred 0 -plots f -pref lazy_flat_dt_sklearn_dt_sklearn_lay2,1_epo2000_bat200_lr0.001_mse_spl1_swc0_swe0_swi0_solz3_radr0.1_dela0_eps0.005 -tree_encoding flat -opt_strategy lazy

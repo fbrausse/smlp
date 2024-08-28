@@ -2551,7 +2551,7 @@ class ModelTerms(ScalerTerms):
     
     # wrapper function on solver.check to measure runtime and return status in a convenient way
     def smlp_solver_check(self, solver, call_name:str, lemma_precision:int=0):
-        approx_lemmas =  lemma_precision > 0
+        approx_lemmas = lemma_precision > 0
         start = time.time()
         #print('solver chack start', flush=True)
         res = solver.check()
