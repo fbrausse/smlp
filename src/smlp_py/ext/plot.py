@@ -25,8 +25,11 @@ class plot_exp:
         self.Set = f'experiment_outputs/Set{self.setno}/Set_{self.setno}_'
         self.witnesses_csv_path = f'Set{self.setno}_{self.exp}_witnesses.csv'
         self.stable_witnesses_csv_path = f'Set{self.setno}_{self.exp}_stable_witnesses.csv'
+        self.counter_witnesses_csv_path = f'Set{self.setno}_{self.exp}_counter_witnesses.csv'
+        self.witnesses_json = f'Set{self.setno}_{self.exp}_witnesses.json'
         self.witnesses_html_path = f'Set{self.setno}_{self.exp}_witnesses.html'
         self.stable_witnesses_html_path = f'Set{self.setno}_{self.exp}_stable_witnesses.html'
+        self.counter_witnesses_html_path = f'Set{self.setno}_{self.exp}_counter_witnesses.html'
         self.opt_out = f'Set{self.setno}_{self.exp}_optimization_output.png'
         self.source_file_1 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.csv'
         self.source_file_2 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.spec'
@@ -190,38 +193,85 @@ class plot_exp:
         shutil.copy2(self.source_file_1, self.destination_folder)
         shutil.copy2(self.source_file_2, self.destination_folder)
 
-    def save_to_csv(self, data, data_version):
+    def save_to_dict(self, data, data_version):
         """
-        Saves model precision data to a CSV file. Appends if the file exists.
+        Saves model precision data to a .json file. Appends if the file exists.
     
         Parameters:
         - data: Dictionary containing data to be saved.
         - data_version: Indicates which version of data is being saved.
         """
-        # Create DataFrame based on data version
-        if data_version == 'witnesses':
-            if len(data) == 3:
-                df = pd.DataFrame({'x': data['x'], 'y': data['y'], 'z': data['z']}, index=[0])
-            else:
-                df = pd.DataFrame({'x': data['x'], 'y': data['y']}, index=[0])
-    
-            # Append to or create the CSV file
-            if os.path.exists(self.witnesses_csv_path):
-                df.to_csv(self.witnesses_csv_path, mode='a', header=False, index=False)
-            else:
-                df.to_csv(self.witnesses_csv_path, mode='w', header=True, index=False)
+        init_data = {}
+        ic(data_version)
+        ic(data)
 
+        #if data_version == 'witnesses':
+        if os.path.exists(self.witnesses_json):
+            with open(self.witnesses_json, 'r') as file:
+                init_data = json.load(file)
+                if data_version in init_data:
+                    if len(data) == 3:
+                        init_data[data_version]['x'].append(data['x'])
+                        init_data[data_version]['y'].append(data['y'])
+                        init_data[data_version]['z'].append(data['z'])
+                    else: 
+                        init_data[data_version]['x'].append(data['x'])
+                        init_data[data_version]['y'].append(data['y'])
+                else:
+                    if len(data) == 3:
+                        init_data[data_version] = {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}
+                    else:
+                        init_data[data_version] = {'x': [data['x']], 'y': [data['y']]}
         else:
             if len(data) == 3:
-                df = pd.DataFrame({'x': data['x'], 'y': data['y'], 'z': data['z']}, index=[0])
+                init_data[data_version] = {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}
             else:
-                df = pd.DataFrame({'x': data['x'], 'y': data['y']}, index=[0])
-    
-            # Append to or create the CSV file
-            if os.path.exists(self.stable_witnesses_csv_path):
-                df.to_csv(self.stable_witnesses_csv_path, mode='a', header=False, index=False)
-            else:
-                df.to_csv(self.stable_witnesses_csv_path, mode='w', header=True, index=False)
+                init_data[data_version] = {'x': [data['x']], 'y': [data['y']]}
+
+        with open(self.witnesses_json, 'w') as file:
+            ic(init_data)
+            json.dump(init_data, file, indent=4)
+
+        #elif data_version == 'stable':
+        #    with open(self.witnesses_json, 'r') as file:
+        #        init_data = json.load(file)
+        #        ic(init_data)
+        #        if data_version in init_data:
+        #            if len(data) == 3:
+        #                init_data[data_version]['x'].append(data['x'])
+        #                init_data[data_version]['y'].append(data['y'])
+        #                init_data[data_version]['z'].append(data['z'])
+        #            else:
+        #                init_data[data_version]['x'].append(data['x'])
+        #                init_data[data_version]['y'].append(data['y'])
+        #        else:
+        #            if len(data) == 3:
+        #                init_data = {data_version: {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}}
+        #            else:
+        #                init_data = {data_version: {'x': [data['x']], 'y': [data['y']]}}
+
+        #    with open(self.witnesses_json, 'w') as file:
+        #        json.dump(init_data, file, indent=4)
+
+        #elif data_version == 'counter_ex':
+        #    with open(self.witnesses_json, 'r') as file:
+        #        init_data = json.load(file)
+        #        ic(init_data)
+        #        if len(data) == 3:
+        #            init_data[data_version]['x'].append(data['x'])
+        #            init_data[data_version]['y'].append(data['y'])
+        #            init_data[data_version]['z'].append(data['z'])
+        #        else:
+        #            init_data[data_version]['x'].append(data['x'])
+        #            init_data[data_version]['y'].append(data['y'])
+
+        #    if len(data) == 3:
+        #        init_data = {data_version: {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}}
+        #    else:
+        #        init_data = {data_version: {'x': [data['x']], 'y': [data['y']]}}
+
+        #    with open(self.witnesses_json, 'w') as file:
+        #        json.dump(init_data, file, indent=4)
 
     def plott(self, x, y, data_version):
         """
@@ -435,9 +485,6 @@ class plot_exp:
                     plt.savefig(self.opt_out)
         else:
             ic("No witnesses to plot")
-
-
-
 
 def copy_data(setno):
     """

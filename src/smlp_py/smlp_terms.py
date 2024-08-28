@@ -964,7 +964,6 @@ class TreeTerms:
     # rules is a list of rules. It is computed from a tree model using method trees_to_rules of the same
     # class TreeTerms.
     def compress_antecedent(self, antecedent):
-        ic("Changes here")
         if not self._compress_rules:
             return antecedent, len(antecedent), len(antecedent)
         ant_dict = {}
@@ -988,22 +987,6 @@ class TreeTerms:
                 ant_dict[trp[0]]['lo_cl'].append(trp[2])
             else:
                 raise Exception('Unexpected binop ' + str(trp[1]) + ' in function reduce_antecedent')
-
-        #for trp in antecedent:
-        #    if trp[1] == '<':
-        #        ant_dict[trp[0]]['up'].append(np.round(trp[2], 4))
-        #        #ant_dict[trp[0]]['op_op'].append(trp[2])
-        #    elif trp[1] == '<=':
-        #        ant_dict[trp[0]]['up'].append(np.round(trp[2], 4))
-        #        ant_dict[trp[0]]['up_cl'].append(np.round(trp[2], 4))
-        #    elif trp[1] == '>':
-        #        ant_dict[trp[0]]['lo'].append(np.round(trp[2], 4))
-        #        #ant_dict[trp[0]]['lo_op'].append(trp[2])
-        #    elif trp[1] == '>=':
-        #        ant_dict[trp[0]]['lo'].append(np.round(trp[2], 4))
-        #        ant_dict[trp[0]]['lo_cl'].append(np.round(trp[2], 4))
-        #    else:
-        #        raise Exception('Unexpected binop ' + str(trp[1]) + ' in function reduce_antecedent')
 
         #print('ant_dict', ant_dict)
         for k,v in ant_dict.items():
@@ -1409,12 +1392,7 @@ class NNKerasTerms: #(SmlpTerms):
     # determine the model type -- sequential vs functional
     def _get_nn_keras_model_type(self, model):
         #print('keras model', model, type(model))
-#<<<<<<< Updated upstream
         if self._keras_is_sequential(model):
-#=======
-#        #print('keras terms', keras)
-#        if isinstance(model, keras.Sequential):
-#>>>>>>> Stashed changes
             model_type = 'sequential'
         elif self._keras_is_functional(model):
             model_type = 'functional'
