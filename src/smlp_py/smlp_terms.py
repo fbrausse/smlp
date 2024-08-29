@@ -17,13 +17,14 @@ from collections import defaultdict
 import sys
 from icecream import ic
 ic.configureOutput(prefix=f'Debug | ', includeContext=True)
-ic("Changes here and line 355")
+ic("Changes here")
 from keras.models import Sequential
 import smlp
 from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
-
+ic("Changes in traverse()")
+ic("Changes in compress_antecedent()")
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
@@ -919,14 +920,16 @@ class TreeTerms:
         for indx, tree_est in enumerate(tree_estimators):
             #rules = self._get_rules(tree_est, feature_names, response_names, class_names)
             rules = self._get_abstract_rules(tree_est, feature_names, response_names, class_names);
+            ic(rules)
             trees_as_rules.append(rules)
             
             if log:
                 print('#TREE {}\n'.format(indx))
-                for rule in rules:
-                    print(self._rule_to_str(rule))
-                    #self._rule_to_solver(None, rule)
-                print('\n')
+                ic("Changes here")
+                #for rule in rules:
+                #    print(self._rule_to_str(rule))
+                #    #self._rule_to_solver(None, rule)
+                #print('\n')
             if save:
                 rules_file.write('#TREE {}\n'.format(indx))
                 for rule in rules:
@@ -964,7 +967,6 @@ class TreeTerms:
     # rules is a list of rules. It is computed from a tree model using method trees_to_rules of the same
     # class TreeTerms.
     def compress_antecedent(self, antecedent):
-        ic("Changes here")
         if not self._compress_rules:
             return antecedent, len(antecedent), len(antecedent)
         ant_dict = {}
@@ -973,38 +975,39 @@ class TreeTerms:
             #print('trp', trp, type(trp[0]), type(trp[1]), type(trp[2]))
             ant_dict[trp[0]] = {'lo':[], 'lo_cl':[], 'up':[], 'up_cl':[]}
 
-        for trp in antecedent:
-            if trp[1] == '<':
-                ant_dict[trp[0]]['up'].append(trp[2])
-                #ant_dict[trp[0]]['op_op'].append(trp[2])
-            elif trp[1] == '<=':
-                ant_dict[trp[0]]['up'].append(trp[2])
-                ant_dict[trp[0]]['up_cl'].append(trp[2])
-            elif trp[1] == '>':
-                ant_dict[trp[0]]['lo'].append(trp[2])
-                #ant_dict[trp[0]]['lo_op'].append(trp[2])
-            elif trp[1] == '>=':
-                ant_dict[trp[0]]['lo'].append(trp[2])
-                ant_dict[trp[0]]['lo_cl'].append(trp[2])
-            else:
-                raise Exception('Unexpected binop ' + str(trp[1]) + ' in function reduce_antecedent')
-
         #for trp in antecedent:
         #    if trp[1] == '<':
-        #        ant_dict[trp[0]]['up'].append(np.round(trp[2], 4))
+        #        ant_dict[trp[0]]['up'].append(trp[2])
         #        #ant_dict[trp[0]]['op_op'].append(trp[2])
         #    elif trp[1] == '<=':
-        #        ant_dict[trp[0]]['up'].append(np.round(trp[2], 4))
-        #        ant_dict[trp[0]]['up_cl'].append(np.round(trp[2], 4))
+        #        ant_dict[trp[0]]['up'].append(trp[2])
+        #        ant_dict[trp[0]]['up_cl'].append(trp[2])
         #    elif trp[1] == '>':
-        #        ant_dict[trp[0]]['lo'].append(np.round(trp[2], 4))
+        #        ant_dict[trp[0]]['lo'].append(trp[2])
         #        #ant_dict[trp[0]]['lo_op'].append(trp[2])
         #    elif trp[1] == '>=':
-        #        ant_dict[trp[0]]['lo'].append(np.round(trp[2], 4))
-        #        ant_dict[trp[0]]['lo_cl'].append(np.round(trp[2], 4))
+        #        ant_dict[trp[0]]['lo'].append(trp[2])
+        #        ant_dict[trp[0]]['lo_cl'].append(trp[2])
         #    else:
         #        raise Exception('Unexpected binop ' + str(trp[1]) + ' in function reduce_antecedent')
 
+        for trp in antecedent:
+            if trp[1] == '<':
+                ant_dict[trp[0]]['up'].append(np.round(trp[2], 4))
+                #ant_dict[trp[0]]['op_op'].append(trp[2])
+            elif trp[1] == '<=':
+                ant_dict[trp[0]]['up'].append(np.round(trp[2], 4))
+                ant_dict[trp[0]]['up_cl'].append(np.round(trp[2], 4))
+            elif trp[1] == '>':
+                ant_dict[trp[0]]['lo'].append(np.round(trp[2], 4))
+                #ant_dict[trp[0]]['lo_op'].append(trp[2])
+            elif trp[1] == '>=':
+                ant_dict[trp[0]]['lo'].append(np.round(trp[2], 4))
+                ant_dict[trp[0]]['lo_cl'].append(np.round(trp[2], 4))
+            else:
+                raise Exception('Unexpected binop ' + str(trp[1]) + ' in function reduce_antecedent')
+
+        ic(ant_dict)
         #print('ant_dict', ant_dict)
         for k,v in ant_dict.items():
             #print('k', k, 'v', v)
@@ -1018,6 +1021,7 @@ class TreeTerms:
                 ant_reduced.append([k,op, mn])
         #print('antecedent', len(antecedent), antecedent, '\nant_reduced', len(ant_reduced), ant_reduced)
         #print('antecedent size: ', len(antecedent), ' --> ', len(ant_reduced), flush=True)
+        ic(ant_reduced)
         return ant_reduced, len(antecedent), len(ant_reduced)
 
     def rules_to_term(self, algo, tree_number:int, rules:list, ant_reduction_stats:dict):
@@ -1067,6 +1071,10 @@ class TreeTerms:
             #     0.5000000149011612)], 'consequent': {'num1': 0.0, 'num2': 0.0}, 'coverage': 2}
             #print('\n ====== i', i, 'rule', rule)
             rule_dict, ant_befor, ant_after = rule_to_term(rule)
+            ic(rule)
+            ic(rule_dict)
+            ic(ant_befor)
+            ic(ant_after)
             ant_reduction_stats['before'].append(ant_befor)
             ant_reduction_stats['after'].append(ant_after)
             # here is how the corresponding rule_dict looks like (it contains smlp / smt2 terms):
@@ -1120,6 +1128,7 @@ class TreeTerms:
             #print('====== tree_rules ======\n', len(tree_rules), tree_rules)
             branches_count_per_tree.append(len(tree_rules))
             tree_term_dict, ant_reduction_stats = self.rules_to_term(algo, i, tree_rules, ant_reduction_stats); #print('tree term_dict', tree_term_dict); 
+            ic(i, tree_rules, ant_reduction_stats)
             if self._tree_encoding == 'flat' and algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']:
                 assert list(tree_term_dict.keys()) == [self._tree_model_id(algo, i)]
             else:
@@ -1376,6 +1385,7 @@ class NNKerasTerms: #(SmlpTerms):
         #print('layer_weights', layer_weights.shape, '\n', layer_weights)
         #print('layer_biases', layer_biases.shape, '\n', layer_biases)
         #print('last_layer_terms', len(last_layer_terms)) #, last_layer_terms)
+
         assert layer_weights.shape[1] == len(last_layer_terms)
         assert layer_biases.shape[0] == layer_weights.shape[0]
         curr_layer_terms = [self._nn_activation_term(activation_func, self._nn_dense_layer_node_term(
@@ -1409,12 +1419,7 @@ class NNKerasTerms: #(SmlpTerms):
     # determine the model type -- sequential vs functional
     def _get_nn_keras_model_type(self, model):
         #print('keras model', model, type(model))
-#<<<<<<< Updated upstream
         if self._keras_is_sequential(model):
-#=======
-#        #print('keras terms', keras)
-#        if isinstance(model, keras.Sequential):
-#>>>>>>> Stashed changes
             model_type = 'sequential'
         elif self._keras_is_functional(model):
             model_type = 'functional'
@@ -1429,6 +1434,7 @@ class NNKerasTerms: #(SmlpTerms):
         #from pprint import pprint
         #import inspect
         #print('model', model, type(model), model.summary())
+        ic("Changes here")
         model_type = self._get_nn_keras_model_type(model)
         assert model_type in ['sequential', 'functional']
         model_terms_dict = {}
@@ -1439,17 +1445,23 @@ class NNKerasTerms: #(SmlpTerms):
             #print('layer config', layer.get_config())
             if type(layer).__name__ == 'InputLayer':
                 assert model_type == 'functional'
+                ic("Input layer")
                 continue 
-            assert isinstance(layer, keras.layers.Dense)
+            #assert isinstance(layer, keras.layers.Dense)
             #print('current layer', layer) 
             #pprint(inspect.getmembers(layer)); 
             #print('units', layer.units, 'activation', layer.activation, 'use_bais', layer.use_bias, 'kernel_initializer', layer.kernel_initializer, 'bias_initializer', layer.bias_initializer, 'kernel_regularizer', layer.kernel_regularizer, 'bias_regularizer', layer.bias_regularizer, 'activity_regularizer', layer.activity_regularizer, 'kernel_constraint', layer.kernel_constraint, 'bias_constraint', layer.bias_constraint)
-            layer_activation = layer.get_config()["activation"]; #print('layer_activation', layer_activation)
-            weights, biases = layer.get_weights(); 
-            #print('t_weights', weights.transpose().shape, '\n', weights.transpose()); 
-            #print('t_biases', biases.transpose().shape, '\n', biases.transpose())
-            curr_layer_terms = self._nn_dense_layer_terms(last_layer_terms, weights.transpose(), 
-                biases.transpose(), layer_activation)
+            if isinstance(layer, keras.layers.Dense):
+                layer_activation = layer.get_config()["activation"]; #print('layer_activation', layer_activation)
+                weights, biases = layer.get_weights(); 
+                #print('t_weights', weights.transpose().shape, '\n', weights.transpose()); 
+                #print('t_biases', biases.transpose().shape, '\n', biases.transpose())
+                curr_layer_terms = self._nn_dense_layer_terms(last_layer_terms, weights.transpose(), 
+                    biases.transpose(), layer_activation)
+                
+            elif isinstance(layer, keras.layers.Dropout):
+                print("This is a Dropout layer")
+
             if model_type == 'functional' and layer.get_config()['name'] in resp_names:
                 #assert model_type == 'functional'
                 #print('layer.get_config()[name]', layer.get_config()['name'])

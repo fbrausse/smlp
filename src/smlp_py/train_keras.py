@@ -39,10 +39,10 @@ class ModelKeras:
         self.SMLP_KERAS_MODELS = [self._algo_name_local2global(m) for m in self._KERAS_MODELS]
         
         # hyper parameter defaults
-        self._DEF_LAYERS_SPEC = '4,1,4,1' # '2,1'
+        self._DEF_LAYERS_SPEC = '5,2,5,2,5,2' # '2,1'
         self._DEF_EPOCHS     = 1000 # 1000
         self._DEF_BATCH_SIZE = 100 # 200
-        self._DEF_OPTIMIZER  = 'rmsprop'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
+        self._DEF_OPTIMIZER  = 'adam'  # options: 'rmsprop', 'adam', 'sgd', 'adagrad', 'nadam'
         self._DEF_LEARNING_RATE = 0.001
         self._HID_ACTIVATION = 'relu'
         self._OUT_ACTIVATION = 'linear'
@@ -253,20 +253,24 @@ class ModelKeras:
 
         ic("Changes here ...")
         #with tf.device('/GPU:0'):
-        
         # Initialize the Sequential model
         model = keras.Sequential()
         
         # Create the layers based on the selected topology
+        ic(layers_spec_list)
+        ic("Iniatiating with dropout rate 0.1")
+        #ic("Iniatiating without dropout")
         for i, size in enumerate(layers_spec_list):
             if i == 0:
                 # The first layer needs to specify the input shape
                 self._keras_logger.info('input layer of size ' + str(input_dim))
                 self._keras_logger.info('dense layer of size ' + str(size))
                 model.add(keras.layers.Dense(units=size, activation=hid_activation, input_shape=(input_dim,)))
+                model.add(keras.layers.Dropout(rate=0.2))
             else:
                 self._keras_logger.info('dense layer of size ' + str(size))
                 model.add(keras.layers.Dense(units=size, activation=hid_activation))
+                model.add(keras.layers.Dropout(rate=0.2))
 
         # in sequential API, there is one "monolithic" output layer, we cannot distinguish
         # individual responses there and set the response names as the output layer names when
@@ -285,6 +289,7 @@ class ModelKeras:
         
         model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics)
         #print("nn_init_model:model") ; print(model)
+        ic(model)
         
         return model
 
@@ -314,6 +319,7 @@ class ModelKeras:
         # Initialize the Functional model
         model = keras.Model(inputs=inputs, outputs=outputs)
         model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics)
+        ic(model)
         return model
     
     # function for comparing model configurations model.get_config() for sequential vs functional models

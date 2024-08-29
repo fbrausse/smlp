@@ -134,7 +134,6 @@ class plot_exp:
             # Calculate training time
             train_time = f"Training time: {times[1] - times[0]}"
             # Save times to text file
-            ic(train_time)
             self.save_to_txt(train_time)
     
         elif len(times) == 4:

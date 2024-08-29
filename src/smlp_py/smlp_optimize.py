@@ -668,7 +668,6 @@ class SmlpOptimize:
             epsilon:float, smlp_domain:smlp.domain, delta:float, solver_logic:str, scale_objv:bool, data_scaler:str, 
             sat_approx=False, sat_precision=64, save_trace=False):
         plot_instance.save_time(time.time())
-        ic("Optimization start time:", time.time())
         self._opt_logger.info('Pareto optimization: Start')
         
         assert epsilon > 0 and epsilon < 1

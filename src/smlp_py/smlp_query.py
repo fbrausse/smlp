@@ -568,7 +568,6 @@ class SmlpQuery:
                 ic('Changes here ...')
                 witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
 #                ic(ca_model, sat_approx, sat_precision)
-                ic(witnessvals)
                 plot_instance.save_to_csv(witnessvals, data_version='witnesses')
                 if use_approxiamted_fractions:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model_approx, quer, model_full_term_dict, alpha, 
@@ -608,15 +607,13 @@ class SmlpQuery:
                     #print(self._modelTermsInst.solver_status_unsat(ce))
                     #print(ce)
                     #print('candidate stable -- return candidate')
-                    ic("stable candidate found")
                     witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
-                    ic(witnessvals)
+                    #ic(witnessvals)
                     plot_instance.save_to_csv(witnessvals, data_version='stable')
                     self._query_logger.info('Query completed with result: STABLE_SAT (satisfiable)')
                     if witn: # export witness (use numbers as values, not terms)
                         ca_model = self._modelTermsInst.get_solver_model(ca) # ca.model
                         witness_vals_dict = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
-                        ic('domain witness_vals_dict', witness_vals_dict)
                         #print('domain witness_vals_dict', witness_vals_dict)
                         # sanity check: the value of query in the sat assignment should be true
                         if quer_expr is not None:
