@@ -568,7 +568,8 @@ class SmlpQuery:
                 ic('Changes here ...')
                 witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
 #                ic(ca_model, sat_approx, sat_precision)
-                plot_instance.save_to_csv(witnessvals, data_version='witnesses')
+                #ic(witnessvals)
+                plot_instance.save_to_dict(witnessvals, data_version='witnesses')
                 if use_approxiamted_fractions:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model_approx, quer, model_full_term_dict, alpha, 
                         theta_radii_dict, solver_logic)
@@ -579,7 +580,8 @@ class SmlpQuery:
                 #if isinstance(ce, smlp.sat):
                     print('candidate not stable -- continue search', flush=True)
                     ce_model = self._modelTermsInst.get_solver_model(ce) #ce.model
-                    #ic(ce_model['z'])
+                    witnessvals = self._smlpTermsInst.witness_term_to_const(ce_model, sat_approx, sat_precision)
+                    plot_instance.save_to_dict(witnessvals, data_version='counter_ex')
                     cem = ce_model.copy(); #print('ce model', cem)
                     # drop Assignements to responses from ce
                     for var in ce_model.keys():
@@ -608,12 +610,12 @@ class SmlpQuery:
                     #print(ce)
                     #print('candidate stable -- return candidate')
                     witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
-                    #ic(witnessvals)
-                    plot_instance.save_to_csv(witnessvals, data_version='stable')
+                    plot_instance.save_to_dict(witnessvals, data_version='stable')
                     self._query_logger.info('Query completed with result: STABLE_SAT (satisfiable)')
                     if witn: # export witness (use numbers as values, not terms)
                         ca_model = self._modelTermsInst.get_solver_model(ca) # ca.model
                         witness_vals_dict = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
+                        #ic('domain witness_vals_dict', witness_vals_dict)
                         #print('domain witness_vals_dict', witness_vals_dict)
                         # sanity check: the value of query in the sat assignment should be true
                         if quer_expr is not None:
