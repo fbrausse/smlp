@@ -150,17 +150,29 @@ class SmlpQuery:
     # just for small potential speedup.
     def check_concrete_witness_consistency(self, domain:smlp.domain, model_full_term_dict:dict, 
             alpha:smlp.form2, eta:smlp.form2, query:smlp.form2, witn_form:smlp.form2, solver_logic:str):
-        solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
-            domain, model_full_term_dict, True, solver_logic)
-        solver.add(alpha); #print('alpha', alpha)
-        solver.add(eta); #print('eta', eta)
-        solver.add(witn_form); #print('witn_form', witn_form); print('query', query)
+        # solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+        #     domain, model_full_term_dict, True, solver_logic)
+        # solver.add(alpha); #print('alpha', alpha)
+        # solver.add(eta); #print('eta', eta)
+        # solver.add(witn_form); #print('witn_form', witn_form); print('query', query)
+
+        candidate_solver = Solver.create_solver(
+            create_solver=self._modelTermsInst.create_model_exploration_instance_from_smlp_components,
+            domain=domain,
+            model_full_term_dict=model_full_term_dict,
+            incremental=True,
+            solver_logic=solver_logic
+        )
+        candidate_solver.add_formula(eta, need_simplification=True)
+        candidate_solver.add_formula(alpha)
+        candidate_solver.add_formula(witn_form, need_simplification=True)
 
         printer = {'alpha':alpha, 'eta':eta,'witn_form':witn_form}
         if query is not None:
             printer['query'] = query
-            solver.add(query)
-        res = self._modelTermsInst.smlp_solver_check(solver, 'witness_consistency',printer )
+            # solver.add(query)
+            candidate_solver.add_formula(query, need_simplification=True)
+        res = self._modelTermsInst.smlp_solver_check(candidate_solver, 'witness_consistency', equations=printer )
         #res = solver.check(); #print('res', res)
         return res
 
@@ -208,28 +220,31 @@ class SmlpQuery:
             self._query_logger.info('Verifying assertion {} <-> {}'.format(str(quer_name), str(quer_expr)))
         else:
             self._query_logger.info('Certifying stability of witness for query ' + str(quer_name) + ':\n   ' + str(witn_dict))
-        candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
-            domain, model_full_term_dict, True, solver_logic)
-        
-        cond_feasible = None
-        # add the remaining user constraints and the query
-        candidate_solver.add(eta); #print('adding eta', eta)
-        candidate_solver.add(alpha); #print('adding alpha', alpha)
-        #candidate_solver.add(beta)
-        candidate_solver.add(quer); #print('adding quer', quer)
-        #print('adding witn_dict', witn_dict)
+
+        candidate_solver = Solver.create_solver(
+            create_solver=self._modelTermsInst.create_model_exploration_instance_from_smlp_components,
+            domain=domain,
+            model_full_term_dict=model_full_term_dict,
+            incremental=True,
+            solver_logic=solver_logic
+        )
+        candidate_solver.add_formula(eta, need_simplification=True)
+        candidate_solver.add_formula(alpha)
+        candidate_solver.add_formula(quer, need_simplification=True)
+
+
         for var,val in witn_dict.items():
             #candidate_solver.add(smlp.Var(var) == smlp.Cnst(val))
-            candidate_solver.add(self._smlpTermsInst.smlp_eq(smlp.Var(var), smlp.Cnst(val)))
+            candidate_solver.add_formula(Solver.smlp_eq(Solver.smlp_var(var), Solver.smlp_cnst(val)))
         
-        candidate_check_res = self._modelTermsInst.smlp_solver_check(candidate_solver, 'ca', {'alpha':alpha, 'eta':eta,'quer':quer})
-        if self._modelTermsInst.solver_status_sat(candidate_check_res): #isinstance(candidate_check_res, smlp.sat):
+        candidate_check_res, _ = self._modelTermsInst.smlp_solver_check(candidate_solver, 'ca', equations={'alpha':alpha, 'eta':eta,'quer':quer})
+        if candidate_check_res == "sat": #isinstance(candidate_check_res, smlp.sat):
             cond_feasible = True
             if universal:
                 self._query_logger.info('The configuration is consistent with assertion ' + str(quer_name))
             else:
                 self._query_logger.info('Witness to query ' + str(quer_name) + ' is a valid witness; checking its stability')
-        elif self._modelTermsInst.solver_status_unsat(candidate_check_res): #isinstance(candidate_check_res, smlp.unsat):
+        elif candidate_check_res == "unsat": #isinstance(candidate_check_res, smlp.unsat):
             cond_feasible = False
             if universal:
                 # Assertion cannot be satisfied (is constant False) given the knob configuration and the constraints.
@@ -255,20 +270,20 @@ class SmlpQuery:
 
         # checking stability of a valid witness to the query
         witn_term_dict = self._smlpTermsInst.witness_const_to_term(witn_dict)
-        ce = self.find_candidate_counter_example(universal, domain, witn_term_dict, quer, model_full_term_dict, alpha, 
+        ce, ce_witness = self.find_candidate_counter_example(universal, domain, witn_term_dict, quer, model_full_term_dict, alpha,
             theta_radii_dict, solver_logic)
-        if self._modelTermsInst.solver_status_sat(ce): #isinstance(ce, smlp.sat):
+        if ce == "sat": #isinstance(ce, smlp.sat):
             if universal:
                 self._query_logger.info('Completed with result: FAIL')
                 #self._query_logger.info('Assertion ' +  str(quer_name) + ' fails (for stability radii ' + str(theta_radii_dict))
                 #status = 'FAIL' if cond_feasible else 'FAIL VACUOUSLY'
-                ce_model = self._modelTermsInst.get_solver_model(ce)
+                ce_model = self._modelTermsInst.get_solver_model(ce, ce_witness)
                 return {'assertion_status':'FAIL', 'asrt': False, 'assertion_feasible': cond_feasible, 
                         'counter_example':self._smlpTermsInst.witness_term_to_const(ce_model, approximate=sat_approx, precision=sat_precision)}
             else:
                 self._query_logger.info('Witness to query ' + str(quer_name) + ' is not stable for radii ' + str(theta_radii_dict))
                 return 'witness, not stable'
-        elif self._modelTermsInst.solver_status_unsat(ce): #isinstance(ce, smlp.unsat):
+        elif ce == "unsat": #isinstance(ce, smlp.unsat):
             if universal:
                 self._query_logger.info('Completed with result: PASS')
                 #self._query_logger.info('Assertion ' +  str(quer_name) + ' passes (for stability radii ' + str(theta_radii_dict))
@@ -422,15 +437,15 @@ class SmlpQuery:
                     self._query_logger.info('Verifying consistency of configuration for assertion ' + str(quer_name) + ':\n   ' + str(witn_form))
                 else:
                     self._query_logger.info('Certifying consistency of witness for query ' + str(quer_name) + ':\n   ' + str(witn_form))
-                witn_status = self.check_concrete_witness_consistency(domain, model_full_term_dict, 
+                witn_status, _ = self.check_concrete_witness_consistency(domain, model_full_term_dict,
                     alpha, eta, None, witn_form, solver_logic)
-                if self._modelTermsInst.solver_status_sat(witn_status): #isinstance(witn_status, smlp.sat):
+                if witn_status == "sat": #isinstance(witn_status, smlp.sat):
                     if universal:
                         self._query_logger.info('Input, knob and configuration constraints are consistent')
                     else:
                         self._query_logger.info('Input, knob and concrete witness constraints are consistent')
                     mode_status_dict[quer_name][CONSISTENCY] = 'true'
-                elif self._modelTermsInst.solver_status_unsat(witn_status): #isinstance(witn_status, smlp.unsat):
+                elif witn_status == "unsat": #isinstance(witn_status, smlp.unsat):
                     if universal:
                         self._query_logger.info('Input, knob and configuration constraints are inconsistent')
                     else:

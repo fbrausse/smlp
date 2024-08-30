@@ -11,9 +11,11 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
     verifier = None
     temp_solver = None
 
-    def __init__(self, specs):
+    def __init__(self, specs,data_bounds_file, model_file_prefix):
         super().__init__()
         self.specs = specs
+        self.data_bounds_file = data_bounds_file
+        self.model_file_prefix = model_file_prefix
         self.create_verifier()
 
     def create_verifier(self):
@@ -31,7 +33,7 @@ class Pysmt_Solver(AbstractSolver, PYSMTOperations):
         parser = TextToPysmtParser()
         parser.init_variables(symbols=symbols)
 
-        self.verifier = MarabouVerifier(parser=parser)
+        self.verifier = MarabouVerifier(parser=parser, data_bounds_file=self.data_bounds_file, model_file_prefix=self.model_file_prefix)
         self.verifier.initialize(spec_domain_dict)
 
     @ClassProperty

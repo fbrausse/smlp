@@ -1394,14 +1394,14 @@ class ModelTerms(ScalerTerms):
             #    '[default {}]'.format(str(self._DEF_CACHE_TERMS))}
         }
 
-        self.parser = TextToPysmtParser()
-        self.parser.init_variables(symbols=[("x1", "real", True), ('x2', 'int', True), ('p1', 'real', True), ('p2', 'int', True),
-                                           ('y1', 'real', False), ('y2', 'real', False)])
-
-        self.verifier = MarabouVerifier(parser=self.parser)
-
-        self._ENABLE_PYSMT = False
-        self._RETURN_PYSMT = False
+        # self.parser = TextToPysmtParser()
+        # self.parser.init_variables(symbols=[("x1", "real", True), ('x2', 'int', True), ('p1', 'real', True), ('p2', 'int', True),
+        #                                    ('y1', 'real', False), ('y2', 'real', False)])
+        #
+        # self.verifier = MarabouVerifier(parser=self.parser)
+        #
+        # self._ENABLE_PYSMT = False
+        # self._RETURN_PYSMT = False
 
         
     # set logger from a caller script
@@ -2072,7 +2072,7 @@ class ModelTerms(ScalerTerms):
         # get variable domains dictionary; certain sanity checks are performrd within this function.
         spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
 
-        self.verifier.initialize(variable_ranges=spec_domain_dict)
+        # self.verifier.initialize(variable_ranges=spec_domain_dict)
 
 
 
@@ -2321,13 +2321,9 @@ class ModelTerms(ScalerTerms):
     # we return value assignmenets to interface (input, knob, output) variables defined in the Spec file
     # (and not values assigned to any other variables that might be defined additionally as part of solver domain,
     # like variables tree_i_resp that we decalre as part of domain for tree models with flat encoding).
-    def get_solver_model(self, res):
-        condition = self.solver_status_sat(res["result"]) if self._ENABLE_PYSMT else self.solver_status_sat(res)
-        if condition:
-            if self._ENABLE_PYSMT:
-                reduced_model = dict((k, v) for k, v in res["witness"].items() if k in self._specInst.get_spec_interface)
-            else:
-                reduced_model = dict((k,v) for k,v in res.model.items() if k in self._specInst.get_spec_interface)
+    def get_solver_model(self, res, witness):
+        if res == "sat":
+            reduced_model = dict((k, v) for k, v in witness.items() if k in self._specInst.get_spec_interface)
             return reduced_model
         else:
             return None

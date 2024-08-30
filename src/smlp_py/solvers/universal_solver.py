@@ -22,7 +22,9 @@ class Solver:
         if cls._instance is None and isinstance(cls.version, cls.Version):
             if cls.version == cls.Version.PYSMT:
                 specs = kwargs["specs"]
-                cls._instance = Pysmt_Solver(specs)
+                data_bounds_file = kwargs["data_bounds_file"]
+                model_file_prefix = kwargs["model_file_prefix"]
+                cls._instance = Pysmt_Solver(specs, data_bounds_file, model_file_prefix)
             else:
                 cls._instance = Form2_Solver()
             cls._map_instance_methods()

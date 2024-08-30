@@ -19,6 +19,9 @@ from smlp_py.smlp_query import SmlpQuery
 from smlp_py.smlp_optimize import SmlpOptimize
 from smlp_py.smlp_refine import SmlpRefine
 
+from src.smlp_py.solvers.universal_solver import Solver
+
+
 # Combining simulation results, optimization, uncertainty analysis, sequential experiments
 # https://foqus.readthedocs.io/en/3.1.0/chapt_intro/index.html
 
@@ -298,7 +301,12 @@ class SmlpFlows:
         # sanity check that the order of features in model_features_dict, feat_names, X_train, X_test, X is 
         # the same; this is mostly important for model exploration modes 
         self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
-        
+
+        Solver(specs=(feat_names, resp_names, self.modelTernaInst._specInst.get_spec_domain_dict),
+               data_bounds_file= self.dataInst.data_bounds_file,
+               model_file_prefix= self.dataInst.model_file_prefix,
+               version=Solver.Version.PYSMT if args.use_pysmt else Solver.Version.FORM2)
+
         if args.analytics_mode in self.model_exploration_modes:
             if args.analytics_mode == 'verify':
                 if True or len(self.specInst.get_spec_knobs)> 0:

@@ -65,7 +65,7 @@ class Variable:
         self.bounds.upper = upper
 
 class MarabouVerifier(Verifier):
-    def __init__(self, parser=None, variable_ranges=None, is_temp=False):
+    def __init__(self, parser=None, data_bounds_file=None, model_file_prefix=None, variable_ranges=None, is_temp=False):
         # MarabouNetwork containing network instance
         self.network = None
 
@@ -83,7 +83,9 @@ class MarabouVerifier(Verifier):
         self.unscaled_variables = []
 
         self.model_file_path = "./"
-        self.data_bounds_file = self.find_file_path("../../../result/abc_smlp_toy_basic_data_bounds.json")
+        self.model_file_prefix = model_file_prefix
+        # self.data_bounds_file = self.find_file_path("../../../result/abc_smlp_toy_basic_data_bounds.json")
+        self.data_bounds_file = self.find_file_path('../../'+data_bounds_file)
         self.data_bounds = None
         # Adds conjunction of equations between bounds in form:
         # e.g. Int(var), var >= 0, var <= 3 -> Or(var == 0, var == 1, var == 2, var == 3)
@@ -105,7 +107,7 @@ class MarabouVerifier(Verifier):
         if variable_ranges:
             self.variable_ranges = variable_ranges
 
-        self.model_file_path = self.find_file_path('../../../result/abc_smlp_toy_basic_nn_keras_model_complete.h5')
+        self.model_file_path = self.find_file_path('../../'+ self.model_file_prefix +'_model_complete.h5')
         self.convert_to_pb()
         self.load_json()
         self.network_num_vars = self.network.numVars
@@ -169,7 +171,7 @@ class MarabouVerifier(Verifier):
         store = self.parser.inputs if is_input else self.parser.outputs
         for var in store:
             name, type = var
-            var_type = Variable.Type.Real if type.lower() == "real" else Variable.Type.Int
+            var_type = Variable.Type.Real if type.lower() in ["real", "float"] else Variable.Type.Int
             if name.startswith(('x', 'p', 'y')) and name.find("_scaled") == -1:
                 index = self.input_index if is_input else self.output_index
                 self.variables.append(Variable(var_type, name=name, index=index, is_input=is_input))
