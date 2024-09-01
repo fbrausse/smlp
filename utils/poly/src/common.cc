@@ -82,6 +82,8 @@ opt<str> smlp::ext_solver_cmd;
 opt<str> smlp::inc_solver_cmd;
 long  smlp::intervals = -1;
 
+assert_mode smlp::check_full_model_result = assert_mode::LOG_FAIL;
+
 #define STR(x)	#x
 #define XSTR(x)	STR(x)
 extern "C" {

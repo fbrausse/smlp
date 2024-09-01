@@ -3,11 +3,11 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"y1": 9.0,
-			"p2": 7.0,
-			"y2": 9.0,
+			"x": 0.0,
 			"p1": 4.0,
-			"x": 0.0
+			"p2": 7.0,
+			"y1": 9.0,
+			"y2": 9.0
 		},
 		"assertion_feasible": false
 	},

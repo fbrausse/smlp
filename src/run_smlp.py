@@ -10,7 +10,7 @@
 # coding: utf-8
 
 
-import sys
+import sys, os
 from smlp_py.smlp_flows import SmlpFlows
 
 def main(argv):

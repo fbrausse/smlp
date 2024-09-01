@@ -198,10 +198,28 @@ result z3_solver::check()
 
 	switch (r) {
 	case z3::sat: {
+		/* TODO: info whether constant is part of model can be useful
+		 *       for generalization of counter-examples. Provide that
+		 *       info! ("don't care variable") */
 		z3::model m = slv.get_model();
 		dbg(mod_z3, "model #const: %u, #symbs: %zu\n", m.num_consts(), size(symbols));
-		assert(m.num_consts() == size(symbols));
+		switch (check_full_model_result) {
+		case assert_mode::NONE:
+			break;
+		case assert_mode::LOG_FAIL:
+			if (m.num_consts() == size(symbols))
+				break;
+			warn(mod_z3, "returned SAT model is not complete\n");
+			break;
+		case assert_mode::ASSERT:
+			assert(m.num_consts() == size(symbols));
+			break;
+		}
 		hmap<str,sptr<term2>> r;
+#if 1
+		for (const auto &[id, e] : symbols)
+			r[id] = make2t(parse_z3_cnst(id, m.eval(e, true)));
+#else
 		for (size_t i=0; i<size(symbols); i++)
 		{
 			z3::func_decl fd = m.get_const_decl(i);
@@ -210,8 +228,11 @@ result z3_solver::check()
 			r[id] = make2t(parse_z3_cnst(id, e));
 			//std::cerr << to_string(r[id]->get<cnst2>()->value) << "\n";
 		}
-		//fprintf(stderr, "z3 model:\n");
-		//std::cerr << m << "\n";
+#endif
+		/*
+		fprintf(stderr, "z3 model:\n");
+		std::cerr << m << "\n";
+		*/
 		return sat { move(r) };
 	}
 	case z3::unsat: return unsat {};

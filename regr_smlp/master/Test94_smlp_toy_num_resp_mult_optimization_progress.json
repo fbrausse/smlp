@@ -14,20 +14,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.36
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.75
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.75
+		"y2": {
+			"value_in_config": 8.36
 		}
 	},
 	"iter(0, 2)": {
@@ -45,20 +45,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.36
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.75
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.75
+		"y2": {
+			"value_in_config": 8.36
 		}
 	},
 	"iter(0, 5)": {
@@ -76,20 +76,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.36
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.75
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.75
+		"y2": {
+			"value_in_config": 8.36
 		}
 	},
 	"iter(0, 'completed')": {
@@ -107,20 +107,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.36
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.75
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.75
+		"y2": {
+			"value_in_config": 8.36
 		},
 		"objv1_scaled_objv2_scaled": {
 			"value_in_config": 0.62
@@ -159,20 +159,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.36
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.75
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.75
+		"y2": {
+			"value_in_config": 8.36
 		}
 	},
 	"iter(1, 2)": {
@@ -190,20 +190,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.68
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.0
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.0
+		"y2": {
+			"value_in_config": 8.68
 		}
 	},
 	"iter(1, 'completed')": {
@@ -221,20 +221,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.68
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.0
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.0
+		"y2": {
+			"value_in_config": 8.68
 		},
 		"objv1_scaled": {
 			"value_in_config": 0.77
@@ -273,20 +273,20 @@
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
-		"y2": {
-			"value_in_config": 8.68
-		},
 		"x": {
 			"value_in_config": 10.0
 		},
 		"p1": {
 			"value_in_config": 4.0
 		},
+		"p2": {
+			"value_in_config": 4.0
+		},
 		"y1": {
 			"value_in_config": 7.48
 		},
-		"p2": {
-			"value_in_config": 4.0
+		"y2": {
+			"value_in_config": 8.68
 		},
 		"objv1_scaled": {
 			"value_in_config": 0.77

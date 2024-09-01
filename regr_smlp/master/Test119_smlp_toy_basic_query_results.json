@@ -13,9 +13,9 @@
 		"query_status": "PASS",
 		"query_result": {
 			"p1": 0.0,
-			"y2": 0.0,
 			"p2": 0.0,
-			"y1": 0.0
+			"y1": 0.0,
+			"y2": 0.0
 		}
 	},
 	"query_infeasible": {

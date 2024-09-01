@@ -88,7 +88,7 @@ private:
 	es::smtlib2::parser out_s;
 	str name, version;
 	split_version parsed_version;
-	size_t n_vars = 0;
+	hset<str> symbols;
 
 	str get_info(const char *what);
 

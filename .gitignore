@@ -32,6 +32,9 @@ lib/libcheck-data.so
 # bin directory
 bin/check-data-cmd
 
+# SMLP bench
+/bench/cec22/.ipynb_checkpoints/cec-2022-benchmark-checkpoint.ipynb
+
 # regeression
 /regr/*
 

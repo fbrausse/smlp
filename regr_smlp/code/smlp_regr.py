@@ -202,6 +202,23 @@ def solver_path_identifier(switches):
         else:
             return sub_switches
 
+def model_algo_identifier(switches):
+    # return '-use_model' in switches
+    if not ('-model' in switches or '--model ' in switches):
+         return None
+    if '--model' in switches:
+         model_algo_loc = switches.find('--model ')
+         model_algo_pref8 = switches[model_algo_loc + 8:model_algo_loc + 14]
+    else:
+         model_algo_loc = switches.find('-model ')
+         model_algo_pref8 = switches[model_algo_loc + 7:model_algo_loc + 13]
+    
+    for algo in ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret', 'nn_keras', 'poly_sklearn', 'system']:
+        #print('algo', algo, 'pref', model_algo_pref8)
+        if algo.startswith(model_algo_pref8):
+            return algo
+    raise Exception('Failed to infer model algo from prefix ' + str(model_algo_pref8))
+
 def use_model_identifier(switches):
     # return '-use_model' in switches
     if not ('-use_model' in switches or '--use_model ' in switches):
@@ -218,7 +235,7 @@ def use_model_identifier(switches):
     else:
             raise Exception('use_model option value cannot be identified')
 
-
+        
 def save_model_identifier(switches):
     #return '-save_model' in switches
     if not ('-save_model' in switches or '--save_model ' in switches):
@@ -271,6 +288,8 @@ def main():
                         -t toy; or run all other tests by specifying -t real; or run all the regression tests by\
                         specifying -t all.')
     parser.add_argument('-m', '--modes', help='Specify modes (e.g., verify) of tests to run, default is all modes.')
+    parser.add_argument('-models', '--models', help='Specify models (e.g., dt_sklearn) of tests to run, default is all modes.')
+    parser.add_argument('-extra', '--extra_options', help='Specify command line options that will be appended to the command line.')
     parser.add_argument('-d', '--debug', action='store_true')
     parser.add_argument('-p', '--print_command', action='store_true', help='print the command to run manually;\
                         the test will not be executed.')
@@ -318,7 +337,14 @@ def main():
         else:
            relevant_modes.append(args.modes.replace(" ", "").replace("\'", ""))
     #print('relevant_modes',relevant_modes);
-
+    
+    relevant_models = []
+    if args.models:
+        if ',' in args.models:
+            relevant_models = args.models.replace(" ", "").replace("\'", "").split(',')
+        else:
+           relevant_models.append(args.models.replace(" ", "").replace("\'", ""))
+    #print('relevant_models',relevant_models)
     """def read_txt_file_to_list(file_path):
         with open(file_path, 'r') as rFile:
             return rFile.read().splitlines()"""
@@ -489,7 +515,8 @@ def main():
             use_model = use_model_identifier(test_switches); #print('use_model', use_model)
             save_model = save_model_identifier(test_switches); #print('save_model', save_model)
             test_type = mode_identifier(test_switches); #print('test_type', test_type)
-
+            model_algo = model_algo_identifier(test_switches); #print('model_algo', model_algo)
+            
             if DEBUG:
                 print('test_data', test_data)
                 print('test_new_data', test_new_data)
@@ -498,6 +525,7 @@ def main():
                 print('use_model', use_model)
                 print('save_model', save_model)
                 print('test_type', test_type)
+                print('model_algo', model_algo)
                 
             use_config_file = conf_identifier(test_switches); #print('use_config_file', use_config_file)
             #print('config file', get_conf_path(get_conf_name(test_switches), models_path))
@@ -591,6 +619,9 @@ def main():
                         test_errors.append(['Build', 'No new data file specified'])
                 if len(relevant_modes) > 0 and (test_type not in relevant_modes+['no mode']):
                      execute_test = False
+                #print('(relevant_models)', relevant_models, 'model_algo', model_algo, flush=True); 
+                if len(relevant_models) > 0 and (model_algo not in relevant_models):
+                      execute_test = False
                     
             if DEBUG:
                 print("DEBUG 3")
@@ -605,6 +636,9 @@ def main():
                     command = "../../src/run_smlp.py"
                 else:
                     command = "../../src/run_smlp.py"
+
+                if args.timeout: # timeout -- TODO !!!
+                    command = '/usr/bin/timeout 600 ' + command 
                 if DEBUG:
                     print('command (0)', command); print('test_type', test_type)
                 if test_type == 'help':
@@ -638,7 +672,12 @@ def main():
                     if test_type == 'prediction'  or (test_new_data != ""): #use_config_file and
                         command += '{new_dat} '.format(new_dat=test_new_data_path)
                         #print('command (2)', command);
-
+                
+                # append extra arguments 
+                #command = command + ' -tree_encoding abc -solver_path "/nfs/iil/proj/dt/eva/smlp/external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat" '
+                if args.extra_options is not None:
+                    command = command + ' ' + args.extra_options
+                
                 if DEBUG:
                     print('command (2)', command);
                     
@@ -649,7 +688,7 @@ def main():
                 if not args.print_command:
                     if save_model:
                         model = True
-                    if args.timeout:
+                    if False: #args.timeout:
                         pr = popen_timeout(command, int(args.timeout))
                         if pr:
                             outs, errs = pr
@@ -847,7 +886,9 @@ def main():
                             txt_file = True
                         # condition before, dropping from it h5 file checks because getting UnicodeDecodeError error on Sles 15, say on Test 13.
                         # (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json') or new_file.endswith('.h5')) and not file_name in files_to_ignore_from_diff:
-                        if (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json')) and not (file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')): # or file_name.endswith('_model_term.json')
+                        exclude_cond = file_name in files_to_ignore_from_diff
+                        exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')
+                        if (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json')) and not exclude_cond:
                             print('comparing {file} to master'.format(file=file_name))
                             p = Popen(
                                 '{diff} -B -I \'Feature selection.*file .*\' -I \'\\[-v-] Input.*\' -I \'usage:.*\' {k} {l}'.format(

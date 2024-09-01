@@ -44,6 +44,20 @@ smlp_logger - INFO - training data after imputing missing values
 9    c11       12.0        2.0    7     1    0
 10   c19       10.0        3.0    7     0    1
 
+smlp_logger - INFO - training data after processing responses
+   categ  FMAX(xyz)  FMAX.xyz.  p-3  PF 1  PF#
+0    c14       10.0        2.0    3     1    1
+1    c15       12.0        2.0    4     0    1
+2     c1       10.0        3.0    4     0    0
+3     c9       11.0        2.0    6     0    0
+4     c5       10.0        2.0    8     1    0
+5    c10        9.0        4.0    7     1    1
+6    c13        9.0        3.0    6     0    0
+7     c4       10.0        3.0    4     0    1
+8    c15       11.0        4.0    4     0    0
+9    c11       12.0        2.0    7     1    0
+10   c19       10.0        3.0    7     0    1
+
 smlp_logger - INFO - PSG Subgroup Discovery started
 
 smlp_logger - INFO - PSG Subgroup Discovery completed
