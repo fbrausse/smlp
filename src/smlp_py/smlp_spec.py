@@ -954,11 +954,12 @@ class SmlpSpec:
             knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
         return input_ranges | knobs_ranges
    
-    def get_spec_stability_intervals_dict(self, knob_config):
+    def get_spec_stability_intervals_dict(self, knob_config, include_inputs):
         #print('knob_config', knob_config)
-        input_ranges = {}
-        for k, v in self.get_spec_alpha_bounds_dict.items():
-            input_ranges[k] = [v['min'], v['max']]
+        if include_inputs:
+            input_ranges = {}
+            for k, v in self.get_spec_alpha_bounds_dict.items():
+                input_ranges[k] = [v['min'], v['max']]
         knobs_ranges = {}
         for k, v in self.get_spec_theta_radii_dict.items():
             if k not in knob_config: # TODO !!!! this should not happen with full assighnement to knobs
@@ -971,7 +972,10 @@ class SmlpSpec:
             else:
                 raise Exception('At least on of the relative or absolute radii must mot be None')
             knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
-        return input_ranges | knobs_ranges
+        if include_inputs:
+            return input_ranges | knobs_ranges
+        else:
+            return knobs_ranges
     
     '''
     This function splits an SMLP spec extracted from spec_file into a number pf spec files with smaller grids 

@@ -2,7 +2,7 @@
 	"version": "1.2",
 	"variables": [
 		{
-			"label": "knob0",
+			"label": "p0",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -16,7 +16,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob1",
+			"label": "p1",
 			"interface": "knob",
 			"type": "int",
 			"grid": [
@@ -30,7 +30,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob2",
+			"label": "p2",
 			"interface": "knob",
 			"type": "int",
 			"grid": [
@@ -44,7 +44,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob3",
+			"label": "p3",
 			"interface": "knob",
 			"type": "int",
 			"grid": [
@@ -58,7 +58,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob4",
+			"label": "p4",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -72,7 +72,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob5",
+			"label": "p5",
 			"interface": "knob",
 			"type": "int",
 			"grid": [
@@ -83,7 +83,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob6",
+			"label": "p6",
 			"interface": "knob",
 			"type": "int",
 			"grid": [
@@ -94,7 +94,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob7",
+			"label": "p7",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -108,7 +108,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob8",
+			"label": "p8",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -122,7 +122,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob9",
+			"label": "p9",
 			"interface": "knob",
 			"type": "int",
 			"grid": [
@@ -133,7 +133,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob10",
+			"label": "p10",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -147,7 +147,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob11",
+			"label": "p11",
 			"interface": "knob",
 			"type": "int",
 			"grid": [
@@ -158,7 +158,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob12",
+			"label": "p12",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -172,7 +172,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob13",
+			"label": "p13",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -186,7 +186,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob14",
+			"label": "p14",
 			"interface": "knob",
 			"type": "real",
 			"grid": [
@@ -200,7 +200,7 @@
 			"rad-rel": 0.05
 		},
 		{
-			"label": "knob15",
+			"label": "p15",
 			"interface": "knob",
 			"type": "real",
 			"grid": [

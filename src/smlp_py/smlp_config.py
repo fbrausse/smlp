@@ -84,7 +84,9 @@ class SmlpConfig:
                 raise Exception('A training data file, a model or doe spec file should be provided')   
         
         if data_name_prefix is not None:
-            input_data_name_prefix = data_name_prefix.removesuffix('.csv')
+            input_data_name_prefix = data_name_prefix.removesuffix('.bz2')
+            input_data_name_prefix = input_data_name_prefix.removesuffix('.gz')
+            input_data_name_prefix = input_data_name_prefix.removesuffix('.csv')
         elif doe_spec_name_prefix is not None:
             input_data_name_prefix = doe_spec_name_prefix.removesuffix('.csv')
         else:
@@ -112,6 +114,8 @@ class SmlpConfig:
 
         # if new_data is not None, its name is added to self._filename_prefix
         if not new_data_file_prefix is None:
+            new_data_file_prefix = new_data_file_prefix.removesuffix('.bz2')
+            new_data_file_prefix = new_data_file_prefix.removesuffix('.gz')
             new_data_file_prefix = new_data_file_prefix.removesuffix('.csv')
             _, new_data_fname = os.path.split(new_data_file_prefix)
             report_name_prefix = report_name_prefix + '_' + new_data_fname

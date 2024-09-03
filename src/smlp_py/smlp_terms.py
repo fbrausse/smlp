@@ -638,7 +638,7 @@ class SmlpTerms:
 # response that represents the entire tree for that response. It uses nested
 # if-then-else (ITE) expressions to capture the branching logic of the tree. 
 #  
-# 3. ABC Encoding: The ABC encoding is a method that introduces additional variables
+# 3. Branched Encoding: The branched encoding is a method that introduces additional variables
 # to represent the antecedents (conditions) of the tree branches. This encoding
 # is useful for breaking down complex tree structures into simpler components that
 # can be shared across responses and handled separately by the solver.
@@ -646,7 +646,7 @@ class TreeTerms:
     def __init__(self):
         self._smlp_terms_logger = None
         self._tree_encoding = None
-        self._tree_encodings = Enum('TreeEncodings', ['flat', 'nested', 'abc'])
+        self._tree_encodings = Enum('TreeEncodings', ['flat', 'nested', 'branched'])
         self.supported_algos = ['dt_sklearn', 'rf_sklearn', 'et_sklearn', 'dt_caret', 'rf_caret', 'et_caret']
         self.model_file_prefix = None
         self.report_file_prefix = None
@@ -683,9 +683,9 @@ class TreeTerms:
     def tree_encoding_flat(self, algo):
         return self._tree_encoding == self._tree_encodings.flat.name and algo in self.supported_algos 
     
-    # is the 'abc' encoding of trees to terms used?
-    def tree_encoding_abc(self, algo):
-        return self._tree_encoding == self._tree_encodings.abc.name and algo in self.supported_algos 
+    # is the 'branched' encoding of trees to terms used?
+    def tree_encoding_branched(self, algo):
+        return self._tree_encoding == self._tree_encodings.branched.name and algo in self.supported_algos 
     
     # is the 'nested' encoding of trees to terms used?
     def tree_encoding_nested(self, algo):
@@ -978,7 +978,7 @@ class TreeTerms:
             antecedent, ant_befor, ant_after = self.compress_antecedent(antecedent)
             ant = self.instSmlpTerms.smlp_and_multi([self._rule_triplet_to_term(p) for p in antecedent])
             res_dict = {}
-            if self.tree_encoding_abc(algo):
+            if self.tree_encoding_branched(algo):
                 for resp, val in consequent.items():
                     res_dict[resp] = self.instSmlpTerms.smlp_cnst(val)
                 return (ant, res_dict), ant_befor, ant_after
@@ -998,8 +998,8 @@ class TreeTerms:
         
         # returned value
         rules_dict = {}
-        if self.tree_encoding_abc(algo):
-            ant_dict = {} # for tree_encoding_abc omly -- maybe rename obs_dict (extra observables dict) -- can be useful for flat encoding as well
+        if self.tree_encoding_branched(algo):
+            ant_dict = {} # for tree_encoding_branched omly -- maybe rename obs_dict (extra observables dict) -- can be useful for flat encoding as well
         if self.tree_encoding_flat(algo):
             rules_dict[self._tree_model_id(algo, tree_number)] = [] # 'Tree_0_dt_sklearn_model
         #print('numer of rules', len(rules), flush=True)
@@ -1033,7 +1033,7 @@ class TreeTerms:
                         rules_dict[resp] = con_term #self.instSmlpTerms.smlp_ite(ant_term, con_term, smlp.Var('SMLP_UNDEFINED'))
                     else:
                         rules_dict[resp] = self.instSmlpTerms.smlp_ite(ant_term, con_term, rules_dict[resp])
-            elif self.tree_encoding_abc(algo):
+            elif self.tree_encoding_branched(algo):
                 ant_term, resp_dict = rule_dict; #print('ant_term', ant_term, type(ant_term), 'resp_dict', resp_dict)
                 resp_name = None if len(resp_dict) > 1 else list(resp_dict.keys())[0]; #print('resp_name', resp_name, type(resp_name))
                 #print('fresh var names', self.tree_antecedent_id(resp_name, tree_number, i))
@@ -1104,7 +1104,7 @@ class TreeTerms:
             tree_term_dict, ant_reduction_stats = self.rules_to_term(algo, i, tree_rules, ant_reduction_stats, resp_names); #print('tree term_dict', tree_term_dict); 
             if self.tree_encoding_flat(algo):
                 assert list(tree_term_dict.keys()) == [self._tree_model_id(algo, i)]
-            elif self.tree_encoding_abc(algo):
+            elif self.tree_encoding_branched(algo):
                 assert all([resp in tree_term_dict.keys() for resp in resp_names])
             else:
                 #print(list(tree_term_dict.keys()), resp_names)
@@ -1171,7 +1171,7 @@ class TreeTerms:
                                 self.instSmlpTerms.smlp_cnst(self.instSmlpTerms.smlp_q(1) / self.instSmlpTerms.smlp_q(int(number_of_trees))), tree_model_term_dict[resp_name])
             
             # we add extra variable definitions for the j_th tree
-            if self.tree_encoding_abc(algo):
+            if self.tree_encoding_branched(algo):
                 #print('tree_term_dict_dict', tree_term_dict_dict);
                 for k, v in tree_term_dict_dict[self._tree_id(j)].items():
                     if k in resp_names:
@@ -1315,7 +1315,7 @@ class PolyTerms: #(SmlpTerms):
 
 # Method to generate smlp term from a Tensorflow Keras model built using Sequential or Functional API 
 # Two encodings of tf Keras models to terms are supported:
-# 1. Flat Encoding: For neural networks, the flat encoding creates a formula for each
+# 1. Layered Encoding: For neural networks, the layered encoding creates a formula for each
 # internal node (neuron) of the network. This encoding exposes the internal structure
 # of the neural network to the solver, allowing each neuron's computation to be
 # represented as a separate logical formula.
@@ -1328,7 +1328,7 @@ class NNKerasTerms: #(SmlpTerms):
         self._smlp_terms_logger = None
         self._smlpTermsInst = SmlpTerms()
         self._nnet_encoding = None
-        self._nnkeras_encodings = Enum('NNKerasEncodings', ['flat', 'nested'])
+        self._nnkeras_encodings = Enum('NNKerasEncodings', ['layered', 'nested'])
     
     # set logger from a caller script
     def set_logger(self, logger):
@@ -1337,8 +1337,8 @@ class NNKerasTerms: #(SmlpTerms):
     def set_nnet_encoding(self, nnet_encoding:str):
         self._nnet_encoding = nnet_encoding
     
-    def nnkeras_encoding_flat(self, algo='nn_keras'):
-        return self._nnet_encoding == self._nnkeras_encodings.flat.name and algo == 'nn_keras'
+    def nnkeras_encoding_layered(self, algo='nn_keras'):
+        return self._nnet_encoding == self._nnkeras_encodings.layered.name and algo == 'nn_keras'
     
     def nnkeras_encoding_nested(self, algo='nn_keras'):
         return self._nnet_encoding == self._nnkeras_encodings.nested.name and algo == 'nn_keras'
@@ -1376,7 +1376,7 @@ class NNKerasTerms: #(SmlpTerms):
     # layer_weights and layer_biases np arrays of weights and biases to compute current layer
     # nodes from the bodes of last (preceding) layer; and argument activation_func is the
     # activation function for the current layer. This function is called both for sequential
-    # and functional API models from function nn_keras_model_to_term_flat(), which explicitly 
+    # and functional API models from function nn_keras_model_to_term_layered(), which explicitly 
     # genrates last_layer_terms for the input layer (and subsequent layers are generated using
     # _nn_dense_layer_terms, both for sequential and functional API models).
     def _nn_dense_layer_terms(self, last_layer_terms, layer_weights, layer_biases, activation_func):
@@ -1510,7 +1510,7 @@ class NNKerasTerms: #(SmlpTerms):
     
     # iterated over nodes of an NN layer to compute the formulas associated to them using function 
     # _nn_dense_layer_node_formula()
-    def _nn_dense_layer_formulas_flat(self, layer:int, last_layer_vars, curr_layer_vars, layer_weights, layer_biases, activation_func):
+    def _nn_dense_layer_formulas_layered(self, layer:int, last_layer_vars, curr_layer_vars, layer_weights, layer_biases, activation_func):
         #print('layer_weights', layer_weights.shape, '\n', layer_weights)
         #print('layer_biases', layer_biases.shape, '\n', layer_biases)
         #print('layer_weights', layer_weights.shape, 'layer_biases', layer_biases.shape)
@@ -1527,8 +1527,8 @@ class NNKerasTerms: #(SmlpTerms):
         assert layer_biases.shape[0] == len(curr_layer_forms)
         return curr_layer_forms
     
-    # flat / relational encoding on NN Keras to terms and formulas
-    def nn_keras_model_to_term_flat(self, model, model_feat_names, model_resp_names, feat_names, resp_names):
+    # layered / relational encoding on NN Keras to terms and formulas
+    def nn_keras_model_to_term_layered(self, model, model_feat_names, model_resp_names, feat_names, resp_names):
         #from pprint import pprint
         #import inspect
         #print('model', model, type(model), model.summary())
@@ -1631,16 +1631,16 @@ class NNKerasTerms: #(SmlpTerms):
                 
             #print('previous_layer_nodes', previous_layer_nodes)
             last_layer_vars = previous_layer_nodes
-            curr_layer_forms = self._nn_dense_layer_formulas_flat(l, last_layer_vars, curr_layer_vars, weights.transpose(), 
+            curr_layer_forms = self._nn_dense_layer_formulas_layered(l, last_layer_vars, curr_layer_vars, weights.transpose(), 
                 biases.transpose(), layer_activation) #, is_output_layer, self._nn_keras_is_functional(model)
             all_layer_forms = all_layer_forms + curr_layer_forms
         
         return {model_name: all_layer_forms}
 
-    # Create a so called "flat" or a "nested" encoding of NN as libsmlp expressions (terms and formulas).
+    # Create a so called "layered" or a "nested" encoding of NN as libsmlp expressions (terms and formulas).
     # With "nested" encoding, a term represnting the function of NN is built for each response and 
     # then the smlplib variable correponding to each response is bound to correponding term using equality.
-    # With "flat" encoding, each internal node of the NN is associated with a variable (and is exposed as 
+    # With "layered" encoding, each internal node of the NN is associated with a variable (and is exposed as 
     # part of the domain dom); and this variable term is bound to respective term computing value of this node
     # based on varibles associated to nodes of the "defining" layer, using equality. The "defining" layer is
     # the previous layer for NN built using sequnetial API, and is the last internal layer that that does not 
@@ -1649,8 +1649,8 @@ class NNKerasTerms: #(SmlpTerms):
     # _nn_dense_layer_node_formula(node_name, last_layer_vars, node_weights, node_bias, activation_func)
     # computes the term correponding to a node based on the respective node weights and the bias.
     def nn_keras_model_to_term(self, model, model_feat_names, model_resp_names, feat_names, resp_names):
-        if self.nnkeras_encoding_flat():
-            model_term_dict = self.nn_keras_model_to_term_flat(model, model_feat_names, 
+        if self.nnkeras_encoding_layered():
+            model_term_dict = self.nn_keras_model_to_term_layered(model, model_feat_names, 
                 model_resp_names, feat_names, resp_names)
         elif self.nnkeras_encoding_nested(): #self._nnet_encoding == self._nnkeras_encodings.NESTED:
             model_term_dict = self.nn_keras_model_to_term_nested(model, model_feat_names, 
@@ -1772,7 +1772,7 @@ class ModelTerms(ScalerTerms):
         self._DEF_COMPRESS_RULES = True
         self._DEF_SIMPLIFY_TERMS = False
         self._DEF_TREE_ENCODING = 'nested' #'flat' #   
-        self._DEF_NNET_ENCODING = 'nested' #'flat' # 
+        self._DEF_NNET_ENCODING = 'nested' #'layered' # 
         #self._DEF_CACHE_TERMS = False
         self.model_term_params_dict = {
             'compress_rules': {'abbr':'compress_rules', 'default':str(self._DEF_COMPRESS_RULES), 'type':str_to_bool,
@@ -1787,7 +1787,7 @@ class ModelTerms(ScalerTerms):
                 'each branch of a tree, while nested encoding builds formula from branches using nested ' +
                 'if-then-else (ite) expressions [default {}]'.format(str(self._DEF_TREE_ENCODING))},
             'nnet_encoding': {'abbr':'nnet_encoding', 'default':str(self._DEF_NNET_ENCODING), 'type':str,
-                'help':'Method to encode Keras Neural Nets model to solvers. Flat encoding cretea a formula from ' +
+                'help':'Method to encode Keras Neural Nets model to solvers. Layered encoding cretea a formula from ' +
                 'each internal node of the NN, while nested encoding builds a monolithic term for each response ' +
                 'representing the function for that response [default {}]'.format(str(self._DEF_NNET_ENCODING))},
             #'cache_terms': {'abbr':'cache_terms', 'default':str(self._DEF_CACHE_TERMS), 'type':str_to_bool,
@@ -1947,8 +1947,8 @@ class ModelTerms(ScalerTerms):
         
         model_full_term_dict = model_term_dict;
         tree_flat_encoding = self._treeTermsInst.tree_encoding_flat(algo)
-        tree_abc_encoding = self._treeTermsInst.tree_encoding_abc(algo)
-        nn_keras_flat_encoding = self._nnKerasTermsInst.nnkeras_encoding_flat(algo)
+        tree_branched_encoding = self._treeTermsInst.tree_encoding_branched(algo)
+        nn_keras_layered_encoding = self._nnKerasTermsInst.nnkeras_encoding_layered(algo)
         
         # compute features scaling term (skipped when it is identity);
         # substitute them instead of scaled feature variables in the model
@@ -1962,7 +1962,7 @@ class ModelTerms(ScalerTerms):
             for resp_name, model_term in model_term_dict.items():
                 for feat_name, feat_term in feature_scaler_terms_dict.items():
                     #print('feat_name', feat_name, 'feat_term', feat_term, flush=True)
-                    if tree_flat_encoding or nn_keras_flat_encoding: 
+                    if tree_flat_encoding or nn_keras_layered_encoding: 
                         model_term = [self.smlp_cnst_fold(form, {feat_name: feat_term}) for form in model_term]
                     else:
                         model_term = self.smlp_cnst_fold(model_term, {feat_name: feat_term}) #self.smlp_subst
@@ -1975,7 +1975,7 @@ class ModelTerms(ScalerTerms):
         # compute responses in original scale from scaled responses that are
         # the outputs of the modes, compose models with unscaled responses
         
-        if resp_were_scaled and not tree_flat_encoding and not nn_keras_flat_encoding and not tree_abc_encoding:
+        if resp_were_scaled and not tree_flat_encoding and not nn_keras_layered_encoding and not tree_branched_encoding:
             responses_unscaler_terms_dict = self.feature_unscaler_terms(data_bounds, resp_names)           
             # substitute scaled response variables with scaled response terms (the model outputs)
             # in original response terms within responses_unscaler_terms_dict
@@ -1986,7 +1986,7 @@ class ModelTerms(ScalerTerms):
             #print('responses_unscaler_terms_dict full model', responses_unscaler_terms_dict, flush=True)
             model_full_term_dict = responses_unscaler_terms_dict
         
-        if resp_were_scaled and tree_abc_encoding:
+        if resp_were_scaled and tree_branched_encoding:
             responses_unscaler_terms_dict = self.feature_unscaler_terms(data_bounds, resp_names)           
             # substitute scaled response variables with scaled response terms (the model outputs)
             # in original response terms within responses_unscaler_terms_dict
@@ -2022,7 +2022,7 @@ class ModelTerms(ScalerTerms):
                 for rule_formula in model_full_term_dict[key]]
             model_full_term_dict = model_full_term_dict_new
         
-        if resp_were_scaled and nn_keras_flat_encoding:
+        if resp_were_scaled and nn_keras_layered_encoding:
             #responses_unscaler_terms_dict = self.feature_unscaler_terms(data_bounds, resp_names); print('responses_unscaler_terms_dict', responses_unscaler_terms_dict)
             responses_scaler_terms_dict = self.feature_scaler_terms(data_bounds, resp_names);  #print('responses_scaler_terms_dict', responses_scaler_terms_dict)
             model_full_term_dict_new = {}
@@ -2407,7 +2407,7 @@ class ModelTerms(ScalerTerms):
                     #print('domain', tree_resp_name)
                     domain_dict[tree_resp_name] = self.var_domain(resp, spec_domain_dict)
             
-        if self._nnKerasTermsInst.nnkeras_encoding_flat(algo):
+        if self._nnKerasTermsInst.nnkeras_encoding_layered(algo):
             # function to declare NN Keras internal nodes (not inputs and not outputs) as part of
             # solver domain (the interface variables -- inputs, knobs, outputs/resonses) are declared
             # as part of domain earlier, and this (for now, for connection to SMT solvers) is 
@@ -2475,7 +2475,7 @@ class ModelTerms(ScalerTerms):
                 model_features_dict, feat_names, resp_names, data_bounds, data_scaler, scale_feat, scale_resp)
         
         # declare intermal observable variables that define conditions in branches of trees in the model
-        if self._treeTermsInst.tree_encoding_abc(algo):
+        if self._treeTermsInst.tree_encoding_branched(algo):
             ###print('\nmodel_full_term_dict\n', model_full_term_dict)
             branch_cond_vars = [k for k in model_full_term_dict.keys() if k not in resp_names]; 
             for branch_cond_var in branch_cond_vars:
@@ -2529,7 +2529,7 @@ class ModelTerms(ScalerTerms):
         base_solver.declare(domain)
         
         if model_full_term_dict is not None :
-            # with flat encoding for trees and NN, model_full_term_dict values are lists of formulas
+            # with flat encoding for trees and layered encoding for NN, model_full_term_dict values are lists of formulas
             if isinstance(list(model_full_term_dict.values())[0], list):
                 for k, v in model_full_term_dict.items():
                     for rule_formula in v:
@@ -2540,7 +2540,7 @@ class ModelTerms(ScalerTerms):
                 for resp_name, resp_term in model_full_term_dict.items():
                     #print('resp_name', resp_name, 'resp_term', resp_term, type(resp_term)) 
                     if self._treeTermsInst.is_tree_antecedent_id(resp_name):
-                        # in this case the abc encoding us used for trees, and we have formulas 
+                        # in this case the branched encoding us used for trees, and we have formulas 
                         # that define tree antecedents and these must be added to solver as is:
                         #print('add to solver', resp_term)
                         base_solver.add(resp_term)

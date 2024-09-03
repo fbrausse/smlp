@@ -67,68 +67,77 @@ class SmlpFrontier:
 
     # This is an efficient implimentation that is not using df.iterrows()
     def local_minimum(self, df, feat_names, resp_names, objv_names, func_intervals):
+        #print('local_minimum: df', df.shape)
         # Initialize df_min with the same shape as df and copy feat_names columns
         df_min = pd.DataFrame(index=df.index, columns=df.columns)
         df_min[feat_names] = df[feat_names]; #print('df_min with features\n', df_min)
-        df_min[resp_names] = df[resp_names];
+        df_min[resp_names] = df[resp_names]; #print('df_min', df_min.columns.tolist(), df_min.shape)
         
         # Precompute all intervals for all rows
         intervals_list = [func_intervals(dict(row[feat_names])) for _, row in df.iterrows()]
-        #print('intervals_list', len(intervals_list), intervals_list)
+        #print('intervals_list', len(intervals_list)); 
         lower_bounds = np.array([[interval[feat_name][0] for feat_name in feat_names] for interval in intervals_list])
         upper_bounds = np.array([[interval[feat_name][1] for feat_name in feat_names] for interval in intervals_list])
         # None as a lower bound for interval represents -inf and as upper bound represents as inf; None is allowed in
         # specifying ranges of inputs and knobs in the spec file, thus we update lower_bounds and upper_bounds as follows:
-        lower_bounds[lower_bounds == None] = (-np.inf); #print('lower_bounds\n', lower_bounds)
-        upper_bounds[upper_bounds == None] = np.inf; #print('upper_bounds\n', upper_bounds)
+        lower_bounds[lower_bounds == None] = (-np.inf); #print('lower_bounds', lower_bounds.shape, '\n', lower_bounds)
+        upper_bounds[upper_bounds == None] = np.inf; #print('upper_bounds', upper_bounds.shape, '\n', upper_bounds)
         
         # Compute the minimum values for objv_names columns within the intervals
-        for i, (lower, upper) in enumerate(zip(lower_bounds, upper_bounds)):
+        for i, (lower, upper) in zip(df.index, zip(lower_bounds, upper_bounds)): #enumerate(zip(lower_bounds, upper_bounds)):
             #print('i, (lower, upper)', i, (lower, upper))
             # Create a boolean mask for rows within the intervals
             mask = np.ones(len(df), dtype=bool)
             for j, feat_name in enumerate(feat_names):
                 mask &= (df[feat_name] >= lower[j]) & (df[feat_name] <= upper[j])
-
+            
             # Compute the minimum values for objv_names columns within the mask
             min_values = df.loc[mask, objv_names].min(); #print('min_values\n', min_values)
-            df_min.loc[i, objv_names] = min_values; #print('df_min i\n', df_min)
-
+            df_min.loc[i, objv_names] = min_values; 
+            #print('df_min i\n', df_min)
+        #print('df_min\n', df_min)
         return df_min
 
+    
+    # Generate mask to filter datframe based on a condition specified as a python expression (string).
+    # Return the filtered dataset.
+    # Apply beta constraint to filetr out samples that do not satisfy beta constraints as wel as samples
+    # that have other samples not satisfying beta constraints within their stability region.
+    def filter_beta_universal(self, df, beta_expr, knobs, resps):
+        if beta_expr is None:
+            return df
+        # Step 1: Find indices of df that do not satisfy beta_expr
+        neg_beta_expr = f"not ({beta_expr})"
+        df_neg_beta = df.query(neg_beta_expr); #print('df_neg_beta\n', df_neg_beta)
+        neg_beta_indices = df_neg_beta.index; #print('neg_beta_indices', neg_beta_indices)
+        
+        # Step 2: Find all unique tuples of values of knobs from knobs values at these row indices
+        unique_knob_tuples = df_neg_beta[knobs].drop_duplicates(); #print('unique_knob_tuples\n', unique_knob_tuples)
+        #intervals_list =  [func_intervals(dict(top[1])) for tup in unique_knob_tuples.iterrows()]
+        intervals_list = []
+        for tup in unique_knob_tuples.iterrows():
+            #print('tup', tup, '\ntype', type(tup)); print('dict', dict(tup[1]))
+            intervals_list.append(self._specInst.get_spec_stability_intervals_dict(dict(tup[1]), False)); 
+        
+        # Step 3: Compute the mask that captures samples within stability ragion of samples computed at Step 1.
+        # These samples will be dropped as a result of applying beta constrains to data, by taking stability 
+        # requirements into account.
+        to_drop_mask = np.zeros(len(df), dtype=bool); #print('init mask\n', to_drop_mask)
+        for interval in intervals_list:
+            interval_mask = True
+            for k, (l,h) in interval.items():
+                #print('k, (l,h)', k, (l,h))
+                curr_mask = (df[k] >= l) & (df[k] <= h); #print('curr_mask\n', curr_mask)
+                interval_mask = interval_mask & curr_mask
+            #print('interval_mask\n', interval_mask)
+            to_drop_mask = to_drop_mask | interval_mask
+        #print('final to_drop_mask\n', to_drop_mask)
+        
+        df_beta = df.loc[~to_drop_mask, : ]; #print('df_beta\n', df_beta)
+        return df_beta
+        
     # find pareto subset of data with respect to optimization objectives specified in argument 'objectives".
     # pareto subset is with respect to the maximum (optimization means finding maximum, not minimum).
-    def find_pareto_front(self, df, knobs, objectives, precision=None):
-        pareto_df = df.copy()
-        # If precision is specified, round the objectives columns
-        if precision is not None:
-            pareto_df[objectives] = pareto_df[objectives].round(precision)
-
-        # Group by the objective values and create a DataFrame with the first row from each group
-        grouped = pareto_df.groupby(objectives)
-        df_groupby_one = pd.DataFrame()
-        for _, group_df in grouped:
-            #print('group_df\n', group_df)
-            df_groupby_one = pd.concat([df_groupby_one, group_df.head(1)], ignore_index=True)
-        #print('df_groupby_one\n', df_groupby_one)
-        # Find the Pareto front within df_groupby_one
-        data = df_groupby_one[objectives].values
-        is_pareto_optimal = np.ones(data.shape[0], dtype=bool)
-        for i, candidate in enumerate(data):
-            if is_pareto_optimal[i]:
-                is_pareto_optimal[is_pareto_optimal] = np.any(data[is_pareto_optimal] > candidate, axis=1)
-                is_pareto_optimal[i] = True  # Keep the current candidate
-
-        # Select the Pareto optimal rows from df_groupby_one
-        pareto_groupby_one = df_groupby_one[is_pareto_optimal]; #print('pareto_groupby_one\n', pareto_groupby_one)
-
-        # Expand the Pareto front by including all rows from the original DataFrame
-        # that correspond to the Pareto optimal rows in pareto_groupby_one
-        pareto_front_indices = pareto_df.reset_index().merge(pareto_groupby_one, on=objectives, how='inner')['index']
-        pareto_front = pareto_df.loc[pareto_front_indices]; #print('pareto_front\n', pareto_front)
-
-        return pareto_front
-
     def find_pareto_front(self, df, knobs, objectives, precision=None):
         pareto_df = df.copy()
         # If precision is specified, round the objectives columns
@@ -211,6 +220,18 @@ class SmlpFrontier:
 
         return mask
 
+    # Generate mask to filter datframe based on a condition specified as a python expression (string).
+    # Return the filtered dataset.
+    def filter_by_expression(self, df, expression:str):
+        if expression is None:
+            return df
+        #print('condition', expression); print('df', df.shape, df.columns.tolist())
+        #print('df before filtering', df.shape, df.columns.tolist())
+        # Create a boolean mask for each response-threshold pair        
+        mask = self.create_boolean_mask(expression, df)
+        filtered_df = df[mask]; #print('filtered_df', filtered_df.shape, filtered_df.columns.tolist())
+        return filtered_df
+    
     #This function Creates new columns in the DataFrame df based on provided expressions and names.
     #Parameters:
     #df (pd.DataFrame): The DataFrame to extend with new objective columns.
@@ -231,46 +252,8 @@ class SmlpFrontier:
             objv_df[name] = objv_df.eval(expr)
 
         return objv_df
-
-
-    # Generate mask to filter datframe based on a condition specified as a python expression (string).
-    # Return the filtered dataset.
-    def filter_by_expression(self, df, expression:str):
-        if expression is None:
-            return df
-        #print('condition', expression); print('df', df.shape, df.columns.tolist())
-        #print('df before filtering', df.shape, df.columns.tolist())
-        # Create a boolean mask for each response-threshold pair        
-        mask = self.create_boolean_mask(expression, df)
-        filtered_df = df[mask]; #print('filtered_df', filtered_df.shape, filtered_df.columns.tolist())
-        return filtered_df
-    
-    def filter_beta_universal(self, df, beta_expr, knobs, resps):
-        # Step 1: Find indices of df that do not satisfy beta_expr
-        neg_beta_expr = f"not ({beta_expr})"
-        df_neg_beta = df.query(neg_beta_expr)
-        neg_beta_indices = df_neg_beta.index
-
-        # Step 2: Find all unique tuples of values of knobs from knobs values at these row indices
-        unique_knob_tuples = df_neg_beta[knobs].drop_duplicates()
-
-        # Step 3: Drop all rows that have these tuples as values in the knobs columns
-        # Create a mask to identify rows to drop
-        mask_to_drop = pd.Series(False, index=df.index)
-        for _, row in unique_knob_tuples.iterrows():
-            mask = pd.Series(True)
-            for knob in knobs:
-                mask &= (df[knob] == row[knob])
-            mask_to_drop |= mask
-
-        # Step 4: Assert that the indices of rows that will be dropped is a superset of the indices computed at step (1)
-        #print('neg_beta_indices', neg_beta_indices, 'df[mask_to_drop].index', df[mask_to_drop].index)
-        assert set(neg_beta_indices).issubset(set(df[mask_to_drop].index)), "Assertion failed: indices to drop should include all indices that do not satisfy beta_expr"
-
-        # Drop the rows and return the resulting DataFrame
-        df_beta = df[~mask_to_drop]
-        return df_beta
-
+        
+        
     # pareto subset selection directly from data, without building a model.
     def select_pareto_frontier(self, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, 
             feat_names:list[str], resp_names:list[str], 
@@ -284,26 +267,26 @@ class SmlpFrontier:
         
         #print('X', X.shape, 'y', y.shape)
         df = pd.concat([X, y], axis=1); #print('df', df.shape, df.columns.tolist())
-        df_shape = df.shape
-        
+        df_shape = df.shape; #print('df shape index', df_shape)
+        #print(list(df.index))
         # Step 1: drop irrelevant data t-- samples that do not satisfy alpha constraints 
         df_alpha = self.filter_by_expression(df, alph_expr); #print('df_alpha', df_alpha.shape, df_alpha.columns.tolist()); print(df_alpha)
-        df_alpha_shape = df_alpha.shape
+        df_alpha_shape = df_alpha.shape; #print('df_alpha shape index', df_alpha_shape); 
+        #print(list(df_alpha.index))
         assert df_alpha_shape[0] <= df_shape[0]; assert df_alpha_shape[1] == df_shape[1]
         
         # Step 2: Compute objectives columns and then min-objectives columns by taking into account stability radii
         df_objv = self.compute_objectives_columns(df_alpha, objv_names, objv_exprs); #print('df_objv', df_objv.shape, df_objv.columns.tolist()); print(df_objv)
-        df_stable_min = self.local_minimum(df_objv, feat_names, resp_names, objv_names, self._specInst.get_spec_stability_intervals_dict)
+        df_stable_min = self.local_minimum(df_objv, feat_names, resp_names, objv_names, lambda knob_dict: self._specInst.get_spec_stability_intervals_dict(knob_dict, True))
         df_stable_min_shape = df_stable_min.shape; #print('df_stable_min', df_stable_min.shape, df_stable_min.columns.tolist()); print(df_stable_min)
         
         knobs = self._specInst.get_spec_knobs; #print('knobs', knobs)
         
         # Step 3: Drop all samples that do not satisfy beta constraints. This needs to be done befre pareto subset selection
         #df_beta = self.filter_by_expression(df_stable_min, beta_expr); print('df_beta', df_beta.shape, df_beta.columns.tolist()); print(df_beta)
-        df_beta = self.filter_beta_universal(df_stable_min, beta_expr, knobs, resp_names)
+        df_beta = self.filter_beta_universal(df_stable_min, beta_expr, knobs, resp_names); #print('df_beta\n', df_beta)
         
         # Step 4: Select pareto subset with respect to maximizing min-objective values
-        
         pareto_frontier = self.find_pareto_front(df_beta, knobs, objv_names); #print('pareto_frontier', pareto_frontier.shape, pareto_frontier.columns.tolist()); print(pareto_frontier)
         pareto_frontier_csv_file = self.report_file_prefix + '_pareto_frontier.csv'
         pareto_frontier.to_csv(pareto_frontier_csv_file, index=False)

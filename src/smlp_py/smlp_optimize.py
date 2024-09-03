@@ -23,13 +23,7 @@ class SmlpOptimize:
         self._modelTermsInst = None # ModelTerms()
         self._queryInst = None # SmlpQuery()
         self._scalerTermsInst = ScalerTerms()
-        # TMP !!!!!! 
-        # use value 
-        self._tmp_return_eager_tuples = False 
-        # TMP !!!!!! 
-        # to reproduce don't care variable problem in test 202, use value False
-        # to reproduce infinite loop im Bin-Opt-Max() in test 83 run with eager strategy, use value False
-        self._tmp_use_model_in_phi_cand = False 
+        self._tmp_use_trace_lemmas = False
         
         # Save best so far (near optimal, stable) configurations of knobs as soon as
         # configurations are improved (keep the earlier updates), in two formats:
@@ -258,7 +252,7 @@ class SmlpOptimize:
             else:
                 T = (l + u) / 2
                 
-            # inviriants of the algprthm -- sanity checks
+            # invariants of the algorithm -- sanity checks
             assert l0 < u0
             assert l < u
             assert l0 not in [-np.inf, np.inf] 
@@ -309,9 +303,13 @@ class SmlpOptimize:
         assert l0 < u0
         assert l0 not in [-np.inf, np.inf] 
         assert u0 not in [-np.inf, np.inf]
-        p_cand, y_cand, l_prime, u_prime = self.bin_opt_max(smlp_domain, model_full_term_dict, phi_cond, '_negated_'+objv_name, None if objv_expr is None else '-('+objv_expr+')', 
-            self._smlpTermsInst.smlp_neg(objv_term), (-u0), (-l0), epsilon, solver_logic)
-        self._opt_tracer.info('bin_opt_min end, p_cand_l_u, {} : {} : {}'.format(str(p_cand), str((-u_prime)),str((-l_prime))))
+        p_cand, y_cand, l_prime, u_prime = self.bin_opt_max(smlp_domain, model_full_term_dict, phi_cond, '_negated_'+objv_name, 
+            None if objv_expr is None else '-('+objv_expr+')', self._smlpTermsInst.smlp_neg(objv_term), (-u0), (-l0), epsilon, solver_logic)
+        if self._trace_precision > 0:
+            p_cand_trace = self._modelTermsInst.witness_term_to_const(p_cand, approximate=True, precision=self._trace_precision)
+        else:
+            p_cand_trace = self._modelTermsInst.witness_term_to_const(p_cand, approximate=False, precision=None)
+        self._opt_tracer.info('bin_opt_min end, p_cand_l_u, {} : {} : {}'.format(str(p_cand_trace), str((-u_prime)),str((-l_prime))))
         assert (-u_prime) < (-l_prime)
         return p_cand, y_cand, (-u_prime), (-l_prime)
     
@@ -323,7 +321,6 @@ class SmlpOptimize:
             l0=None, u0=None): #, l=(-np.inf), u=np.inf): #TODO !!! l, u are not needed???
 
         self._opt_logger.info('Optimize single objective with eager strategy ' + str(objv_name) + ': Start')
-        
         # initial lower bound l0 and initial upper bound u0
         if u0 is None and l0 is None:
             if scale_objectives or objv_bounds is None:
@@ -354,13 +351,10 @@ class SmlpOptimize:
                 self._opt_tracer.info('eager opt end, optimization converged with required accuracy')
                 break
             phi_cond = self._smlpTermsInst.smlp_and(phi_cand, L); #print('phi_cond', phi_oand)
-            # TODO !!!!!!! temp workaround to use model_full_term_dict instead of None !!!!!!!!!!
-            if self._tmp_use_model_in_phi_cand:
-                candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
-                    smlp_domain, model_full_term_dict, True, solver_logic)
-            else:
-                candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
-                    smlp_domain, None, True, solver_logic)
+            if self._tmp_use_trace_lemmas:
+                self._opt_tracer.info('eager opt iter, phi_cond lemma, {}'.format(str(phi_cond)))
+            candidate_solver = self._modelTermsInst.create_model_exploration_instance_from_smlp_components(
+                smlp_domain, model_full_term_dict, True, solver_logic)
             candidate_solver.add(phi_cond)
             #print('solving phi_cond', flush=True)
             res = self._queryInst._modelTermsInst.smlp_solver_check(candidate_solver, 'ca_eager', self._queryInst._lemma_precision)
@@ -370,8 +364,15 @@ class SmlpOptimize:
                 self._opt_tracer.info('eager opt end, optimization result cannot be improved')
                 break
             p_cand, y_cand, l_cand, u_cand = self.bin_opt_max(smlp_domain, model_full_term_dict, phi_cond, objv_name, objv_expr, objv_term, l_e, u_e, epsilon, solver_logic)
+            if l_stab + epsilon > u_cand:
+                self._opt_tracer.info('eager opt end, optimization converged with required accuracy')
+                break
+            if True: # elegant fix
+                if l_stab == (-np.inf):
+                    l_e = l_cand
+            else: # original fix
+                l_e = l_cand
             u_e = u_cand
-            l_e = l_cand # TODO !!!!!! verify this line of code, inserted to fix algorithm
             assert l_e < u_e
             
             # Here we do not use delta (use delta = None) because theta_form is not used in lemma generation
@@ -423,6 +424,8 @@ class SmlpOptimize:
                 P_eager.append((p_cand, l_cand, u_cand, l_stab))
             
             theta_p_cex_delta = self._modelTermsInst.compute_stability_formula_theta(p_cex, delta, theta_radii_dict, True)
+            if self._tmp_use_trace_lemmas:
+                self._opt_tracer.info('eager opt iter, edding lemma, {}'.format(str(theta_p_cex_delta)))
             L = self._smlpTermsInst.smlp_and(L, self._smlpTermsInst.smlp_not(theta_p_cex_delta))
             iter_count +=  + 1
         
@@ -434,10 +437,7 @@ class SmlpOptimize:
         assert l_res == P[-1]['threshold_lo_scaled']
         #print('optimize_single_objective_eager and with l_res', l_res, flush=True)
         self._opt_logger.info('Optimize single objective with eager strategy ' + str(objv_name) + ': end')
-        if self._tmp_return_eager_tuples:
-            return l_res
-        else:
-            return P[-1] # l_res
+        return P[-1] # l_res
     
     # Optimization for single objective.
     # assuming in first implementation that objectives are scaled to [0,1] -- not using
@@ -616,12 +616,9 @@ class SmlpOptimize:
                     objv_term, objv_epsn, smlp_domain, eta, theta_radii_dict, alpha, beta, delta, solver_logic, scale_objectives, objv_names[i], 
                     objv_bounds_dict, None, sat_approx=True, sat_precision=64, save_trace=False); #print('opt_conf', opt_conf)
             elif strategy == 'eager':
-                if self._tmp_return_eager_tuples:
-                    assert False
-                else:
-                    opt_conf[objv_names[i]] = self.optimize_single_objective_eager(model_full_term_dict, objv_name, objv_expr, 
-                        objv_term, objv_epsn, smlp_domain, eta, theta_radii_dict, alpha, beta, delta, solver_logic, scale_objectives, objv_names[i], 
-                        objv_bounds_dict, None, sat_approx=True, sat_precision=64, save_trace=False);
+                opt_conf[objv_names[i]] = self.optimize_single_objective_eager(model_full_term_dict, objv_name, objv_expr, 
+                    objv_term, objv_epsn, smlp_domain, eta, theta_radii_dict, alpha, beta, delta, solver_logic, scale_objectives, objv_names[i], 
+                    objv_bounds_dict, None, sat_approx=True, sat_precision=64, save_trace=False);
             else:
                 raise Exception('Unsupported optimization strategy ' + str(strategy))
                 
@@ -703,17 +700,10 @@ class SmlpOptimize:
                 scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
                 sat_approx, sat_precision, save_trace, l0, u0, l, u)
         elif strategy == 'eager':
-            if self._tmp_return_eager_tuples:
-                r = {}
-                r['threshold_lo'] = self.optimize_single_objective_eager(model_full_term_dict, min_name, None, min_objs, 
-                    epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
-                    scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
-                    sat_approx, sat_precision, save_trace, l0, u0) #, l, u)
-            else:
-                r = self.optimize_single_objective_eager(model_full_term_dict, min_name, None, min_objs, 
-                    epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
-                    scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
-                    sat_approx, sat_precision, save_trace, l0, u0)
+            r = self.optimize_single_objective_eager(model_full_term_dict, min_name, None, min_objs, 
+                epsilon, smlp_domain, eta_F_t, theta_radii_dict, alpha, beta, delta, solver_logic,
+                scale_objectives, min_name, objv_bounds, update_thresholds_dict, 
+                sat_approx, sat_precision, save_trace, l0, u0)
         else:
             raise Exception('Unsupported optimization strategy ' + str(strategy))
         
@@ -838,10 +828,14 @@ class SmlpOptimize:
             json.dump(self.best_config_dict, f, indent='\t', cls=np_JSONEncoder)
         self.best_config_df.to_csv(self.optimization_progress_file+'.csv', index=False)
         if completed:
+            #print('self.best_config_dict', self.best_config_dict); print('\n\n\nmode_status_dict', self.mode_status_dict)
+            #print('best_config_df', self.best_config_df); print('self.feat_names', self.feat_names);
+            #print('duplic', self.best_config_df.drop_duplicates(subset=self.feat_names, inplace=False))
+            #assert False
             self.mode_status_dict['smlp_execution'] = 'completed'
             with open(self.optimization_results_file+'.json', 'w') as f:
                 json.dump(self.best_config_dict['final'] | self.mode_status_dict, f, indent='\t', cls=np_JSONEncoder)
-            final_config_df = self.best_config_df.drop_duplicates(subset=self.feat_names, inplace=False)
+            final_config_df = self.best_config_df.drop_duplicates(subset=self.feat_names, inplace=False, keep='last')
             final_config_df.to_csv(self.optimization_results_file+'.csv', index=False)            
     
     
@@ -1231,6 +1225,7 @@ class SmlpOptimize:
         # The eager strategy is only supported for problems without (free) inputs (that is, model inputs are all knobs) 
         input_features = [ft for ft in feat_names if ft in self._modelTermsInst._specInst.get_spec_inputs]
         if strategy == 'eager' and len(input_features) > 0:
+            self._opt_logger.warning('Eager strategy on single objectives cannot be run because spec contains free input(s); the lazy strategy will be run instead...')
             strategy = 'lazy'
         
         if pareto:
