@@ -17,7 +17,7 @@ For most of these functions, we generated two datasets and spec files -- one for
 
 2.Intel benchmarks:
 
-Intel real-life datasets and respective spec files, with parameter and output names anonymized (in some cases the input names are not anonymized). These datasets come from the signal integrity / electrical validation domain.
+Intel real-life datasets and respective spec files, with parameter and output names anonymized (in some cases the input names are not anonymized). These datasets come from the signal integrity/electrical validation domain.
 
 
 1. s2_tx_anonym -- data and spec from signal integrity domain. Contains free inputs of integer type (they model categorical input variables). Knob and output names are anonymized. Example command:
