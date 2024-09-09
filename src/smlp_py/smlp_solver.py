@@ -12,6 +12,7 @@ class SmlpSolver:
         self._DEF_SOLVER = 'z3'
         self._DEF_SOLVER_PATH = None
         self._DEF_SOLVER_LOGIC = 'ALL'
+        self.use_pysmt = False
         #self._DEF_SOLVER_INCREMENTAL = True
         
         '''
@@ -35,6 +36,9 @@ class SmlpSolver:
                 'help':'SMT2-lib theory with respect to which to solve model exploration task at hand, ' +
                         'in modes "verify," "query", "optimize" and "optsyn". ' +
                         '[default: {}]'.format(str(self._DEF_SOLVER_LOGIC))},
+            'use_pysmt': {'abbr': 'use_pysmt', 'default': self.use_pysmt, 'type': str_to_bool,
+                       'help': 'Solver to use in model exploration modes "verify," "query", "optimize" and "optsyn". ' +
+                               '[default: {}]'.format(str(self.use_pysmt))},
             #'solver_incr': {'abbr':'solver_incr', 'default': self._DEF_SOLVER_INCREMENTAL, 'type':str_to_bool,
             #    'help':'Should sover be used in incremental mode? ' +
             #            '[default: {}]'.format(str(self._DEF_SOLVER_INCREMENTAL))}

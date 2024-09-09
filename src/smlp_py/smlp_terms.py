@@ -5,6 +5,8 @@ import operator
 import numpy as np
 import pandas as pd
 import keras
+from Cython.Compiler.TreePath import operations
+from pysmt.fnode import FNode
 from sklearn.tree import _tree
 import json
 import ast
@@ -18,10 +20,19 @@ import sys
 from enum import Enum
 
 import smlp
-from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
+from src.smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates,
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
+from pysmt.shortcuts import Real as pysmtReal
+from src.smlp_py.NN_verifiers.verifiers import MarabouVerifier
+import pysmt
 
+from src.smlp_py.smtlib.text_to_sympy import TextToPysmtParser
+from src.smlp_py.solvers.universal_solver import Solver
+
+from src.smlp_py.solvers.z3.operations import SMLPOperations
+
+from src.smlp_py.solvers.z3.solver import Form2_Solver
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
@@ -51,16 +62,7 @@ from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_wit
 # to solver instance separately (as many as required, depending on whether all responses are analysed together).
 
 
-USE_CACHE = False
 
-def conditional_cache(func):
-    """Custom decorator to conditionally apply @functools.cache."""
-    if USE_CACHE:
-        # Apply caching
-        return functools.cache(func)
-    else:
-        # Return the original function without caching
-        return func
 '''
 
 def conditional_cache(func):
@@ -78,7 +80,7 @@ def conditional_cache(func):
 
 # Class SmlpTerms has methods for generating terms, and classes TreeTerms, PolyTerms and NNKerasTerms are inherited
 # from it but this inheritance is probably not implemented in the best way: TODO !!!: see if that can be improved.
-class SmlpTerms:
+class SmlpTerms(SMLPOperations):
     def __init__(self):
         self._smlp_terms_logger = None
         self.report_file_prefix = None
@@ -127,8 +129,9 @@ class SmlpTerms:
             ast.LtE: self.smlp_le, ast.Gt: self.smlp_gt, ast.GtE: self.smlp_ge, 
             ast.And: self.smlp_and, ast.Or: self.smlp_or, ast.Not: self.smlp_not,
             ast.IfExp: self.smlp_ite
-        } 
-        
+        }
+        self._ENABLE_PYSMT = False
+
     # set logger from a caller script
     def set_logger(self, logger):
         self._smlp_terms_logger = logger
@@ -585,8 +588,17 @@ class SmlpTerms:
     # Can also be applied to a dictionary where values are terms.
     def witness_term_to_const(self, witness, approximate=False, precision=64):
         witness_vals_dict = {}
+        # if self._ENABLE_PYSMT:
+        #     return witness
         for k,t in witness.items():
-            witness_vals_dict[k] = self.ground_smlp_expr_to_value(t, approximate, precision)
+            if isinstance(t, smlp.term2):
+                new_value = self.ground_smlp_expr_to_value(t, approximate, precision)
+            elif isinstance(t, pysmt.fnode.FNode) and t.is_constant():
+                new_value = float(t.constant_value())
+            else:
+                new_value = float(t)
+
+            witness_vals_dict[k] = new_value
         return witness_vals_dict
 
     # computes and returns sat assignment witness_approx which approximates input witness/sat assignment 
@@ -1693,22 +1705,23 @@ class ScalerTerms(SmlpTerms):
     # x_scaled obtained from x using min_max scaler to range [0, 1] (which is the same as normalizin x),
     # orig_min stands for min(x) and orig_max stands for max(x). Note that 1 / (max(x) - min(x)) is a
     # rational constant, it is defined to smlp instance as a fraction (thus there is no loss of precision).
-    def feature_scaler_to_term(self, orig_feat_name, scaled_feat_name, orig_min, orig_max): 
+    def feature_scaler_to_term(self, orig_feat_name, scaled_feat_name, orig_min, orig_max, allow_solver=False):
         #print('feature_scaler_to_term', 'orig_min', orig_min, type(orig_min), 'orig_max', orig_max, type(orig_max), flush=True)
+        operations = Solver if allow_solver else self
         if orig_min == orig_max:
-            return self.smlp_cnst(0) #smlp.Cnst(0) # same as returning smlp.Cnst(smlp.Q(0))
+            return operations.smlp_cnst(0) #smlp.Cnst(0) # same as returning smlp.Cnst(smlp.Q(0))
         else:
-            return self.smlp_mult(
-                self.smlp_cnst(self.smlp_q(1) / self.smlp_q(orig_max - orig_min)),
-                (self.smlp_var(orig_feat_name) - self.smlp_cnst(orig_min)))
+            return operations.smlp_mult(
+                operations.smlp_cnst(operations.smlp_q(1) / operations.smlp_q(orig_max - orig_min)),
+                (operations.smlp_var(orig_feat_name) - operations.smlp_cnst(orig_min)))
             ####return self.smlp_div(self.smlp_var(orig_feat_name) - self.smlp_cnst(orig_min), self.smlp_cnst(orig_max) - self.smlp_cnst(orig_min))
             ####return smlp.Cnst(smlp.Q(1) / smlp.Q(orig_max - orig_min)) * (smlp.Var(orig_feat_name) - smlp.Cnst(orig_min))
-    
+
     # Computes dictionary with features as keys and scaler terms as values
-    def feature_scaler_terms(self, data_bounds, feat_names): 
-        return dict([(self._scaled_name(feat), self.feature_scaler_to_term(feat, self._scaled_name(feat), 
-            data_bounds[feat]['min'], data_bounds[feat]['max'])) for feat in feat_names])
-        
+    def feature_scaler_terms(self, data_bounds, feat_names, allow_solver=False):
+        return dict([(self._scaled_name(feat), self.feature_scaler_to_term(feat, self._scaled_name(feat),
+            data_bounds[feat]['min'], data_bounds[feat]['max'], allow_solver=allow_solver)) for feat in feat_names])
+
     # Computes term x from column x_scaled using expression x = x_scaled * (max_x - min_x) + x_min.
     # Argument orig_feat_name is name for column x, argument scaled_feat_name is the name of scaled column 
     # x_scaled obtained earlier from x using min_max scaler to range [0, 1] (same as normalization of x),
@@ -1794,6 +1807,16 @@ class ModelTerms(ScalerTerms):
             #    'help':'Should terms be cached along building terms and formulas in model exploration modes? ' +
             #    '[default {}]'.format(str(self._DEF_CACHE_TERMS))}
         }
+
+        # self.parser = TextToPysmtParser()
+        # self.parser.init_variables(symbols=[("x1", "real", True), ('x2', 'int', True), ('p1', 'real', True), ('p2', 'int', True),
+        #                                    ('y1', 'real', False), ('y2', 'real', False)])
+        #
+        # self.verifier = MarabouVerifier(parser=self.parser)
+        #
+        # self._ENABLE_PYSMT = False
+        # self._RETURN_PYSMT = False
+
         
     # set logger from a caller script
     def set_logger(self, logger):
@@ -1965,7 +1988,8 @@ class ModelTerms(ScalerTerms):
                     if tree_flat_encoding or nn_keras_layered_encoding: 
                         model_term = [self.smlp_cnst_fold(form, {feat_name: feat_term}) for form in model_term]
                     else:
-                        model_term = self.smlp_cnst_fold(model_term, {feat_name: feat_term}) #self.smlp_subst
+                        model_term = self.smlp_cnst_fold(model_term, {feat_name: feat_term})
+                        # model_term = Solver.substitute(var=model_term, substitutions={feat_name: feat_term}) #self.smlp_subst
                 #print('model term after', model_term, flush=True)
                 model_term_dict[resp_name] = model_term
             #print('model_term_dict with unscaled features', model_term_dict, flush=True)
@@ -2084,18 +2108,24 @@ class ModelTerms(ScalerTerms):
         #print('objv_exprs', objv_exprs)
         if objv_exprs is None:
             return None, None, None, None
-        orig_objv_terms_dict = dict([(objv_name, self.ast_expr_to_term(objv_expr)) \
+        orig_objv_terms_dict = dict([(objv_name, Solver.parse_ast(parser=self.ast_expr_to_term, expression=objv_expr)) \
             for objv_name, objv_expr in zip(objv_names, objv_exprs)]) #self._smlpTermsInst.
         #print('orig_objv_terms_dict', orig_objv_terms_dict)
+
         if scale_objv:
-            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names) #._scalerTermsInst
+            # allow_pysmt = isinstance(next(iter(orig_objv_terms_dict), FNode)
+
+            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names, allow_solver=True)  # ._scalerTermsInst
+
             #print('scaled_objv_terms_dict', scaled_objv_terms_dict)
             objv_terms_dict = {}
             for i, (k, v) in enumerate(scaled_objv_terms_dict.items()):
                 #print('k', k, 'v', v, type(v)); 
                 x = list(orig_objv_terms_dict.keys())[i]; 
                 #print('x', x); print('arg', orig_objv_terms_dict[x])
-                objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]}) #self.smlp_subst
+
+                objv_terms_dict[k] = Solver.substitute(var=v, substitutions={x: orig_objv_terms_dict[x]})
+                # objv_terms_dict[k] = self.smlp_cnst_fold(v, {x: orig_objv_terms_dict[x]})
             #objv_terms_dict = scaled_objv_terms_dict
         else:
             objv_terms_dict = orig_objv_terms_dict
@@ -2106,7 +2136,41 @@ class ModelTerms(ScalerTerms):
                 for objv_name in objv_names]
         #print('objv_terms_dict', objv_terms_dict)
         return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict
-    
+
+    def pysmt_compute_objectives_terms(self, objv_names, objv_exprs, objv_bounds, scale_objv):
+        # print('objv_exprs', objv_exprs)
+        if objv_exprs is None:
+            return None, None, None, None
+
+        pysmt_objv_terms_dict = dict([(objv_name, self.parser.parse(objv_expr)) \
+                                      for objv_name, objv_expr in zip(objv_names, objv_exprs)])
+
+        if scale_objv:
+            scaled_objv_terms_dict = self.feature_scaler_terms(objv_bounds, objv_names,
+                                                                   self.parser)  # ._scalerTermsInst
+
+            # print('scaled_objv_terms_dict', scaled_objv_terms_dict)
+            objv_terms_dict = {}
+            for i, (k, v) in enumerate(scaled_objv_terms_dict.items()):
+                # print('k', k, 'v', v, type(v));
+                x = list(pysmt_objv_terms_dict.keys())[i];
+                # print('x', x); print('arg', orig_objv_terms_dict[x])
+                # if self._ENABLE_PYSMT:
+                substitution = {self.parser.get_symbol(x): pysmt_objv_terms_dict[x]}
+                # Apply the substitution
+                objv_terms_dict[k] = self.parser.simplify(v.substitute(substitution))
+                # else:
+            # objv_terms_dict = scaled_objv_terms_dict
+        else:
+            objv_terms_dict = pysmt_objv_terms_dict
+            scaled_objv_terms_dict = None
+
+        if scaled_objv_terms_dict is not None:
+            assert list(scaled_objv_terms_dict.keys()) == [self._scaled_name(objv_name)  # ._scalerTermsInst
+                                                           for objv_name in objv_names]
+        # print('objv_terms_dict', objv_terms_dict)
+        return objv_terms_dict, pysmt_objv_terms_dict, scaled_objv_terms_dict
+
     
     # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
     # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
@@ -2122,8 +2186,10 @@ class ModelTerms(ScalerTerms):
                 assert delta_rel >= 0
         else:
             delta_rel = delta_abs = None
-            
-        theta_form = self.smlp_true
+
+        # theta_form = pysmt.shortcuts.TRUE() if self._ENABLE_PYSMT else self.smlp_true
+        theta_form = Solver._instance.smlp_true
+
         #print('radii_dict', radii_dict)
         radii_dict_local = radii_dict.copy() 
         knobs = radii_dict_local.keys(); #print('knobs', knobs); print('cex', cex); print('delta', delta_dict)
@@ -2135,19 +2201,24 @@ class ModelTerms(ScalerTerms):
                     radii_dict_local[cex_var] = {'rad-abs':0, 'rad-rel': None} # delta
         
         for var,radii in radii_dict_local.items():
-            var_term = self.smlp_var(var)
+            var_term = Solver.smlp_var(var)
             # either rad-abs or rad-rel must be None -- for each var wr declare only one of these
             if radii['rad-abs'] is not None:
                 rad = radii['rad-abs']; #print('rad', rad); 
                 if delta_rel is not None: # we are generating a lemma
                     rad = rad * (1 + delta_rel) + delta_abs 
-                rad_term = self.smlp_cnst(rad)
+
+                # if self._ENABLE_PYSMT:
+                #     rad_term = float(rad)
+                # else:
+                #     rad_term = self.smlp_cnst(rad)
+                rad_term = Solver.get_rad_term(rad=rad)
+
             elif radii['rad-rel'] is not None:
                 rad = radii['rad-rel']; #print('rad', rad)
                 if delta_rel is not None: # we are generating a lemma
                     rad = rad * (1 + delta_rel) + delta_abs
-                rad_term = self.smlp_cnst(rad)
-                
+
                 # TODO !!!  issue a warning when candidates become closer and closer
                 # TODO !!!!!!! warning when distance between previous and current candidate
                 # TODO !!!!!! warning when FINAL rad + delta is 0, as part of sanity checking options
@@ -2166,37 +2237,83 @@ class ModelTerms(ScalerTerms):
                 # candidate; this is a matter of definition of relative radius, and seems cleaner than computing actual radius 
                 # from relative radius based on variable values in the counter-exaples to candidate rather than variable values 
                 # in the candidate itself.
-                if delta_rel is not None: # radius for a lemma -- cex holds values of candidate counter-example
-                    rad_term = rad_term * abs(var_term)
-                else: # radius for excluding a candidate -- cex holds values of the candidate 
-                    rad_term = rad_term * abs(cex[var])
-            elif delta_dict is not None: 
-                raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified') 
-            theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
+
+                # if self._ENABLE_PYSMT:
+                #     rad_term = float(rad)
+                # else:
+                #     rad_term = self.smlp_cnst(rad)
+                #     if delta_rel is not None: # radius for a lemma -- cex holds values of candidate counter-example
+                #         rad_term = rad_term * abs(var_term)
+                #     else: # radius for excluding a candidate -- cex holds values of the candidate
+                #         rad_term = rad_term * abs(cex[var])
+
+                rad_term = Solver.generate_rad_term(rad=rad, delta_rel=delta_rel, var_term=var_term,candidate=cex[var])
+
+
+            elif delta_dict is not None:
+                raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified')
+            # if self._ENABLE_PYSMT:
+            #     value = float(cex[var])
+            #     PYSMT_var = self.parser.get_symbol(var)
+            #     type = pysmt.shortcuts.Int if str(PYSMT_var.get_type()) == "Int" else pysmtReal
+            #     calc_type = int if str(PYSMT_var.get_type()) == "Int" else float
+            #     lower = calc_type(value - rad_term)
+            #     lower = type(lower)
+            #     upper = calc_type(value + rad_term)
+            #     upper = type(upper)
+            #     theta_form = self.parser.and_(theta_form, PYSMT_var >= lower, PYSMT_var <= upper)
+            #
+            # else:
+            #     theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
+
+            theta_form = Solver.create_theta_form(theta_form=theta_form, witness=cex[var], var=var, var_term=var_term, rad_term=rad_term)
+
         #print('theta_form', theta_form)
         return theta_form
-    
+
     # Creates eta constraints on control parameters (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
     def compute_grid_range_formulae_eta(self):
         #print('generate eta constraint')
-        eta_grid_form = self.smlp_true
+        eta_grid_form = Solver._instance.smlp_true
         eta_grids_dict = self._specInst.get_spec_eta_grids_dict; #print('eta_grids_dict', eta_grids_dict)
         for var,grid in eta_grids_dict.items():
-            eta_grid_disj = self.smlp_false
-            var_term = self.smlp_var(var)
+            eta_grid_disj = Solver._instance.smlp_false
+            var_term = Solver.smlp_var(var)
             for gv in grid: # iterate over grid values
-                if eta_grid_disj == self.smlp_false:
-                    eta_grid_disj = var_term == self.smlp_cnst(gv)
+                if eta_grid_disj == Solver._instance.smlp_false:
+                    eta_grid_disj = Solver.smlp_eq(var_term, Solver.smlp_cnst(gv))
                 else:
-                    eta_grid_disj = self.smlp_or(eta_grid_disj, var_term == self.smlp_cnst(gv))
-            if eta_grid_form == self.smlp_true:
+                    eta_grid_disj = Solver.smlp_or(eta_grid_disj, Solver.smlp_eq(var_term, Solver.smlp_cnst(gv)))
+            if eta_grid_form == Solver._instance.smlp_true:
                 eta_grid_form = eta_grid_disj
             else:
-                eta_grid_form = self.smlp_and(eta_grid_form, eta_grid_disj)
+                eta_grid_form = Solver.smlp_and(eta_grid_form, eta_grid_disj)
         #print('eta_grid_form', eta_grid_form); 
         return eta_grid_form
-                
+
+    def pysmt_compute_grid_range_formulae_eta(self):
+        # print('generate eta constraint')
+        eta_grid_form = pysmt.shortcuts.TRUE()
+        eta_grids_dict = self._specInst.get_spec_eta_grids_dict;  # print('eta_grids_dict', eta_grids_dict)
+        for var, grid in eta_grids_dict.items():
+            # self.verifier.add_bounds(var, grid=grid)
+            eta_grid_disj = pysmt.shortcuts.FALSE()
+            var_term = self.parser.get_symbol(var)
+            symbol_type = var_term.get_type()
+            for gv in grid:  # iterate over grid values
+                if eta_grid_disj == pysmt.shortcuts.FALSE():
+                    eta_grid_disj = self.parser.eq_(var_term, self.parser.cast_number(symbol_type, gv))
+                else:
+                    eta_grid_disj = self.parser.or_(eta_grid_disj,
+                                                    self.parser.eq_(var_term, self.parser.cast_number(symbol_type, gv)))
+            if eta_grid_form == pysmt.shortcuts.TRUE():
+                eta_grid_form = eta_grid_disj
+            else:
+                eta_grid_form = self.parser.and_(eta_grid_form, eta_grid_disj)
+        # print('eta_grid_form', eta_grid_form);
+        return eta_grid_form
+
 
     # Compute formulae alpha, beta, eta from respective expression string.
     def compute_input_ranges_formula_alpha(self, model_inputs):
@@ -2225,8 +2342,13 @@ class ModelTerms(ScalerTerms):
                 assert False
         return alpha_form
     
-    def compute_input_ranges_formula_alpha_eta(self, alpha_vs_eta, model_inputs):
-        alpha_or_eta_form = self.smlp_true
+    def compute_input_ranges_formula_alpha_eta(self, alpha_vs_eta, model_inputs, specs=None):
+        #  self.ENABLE_PYSMT
+        # alpha_or_eta_form = self.smlp_true
+        # smt_form = pysmt.shortcuts.TRUE()
+
+        alpha_or_eta_form = Solver._instance.smlp_true
+
         if alpha_vs_eta == 'alpha':
             alpha_or_eta_ranges_dict = self._specInst.get_spec_alpha_bounds_dict
         elif alpha_vs_eta == 'eta':
@@ -2243,19 +2365,36 @@ class ModelTerms(ScalerTerms):
             #print('mn', mn, 'mx', mx)
             if mn is not None and mx is not None:
                 if self._declare_domain_interface_only:
-                    if self._encode_input_range_as_disjunction and alpha_vs_eta == 'alpha' and v in self._specInst.get_spec_inputs:
-                        rng = self.smlp_or_multi([self.smlp_eq(self.smlp_var(v), self.smlp_cnst(i)) for i in range(mn, mx+1)])
-                    else:
-                        rng = self.smlp_and(self.smlp_var(v) >= self.smlp_cnst(mn), self.smlp_var(v) <= self.smlp_cnst(mx))
-                    alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
+                    # if self._ENABLE_PYSMT:
+                    #     symbol_v = self.parser.get_symbol(v)
+                    #     form = self.parser.and_(symbol_v >= mn, symbol_v <= mx)
+                    #     smt_form = self.parser.and_(smt_form, form)
+                    #
+                    #
+                    # if self._encode_input_range_as_disjunction and alpha_vs_eta == 'alpha' and v in self._specInst.get_spec_inputs:
+                    #     rng = self.smlp_or_multi([self.smlp_eq(self.smlp_var(v), self.smlp_cnst(i)) for i in range(mn, mx+1)])
+                    # else:
+                    #     rng = self.smlp_and(self.smlp_var(v) >= self.smlp_cnst(mn), self.smlp_var(v) <= self.smlp_cnst(mx))
+                    # alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
+
+                    alpha_or_eta_form = Solver.create_alpha_or_eta_form(
+                                                    alpha_or_eta_form=alpha_or_eta_form,
+                                                    v=v,
+                                                    mn=mn,
+                                                    mx=mx,
+                                                    is_alpha=alpha_vs_eta == 'alpha',
+                                                    is_in_spec=v in self._specInst.get_spec_inputs,
+                                                    is_disjunction=self._encode_input_range_as_disjunction
+                                                )
             elif mn is not None:
-                rng = self.smlp_var(v) >= self.smlp_cnst(mn)
-                alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
+                rng = Solver.smlp_var(v) >= Solver.smlp_cnst(mn)
+                alpha_or_eta_form = Solver.smlp_and(alpha_or_eta_form, rng)
             elif mx is not None:
-                rng = self.smlp_var(v) <= self.smlp_cnst(mx)
-                alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
+                rng = Solver.smlp_var(v) <= Solver.smlp_cnst(mx)
+                alpha_or_eta_form = Solver.smlp_and(alpha_or_eta_form, rng)
             else:
                 assert False
+
         return alpha_or_eta_form
     
     # alph_expr is alpha constraint specified in command line. If it is not None 
@@ -2269,16 +2408,23 @@ class ModelTerms(ScalerTerms):
         #alph_form = self.compute_input_ranges_formula_alpha(model_inputs) 
         #alph_form = self.smlp_true
         if alph_expr is None:
-            alpha_expr = self._specInst.get_spec_alpha_global_expr
+            alph_expr = self._specInst.get_spec_alpha_global_expr
         if alph_expr is None:
-            return self.smlp_true
+            return Solver._instance.smlp_true
         else:
             alph_expr_vars = get_expression_variables(alph_expr)
             dont_care_vars = list_subtraction_set(alph_expr_vars, model_inputs)
             if len(dont_care_vars) > 0:
                 raise Exception('Variables ' + str(dont_care_vars) + 
                     ' in input constraints (alpha) are not part of the model')
-            alph_glob = self.ast_expr_to_term(alph_expr)
+
+            alph_glob = Solver.parse_ast(parser=self.ast_expr_to_term, expression=alph_expr)
+            # if self._ENABLE_PYSMT:
+            #     if self._RETURN_PYSMT:
+            #         return self.parser.parse(alph_expr)
+            #     else:
+            #         print(self.parser.parse(alph_expr))
+
             return alph_glob #self._smlpTermsInst.smlp_and(alph_form, alph_glob)
     
     # The argument model_inps_outps is the union of model input and output varaiables.
@@ -2290,18 +2436,18 @@ class ModelTerms(ScalerTerms):
     # and are not dropped during data processing (see function SmlpData._prepare_data_for_modeling).
     def compute_beta_formula(self, beta_expr, model_inps_outps):
         if beta_expr is None:
-            return self.smlp_true
+            return Solver._instance.smlp_true
         else:
             beta_expr_vars = get_expression_variables(beta_expr)
             dont_care_vars = list_subtraction_set(beta_expr_vars, model_inps_outps)
             if len(dont_care_vars) > 0:
                 raise Exception('Variables ' + str(dont_care_vars) + 
                     ' in optimization constraints (beta) are not part of the model')
-            return self.ast_expr_to_term(beta_expr)
+            return Solver.parse_ast(parser=self.ast_expr_to_term, expression=beta_expr)
     
     def compute_eta_formula(self, eta_expr, model_inputs):
         if eta_expr is None:
-            return self.smlp_true
+            return Solver._instance.smlp_true
         else:
             # eta_expr can only contain knobs (control inputs), not free inputs or outputs (responses)
             eta_expr_vars = get_expression_variables(eta_expr)
@@ -2309,7 +2455,13 @@ class ModelTerms(ScalerTerms):
             if len(dont_care_vars) > 0:
                 raise Exception('Variables ' + str(dont_care_vars) + 
                     ' in knob constraints (eta) are not part of the model')
-            return self.ast_expr_to_term(eta_expr)
+            # if self._ENABLE_PYSMT:
+            #     if self._RETURN_PYSMT:
+            #         return self.parser.parse(eta_expr)
+            #     else:
+            #         print(self.parser.parse(eta_expr))
+
+            return Solver.parse_ast(parser=self.ast_expr_to_term, expression=eta_expr)
 
     def var_domain(self, var, spec_domain_dict):
         interval = spec_domain_dict[var][self._SPEC_DOMAIN_INTERVAL_TAG]; #self._specInst.get_spec_interval_tag
@@ -2349,19 +2501,27 @@ class ModelTerms(ScalerTerms):
         else:
             raise Exception('Data bounds file cannot be loaded')
         self._smlp_terms_logger.info('Parsing the SPEC: End') 
-        
+
         # get variable domains dictionary; certain sanity checks are performrd within this function.
         spec_domain_dict = self._specInst.get_spec_domain_dict; #print('spec_domain_dict', spec_domain_dict)
-        
+
+        # self.verifier.initialize(variable_ranges=spec_domain_dict)
+
+
+
         # contraints on features used as control variables and on the responses
-        alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names); #print('alph_ranges')
-        alph_global = self.compute_global_alpha_formula(alph_expr, feat_names); #print('alph_global')
-        alpha = self.smlp_and(alph_ranges, alph_global); #print('alpha')
-        beta = self.compute_beta_formula(beta_expr, feat_names+resp_names); #print('beta')
-        eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names); #print('eta_ranges')
-        eta_grids = self.compute_grid_range_formulae_eta(); #print('eta_grids')
-        eta_global = self.compute_eta_formula(eta_expr, feat_names); #print('eta_global', eta_global)
-        eta = self.smlp_and_multi([eta_ranges, eta_grids, eta_global]); #print('eta', eta)
+        alph_ranges = self.compute_input_ranges_formula_alpha_eta('alpha', feat_names,
+                                                                  spec_domain_dict);  # print('alph_ranges')
+        alph_global = self.compute_global_alpha_formula(alph_expr, feat_names);  # print('alph_global')
+        alpha = Solver.smlp_and(alph_ranges, alph_global)
+
+        beta = self.compute_beta_formula(beta_expr, feat_names + resp_names);  # print('beta')
+        eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names,
+                                                                 spec_domain_dict);  # print('eta_ranges')
+        eta_grids = self.compute_grid_range_formulae_eta()
+        eta_global = self.compute_eta_formula(eta_expr, feat_names);  # print('eta_global', eta_global)
+
+        eta = Solver.smlp_and_multi([eta_ranges, eta_grids, eta_global])
         
         self._smlp_terms_logger.info('Alpha global   constraints: ' + str(alph_global))
         self._smlp_terms_logger.info('Alpha ranges   constraints: ' + str(alph_ranges))
@@ -2548,30 +2708,34 @@ class ModelTerms(ScalerTerms):
                         eq_form = self.smlp_eq(self.smlp_var(resp_name), resp_term); #print('eq_form', eq_form, type(eq_form))
                         base_solver.add(eq_form)
         return base_solver
-    
+
     # wrapper function on solver.check to measure runtime and return status in a convenient way
-    def smlp_solver_check(self, solver, call_name:str, lemma_precision:int=0):
+    def smlp_solver_check(self, solver, call_name:str, lemma_precision:int=0, equations=None, temp=False):
+        if equations:
+            print('FORM2 FORMULA', equations)
         approx_lemmas = lemma_precision > 0
         start = time.time()
         #print('solver chack start', flush=True)
-        res = solver.check()
+        res, witness = solver.check(temp=temp)
         #print('solver chack end', flush=True)
         end = time.time()
-        if  isinstance(res, smlp.unknown):
+        status = Solver.convert_results_to_string(res)
+
+        if status == "unknown":
             #print('smlp_unknown', smlp.unknown)
-            status = 'unknown'
             sat_model = {}
-        elif isinstance(res, smlp.sat):
+        elif status == "sat":
             #print('smlp_sat', smlp.sat)
-            status = 'sat'
-            sat_model = self.witness_term_to_const(res.model, approximate=False, precision=None)
+            witness = res.model if isinstance(solver, Form2_Solver) else witness["witness"]
+            sat_model = self.witness_term_to_const(witness, approximate=False, precision=None)
             if approx_lemmas:
-                sat_model_approx = self.approximate_witness_term(res.model, lemma_precision)
+                sat_model_approx = self.approximate_witness_term(witness, lemma_precision)
+            # return TextToPysmtParser.SAT
             #print('res.model', res.model, 'sat_model', sat_model)
-        elif isinstance(res, smlp.unsat):
+        elif status == "unsat":
             #print('smlp_unsat', smlp.unsat)
-            status = 'unsat'
             sat_model = {}
+            # return TextToPysmtParser.UNSAT
         else:
             raise Exception('Unexpected solver result ' + str(res))
         
@@ -2643,16 +2807,16 @@ class ModelTerms(ScalerTerms):
             #print('res.mode;', res.model, 'assignment', assignment, 'assignment_approx', assignment_approx); 
             #return res, assignment_approx
         #print('exit smlp_solver_check', flush=True)
-        return res
+        return status, witness
     
     def solver_status_sat(self, res):
-        return isinstance(res, smlp.sat)
+        return res == "SAT"
         
     def solver_status_unsat(self, res):
-        return isinstance(res, smlp.unsat)
+        return res == "UNSAT"
         
     def solver_status_unknown(self, res):
-        return isinstance(res, smlp.unknown)
+        return res == "UNKNOWN"
         
     # we return value assignmenets to interface (input, knob, output) variables defined in the Spec file
     # (and not values assigned to any other variables that might be defined additionally as part of solver domain,
@@ -2692,22 +2856,50 @@ class ModelTerms(ScalerTerms):
     def check_alpha_eta_consistency(self, domain:smlp.domain, model_full_term_dict:dict, 
             alpha:smlp.form2, eta:smlp.form2, solver_logic:str):
         #print('create solver: model', model_full_term_dict, flush=True)
-        solver = self.create_model_exploration_instance_from_smlp_components(
-            domain, model_full_term_dict, False, solver_logic)
-        #print('add alpha', alpha, flush=True)
-        solver.add(alpha); #print('alpha', alpha, flush=True)
-        solver.add(eta); #print('eta', eta)
-        #print('create check', flush=True)
-        #res = solver.check(); print('res', res, flush=True)
-        res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency')
+        # if not self._RETURN_PYSMT:
+        #     solver = self.create_model_exploration_instance_from_smlp_components(
+        #     domain, model_full_term_dict, False, solver_logic)
+        #     #print('add alpha', alpha, flush=True)
+        #     solver.add(alpha); #print('alpha', alpha, flush=True)
+        #     solver.add(eta); #print('eta', eta)
+        #     #print('create check', flush=True)
+        #     #res = solver.check(); print('res', res, flush=True)
+        #     res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency', equations={'alpha':alpha, 'eta':eta})
+        # else:
+        #     self.verifier.reset()
+        #     self.verifier.apply_restrictions(alpha)
+        #     self.verifier.apply_restrictions(eta)
+        #     print('PYSMT FORMULA',{'alpha':alpha, 'eta':eta})
+        #     res, witness = self.verifier.solve()
+
+        solver = Solver.create_solver(
+            create_solver=self.create_model_exploration_instance_from_smlp_components,
+            domain=domain,
+            model_full_term_dict=model_full_term_dict,
+            incremental=False,
+            solver_logic=solver_logic
+        )
+        solver.add_formula(alpha)
+        solver.add_formula(eta)
+
+        res,_ = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency', equations={'alpha':alpha, 'eta':eta})
+
         consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'
-        if isinstance(res, smlp.sat):
+        if res == "sat":
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are consistent')
             interface_consistent = True
-        elif isinstance(res, smlp.unsat):
+        elif res == "unsat":
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are inconsistent')
             interface_consistent = False
         else:
             raise Exception('alpha and eta cosnsistency check failed to complete')
         return interface_consistent
+
+    def add_integer_constraints(self):
+        for symbol, values in self._specInst.get_spec_domain_dict.items():
+            if values['range'] == 'int':
+                ranges = values['interval']
+                integer_formula = self.parser.create_integer_disjunction(f'{symbol}_unscaled', (ranges[0], ranges[-1]))
+                self.verifier.add_permanent_constraint(integer_formula)
+
 
