@@ -9,6 +9,8 @@ import subprocess
 import plotly.graph_objects as go
 from icecream import ic
 from matplotlib.colors import Normalize
+import torch
+import sys
 
 # Configure icecream for debugging output
 ic.configureOutput(prefix=f'Debug | ', includeContext=True)
@@ -17,24 +19,28 @@ exp = str(round(random.random(), 4))  # Generate a random experiment identifier
 
 class plot_exp:
 
-    def __init__(self, exp=exp, setno='1'):
+    def __init__(self, exp=exp, setno='10'):
 
         self.exp = exp
         self.setno = setno
         self.txt_file = f'Set{self.setno}_{self.exp}_experiments.txt'
         self.Set = f'experiment_outputs/Set{self.setno}/Set_{self.setno}_'
-        self.witnesses_csv_path = f'Set{self.setno}_{self.exp}_witnesses.csv'
-        self.stable_witnesses_csv_path = f'Set{self.setno}_{self.exp}_stable_witnesses.csv'
-        self.counter_witnesses_csv_path = f'Set{self.setno}_{self.exp}_counter_witnesses.csv'
         self.witnesses_json = f'Set{self.setno}_{self.exp}_witnesses.json'
+        self.orig_csv = "smlp_toy_basic.csv"
         self.witnesses_html_path = f'Set{self.setno}_{self.exp}_witnesses.html'
-        self.stable_witnesses_html_path = f'Set{self.setno}_{self.exp}_stable_witnesses.html'
-        self.counter_witnesses_html_path = f'Set{self.setno}_{self.exp}_counter_witnesses.html'
+        self.stable_x_original_html_path = f'Set{self.setno}_{self.exp}_stable_x_original.html'
+        self.stable_x_counter_html_path = f'Set{self.setno}_{self.exp}_stable_x_counter.html'
         self.opt_out = f'Set{self.setno}_{self.exp}_optimization_output.png'
         self.source_file_1 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.csv'
         self.source_file_2 = f'experiment_outputs/Set{self.setno}/smlp_toy_basic.spec'
         self.destination_folder = '.'    
         self.spec_file = "smlp_toy_basic.spec"
+        self.orig_data = pd.read_csv('smlp_toy_basic.csv')
+        self.x_bounds = f"\nmin x: {self.orig_data.iloc[:, 0].min()} max x: {self.orig_data.iloc[:, 0].max()}"
+        self.y_bounds = f"\nmin y: {self.orig_data.iloc[:, 1].min()} max y: {self.orig_data.iloc[:, 1].max()}"
+        if len(self.orig_data.columns) > 2:
+            self.z_bounds = f"\nmin z: {self.orig_data.iloc[:, 2].min()} max z: {self.orig_data.iloc[:, 2].max()}"
+        self.orig_len = f"\nlength of dataset: {len(self.orig_data)}"
 
     def save_to_txt(self, data):
         """
@@ -43,23 +49,13 @@ class plot_exp:
         Parameters:
         - data: Data to be saved. Can be a list or a single value.
         """
-        # Load original data for bounds
-        orig_data = pd.read_csv('smlp_toy_basic.csv')
-        x_bounds = f"\nmin x: {orig_data.iloc[:, 0].min()} max x: {orig_data.iloc[:, 0].max()}"
-        y_bounds = f"\nmin y: {orig_data.iloc[:, 1].min()} max y: {orig_data.iloc[:, 1].max()}"
-        
-        if len(orig_data.columns) > 2:
-            z_bounds = f"\nmin z: {orig_data.iloc[:, 2].min()} max z: {orig_data.iloc[:, 2].max()}"
-    
-        orig_len = f"\nlength of dataset: {len(orig_data)}"
-    
         # Save data to text file
         with open(self.txt_file, 'a') as f:
             if isinstance(data, list):
                 f.write(f"{self.setno}\n{self.exp}\n")
                 for index, arg in enumerate(data[1:], start=1):
                     f.write(f"Argument {index}: {arg}\n")
-                f.write(x_bounds + y_bounds + (z_bounds if len(orig_data.columns) > 2 else '') + orig_len + "\n \n")
+                f.write(self.x_bounds + self.y_bounds + (self.z_bounds if len(self.orig_data.columns) > 2 else '') + self.orig_len + "\n \n")
                 f.flush()
     
                 resp_index = data.index('-resp')
@@ -68,17 +64,6 @@ class plot_exp:
                 feat = data[feat_index + 1]
                 resp_list = resp.split(',')
                 feat_list = feat.split(',')
-                #if len(feat_list) > 1:
-                #    for f in feat_list:
-                #        ic(f)
-                #else:
-                #    ic(feat_list[0])
-    
-                #if len(resp_list) > 1:
-                #    for f in resp_list:
-                #        ic(f)
-                #else:
-                #    ic(resp_list[0])
                 with open(self.spec_file, 'r') as spec:
                     spec = json.load(spec)
                 for key, value in spec.items():
@@ -86,7 +71,6 @@ class plot_exp:
                         for v in value:
                             for ite, val in v.items():
                                 if str(ite) == "rad-abs":
-                                    ic("here")
                                     f.write(f"For {v['label']} {ite}: {val}\n")
     
             else:
@@ -189,6 +173,18 @@ class plot_exp:
         """
         Copies source files to the current directory.
         """
+        if not torch.cuda.is_available():
+            ic("CUDA is not available. Exiting program.")
+            sys.exit(1)  # Exit with a non-zero status code
+
+        # Your CUDA-dependent code here
+        ic("CUDA is available. Proceeding with the program.")
+        cuda = "CUDA is available. Proceeding with the program."
+        self.save_to_txt(cuda)
+        
+        #ic(torch.cuda.is_available())
+        #ic(torch.version.cuda)
+        #ic(torch.__version__)
         shutil.copy2(self.source_file_1, self.destination_folder)
         shutil.copy2(self.source_file_2, self.destination_folder)
 
@@ -201,76 +197,25 @@ class plot_exp:
         - data_version: Indicates which version of data is being saved.
         """
         init_data = {}
-        ic(data_version)
-        ic(data)
-
-        #if data_version == 'witnesses':
         if os.path.exists(self.witnesses_json):
             with open(self.witnesses_json, 'r') as file:
                 init_data = json.load(file)
                 if data_version in init_data:
-                    if len(data) == 3:
-                        init_data[data_version]['x'].append(data['x'])
-                        init_data[data_version]['y'].append(data['y'])
-                        init_data[data_version]['z'].append(data['z'])
-                    else: 
-                        init_data[data_version]['x'].append(data['x'])
-                        init_data[data_version]['y'].append(data['y'])
+                    for key in data:
+                        if key not in init_data[data_version]:
+                            init_data[data_version][key] = []
+                        init_data[data_version][key].append(data[key])
+
                 else:
-                    if len(data) == 3:
-                        init_data[data_version] = {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}
-                    else:
-                        init_data[data_version] = {'x': [data['x']], 'y': [data['y']]}
+                    init_data[data_version] = {key: [value] for key, value in data.items()}
         else:
-            if len(data) == 3:
-                init_data[data_version] = {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}
-            else:
-                init_data[data_version] = {'x': [data['x']], 'y': [data['y']]}
+            init_data[data_version] = {key: value for key, value in data.items()}
 
         with open(self.witnesses_json, 'w') as file:
-            ic(init_data)
             json.dump(init_data, file, indent=4)
 
-        #elif data_version == 'stable':
-        #    with open(self.witnesses_json, 'r') as file:
-        #        init_data = json.load(file)
-        #        ic(init_data)
-        #        if data_version in init_data:
-        #            if len(data) == 3:
-        #                init_data[data_version]['x'].append(data['x'])
-        #                init_data[data_version]['y'].append(data['y'])
-        #                init_data[data_version]['z'].append(data['z'])
-        #            else:
-        #                init_data[data_version]['x'].append(data['x'])
-        #                init_data[data_version]['y'].append(data['y'])
-        #        else:
-        #            if len(data) == 3:
-        #                init_data = {data_version: {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}}
-        #            else:
-        #                init_data = {data_version: {'x': [data['x']], 'y': [data['y']]}}
-
-        #    with open(self.witnesses_json, 'w') as file:
-        #        json.dump(init_data, file, indent=4)
-
-        #elif data_version == 'counter_ex':
-        #    with open(self.witnesses_json, 'r') as file:
-        #        init_data = json.load(file)
-        #        ic(init_data)
-        #        if len(data) == 3:
-        #            init_data[data_version]['x'].append(data['x'])
-        #            init_data[data_version]['y'].append(data['y'])
-        #            init_data[data_version]['z'].append(data['z'])
-        #        else:
-        #            init_data[data_version]['x'].append(data['x'])
-        #            init_data[data_version]['y'].append(data['y'])
-
-        #    if len(data) == 3:
-        #        init_data = {data_version: {'x': [data['x']], 'y': [data['y']], 'z': [data['z']]}}
-        #    else:
-        #        init_data = {data_version: {'x': [data['x']], 'y': [data['y']]}}
-
-        #    with open(self.witnesses_json, 'w') as file:
-        #        json.dump(init_data, file, indent=4)
+        if data_version == 'bounds':
+            ic(init_data[data_version])
 
     def plott(self, x, y, data_version):
         """
@@ -283,7 +228,6 @@ class plot_exp:
         """
         # Load original data
         orig_data = pd.read_csv('smlp_toy_basic.csv')
-        Set = f'Set{self.setno}_'
         
         if len(orig_data.columns) > 2:
             if data_version == 'optimized':
@@ -310,10 +254,14 @@ class plot_exp:
                 fig1.write_html(f"Set{self.setno}_{self.exp}_scatter_plot_optimized.html")
             
             else:
+
                 z = y
                 y = x.iloc[:, 1]
                 x = x.iloc[:, 0]
-                
+
+                data = {'x': x.tolist(), 'y': y.tolist(), 'z':z.tolist()}
+                self.save_to_dict(data, data_version)
+
                 # Create 3D scatter plot
                 fig0 = go.Figure(data=[go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color='blue'))])
                 
@@ -336,152 +284,130 @@ class plot_exp:
             plt.title('Scatter Plot representing Original data and Model Reconstruction of Original Data/Graph')
             plt.grid(True)
             plt.legend()
-            plt.savefig(f"{Set}{exp}_{data_version}.png")
+            plt.savefig(f"{self.setno}{self.exp}_{data_version}.png")
 
-    def witnesses(self, lower_bound, solver):
+    def unscale(self, b):
+        data_version = 'bounds'
+        min_value = self.orig_data.iloc[:, 2].min()
+        max_value = self.orig_data.iloc[:, 2].max()
+
+        # Iterate over the dictionary items
+        for key, value in b.items():
+            # Calculate the new value
+            new_value = value * (max_value - min_value) + min_value
+            # Update the dictionary with the new value
+            b[key] = new_value
+        ic(b)
+        self.save_to_dict(b, data_version)
+
+    def witnesses(self):
         """
         Creates and saves plots based on witnesses data and original data.
         """
-        orig = pd.read_csv('/home/x/temp/smlp/smlp_toy_basic.csv')
+        orig = pd.read_csv(self.orig_csv)
     
-        if os.path.exists(self.witnesses_csv_path):
+        if os.path.exists(self.witnesses_json):
     
-            df = pd.read_csv(self.witnesses_csv_path)
-            df.drop_duplicates(inplace=True)
-            df.to_csv(self.witnesses_csv_path, index=False)
-            num_witn = "Number of witnesses explored: " + str(len(df))
+            with open(self.witnesses_json, 'r') as file:
+                data = json.load(file)
+
+            num_witn = "Number of witnesses explored: " + str(len(data['witnesses']['x'][:]))
             self.save_to_txt(num_witn)
-    
-            if solver == "sat":
 
-                df_sat = pd.read_csv(self.stable_witnesses_csv_path)
-                df_sat.drop_duplicates(inplace=True)
-                df_sat.to_csv(self.stable_witnesses_csv_path, index=False)
-                num_witn = "Number of stable witnesses found: " + str(len(df_sat))
-                self.save_to_txt(num_witn)
-    
-                lower_bound = float(lower_bound['objective'])
-                # Check if 3D plotting is required
-                if len(orig.columns) > 2:
-                    
-                    # Extract data for plotting
-                    z_orig = orig.iloc[:, 2]
-                    y_orig = orig.iloc[:, 1]
-                    x_orig = orig.iloc[:, 0]
-                    z_additional = df.iloc[:, 2]
-                    y_additional = df.iloc[:, 1]
-                    x_additional = df.iloc[:, 0]
+            z_orig = data['test']['z']
+            y_orig = data['test']['y']
+            x_orig = data['test']['x']
 
-                    z_sat = df_sat.iloc[:, 2]
-                    y_sat = df_sat.iloc[:, 1]
-                    x_sat = df_sat.iloc[:, 0]
-                    
-                    # Create 3D scatter plot
-                    fig1 = go.Figure(data=[
-                        go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
-                        go.Scatter3d(x=x_additional, y=y_additional, z=z_additional, mode='markers', marker=dict(color=z_additional, colorscale='Hot', colorbar=dict(title='title')), name='Optimal value')
-                    ])
-                    
-                    # Update layout
-                    fig1.update_layout(
-                        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
-                        title='Scatter Plot of Optimal values on Original dataset'
-                    )
-                    
-                    # Save figure and open HTML file
-                    fig1.write_html(self.witnesses_html_path)
-                    #subprocess.run(['xdg-open', os.path.abspath(witnesses_html_path)], check=True)
+            if 'counter' in data and 'stable' in data:
+                z_counter = data['counter']['z'][:] 
+                y_counter = data['counter']['y'][:] 
+                x_counter = data['counter']['x'][:] 
 
-                    fig2 = go.Figure(data=[
-                        go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
-                        go.Scatter3d(x=x_sat, y=y_sat, z=z_sat, mode='markers', marker=dict(color=z_sat, colorscale='Hot', colorbar=dict(title='title')), name='Stable value')
-                    ])
-                    
-                    # Update layout
-                    fig2.update_layout(
-                        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
-                        title='Scatter Plot of stable values on Original dataset'
-                    )
-                    
-                    # Save figure and open HTML file
-                    fig2.write_html(self.stable_witnesses_html_path)
-                    
-                else:
-                    
-                    # Extract data for plotting
-                    x1 = orig.iloc[:, 0]
-                    y1 = orig.iloc[:, 1]
-                    x = df.iloc[:, 0]
-                    y = df.iloc[:, 1]
-                    
-                    distances = np.abs(y - lower_bound)
-                    norm = Normalize(vmin=distances.min(), vmax=distances.max())
-                    # Reset index for consistency
-                    x.reset_index(drop=True, inplace=True)
-                    y.reset_index(drop=True, inplace=True)
-                    
-                    # Create scatter plot
-                    plt.scatter(x1, y1, color='#8ad347', label='Objective function')
-                    #plt.scatter(x, y, color='#00ffff', label='Witnesses')
-                    scatter = plt.scatter(x, y, c=distances, cmap='viridis', norm=norm, label='Witnesses', edgecolor='k')
-    
-                    cbar = plt.colorbar(scatter, label='Distance from approximated maximum')
-    
-                    plt.axhline(y=lower_bound, color='0', linestyle='--', label=f'Threshold lower bound (y = {lower_bound})')
-                    plt.xlabel('X')
-                    plt.ylabel('Y', rotation=0)
-                    plt.title('Optimization')
-                    plt.grid(True)
-                    plt.legend()
-                    plt.savefig(self.opt_out)
-    
-            else: 
-                # Check if 3D plotting is required
-                if len(orig.columns) > 2:
-                    # Extract data for plotting
-                    z_orig = orig.iloc[:, 2]
-                    y_orig = orig.iloc[:, 1]
-                    x_orig = orig.iloc[:, 0]
-                    z_additional = df.iloc[:, 2]
-                    y_additional = df.iloc[:, 1]
-                    x_additional = df.iloc[:, 0]
-                    
-                    # Create 3D scatter plot
-                    fig1 = go.Figure(data=[
-                        go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
-                        go.Scatter3d(x=x_additional, y=y_additional, z=z_additional, mode='markers', marker=dict(color=z_additional, colorscale='Hot', colorbar=dict(title='title')), name='Optimal value')
-                    ])
-                    
-                    # Update layout
-                    fig1.update_layout(
-                        scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
-                        title='Scatter Plot of Optimal values on Original dataset'
-                    )
-                    
-                    # Save figure and open HTML file
-                    fig1.write_html(self.witnesses_html_path)
+                z_sat = data['stable']['z'][:] 
+                y_sat = data['stable']['y'][:] 
+                x_sat = data['stable']['x'][:] 
+
+                # Create 3D scatter plot
+                fig1 = go.Figure(data=[
+                    go.Scatter3d(x=x_sat, y=y_sat, z=z_sat, mode='markers', marker=dict(color='red'), name='stable witness'),
+                    go.Scatter3d(x=x_counter, y=y_counter, z=z_counter, mode='markers', marker=dict(color='blue'), name='counter example'),
+                    go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='original data')
+                    #go.Scatter3d(x=x_counter, y=y_counter, z=z_counter, mode='markers', marker=dict(color=z_counter, colorscale='Hot', colorbar=dict(title='title')), name='Optimal value')
+                ])
                 
-                else:
-                    # Extract data for plotting
-                    x1 = orig.iloc[:, 0]
-                    y1 = orig.iloc[:, 1]
-                    x = df.iloc[:, 0]
-                    y = df.iloc[:, 1]
-                    
-                    # Reset index for consistency
-                    x.reset_index(drop=True, inplace=True)
-                    y.reset_index(drop=True, inplace=True)
-                    
-                    # Create scatter plot
-                    plt.scatter(x1, y1, color='#8ad347', label='Objective function')
-                    plt.scatter(x, y, color='#00ffff', label='Witnesses')
+                # Update layout
+                fig1.update_layout(
+                    scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                    title='Scatter Plot of counter examples and stable witnesses on original data'
+                )
                 
-                    plt.xlabel('X')
-                    plt.ylabel('Y', rotation=0)
-                    plt.title('Optimization')
-                    plt.grid(True)
-                    plt.legend()
-                    plt.savefig(self.opt_out)
+                # Save figure and open HTML file
+                fig1.write_html(self.stable_x_counter_html_path)
+
+                z = data['witnesses']['z'][:] 
+                y = data['witnesses']['y'][:] 
+                x = data['witnesses']['x'][:] 
+
+                fig2 = go.Figure(data=[
+                    go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='Original data'),
+                    go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color=z, colorscale='Hot', colorbar=dict(title='title')), name='witnesses')
+                ])
+                
+                # Update layout
+                fig2.update_layout(
+                    scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                    title='Scatter Plot of witnesses on Original dataset'
+                )
+                
+                # Save figure and open HTML file
+                fig2.write_html(self.witnesses_html_path)
+
+            elif 'stable' in data:
+
+                z_sat = data['stable']['z'][:] 
+                y_sat = data['stable']['y'][:] 
+                x_sat = data['stable']['x'][:] 
+
+                z = data['witnesses']['z'][:] 
+                y = data['witnesses']['y'][:] 
+                x = data['witnesses']['x'][:] 
+
+                fig2 = go.Figure(data=[
+                    go.Scatter3d(x=x_sat, y=y_sat, z=z_sat, mode='markers', marker=dict(color='red'), name='stable witness'),
+                    go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color='blue'), name='witnesses'),
+                    go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='grey', opacity=0.5), name='original data')
+                    #go.Scatter3d(x=x_counter, y=y_counter, z=z_counter, mode='markers', marker=dict(color=z_counter, colorscale='Hot', colorbar=dict(title='title')), name='Optimal value')
+                ])
+
+                # Update layout
+                fig2.update_layout(
+                    scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                    title='Scatter Plot of stable witnesses on Original dataset'
+                )
+                
+                # Save figure and open HTML file
+                fig2.write_html(self.stable_x_original_html_path)
+
+            else:
+
+                z = data['witnesses']['z'][:] 
+                y = data['witnesses']['y'][:] 
+                x = data['witnesses']['x'][:] 
+
+                fig2 = go.Figure(data=[
+                    go.Scatter3d(x=x_orig, y=y_orig, z=z_orig, mode='markers', marker=dict(color='red', opacity=0.5), name='Original data'),
+                    go.Scatter3d(x=x, y=y, z=z, mode='markers', marker=dict(color=z, colorscale='Hot', colorbar=dict(title='title')), name='Stable value')
+                ])
+                
+                # Update layout
+                fig2.update_layout(
+                    scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z'),
+                    title='Scatter Plot of witnesses on Original dataset'
+                )
+                
+                # Save figure and open HTML file
+                fig2.write_html(self.witnesses_html_path)
+
         else:
             ic("No witnesses to plot")
 

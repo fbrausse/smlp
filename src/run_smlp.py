@@ -36,4 +36,5 @@ if __name__ == "__main__":
 
 end_time = time.time()
 total_time = end_time-start_time
+plot_instance.witnesses()
 plot_instance.save_to_txt(total_time)

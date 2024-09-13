@@ -276,7 +276,15 @@ class SmlpOptimize:
             #print('quer_and_beta', quer_and_beta) 'u0_l0_u_l_T'
             self._opt_tracer.info('objective_thresholds_u0_l0_u_l_T, {} : {} : {} : {} : {}'.format(str(u0),str(l0),str(u),str(l),str(T)))
             ic("Here ...")
-            #ic(u0,l0,u,l,T)
+            data = {
+            'u0': u0,
+            'l0': l0,
+            'u': u,
+            'l': l,
+            'T': T
+            }
+            plot_instance.unscale(data)
+
             quer_res = self._queryInst.query_condition(
                 True, model_full_term_dict, quer_name, quer_expr, quer_and_beta, smlp_domain,
                 eta, alpha, theta_radii_dict, delta, solver_logic, False, sat_approx, sat_precision)
@@ -658,8 +666,8 @@ class SmlpOptimize:
             final_config_df = self.best_config_df.drop_duplicates(subset=self.feat_names, inplace=False)
             final_config_df.to_csv(self.optimization_results_file+'.csv', index=False)            
             ic("changes here")
-            solver = 'sat'
-            plot_instance.witnesses(s_origin_dict, solver)
+            lower_bound = "Stable optimal lower bound: " + str(s_origin_dict['objective'])
+            plot_instance.save_to_txt(lower_bound)
     
     # pareto optimization, reduced to single objective optimization and condition queries.
     def optimize_pareto_objectives(self, feat_names:list[str], resp_names:list[str], 

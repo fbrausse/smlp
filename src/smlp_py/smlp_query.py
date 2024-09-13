@@ -565,10 +565,9 @@ class SmlpQuery:
                         approx_ca_models[h] = 0
                     ic('ca_model_approx', ca_model_approx)
                 feasible = True
-                ic('Changes here ...')
+                #ic('Changes here ...')
                 witnessvals = self._smlpTermsInst.witness_term_to_const(ca_model, sat_approx, sat_precision)
-#                ic(ca_model, sat_approx, sat_precision)
-                #ic(witnessvals)
+                ic(witnessvals)
                 plot_instance.save_to_dict(witnessvals, data_version='witnesses')
                 if use_approxiamted_fractions:
                     ce = self.find_candidate_counter_example(universal, domain, ca_model_approx, quer, model_full_term_dict, alpha, 
@@ -581,7 +580,7 @@ class SmlpQuery:
                     print('candidate not stable -- continue search', flush=True)
                     ce_model = self._modelTermsInst.get_solver_model(ce) #ce.model
                     witnessvals = self._smlpTermsInst.witness_term_to_const(ce_model, sat_approx, sat_precision)
-                    plot_instance.save_to_dict(witnessvals, data_version='counter_ex')
+                    plot_instance.save_to_dict(witnessvals, data_version='counter')
                     cem = ce_model.copy(); #print('ce model', cem)
                     # drop Assignements to responses from ce
                     for var in ce_model.keys():
@@ -629,7 +628,7 @@ class SmlpQuery:
                 ic("Changes here ...")
                 solver = "unsat"
                 lower_bound = None
-                plot_instance.witnesses(lower_bound, solver)
+                #plot_instance.witnesses(lower_bound, solver)
                 if feasible is None:
                     feasible = False
                 #print('candidate does not exist -- query unsuccessful')
