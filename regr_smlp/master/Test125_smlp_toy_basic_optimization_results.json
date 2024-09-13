@@ -13,19 +13,19 @@
 		"max_in_data": 102.36396627,
 		"min_in_data": 1.0752000000000002
 	},
-	"y2": {
-		"value_in_config": 0.0,
-		"value_in_system": 0
-	},
 	"p1": {
+		"value_in_config": 0.0
+	},
+	"p2": {
 		"value_in_config": 0.0
 	},
 	"y1": {
 		"value_in_config": 0.0,
 		"value_in_system": 0
 	},
-	"p2": {
-		"value_in_config": 0.0
+	"y2": {
+		"value_in_config": 0.0,
+		"value_in_system": 0
 	},
 	"objv2_scaled": {
 		"value_in_config": -0.010615194948015235

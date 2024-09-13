@@ -180,6 +180,8 @@ class ModelSklearn:
 
         # parameters that are unique to et or usage is slightly different from dt, rf
         self._et_hyperparam_dict = {
+            'n_estimators': {'abbr':'n_estimators', 'default': self._DEF_N_ESTIMATORS, 'type':int,
+                'help': 'The number of trees in the forest. [default: ' + str(self._DEF_N_ESTIMATORS) + ']'},
             'max_features': {'abbr':'max_features', 'default': self._DEF_MAX_FEATURS_ET, 'type':str, # can be int, float or constant string
                 'help': 'The number of features to consider when looking for the best split: ' +
                         'If int, then consider max_features features at each split. ' +
@@ -188,6 +190,22 @@ class ModelSklearn:
                         'If “sqrt”, then max_features=sqrt(n_features). ' +
                         'If “log2”, then max_features=log2(n_features). ' +
                         'If None, then max_features=n_features. [default: ' + str(self._DEF_MAX_FEATURS_ET) + ']'},
+            'bootstrap': {'abbr':'bootstrap', 'default': self._DEF_BOOTSTRAP, 'type':str_to_bool,
+                'help': 'Whether bootstrap samples are used when building trees. If False, the whole ' +
+                        'dataset is used to build each tree [default: ' + str(self._DEF_BOOTSTRAP) + ']'},
+            'verbose': {'abbr':'verbose', 'default': self._DEF_VERBOSE_RF, 'type':str_to_bool,
+                'help': 'Controls the verbosity when fitting and predicting. [default: ' + str(self._DEF_VERBOSE_RF) + ']'},
+            'warm_start': {'abbr':'warm_start', 'default': self._DEF_WARM_START, 'type':str_to_bool,
+                'help': 'When set to True, reuse the solution of the previous call to fit and add more ' +
+                        'estimators to the ensemble, otherwise, just fit a whole new forest ' +
+                        '[default: ' + str(self._DEF_WARM_START) + ']'},
+            'max_samples': {'abbr':'max_samples', 'default': self._DEF_MAX_SAMPLES, 'type':str,
+                'help': 'If bootstrap is True, the number of samples to draw from X to train each base estimator. ' +
+                        'If None (default), then draw X.shape[0] samples. ' +
+                        'If int, then draw max_samples samples.' +
+                        'If float, then draw max(round(n_samples * max_samples), 1) samples. ' +
+                        'Thus, max_samples should be in the interval (0.0, 1.0]. ' +
+                        '[default: ' + str(self._DEF_MAX_SAMPLES) + ']'},
             'random_state': {'abbr':'rand_state', 'default': self._DEF_RAND_STATE, 'type':int,
                 'help': 'Used to pick randomly the max_features used at each split. ' + 
                         'Note that the mere presence of random_state doesn’t mean that randomization ' +

@@ -311,7 +311,7 @@ static bool contains_ite(const sptr<term2> &t)
 	);
 }
 
-result crit_solver::check(const domain &dom, const sptr<form2> &orig)
+result crit_solver::do_check(const domain &dom, const sptr<form2> &orig)
 {
 	/* Check whether domain is bounded and if so, generate the list of its
 	 * corner points */
@@ -633,6 +633,8 @@ result ival_solver::check() const
 		for (const auto &dom : nos)
 			s->add(neg(in_domain(dom)));
 	return s->check();
+#else
+	(void)the_logic;
 #endif
 	/* some values do, others do not satisfy the formula */
 	return unknown { "overlap" };

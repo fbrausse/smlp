@@ -12,7 +12,12 @@
 
 namespace smlp {
 
-struct sat { hmap<str,sptr<term2>> model; };
+/* TODO: Bool type in domain */
+
+struct sat {
+	hmap<str,sptr<term2>> model;
+	/* TODO: hset<str> dont_care = {}; */
+};
 struct unsat {};
 struct unknown { str reason; };
 

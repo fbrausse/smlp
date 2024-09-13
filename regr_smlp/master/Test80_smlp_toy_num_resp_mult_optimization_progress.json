@@ -13,13 +13,13 @@
 		"p1": {
 			"value_in_config": 4.0
 		},
-		"y2": {
-			"value_in_config": 9.0
-		},
 		"p2": {
 			"value_in_config": 6.000000067055225
 		},
 		"y1": {
+			"value_in_config": 9.0
+		},
+		"y2": {
 			"value_in_config": 9.0
 		}
 	}

@@ -9,7 +9,7 @@
 
 # coding: utf-8
 
-import sys
+import sys, os
 from icecream import ic
 from smlp_py.ext import plot
 from smlp_py.smlp_flows import SmlpFlows
@@ -32,6 +32,7 @@ def main(argv):
     smlpInst.smlp_flow()
 
 if __name__ == "__main__":
+
     main(sys.argv)
 
 end_time = time.time()

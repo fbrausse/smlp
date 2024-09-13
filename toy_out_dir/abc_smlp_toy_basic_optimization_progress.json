@@ -1,0 +1,38 @@
+{
+	"vacuity": {
+		"objective": {
+			"value_in_config": 5.553313029315958,
+			"threshold_scaled": 0.9684523544155594,
+			"threshold": 5.553313029315958,
+			"max_in_data": 5.9855,
+			"min_in_data": -7.714
+		},
+		"x": {
+			"value_in_config": 2.116145038701296
+		},
+		"y": {
+			"value_in_config": 0.16134999531395733
+		},
+		"z": {
+			"value_in_config": 5.553313029315958
+		}
+	},
+	"iter(0, 2)": {
+		"objective": {
+			"value_in_config": 4.39676666666667,
+			"threshold_scaled": 0.5,
+			"threshold": -0.8642500000000002,
+			"max_in_data": 5.9855,
+			"min_in_data": -7.714
+		},
+		"x": {
+			"value_in_config": 0.8621500385522842
+		},
+		"y": {
+			"value_in_config": 0.13594999838247895
+		},
+		"z": {
+			"value_in_config": 4.39676666666667
+		}
+	}
+}

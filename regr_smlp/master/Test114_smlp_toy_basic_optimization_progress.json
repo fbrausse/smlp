@@ -14,8 +14,14 @@
 			"max_in_data": 10.7007,
 			"min_in_data": 0.24
 		},
-		"y2": {
-			"value_in_config": 9.5661
+		"x1": {
+			"value_in_config": 10.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 10.7007
 		},
 		"x2": {
 			"value_in_config": 0.0
@@ -23,14 +29,8 @@
 		"p1": {
 			"value_in_config": 4.0
 		},
-		"y1": {
-			"value_in_config": 10.7007
-		},
-		"x1": {
-			"value_in_config": 10.0
-		},
-		"p2": {
-			"value_in_config": 4.0
+		"y2": {
+			"value_in_config": 9.5661
 		}
 	},
 	"iter(0, 'completed')": {
@@ -48,8 +48,14 @@
 			"max_in_data": 10.7007,
 			"min_in_data": 0.24
 		},
-		"y2": {
-			"value_in_config": 9.5661
+		"x1": {
+			"value_in_config": 10.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 10.7007
 		},
 		"x2": {
 			"value_in_config": 0.0
@@ -57,14 +63,8 @@
 		"p1": {
 			"value_in_config": 4.0
 		},
-		"y1": {
-			"value_in_config": 10.7007
-		},
-		"x1": {
-			"value_in_config": 10.0
-		},
-		"p2": {
-			"value_in_config": 4.0
+		"y2": {
+			"value_in_config": 9.5661
 		},
 		"objective1_scaled_objective2_scaled": {
 			"value_in_config": 1.0
@@ -103,8 +103,14 @@
 			"max_in_data": 10.7007,
 			"min_in_data": 0.24
 		},
-		"y2": {
-			"value_in_config": 9.5661
+		"x1": {
+			"value_in_config": 10.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 10.7007
 		},
 		"x2": {
 			"value_in_config": 0.0
@@ -112,14 +118,8 @@
 		"p1": {
 			"value_in_config": 4.0
 		},
-		"y1": {
-			"value_in_config": 10.7007
-		},
-		"x1": {
-			"value_in_config": 10.0
-		},
-		"p2": {
-			"value_in_config": 4.0
+		"y2": {
+			"value_in_config": 9.5661
 		},
 		"objective1_scaled_objective2_scaled": {
 			"value_in_config": 1.0

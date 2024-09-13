@@ -109,8 +109,8 @@ class ModelKeras:
         } #'r2': keras.metrics.R2Score(name='r2')
         
         # Hard coded parameters, not exposed to user for now
-        self._TUNER_MAX_EPOCHS = 100 # the max_epochs paramer for Keras Tuner Hyperband() and the epochs parameter for search()
-        self._TUNER_MAX_TRIALS = 30 # the max_trails paramer for Keras Tuner BayesianOptimization() and RandomSearch functions
+        self._TUNER_MAX_EPOCHS = 2000 # the max_epochs paramer for Keras Tuner Hyperband() and the epochs parameter for search()
+        self._TUNER_MAX_TRIALS = 20 # the max_trails paramer for Keras Tuner BayesianOptimization() and RandomSearch functions
         self._TUNER_HYPERBAND_FACTOR = 3
         self._TUNER_HYPERBAND_ITERATIONS = 2
         self._TUNER_OVERWRITE = True
@@ -668,7 +668,7 @@ class ModelKeras:
 
     # performing hyperparameter tuning (search)
     def search(self, X_train:pd.DataFrame, y_train:pd.DataFrame, X_val:pd.DataFrame, y_val:pd.DataFrame, input_dim:int, resp_names:list[str], sequential_api:bool,
-            hid_activation:str, out_activation:str, metrics, layers_grid:list, losses_grid:list, lrates_grid:list, batches_grid:list, tuner_algo:str):
+            hid_activation:str, out_activation:str, epochs:int, metrics, layers_grid:list, losses_grid:list, lrates_grid:list, batches_grid:list, tuner_algo:str):
         self._keras_logger.info('Tuning model hyperparameters using Keras Tuner algorithm ' + str(tuner_algo) + ': start')
         #print('X_train\n', X_train); print('y_train\n', y_train); print('X_val\n', X_val); print('y_val\n', y_val); 
         #print('input_dim =', input_dim); print('resp_names =', resp_names);
@@ -677,7 +677,7 @@ class ModelKeras:
         self.tuner.search(
             x=X_train,
             y=y_train,
-            epochs=self._TUNER_MAX_EPOCHS,
+            epochs=epochs, #self._TUNER_MAX_EPOCHS,
             validation_data=(X_val, y_val),
             callbacks=[keras.callbacks.EarlyStopping(patience=self._TUNER_EARLY_STOPPING_PATIENCE)],
             batch_size=self.tuner.oracle.hyperparameters.Choice('batch_size', values=batches_grid) if batches_grid is not None else None        
@@ -749,7 +749,7 @@ class ModelKeras:
             layers_grid, losses_grid, lrates_grid, batches_grid, tuner_algo, batch_size, loss_function_str, metrics, learning_rate):
         # search for best hyperparam values using Keras Tuner
         self.search(X_train, y_train, X_test, y_test, X_train.shape[1], resp_names, sequential_api, 
-            hid_activation, out_activation, metrics, layers_grid, losses_grid, lrates_grid, batches_grid, tuner_algo)
+            hid_activation, out_activation, epochs, metrics, layers_grid, losses_grid, lrates_grid, batches_grid, tuner_algo)
         # train the final model using the selected hyper-param values (and by fully executing specified epochs count)
         best_model, history = self.get_best_model(X_train, X_test, y_train, y_test, epochs, weights_coef, batch_size, 
             loss_function_str, learning_rate, sequential_api); 

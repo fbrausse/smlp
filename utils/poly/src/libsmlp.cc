@@ -281,7 +281,19 @@ static boost::python::dict options(boost::python::object o)
 				}
 			else if (k == "alg_dec_prec_approx")
 				solver::alg_dec_prec_approx = extract<decltype(solver::alg_dec_prec_approx)>(v);
-			else
+			else if (k == "check_full_model_result") {
+				if (v.is_none())
+					throw std::invalid_argument("check_full_model_result setting to options() has None value");
+				str s = extract<str>(v);
+				if (s == "none")
+					check_full_model_result = assert_mode::NONE;
+				else if (s == "assert")
+					check_full_model_result = assert_mode::ASSERT;
+				else if (s == "log-fail")
+					check_full_model_result = assert_mode::LOG_FAIL;
+				else
+					throw std::invalid_argument("check_full_model_result setting to options()");
+			} else
 				throw std::invalid_argument("key '" + k + "' not known for options()");
 		}
 	}
@@ -293,6 +305,19 @@ static boost::python::dict options(boost::python::object o)
 	r[boost::python::str("intervals")] = boost::python::long_(intervals);
 	r[boost::python::str("log_color")] = boost::python::long_(Module::log_color ? 1 : 0);
 	r[boost::python::str("alg_dec_prec_approx")] = boost::python::long_(solver::alg_dec_prec_approx);
+	boost::python::str cfmr;
+	switch (check_full_model_result) {
+	case assert_mode::NONE:
+		cfmr = boost::python::str("none");
+		break;
+	case assert_mode::LOG_FAIL:
+		cfmr = boost::python::str("log-fail");
+		break;
+	case assert_mode::ASSERT:
+		cfmr = boost::python::str("assert");
+		break;
+	}
+	r[boost::python::str("check_full_model_result")] = cfmr;
 	return r;
 }
 

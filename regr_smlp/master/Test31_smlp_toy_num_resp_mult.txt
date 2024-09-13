@@ -44,6 +44,20 @@ smlp_logger - INFO - training data after imputing missing values
 9   12.0  2.0   7   5   5
 10  10.0  3.0   7   9   5
 
+smlp_logger - INFO - training data after processing responses
+       x   p1  p2  y1  y2
+0   10.0  2.0   3   1   1
+1   12.0  2.0   4   0   1
+2   10.0  3.0   4   1   1
+3   11.0  2.0   6   1   0
+4   10.0  2.0   8   0   0
+5    9.0  4.0   7   0   1
+6    9.0  3.0   6   1   0
+7   10.0  3.0   4   1   0
+8   11.0  4.0   4   0   1
+9   12.0  2.0   7   1   0
+10  10.0  3.0   7   0   0
+
 smlp_logger - INFO - PSG Subgroup Discovery started
 
 smlp_logger - INFO - PSG Subgroup Discovery completed
