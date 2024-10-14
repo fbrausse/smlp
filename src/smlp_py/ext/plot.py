@@ -19,7 +19,7 @@ exp = str(round(random.random(), 4))  # Generate a random experiment identifier
 
 class plot_exp:
 
-    def __init__(self, exp=exp, setno='10'):
+    def __init__(self, exp=exp, setno='21'):
 
         self.exp = exp
         self.setno = setno

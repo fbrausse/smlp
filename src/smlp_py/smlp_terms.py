@@ -380,7 +380,6 @@ class SmlpTerms:
             #print('obj', obj)
             # Destructure the given object
             destructure_result = self.smlp_destruct(obj); #print('destructure_result', destructure_result)
-            ic("Changes here...")
             #sys.setrecursionlimit(20000)
             destructure_result = self.smlp_destruct(obj)
 
@@ -950,7 +949,7 @@ class TreeTerms:
     # rules is a list of rules. It is computed from a tree model using method trees_to_rules of the same
     # class TreeTerms.
     def compress_antecedent(self, antecedent):
-        ic("Changes here")
+        #ic("Changes here")
         if not self._compress_rules:
             return antecedent, len(antecedent), len(antecedent)
         ant_dict = {}
@@ -1411,15 +1410,24 @@ class NNKerasTerms: #(SmlpTerms):
         ic("Before rounding up")
         #ic("After rounding up")
         layer_term = None
+        ic(last_layer_terms)
+        ic(node_weights)
+        ic(node_bias)
         for i,t in enumerate(last_layer_terms):
             if i == 0:
                 layer_term = last_layer_terms[0] * smlp.Cnst(float(node_weights[0]))
                 #layer_term = last_layer_terms[0] * smlp.Cnst(float(np.round(node_weights[0], 4)))
             else:
+                ic(last_layer_terms[i])
+                ic(smlp.Cnst(float(node_weights[i])))
+                ic(type(smlp.Cnst(float(node_weights[i]))))
+                ic(layer_term)
                 layer_term = layer_term + last_layer_terms[i] * smlp.Cnst(float(node_weights[i]))
+                
                 #layer_term = layer_term + last_layer_terms[i] * smlp.Cnst(float(np.round(node_weights[i], 4)))
 
         layer_term = layer_term + smlp.Cnst(float(node_bias)) 
+        ic(layer_term)
         #layer_term = layer_term + smlp.Cnst(float(np.round(node_bias, 4))) 
 
         return layer_term
@@ -1482,8 +1490,7 @@ class NNKerasTerms: #(SmlpTerms):
     # determine the model type -- sequential vs functional
     def get_nn_keras_model_type(self, model):
         #print('keras model', model, type(model))
-        if self._keras_is_sequential(model):
-
+        if self._nn_keras_is_sequential(model):
             model_type = 'sequential'
         elif self._nn_keras_is_functional(model):
             model_type = 'functional'
