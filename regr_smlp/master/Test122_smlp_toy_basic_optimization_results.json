@@ -1,0 +1,34 @@
+{
+	"objv1": {
+		"p1": 0.0,
+		"p2": 0.0,
+		"y1": 0.0,
+		"y2": 0.0,
+		"objv1_scaled": -0.022943015285783935,
+		"objv1": 0.0,
+		"threshold_lo_scaled": -0.02294301986694336,
+		"threshold_lo": -4.792213439042886e-08,
+		"threshold_up_scaled": -0.022943012416362762,
+		"threshold_up": 3.001615406228453e-08,
+		"max_in_data": 10.7007,
+		"min_in_data": 0.24
+	},
+	"objv2": {
+		"p1": 0.0,
+		"p2": 0.0,
+		"y1": 0.0,
+		"y2": 0.0,
+		"objv2_scaled": -0.010615194948015235,
+		"objv2": 0.0,
+		"threshold_lo_scaled": -0.01061519980430603,
+		"threshold_lo": -4.918877031973577e-07,
+		"threshold_up_scaled": -0.010615192353725433,
+		"threshold_up": 2.6277241338412693e-07,
+		"max_in_data": 102.36396627,
+		"min_in_data": 1.0752000000000002
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true",
+	"synthesis_feasible": "true"
+}

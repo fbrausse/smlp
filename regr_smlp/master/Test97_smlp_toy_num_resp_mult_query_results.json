@@ -1,0 +1,23 @@
+{
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"query1": {
+		"query_feasible": "false",
+		"query_stable": "false",
+		"query_status": "FAIL",
+		"query_result": null
+	},
+	"query2": {
+		"query_feasible": "true",
+		"query_stable": "false",
+		"query_status": "FAIL",
+		"query_result": null
+	},
+	"query3": {
+		"query_feasible": "false",
+		"query_stable": "false",
+		"query_status": "FAIL",
+		"query_result": null
+	},
+	"model_consistent": "true"
+}

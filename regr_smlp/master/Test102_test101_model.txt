@@ -1,0 +1,118 @@
+
+smlp_logger - INFO - Model exploration specification:
+{'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'p1', 'type': 'knob', 'range': 'float', 'rad-rel': Fraction(1, 10), 'grid': [2, 4, 7], 'bounds': [0, 10]}, {'label': 'p2', 'type': 'knob', 'range': 'float', 'rad-abs': Fraction(1, 5), 'bounds': [3, 7]}], 'witnesses': {'query1': {'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}, 'query2': {'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}, 'query3': {'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}}}
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "certify": Start
+
+smlp_logger - INFO - Computed spec global constraint expressions:
+
+smlp_logger - INFO - Global alpha : None
+
+smlp_logger - INFO - Global beta  : None
+
+smlp_logger - INFO - Radii  theta : {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
+
+smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+
+smlp_logger - INFO - Query query1: (y2**3+p2)/2<6
+
+smlp_logger - INFO - Query query2: y1>=9
+
+smlp_logger - INFO - Query query3: y2<20
+
+smlp_logger - INFO - Witness to query query1
+{'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}
+
+smlp_logger - INFO - Witness to query query2
+{'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}
+
+smlp_logger - INFO - Witness to query query3
+{'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}
+
+smlp_logger - INFO - PREPARE DATA FOR MODELING
+
+smlp_logger - INFO - LOAD TRAINED MODEL
+
+smlp_logger - INFO - Seving model rerun configuration in file ./../models/test101_model_rerun_model_config.json
+
+smlp_logger - INFO - Creating model exploration base components: Start
+
+smlp_logger - INFO - Parsing the SPEC: Start
+
+smlp_logger - INFO - Parsing the SPEC: End
+
+smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x': {'range': 'float', 'interval': [0, 10]}, 'p1': {'range': 'float', 'interval': [0, 10]}, 'p2': {'range': 'float', 'interval': [3, 7]}}
+
+smlp_logger - INFO - Input bounds (alpha): {'x': {'min': 0, 'max': 10}}
+
+smlp_logger - INFO - Knob bounds (eta): {'p1': {'min': 0, 'max': 10}, 'p2': {'min': 3, 'max': 7}}
+
+smlp_logger - INFO - Knob grids (eta): {'p1': [2, 4, 7]}
+
+smlp_logger - INFO - Alpha global   constraints: true
+
+smlp_logger - INFO - Alpha ranges   constraints: (and true (and (>= x 0) (<= x 10)))
+
+smlp_logger - INFO - Alpha combined constraints: (let ((|:0| true)) (and (and |:0| (and (>= x 0) (<= x 10))) |:0|))
+
+smlp_logger - INFO - Beta  global   constraints: true
+
+smlp_logger - INFO - Eta   ranges   constraints: (and (and true (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7)))
+
+smlp_logger - INFO - Eta   grid     constraints: (or (or (= p1 2) (= p1 4)) (= p1 7))
+
+smlp_logger - INFO - Eta   global   constraints: true
+
+smlp_logger - INFO - Eta   combined constraints: (let ((|:0| true)) (and (and (and (and |:0| (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7))) (or (or (= p1 2) (= p1 4)) (= p1 7))) |:0|))
+
+smlp_logger - INFO - Creating model exploration base components: End
+
+smlp_logger - INFO - Input and knob interface constraints are consistent
+
+smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Model operator counts for y1: {'add': 1, 'mul': 7, 'ite': 3, 'and': 3, 'prop': 6, 'const': 24, 'sub': 6, 'var': 6}
+
+smlp_logger - INFO - Model operator counts for y2: {'add': 1, 'mul': 4, 'ite': 2, 'and': 1, 'prop': 3, 'const': 14, 'sub': 3, 'var': 3}
+
+smlp_logger - INFO - Building model terms: End
+
+smlp_logger - INFO - Model interface constraints are consistent
+
+smlp_logger - INFO - Certifying consistency of witness for query query1:
+   (and (and (= x 5) (= p1 4)) (= p2 (/ 7 2)))
+
+smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
+
+smlp_logger - INFO - Certifying consistency of witness for query query2:
+   (and (and (= x 5) (= p1 4)) (= p2 (/ 7 2)))
+
+smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
+
+smlp_logger - INFO - Certifying consistency of witness for query query3:
+   (and (and (= x 5) (= p1 4)) (= p2 (/ 7 2)))
+
+smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
+
+smlp_logger - INFO - Certifying stability of witness for query query1:
+   {'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}
+
+smlp_logger - INFO - Witness to query query1 is not a valid witness (even without stability requirements)
+
+smlp_logger - INFO - Certifying stability of witness for query query2:
+   {'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}
+
+smlp_logger - INFO - Witness to query query2 is not a valid witness (even without stability requirements)
+
+smlp_logger - INFO - Certifying stability of witness for query query3:
+   {'x': 5, 'p1': 4, 'p2': Fraction(7, 2)}
+
+smlp_logger - INFO - Witness to query query3 is a valid witness; checking its stability
+
+smlp_logger - INFO - Witness to query query3 is stable for radii {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
+
+smlp_logger - INFO - Running SMLP in mode "certify": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

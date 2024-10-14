@@ -1,0 +1,19 @@
+-((x-2)**2)+3
+
+max (x,y) = (2,3)
+
+dt_sklearn
+
+src/run_smlp.py -data smlp_toy_basic -out_dir toy_out_dir -pref abc -mode optimize -pareto t -sat_thresh f -resp y -feat x -model dt_sklearn -dt_sklearn_max_depth 15 -data_scaler min_max -epsilon 0.05 -delta 0.1 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic
+
+nn_keras
+
+src/run_smlp.py -data smlp_toy_basic.csv -out_dir toy_out_dir -pref abc -mode optimize -pareto t -resp y -feat x -model nn_keras -data_scaler min_max -epsilon 0.05 -delta_abs 0.1 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic.spec
+
+poly_sklearn
+
+src/run_smlp.py -data smlp_toy_basic -out_dir toy_out_dir -pref abc -mode optimize -pareto t -sat_thresh f -resp y -feat x -model poly_sklearn -data_scaler min_max -epsilon 0.05 -delta 0.1 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic
+
+dt_caret
+
+src/run_smlp.py -data smlp_toy_basic -out_dir toy_out_dir -pref abc -mode optimize -pareto t -sat_thresh f -resp y -feat x -model dt_caret -data_scaler min_max -epsilon 0.005 -delta 0.5 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic

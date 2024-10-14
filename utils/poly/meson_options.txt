@@ -1,0 +1,34 @@
+# link options
+option('static', type: 'boolean', value: false, description:
+	'whether or not to enable static linking of the executable')
+
+option('asserts', type: 'boolean', value: true, description:
+	'whether or not assertions should be included in the build')
+
+# kay header-only library
+option('kay-prefix', type: 'string', description:
+	'prefix of the include path containing the kay library')
+
+# optional built-in Z3 solver
+option('z3', type: 'feature', description:
+	'enable the built-in solver via Z3; disabling this feature means '+
+	'that any SMT solving requires an external solver')
+
+# optional Flint usage instead of gmpxx
+option('flint', type: 'feature', description:
+	'use the flint library for Z and Q')
+option('flint-prefix', type: 'string', description:
+	'prefix of the install path containing the flint library')
+
+# optional NN support
+option('keras-nn', type: 'feature', description:
+	'enable support for reasoning about Keras NNs; pulls in requirements of libraries: hdf5, kjson, iv')
+
+option('hdf5-prefix', type: 'string', description:
+	'prefix of the install path containing the hdf5 library and its C++ headers')
+
+option('kjson-prefix', type: 'string', description:
+	'prefix of the install path containing the kjson library')
+
+option('boost-prefix', type: 'string', description:
+	'prefix of the install path containing the boost-python library')

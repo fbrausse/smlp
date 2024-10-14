@@ -1,0 +1,15 @@
+{
+	"asrt_y1": {
+		"configuration_consistent": "unknown",
+		"assertion_status": "ERROR",
+		"counter_example": "unknown"
+	},
+	"asrt_y2": {
+		"configuration_consistent": "unknown",
+		"assertion_status": "ERROR",
+		"counter_example": "unknown"
+	},
+	"smlp_execution": "aborted",
+	"interface_consistent": "false",
+	"model_consistent": "false"
+}

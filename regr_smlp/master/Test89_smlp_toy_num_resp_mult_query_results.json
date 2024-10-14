@@ -1,0 +1,28 @@
+{
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"query1": {
+		"query_feasible": "false",
+		"query_stable": "false",
+		"query_status": "FAIL",
+		"query_result": null
+	},
+	"query2": {
+		"query_feasible": "true",
+		"query_stable": "true",
+		"query_status": "PASS",
+		"query_result": {
+			"p1": 7.0,
+			"p2": 6.750000044703484,
+			"y1": 9.0,
+			"y2": 9.0
+		}
+	},
+	"query3": {
+		"query_feasible": "false",
+		"query_stable": "false",
+		"query_status": "FAIL",
+		"query_result": null
+	},
+	"model_consistent": "true"
+}

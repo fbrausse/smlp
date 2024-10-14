@@ -1,0 +1,248 @@
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "predict": Start
+
+smlp_logger - INFO - PREPARE DATA FOR MODELING
+
+smlp_logger - INFO - Preparing training data for modeling: start
+
+smlp_logger - INFO - loading training data
+
+smlp_logger - INFO - data summary
+             PF       |PF |          x         p1         p2
+count  11.000000  11.000000  10.000000  10.000000  11.000000
+mean    2.027273   2.509091  10.400000   2.800000   5.454545
+std     2.502435   3.579792   1.074968   0.788811   1.694912
+min    -2.000000  -3.000000   9.000000   2.000000   3.000000
+25%     0.650000   1.350000  10.000000   2.000000   4.000000
+50%     1.600000   2.000000  10.000000   3.000000   6.000000
+75%     2.850000   2.800000  11.000000   3.000000   7.000000
+max     8.000000  12.000000  12.000000   4.000000   8.000000
+
+smlp_logger - INFO - training data
+   categ  PF   |PF |     x   p1  p2
+0     c0  0.7    1.2  10.0  2.0   3
+1    c12  1.6    1.6  12.0  NaN   4
+2     c2  0.4    2.5   NaN  3.0   4
+3    c17  3.2    3.4  11.0  2.0   6
+4    c18  2.5    2.0  10.0  2.0   8
+5     c8  1.4    0.8   9.0  4.0   7
+6     c7  0.6    2.7   9.0  3.0   6
+7     c3  3.4    1.5  10.0  3.0   4
+8    c12  8.0    2.9  11.0  4.0   4
+9     c6 -2.0   12.0  12.0  2.0   7
+10   c16  2.5   -3.0  10.0  3.0   7
+
+smlp_logger - INFO - training data after imputing missing values
+   categ     x   p1  p2  PF   |PF |
+0     c0  10.0  2.0   3  0.7    1.2
+1    c12  12.0  2.0   4  1.6    1.6
+2     c2  10.0  3.0   4  0.4    2.5
+3    c17  11.0  2.0   6  3.2    3.4
+4    c18  10.0  2.0   8  2.5    2.0
+5     c8   9.0  4.0   7  1.4    0.8
+6     c7   9.0  3.0   6  0.6    2.7
+7     c3  10.0  3.0   4  3.4    1.5
+8    c12  11.0  4.0   4  8.0    2.9
+9     c6  12.0  2.0   7 -2.0   12.0
+10   c16  10.0  3.0   7  2.5   -3.0
+
+smlp_logger - INFO - training data after processing responses
+   categ     x   p1  p2  PF   |PF |
+0     c0  10.0  2.0   3  0.7    1.2
+1    c12  12.0  2.0   4  1.6    1.6
+2     c2  10.0  3.0   4  0.4    2.5
+3    c17  11.0  2.0   6  3.2    3.4
+4    c18  10.0  2.0   8  2.5    2.0
+5     c8   9.0  4.0   7  1.4    0.8
+6     c7   9.0  3.0   6  0.6    2.7
+7     c3  10.0  3.0   4  3.4    1.5
+8    c12  11.0  4.0   4  8.0    2.9
+9     c6  12.0  2.0   7 -2.0   12.0
+10   c16  10.0  3.0   7  2.5   -3.0
+
+smlp_logger - INFO - training data after encoding levels of categorical features with integers
+    categ     x   p1  p2  PF   |PF |
+0       0  10.0  2.0   3  0.7    1.2
+1       1  12.0  2.0   4  1.6    1.6
+2       2  10.0  3.0   4  0.4    2.5
+3       3  11.0  2.0   6  3.2    3.4
+4       4  10.0  2.0   8  2.5    2.0
+5       5   9.0  4.0   7  1.4    0.8
+6       6   9.0  3.0   6  0.6    2.7
+7       7  10.0  3.0   4  3.4    1.5
+8       1  11.0  4.0   4  8.0    2.9
+9       8  12.0  2.0   7 -2.0   12.0
+10      9  10.0  3.0   7  2.5   -3.0
+
+smlp_logger - INFO - Sampling from training data: start
+
+smlp_logger - INFO - Sampling from training data: end
+
+smlp_logger - INFO - X_train after sampling: (8, 4)
+
+smlp_logger - INFO - y_train after sampling: (8, 2)
+
+smlp_logger - INFO - Preparing training data for modeling: end
+
+smlp_logger - INFO - Saving data bounds into file:./test22_model_data_bounds.json
+
+smlp_logger - INFO - {'categ': {'min': 0, 'max': 9}, 'x': {'min': 9.0, 'max': 12.0}, 'p1': {'min': 2.0, 'max': 4.0}, 'p2': {'min': 3, 'max': 8}, 'PF ': {'min': -2.0, 'max': 8.0}, '|PF |': {'min': -3.0, 'max': 12.0}}
+
+smlp_logger - INFO - Preparing new data for modeling: start
+
+smlp_logger - INFO - loading new data
+
+smlp_logger - INFO - data summary
+            PF      |PF |          x        p1        p2
+count  9.000000  9.000000   8.000000  8.000000  9.000000
+mean   3.766667  5.500000  10.250000  2.875000  5.111111
+std    1.871497  2.740894   1.035098  0.834523  1.691482
+min    0.200000  0.600000   9.000000  2.000000  3.000000
+25%    3.000000  3.300000   9.750000  2.000000  4.000000
+50%    4.100000  6.400000  10.000000  3.000000  4.000000
+75%    4.600000  7.400000  11.000000  3.250000  6.000000
+max    6.200000  8.600000  12.000000  4.000000  8.000000
+
+smlp_logger - INFO - new data
+  categ  PF   |PF |     x   p1  p2
+0    c0  6.2    8.6  10.0  2.0   3
+1   c12  2.3    5.7  12.0  NaN   4
+2    c2  4.4    3.3   NaN  3.0   4
+3   c17  0.2    0.6  11.0  2.0   6
+4   c18  6.0    7.2  10.0  2.0   8
+5    c8  4.1    6.4   9.0  4.0   7
+6    c7  4.6    7.8   9.0  3.0   6
+7    c3  3.0    7.4  10.0  3.0   4
+8   c12  3.1    2.5  11.0  4.0   4
+
+smlp_logger - INFO - new data after imputing missing values
+  categ     x   p1  p2  PF   |PF |
+0    c0  10.0  2.0   3  6.2    8.6
+1   c12  12.0  2.0   4  2.3    5.7
+2    c2  10.0  3.0   4  4.4    3.3
+3   c17  11.0  2.0   6  0.2    0.6
+4   c18  10.0  2.0   8  6.0    7.2
+5    c8   9.0  4.0   7  4.1    6.4
+6    c7   9.0  3.0   6  4.6    7.8
+7    c3  10.0  3.0   4  3.0    7.4
+8   c12  11.0  4.0   4  3.1    2.5
+
+smlp_logger - INFO - new data after processing responses
+  categ     x   p1  p2  PF   |PF |
+0    c0  10.0  2.0   3  6.2    8.6
+1   c12  12.0  2.0   4  2.3    5.7
+2    c2  10.0  3.0   4  4.4    3.3
+3   c17  11.0  2.0   6  0.2    0.6
+4   c18  10.0  2.0   8  6.0    7.2
+5    c8   9.0  4.0   7  4.1    6.4
+6    c7   9.0  3.0   6  4.6    7.8
+7    c3  10.0  3.0   4  3.0    7.4
+8   c12  11.0  4.0   4  3.1    2.5
+
+smlp_logger - INFO - new data after encoding levels of categorical features with integers
+   categ     x   p1  p2  PF   |PF |
+0      0  10.0  2.0   3  6.2    8.6
+1      1  12.0  2.0   4  2.3    5.7
+2      2  10.0  3.0   4  4.4    3.3
+3      3  11.0  2.0   6  0.2    0.6
+4      4  10.0  2.0   8  6.0    7.2
+5      5   9.0  4.0   7  4.1    6.4
+6      6   9.0  3.0   6  4.6    7.8
+7      7  10.0  3.0   4  3.0    7.4
+8      1  11.0  4.0   4  3.1    2.5
+
+smlp_logger - INFO - Preparing new data for modeling: end
+
+smlp_logger - INFO - TRAIN MODEL
+
+smlp_logger - INFO - Model training: start
+
+smlp_logger - INFO - Model training: end
+
+smlp_logger - INFO - Seving model in file ./test22_model_poly_sklearn_model_complete.pkl
+
+smlp_logger - INFO - PREDICT ON TRAINING DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_training_predictions_summary.csv
+
+smlp_logger - INFO - Saving prediction precisions into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_training_prediction_precisions.csv
+
+smlp_logger - INFO - Prediction on training data --  msqe: 0.000
+
+smlp_logger - INFO - Prediction on training data --  r2_score: 1.000
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - PREDICT ON TEST DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_test_predictions_summary.csv
+
+smlp_logger - INFO - Saving prediction precisions into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_test_prediction_precisions.csv
+
+smlp_logger - INFO - Prediction on test data --  msqe: 27.691
+
+smlp_logger - INFO - Prediction on test data --  r2_score: -33.137
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - PREDICT ON LABELED DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_labeled_predictions_summary.csv
+
+smlp_logger - INFO - Saving prediction precisions into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_labeled_prediction_precisions.csv
+
+smlp_logger - INFO - Prediction on labeled data --  msqe: 7.552
+
+smlp_logger - INFO - Prediction on labeled data --  r2_score: -0.051
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - PREDICT ON NEW DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_new_predictions_summary.csv
+
+smlp_logger - INFO - Saving prediction precisions into file: 
+./Test21_smlp_toy_num_metasymbol_mult_reg_smlp_toy_num_metasymbol_mult_reg_pred_labeled_new_prediction_precisions.csv
+
+smlp_logger - INFO - Prediction on new data --  msqe: 18.189
+
+smlp_logger - INFO - Prediction on new data --  r2_score: -3.013
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - Running SMLP in mode "predict": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

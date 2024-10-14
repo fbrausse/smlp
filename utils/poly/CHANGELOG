@@ -1,0 +1,183 @@
+2023-01-24 poly-v0.10.1
+
+ * fix problem related to missing bounds
+
+2023-01-02 poly-v0.10.0
+
+ * document python module build
+ * generate setup.py by meson
+ * make mpfr dependency respect the "static" option
+ * py: support domain as container, domain-component as pair; add set_loglvl() and simplify opt<Q>
+ * fix infix parser for numeric constant at end of the input
+ * require -R for Pareto search
+ * py: allow instantiation of pre_problem and domain
+ * simplify creation of expr2
+ * restore support for gcc-11 and clang >= 11
+ * include libiv sources + update build instrs
+ * -O now does not affect alpha, beta or eta
+ * add missing include/smlp
+ * fix fallback def of isatty()
+ * print backtrace on USR1
+ * add (yet unused) gearopt iterable
+ * default symbol visibility and -rdynamic
+
+2022-12-13 poly-v0.9.0
+
+ * fix computation of final bounds for optimum
+ * catch more cases worth logging
+ * move bop/uop to expr2; add infix support for "^"
+ * move more ad-hoc unrolled functions to API: and, or, not, div_cnst
+ * begin parsing cvc5/cvc4/z3 inexact or algebraic assignments in models
+ * add reals and algebraics
+ * introduce A values to cnst2
+ * parameterize how literals are unrolled
+ * prepare to librarify
+ * add initial version of Pareto
+ * cleanup
+ * first version Python API
+ * add some local things to .gitignore
+ * move __init__.py + separate -static* flags for exe & lib
+ * add __version__ + fix boost dep for static build
+
+2022-11-26 poly-v0.8.0
+
+ * override Z3's buggy SIGINT handler (after 100ms)
+ * add -T LO:INC:HI option format
+ * rename -O OUT-BNDS to -O OBJ-BNDS for uniformity
+ * disentangle critical points and fallback solver from ival solver
+ * obtaining all solutions to a problem is now handled in a lazy manner
+ * splitting intervals no longer skips space between midpoint and next double
+ * critical points solver only handles linear derivatives
+ * add option -o OBJ-SPEC supporting arbitrary expressions or the expression
+   'Pareto(E1,E2,...)' containing such expressions (Pareto optimization is not
+   implemented, yet)
+ * minor improvements/fixes:
+   - simplifier deals with double-neg and unnecessary conj/disj
+   - logging
+   - fix handling option -c auto
+   - report and error on surplus unused arguments
+   - empty sequence of solvers
+   - ext-solver outputs time to solve
+   - print the named outputs (if any)
+   - sequence of variables in models is sorted now
+   - optimize_EA properly forwards strictness info to obj-range
+   - check that none of the objectives is constant on the domain
+
+2022-11-17 poly-v0.7.0
+
+ * moved old options -1 and -c to -C gen-obj and -C clamp
+ * introduced structured and colored log output for clarity:
+   - verbosity controlled by new option -v
+   - log levels are: none, error, warn, info, note, debug; default: note
+   - color controlled by repurposed option -c
+   - solvers are more verbose in what they are doing
+ * support reading options from envvar SMLP_OPTS (if set); parsing the envvar
+   string is done by the shell (envvar SHELL if set, 'sh' otherwise), as if
+   SMLP was invoked by
+     ${SHELL} -c 'exec "$0" ${SMLP_OPTS} "$@"' smlp arguments...
+
+2022-11-15 poly-v0.6.2
+
+ * fix cause for segfault when the search finds that the threshold is out of
+   the bounds of the -T list
+
+2022-11-15 poly-v0.6.1
+
+ * -C bnds-dom now affects integer variables as well
+ * protection for ival-solver and critical-point solver:
+ * - encode unbounded domains properly for fallback solver
+ * - critical points are not suitable for (dis-)equality constraints
+ * - protect against handling interval domains for integers
+
+2022-11-15 poly-v0.6.0
+
+ * code simplification and cleanup
+ * documentation of trace format and rationale behind it in readme
+ * move {id_theta => all_eq}() to public API
+ * add u, trace showing final range and contained info and c,/d, trace records
+ * generalize search range for GearOpt and add option -T THRESHS
+ * relax check on -Cbnds-dom for -r: input bounds empty -> fine
+ * ksmt-0.1.7 not supported (missing (get-model)), next version will be
+ * simplify and add check for Match() signature
+ * fix infix parser: x-y+z was parsed as x-(y+z)
+
+2022-11-08 poly-v0.5.0
+
+ * fix for gmpxx build
+ * derivative() returns null for (ite c y n) with var in free vars of c
+ * simplify check in critical points
+ * cleanup critical points output
+ * critical points uses NNF of formula
+ * separate critical points solver from ival-solver + more output
+ * do not assume real inputs from lists + sanitize behaviour of -r
+ * add ordering on terms and formulas
+ * document operations on expr2 terms and formulas some more
+ * add interval-evaluation API
+ * use interval approximation when -R is not given in optimization mode
+ * remove outdated guard claiming the interval-solver is not supported for optimization - it is
+ * update -R in help message / usage in readme
+ * update -d DELTA desc in usage info
+ * remove unused Makefiles
+ * support -Dstatic=true
+ * allow lhs to refer to named output symbols + use that for NNs
+ * add -C bnds-dom + check finiteness of ival evaluation
+ * more sanitization of -R LO,HI inputs
+
+2022-11-02 poly-v0.4.0
+
+ * update usage in readme
+ * compat with clang>=11, gcc>=11
+ * simplify gear formula using "target" = (beta /\ f >= T)
+ * switch to kay::dbl::ival, add SUBDIVS param to -i, do not install SIGINT handler
+ * unconditionally include ival-solver
+ * ival-solver supports ite2
+ * add license headers to ival-solver
+ * ival-solver cleanup
+ * feed maybes from ival to next solver
+ * add simplify() on form2 and term2 + add derivative() on term2
+ * WIP: ival computes #critical points for simple problems
+ * add meson configure option -Dasserts=(true|false)
+ * missing case in simplify()
+ * add critical-points search after ival-solver
+
+2022-11-02 poly-v0.3.0
+
+ * prepare making z3-solver optional
+ * make z3-solver optional
+ * fix typo in help message
+ * cleanup includes
+ * add first version of an interval solver
+ * do not capture stderr of external solvers
+ * ival-solver: eval combinations separately
+ * comment ival-solver code
+ * sequence ival- and other solvers
+ * sanitize solver::add() API + ival-solver sub-divides once on MAYBE
+ * include sub-division log messages
+
+2022-10-29 poly-v0.2.1
+
+ * add support for ksmt
+ * support MathSAT 5.6.{3,8}
+ * take delta into account for id_theta
+ * add supported external solvers to readme
+ * bump v0.2.1
+
+2022-10-27 poly-v0.2.0
+
+ * add -Dstatic=(true|false) meson option
+ * add -V for version info
+ * add support for Not() for ALPHA, BETA
+ * add support for -e ETA
+ * update usage in readme
+ * add some detail in build instructions
+ * initial support for external solver
+ * fix parsing model of ext-solver + add -I INC-CMD
+ * ext-solver prints (first) error in check()
+ * cleanup ext-solver model parsing
+ * run ext-solver in ${SHELL:-sh} instead of sh
+ * perform ood-check using ext-solver if specified
+ * include exit-code description in help message
+
+2022-10-24 poly-v0.1.0
+
+ * initial release

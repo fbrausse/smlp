@@ -1,0 +1,10 @@
+#Forest semantics: majority vote
+#Number of trees: 1
+
+#TREE 0
+if (p2 > 5.0) and (p1 <= 3.5) and (x > 10.5) then (y1 = 5.0) and (y2 = 5.0) | based on 2 samples
+if (p2 > 5.0) and (p1 <= 3.5) and (x <= 10.5) and (p2 > 6.5) then (y1 = 9.0) and (y2 = 5.0) | based on 2 samples
+if (p2 > 5.0) and (p1 > 3.5) then (y1 = 9.0) and (y2 = 9.0) | based on 1 samples
+if (p2 > 5.0) and (p1 <= 3.5) and (x <= 10.5) and (p2 <= 6.5) then (y1 = 5.0) and (y2 = 5.0) | based on 1 samples
+if (p2 <= 5.0) and (x > 11.0) then (y1 = 9.0) and (y2 = 9.0) | based on 1 samples
+if (p2 <= 5.0) and (x <= 11.0) then (y1 = 5.0) and (y2 = 9.0) | based on 1 samples

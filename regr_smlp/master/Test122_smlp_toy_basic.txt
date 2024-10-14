@@ -1,0 +1,568 @@
+
+smlp_logger - INFO - Model exploration specification:
+{'version': '1.2', 'variables': [{'label': 'y1', 'interface': 'output', 'type': 'real'}, {'label': 'y2', 'interface': 'output', 'type': 'real'}, {'label': 'p1', 'interface': 'knob', 'type': 'real', 'range': [-2, 2], 'rad-abs': Fraction(1, 5), 'grid': [0]}, {'label': 'p2', 'interface': 'knob', 'type': 'real', 'range': [-2, 2], 'rad-abs': 0, 'grid': [0]}], 'beta': 'y2<=0', 'system': {'y1': '0 if p1<=0 and p2>-1 else p1', 'y2': '0 if p2<=0 and p1>-1 else p2'}, 'assertions': {'assert': 'y1<=0'}, 'objectives': {'objv1': 'y1', 'objv2': 'y1*y2'}}
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "optimize": Start
+
+smlp_logger - INFO - Computed spec global constraint expressions:
+
+smlp_logger - INFO - Global alpha : None
+
+smlp_logger - INFO - Global beta  : y2<=0
+
+smlp_logger - INFO - Radii  theta : {'p1': {'rad-abs': Fraction(1, 5), 'rad-rel': None}, 'p2': {'rad-abs': 0, 'rad-rel': None}}
+
+smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+
+smlp_logger - INFO - Assertion assert: y1<=0
+
+smlp_logger - INFO - Objective objv1: y1
+
+smlp_logger - INFO - Objective objv2: y1*y2
+
+smlp_logger - INFO - Original system : {'y1': '0 if p1<=0 and p2>-1 else p1', 'y2': '0 if p2<=0 and p1>-1 else p2'}
+
+smlp_logger - INFO - PREPARE DATA FOR MODELING
+
+smlp_logger - INFO - Preparing training data for modeling: start
+
+smlp_logger - INFO - loading training data
+
+smlp_logger - INFO - data summary
+              x1         x2         p1         p2         y1         y2
+count  10.000000  10.000000  10.000000  10.000000  10.000000  10.000000
+mean    3.695500   0.200000   4.620000   4.800000   3.436300   7.937260
+std     3.828165   0.788811   3.116194   1.619328   3.918690   2.847973
+min    -0.821800  -1.000000   0.100000   3.000000   0.240000   1.120000
+25%     0.364350   0.000000   2.475000   3.250000   0.689550   8.000000
+50%     3.423500   0.000000   4.000000   4.500000   0.935000   8.000000
+75%     6.694250   1.000000   7.000000   6.000000   5.778325   9.209575
+max     9.546000   1.000000  10.000000   7.000000  10.700700  12.020000
+
+smlp_logger - INFO - training data
+       x1  x2    p1  p2       y1       y2
+0  2.9800  -1   0.1   4   5.0233   8.0000
+1  8.5530  -1   3.9   3   0.6936  12.0200
+2  0.5580   1   2.0   4   0.6882   8.1400
+3  3.8670   0   1.1   3   0.2400   8.0000
+4 -0.8218   0   4.0   3   0.3240   8.0000
+5  5.2520   0   4.0   5   6.0300   8.0000
+6  0.2998   1   7.1   6   0.9100  10.1250
+7  7.1750   1   7.0   7   0.9600   1.1200
+8  9.5460   0   7.0   6  10.7007   9.5661
+9 -0.4540   1  10.0   7   8.7932   6.4015
+
+smlp_logger - INFO - training data after imputing missing values
+     p1  p2       y1       y2
+0   0.1   4   5.0233   8.0000
+1   3.9   3   0.6936  12.0200
+2   2.0   4   0.6882   8.1400
+3   1.1   3   0.2400   8.0000
+4   4.0   3   0.3240   8.0000
+5   4.0   5   6.0300   8.0000
+6   7.1   6   0.9100  10.1250
+7   7.0   7   0.9600   1.1200
+8   7.0   6  10.7007   9.5661
+9  10.0   7   8.7932   6.4015
+
+smlp_logger - INFO - training data after processing responses
+     p1  p2       y1       y2
+0   0.1   4   5.0233   8.0000
+1   3.9   3   0.6936  12.0200
+2   2.0   4   0.6882   8.1400
+3   1.1   3   0.2400   8.0000
+4   4.0   3   0.3240   8.0000
+5   4.0   5   6.0300   8.0000
+6   7.1   6   0.9100  10.1250
+7   7.0   7   0.9600   1.1200
+8   7.0   6  10.7007   9.5661
+9  10.0   7   8.7932   6.4015
+
+smlp_logger - INFO - training data after encoding levels of categorical features with integers
+     p1  p2       y1       y2
+0   0.1   4   5.0233   8.0000
+1   3.9   3   0.6936  12.0200
+2   2.0   4   0.6882   8.1400
+3   1.1   3   0.2400   8.0000
+4   4.0   3   0.3240   8.0000
+5   4.0   5   6.0300   8.0000
+6   7.1   6   0.9100  10.1250
+7   7.0   7   0.9600   1.1200
+8   7.0   6  10.7007   9.5661
+9  10.0   7   8.7932   6.4015
+
+smlp_logger - INFO - training data after scaling (normalizing) features and responses
+         p1    p2        y1        y2
+0  0.000000  0.25  0.457264  0.631193
+1  0.383838  0.00  0.043362  1.000000
+2  0.191919  0.25  0.042846  0.644037
+3  0.101010  0.00  0.000000  0.631193
+4  0.393939  0.00  0.008030  0.631193
+5  0.393939  0.50  0.553500  0.631193
+6  0.707071  0.75  0.064049  0.826147
+7  0.696970  1.00  0.068829  0.000000
+8  0.696970  0.75  1.000000  0.774872
+9  1.000000  1.00  0.817651  0.484541
+
+smlp_logger - INFO - Sampling from training data: start
+
+smlp_logger - INFO - Sampling from training data: end
+
+smlp_logger - INFO - X_train after sampling: (8, 2)
+
+smlp_logger - INFO - y_train after sampling: (8, 2)
+
+smlp_logger - INFO - Preparing training data for modeling: end
+
+smlp_logger - INFO - Saving data bounds into file:./Test122_smlp_toy_basic_data_bounds.json
+
+smlp_logger - INFO - {'p1': {'min': 0.1, 'max': 10.0}, 'p2': {'min': 3.0, 'max': 7.0}, 'y1': {'min': 0.24, 'max': 10.7007}, 'y2': {'min': 1.12, 'max': 12.02}}
+
+smlp_logger - INFO - Creating model exploration base components: Start
+
+smlp_logger - INFO - Parsing the SPEC: Start
+
+smlp_logger - INFO - Parsing the SPEC: End
+
+smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'real', 'interval': None}, 'y2': {'range': 'real', 'interval': None}, 'p1': {'range': 'real', 'interval': [-2, 2]}, 'p2': {'range': 'real', 'interval': [-2, 2]}}
+
+smlp_logger - INFO - Input bounds (alpha): {}
+
+smlp_logger - INFO - Knob bounds (eta): {'p1': {'min': -2, 'max': 2}, 'p2': {'min': -2, 'max': 2}}
+
+smlp_logger - INFO - Knob grids (eta): {'p1': [0], 'p2': [0]}
+
+smlp_logger - INFO - Alpha global   constraints: true
+
+smlp_logger - INFO - Alpha ranges   constraints: true
+
+smlp_logger - INFO - Alpha combined constraints: (let ((|:0| true)) (and |:0| |:0|))
+
+smlp_logger - INFO - Beta  global   constraints: (<= y2 0)
+
+smlp_logger - INFO - Eta   ranges   constraints: (and (and true (and (>= p1 (- 2)) (<= p1 2))) (and (>= p2 (- 2)) (<= p2 2)))
+
+smlp_logger - INFO - Eta   grid     constraints: (and (= p1 0) (= p2 0))
+
+smlp_logger - INFO - Eta   global   constraints: true
+
+smlp_logger - INFO - Eta   combined constraints: (let ((|:0| true)) (and (and (and (and |:0| (and (>= p1 (- 2)) (<= p1 2))) (and (>= p2 (- 2)) (<= p2 2))) (and (= p1 0) (= p2 0))) |:0|))
+
+smlp_logger - INFO - Creating model exploration base components: End
+
+smlp_logger - INFO - Input and knob interface constraints are consistent
+
+smlp_logger - INFO - Building system terms: Start
+
+smlp_logger - INFO - System terms dictionary: {'y1': <smlp.libsmlp.term2 (ite (and (<= p1 0) (> p2 (- 1))) 0 p1)>, 'y2': <smlp.libsmlp.term2 (ite (and (<= p2 0) (> p1 (- 1))) 0 p2)>}
+
+smlp_logger - INFO - Building system terms: End
+
+smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Model operator counts for y1: {'ite': 1, 'and': 1, 'prop': 2, 'var': 3, 'const': 3, 'usub': 1}
+
+smlp_logger - INFO - Model operator counts for y2: {'ite': 1, 'and': 1, 'prop': 2, 'var': 3, 'const': 3, 'usub': 1}
+
+smlp_logger - INFO - Building model terms: End
+
+smlp_logger - INFO - Model interface constraints are consistent
+
+smlp_logger - INFO - Pareto optimization synthesis feasibility check: Start
+
+smlp_logger - INFO - Querying condition synthesis_feasibility <-> True
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Pareto optimization vacuity completed with objectives thresholds: 
+    Scaled to [0,1]: {'objv1': '-0.022943', 'objv2': '-0.010615'}
+    Original  scale: {'objv1': '0.000000', 'objv2': '0.000000'}
+
+
+smlp_logger - INFO - Pareto optimization synthesis feasibility check: End
+
+smlp_logger - INFO - Optimize single objective objv1_scaled: Start
+
+smlp_logger - INFO - Querying condition objv1_scaled_1 <-> y1 >= 1
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from inf to 1
+
+smlp_logger - INFO - Querying condition objv1_scaled_0 <-> y1 >= 0
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from 1 to 0
+
+smlp_logger - INFO - Querying condition objv1_scaled_-2 <-> y1 >= -2
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -inf to -2
+
+smlp_logger - INFO - Querying condition objv1_scaled_-1.0 <-> y1 >= -1.0
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -2 to -1.0
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.5 <-> y1 >= -0.5
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -1.0 to -0.5
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.25 <-> y1 >= -0.25
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.5 to -0.25
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.125 <-> y1 >= -0.125
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.25 to -0.125
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.0625 <-> y1 >= -0.0625
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.125 to -0.0625
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.03125 <-> y1 >= -0.03125
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.0625 to -0.03125
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.015625 <-> y1 >= -0.015625
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from 0 to -0.015625
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.0234375 <-> y1 >= -0.0234375
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.03125 to -0.0234375
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.01953125 <-> y1 >= -0.01953125
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.015625 to -0.01953125
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.021484375 <-> y1 >= -0.021484375
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.01953125 to -0.021484375
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.0224609375 <-> y1 >= -0.0224609375
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.021484375 to -0.0224609375
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.02294921875 <-> y1 >= -0.02294921875
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.0234375 to -0.02294921875
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022705078125 <-> y1 >= -0.022705078125
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.0224609375 to -0.022705078125
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.0228271484375 <-> y1 >= -0.0228271484375
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.022705078125 to -0.0228271484375
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.02288818359375 <-> y1 >= -0.02288818359375
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.0228271484375 to -0.02288818359375
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022918701171875 <-> y1 >= -0.022918701171875
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.02288818359375 to -0.022918701171875
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.0229339599609375 <-> y1 >= -0.0229339599609375
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.022918701171875 to -0.0229339599609375
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.02294158935546875 <-> y1 >= -0.02294158935546875
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.0229339599609375 to -0.02294158935546875
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022945404052734375 <-> y1 >= -0.022945404052734375
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.02294921875 to -0.022945404052734375
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022943496704101562 <-> y1 >= -0.022943496704101562
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.022945404052734375 to -0.022943496704101562
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022942543029785156 <-> y1 >= -0.022942543029785156
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.02294158935546875 to -0.022942543029785156
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.02294301986694336 <-> y1 >= -0.02294301986694336
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv1_scaled from -0.022943496704101562 to -0.02294301986694336
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022942781448364258 <-> y1 >= -0.022942781448364258
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.022942543029785156 to -0.022942781448364258
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.02294290065765381 <-> y1 >= -0.02294290065765381
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.022942781448364258 to -0.02294290065765381
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022942960262298584 <-> y1 >= -0.022942960262298584
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.02294290065765381 to -0.022942960262298584
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.02294299006462097 <-> y1 >= -0.02294299006462097
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.022942960262298584 to -0.02294299006462097
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022943004965782166 <-> y1 >= -0.022943004965782166
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.02294299006462097 to -0.022943004965782166
+
+smlp_logger - INFO - Querying condition objv1_scaled_-0.022943012416362762 <-> y1 >= -0.022943012416362762
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv1_scaled from -0.022943004965782166 to -0.022943012416362762
+
+smlp_logger - INFO - Optimize single objective objv1_scaled: End
+
+smlp_logger - INFO - Optimize single objective objv2_scaled: Start
+
+smlp_logger - INFO - Querying condition objv2_scaled_1 <-> y1*y2 >= 1
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from inf to 1
+
+smlp_logger - INFO - Querying condition objv2_scaled_0 <-> y1*y2 >= 0
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 1 to 0
+
+smlp_logger - INFO - Querying condition objv2_scaled_-2 <-> y1*y2 >= -2
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -inf to -2
+
+smlp_logger - INFO - Querying condition objv2_scaled_-1.0 <-> y1*y2 >= -1.0
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -2 to -1.0
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.5 <-> y1*y2 >= -0.5
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -1.0 to -0.5
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.25 <-> y1*y2 >= -0.25
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.5 to -0.25
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.125 <-> y1*y2 >= -0.125
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.25 to -0.125
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.0625 <-> y1*y2 >= -0.0625
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.125 to -0.0625
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.03125 <-> y1*y2 >= -0.03125
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.0625 to -0.03125
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.015625 <-> y1*y2 >= -0.015625
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.03125 to -0.015625
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.0078125 <-> y1*y2 >= -0.0078125
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from 0 to -0.0078125
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.01171875 <-> y1*y2 >= -0.01171875
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.015625 to -0.01171875
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.009765625 <-> y1*y2 >= -0.009765625
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.0078125 to -0.009765625
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.0107421875 <-> y1*y2 >= -0.0107421875
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.01171875 to -0.0107421875
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.01025390625 <-> y1*y2 >= -0.01025390625
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.009765625 to -0.01025390625
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010498046875 <-> y1*y2 >= -0.010498046875
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.01025390625 to -0.010498046875
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.0106201171875 <-> y1*y2 >= -0.0106201171875
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.0107421875 to -0.0106201171875
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.01055908203125 <-> y1*y2 >= -0.01055908203125
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010498046875 to -0.01055908203125
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010589599609375 <-> y1*y2 >= -0.010589599609375
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.01055908203125 to -0.010589599609375
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.0106048583984375 <-> y1*y2 >= -0.0106048583984375
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010589599609375 to -0.0106048583984375
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.01061248779296875 <-> y1*y2 >= -0.01061248779296875
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.0106048583984375 to -0.01061248779296875
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010616302490234375 <-> y1*y2 >= -0.010616302490234375
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.0106201171875 to -0.010616302490234375
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010614395141601562 <-> y1*y2 >= -0.010614395141601562
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.01061248779296875 to -0.010614395141601562
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615348815917969 <-> y1*y2 >= -0.010615348815917969
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010616302490234375 to -0.010615348815917969
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010614871978759766 <-> y1*y2 >= -0.010614871978759766
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010614395141601562 to -0.010614871978759766
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615110397338867 <-> y1*y2 >= -0.010615110397338867
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010614871978759766 to -0.010615110397338867
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615229606628418 <-> y1*y2 >= -0.010615229606628418
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010615348815917969 to -0.010615229606628418
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615170001983643 <-> y1*y2 >= -0.010615170001983643
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615110397338867 to -0.010615170001983643
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.01061519980430603 <-> y1*y2 >= -0.01061519980430603
+
+smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
+
+smlp_logger - INFO - Increasing threshold lower bound for objective objv2_scaled from -0.010615229606628418 to -0.01061519980430603
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615184903144836 <-> y1*y2 >= -0.010615184903144836
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615170001983643 to -0.010615184903144836
+
+smlp_logger - INFO - Querying condition objv2_scaled_-0.010615192353725433 <-> y1*y2 >= -0.010615192353725433
+
+smlp_logger - INFO - Query completed with result: UNSAT (unsatisfiable)
+
+smlp_logger - INFO - Decreasing threshold upper bound for objective objv2_scaled from -0.010615184903144836 to -0.010615192353725433
+
+smlp_logger - INFO - Optimize single objective objv2_scaled: End
+
+smlp_logger - INFO - Running SMLP in mode "optimize": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

@@ -1,0 +1,137 @@
+{
+	"vacuity": {
+		"objv1": {
+			"value_in_config": 7.0,
+			"threshold_scaled": 0.5,
+			"threshold": 7.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 5.0,
+			"threshold_scaled": 0.0,
+			"threshold": 5.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 2.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 5.0
+		},
+		"y2": {
+			"value_in_config": 9.0
+		}
+	},
+	"iter(0, 'completed')": {
+		"objv1": {
+			"value_in_config": 7.0,
+			"threshold_scaled": 0.0,
+			"threshold": 5.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 5.0,
+			"threshold_scaled": 0.0,
+			"threshold": 5.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 2.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 5.0
+		},
+		"y2": {
+			"value_in_config": 9.0
+		},
+		"objv1_scaled_objv2_scaled": {
+			"value_in_config": 0.0
+		},
+		"threshold_lo_scaled": {
+			"value_in_config": 0.0
+		},
+		"threshold_lo": {
+			"value_in_config": 0.0
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 0.0625
+		},
+		"threshold_up": {
+			"value_in_config": 0.0625
+		},
+		"max_in_data": {
+			"value_in_config": 1.0
+		},
+		"min_in_data": {
+			"value_in_config": 0.0
+		}
+	},
+	"final": {
+		"objv1": {
+			"value_in_config": 7.0,
+			"threshold_scaled": 0.0,
+			"threshold": 5.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv2": {
+			"value_in_config": 5.0,
+			"threshold_scaled": 0.0,
+			"threshold": 5.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"x": {
+			"value_in_config": 10.0
+		},
+		"p1": {
+			"value_in_config": 2.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 5.0
+		},
+		"y2": {
+			"value_in_config": 9.0
+		},
+		"objv1_scaled_objv2_scaled": {
+			"value_in_config": 0.0
+		},
+		"threshold_lo_scaled": {
+			"value_in_config": 0.0
+		},
+		"threshold_lo": {
+			"value_in_config": 0.0
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 0.0625
+		},
+		"threshold_up": {
+			"value_in_config": 0.0625
+		},
+		"max_in_data": {
+			"value_in_config": 1.0
+		},
+		"min_in_data": {
+			"value_in_config": 0.0
+		}
+	}
+}

@@ -1,0 +1,41 @@
+{
+	"assert_stable_config": {
+		"configuration_consistent": "true",
+		"assertion_status": "PASS",
+		"counter_example": null,
+		"assertion_feasible": true
+	},
+	"assert_grid_conflict": {
+		"configuration_consistent": "false",
+		"assertion_status": "ERROR",
+		"counter_example": null,
+		"assertion_feasible": "false"
+	},
+	"assert_unstable_config": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"x": 1.0,
+			"p1": 7.5,
+			"p2": 6.125,
+			"y1": -58.38640996591811,
+			"y2": 55.69463654220261
+		},
+		"assertion_feasible": true
+	},
+	"assert_infeasible": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"x": 1.0,
+			"p1": 7.5,
+			"p2": 6.125,
+			"y1": -58.38640996591811,
+			"y2": 55.69463654220261
+		},
+		"assertion_feasible": false
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}

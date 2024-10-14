@@ -104,8 +104,8 @@ def parse_args(argv):
 	                    '(generate grid otherwise)')
 	return p.parse_args(argv[1:])
 
-def main(argv):
-	args = parse_args(argv)
+if __name__ == "__main__":
+	args = parse_args(sys.argv)
 
 	with open(args.spec, 'r') as f:
 		spec = json.load(f)
@@ -122,14 +122,17 @@ def main(argv):
 	                log=log)
 	abs_t = sc.denorm(float(args.threshold)) if args.threshold is not None else None
 
-	safe, pred = nn_predict_grid(spec, bnds, gen, load_model(args.model),
-	                             (timed(lambda: safe_grid(spec, bnds, log=log),
-	                                    'generating grid', log=log)
-	                              if args.values is None
-	                              else pd.read_csv(args.values)[[
-	                                  s['label'] for s in spec
-	                                  if s['type'] in ('knob','categorical')
-	                              ]]),
+	model = load_model(args.model)
+	values = (timed(lambda: safe_grid(spec, bnds, log=log),
+	                                  'generating grid', log=log)
+	                            if args.values is None
+	                            else pd.read_csv(args.values)[[
+	                                s['label'] for s in spec
+	                                if s['type'] in ('knob','categorical','input')
+	                            ]])
+
+	safe, pred = nn_predict_grid(spec, bnds, gen, model,
+	                             values,
 	                             abs_t, log=log)
 
 	timed(lambda: safe.to_csv(args.output, index=False),
@@ -137,6 +140,3 @@ def main(argv):
 	if args.predicted is not None:
 		timed(lambda: pred.to_csv(args.predicted, index=False),
 		      'saving predictions to CSV', log=log)
-
-if __name__ == "__main__":
-	main(sys.argv)

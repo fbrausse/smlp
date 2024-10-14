@@ -117,7 +117,7 @@ static void extract_bounds_json(FILE *f, float minmax[static 2], const char *res
 		    resp);
 
 	const struct kjson_value *min = NULL, *max = NULL;
-	for (size_t i=0; i<b->o.n && !min && !max; i++)
+	for (size_t i=0; i<b->o.n && (!min || !max); i++)
 		if (!strcmp(b->o.data[i].key.begin, "min"))
 			min = &b->o.data[i].value;
 		else if (!strcmp(b->o.data[i].key.begin, "max"))

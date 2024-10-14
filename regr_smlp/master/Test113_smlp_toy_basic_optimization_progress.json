@@ -1,0 +1,146 @@
+{
+	"vacuity": {
+		"objective1": {
+			"value_in_config": 10.1334,
+			"threshold_scaled": 1.0,
+			"threshold": 10.1334,
+			"max_in_data": 10.1334,
+			"min_in_data": 1.04
+		},
+		"objective2": {
+			"value_in_config": 10.7007,
+			"threshold_scaled": 1.0,
+			"threshold": 10.7007,
+			"max_in_data": 10.7007,
+			"min_in_data": 0.24
+		},
+		"x1": {
+			"value_in_config": 10.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 10.7007
+		},
+		"x2": {
+			"value_in_config": 0.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y2": {
+			"value_in_config": 9.5661
+		}
+	},
+	"iter(0, 'completed')": {
+		"objective1": {
+			"value_in_config": 10.1334,
+			"threshold_scaled": 1.0,
+			"threshold": 10.133399999999998,
+			"max_in_data": 10.1334,
+			"min_in_data": 1.04
+		},
+		"objective2": {
+			"value_in_config": 10.7007,
+			"threshold_scaled": 1.0,
+			"threshold": 10.7007,
+			"max_in_data": 10.7007,
+			"min_in_data": 0.24
+		},
+		"x1": {
+			"value_in_config": 10.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 10.7007
+		},
+		"x2": {
+			"value_in_config": 0.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y2": {
+			"value_in_config": 9.5661
+		},
+		"objective1_scaled_objective2_scaled": {
+			"value_in_config": 1.0
+		},
+		"threshold_lo_scaled": {
+			"value_in_config": 1.0
+		},
+		"threshold_lo": {
+			"value_in_config": 1.0
+		},
+		"max_in_data": {
+			"value_in_config": 1.0
+		},
+		"min_in_data": {
+			"value_in_config": 0.0
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 1.03125
+		},
+		"threshold_up": {
+			"value_in_config": 1.03125
+		}
+	},
+	"final": {
+		"objective1": {
+			"value_in_config": 10.1334,
+			"threshold_scaled": 1.0,
+			"threshold": 10.133399999999998,
+			"max_in_data": 10.1334,
+			"min_in_data": 1.04
+		},
+		"objective2": {
+			"value_in_config": 10.7007,
+			"threshold_scaled": 1.0,
+			"threshold": 10.7007,
+			"max_in_data": 10.7007,
+			"min_in_data": 0.24
+		},
+		"x1": {
+			"value_in_config": 10.0
+		},
+		"p2": {
+			"value_in_config": 4.0
+		},
+		"y1": {
+			"value_in_config": 10.7007
+		},
+		"x2": {
+			"value_in_config": 0.0
+		},
+		"p1": {
+			"value_in_config": 4.0
+		},
+		"y2": {
+			"value_in_config": 9.5661
+		},
+		"objective1_scaled_objective2_scaled": {
+			"value_in_config": 1.0
+		},
+		"threshold_lo_scaled": {
+			"value_in_config": 1.0
+		},
+		"threshold_lo": {
+			"value_in_config": 1.0
+		},
+		"max_in_data": {
+			"value_in_config": 1.0
+		},
+		"min_in_data": {
+			"value_in_config": 0.0
+		},
+		"threshold_up_scaled": {
+			"value_in_config": 1.03125
+		},
+		"threshold_up": {
+			"value_in_config": 1.03125
+		}
+	}
+}

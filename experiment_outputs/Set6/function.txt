@@ -1,0 +1,5 @@
+x*(x**2-y**2)*(x**2-4)
+
+max(x, y, z) = (-1.5498, 0, 5.9489)
+
+src/run_smlp.py -data smlp_toy_basic -out_dir toy_out_dir -pref abc -mode optimize -pareto t -sat_thresh f -resp z -feat x,y -model dt_sklearn -dt_sklearn_max_depth 15 -data_scaler min_max -epsilon 0.05 -delta 0.01 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f -spec smlp_toy_basic

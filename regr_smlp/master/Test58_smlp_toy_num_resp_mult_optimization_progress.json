@@ -1,0 +1,33 @@
+{
+	"vacuity": {
+		"objv_y1": {
+			"value_in_config": 5.0,
+			"threshold_scaled": 0.0,
+			"threshold": 5.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"objv_y2": {
+			"value_in_config": 9.0,
+			"threshold_scaled": 1.0,
+			"threshold": 9.0,
+			"max_in_data": 9.0,
+			"min_in_data": 5.0
+		},
+		"x": {
+			"value_in_config": 0.0
+		},
+		"p1": {
+			"value_in_config": 2.0
+		},
+		"p2": {
+			"value_in_config": 3.0
+		},
+		"y1": {
+			"value_in_config": 5.0
+		},
+		"y2": {
+			"value_in_config": 9.0
+		}
+	}
+}

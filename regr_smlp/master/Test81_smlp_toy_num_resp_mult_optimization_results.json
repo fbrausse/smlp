@@ -1,0 +1,21 @@
+{
+	"obj1": {
+		"x": 11.000000014901161,
+		"p1": 4.0,
+		"p2": 7.0,
+		"y1": 9.0,
+		"y2": 9.0,
+		"obj1_scaled": 1.0,
+		"obj1": 9.0,
+		"threshold_lo_scaled": 1.0,
+		"threshold_lo": 9.0,
+		"max_in_data": 9.0,
+		"min_in_data": 5.0,
+		"threshold_up_scaled": 1.03125,
+		"threshold_up": 9.125
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true",
+	"synthesis_feasible": "true"
+}

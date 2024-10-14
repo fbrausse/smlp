@@ -122,7 +122,7 @@ def scaler_from_bounds(spec, bnds):
 
 def io_scalers(spec, gen, bnds):
 	si = scaler_from_bounds([s for s in spec
-	                         if s['type'] in ('categorical', 'knob')],
+	                         if s['type'] in ('categorical', 'knob', 'input')],
 	                        bnds)
 	so = scaler_from_bounds([s for s in spec
 	                         if s['type'] == 'response'
@@ -132,9 +132,10 @@ def io_scalers(spec, gen, bnds):
 
 def obj_range(gen, bnds):
 	r = gen['response']
-	if len(r) == 1 and gen['objective'] == r[0]:
-		so = scaler_from_bounds([{'label': r[0]}], bnds)
-		return so.data_min_[0], so.data_max_[0]
+	for resp in r:
+		if gen['objective'] == resp:
+			so = scaler_from_bounds([{'label': resp}], bnds)
+			return so.data_min_[0], so.data_max_[0]
 	assert len(r) == 2
 	sOu = None
 	sOl = None

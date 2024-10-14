@@ -1,0 +1,30 @@
+2024-04-05 14:14:58,988:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-04-05 14:14:58,988:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-04-05 14:14:58,988:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-04-05 14:14:58,988:WARNING:
+'cuml' is a soft dependency and not included in the pycaret installation. Please run: `pip install cuml` to install.
+2024-04-05 14:14:59,681:WARNING:
+'prophet' is a soft dependency and not included in the pycaret installation. Please run: `pip install prophet` to install.
+2024-04-05 14:15:02,806:INFO:Initializing load_model()
+2024-04-05 14:15:02,807:INFO:load_model(model_name=./../models/Test5_smlp_toy_num_resp_mult_y1_dt_caret_model_complete, platform=None, authentication=None, verbose=True)
+2024-04-05 14:15:02,821:INFO:Initializing predict_model()
+2024-04-05 14:15:02,821:INFO:predict_model(self=<pycaret.regression.oop.RegressionExperiment object at 0x7fff2db888e0>, estimator=Pipeline(memory=FastMemory(location=/tmp/joblib),
+         steps=[('numerical_imputer',
+                 TransformerWrapper(include=['FMAX_xyz', 'FMAX_abc', 'p3'],
+                                    transformer=SimpleImputer())),
+                ('categorical_imputer',
+                 TransformerWrapper(include=[],
+                                    transformer=SimpleImputer(strategy='most_frequent'))),
+                ('actual_estimator',
+                 DecisionTreeRegressor(criterion='friedman_mse', max_depth=13,
+                                       max_features='log2',
+                                       min_impurity_decrease=0.05,
+                                       min_samples_leaf=6, min_samples_split=5,
+                                       random_state=10))]), probability_threshold=None, encoded_labels=False, raw_score=False, round=4, verbose=True, ml_usecase=None, preprocess=True, encode_labels=<function _SupervisedExperiment.predict_model.<locals>.encode_labels at 0x7fff2db761f0>)
+2024-04-05 14:15:02,822:INFO:Checking exceptions
+2024-04-05 14:15:02,822:INFO:Preloading libraries
+2024-04-05 14:15:02,822:INFO:Set up data.
+2024-04-05 14:15:02,823:INFO:Set up index.

@@ -1,0 +1,85 @@
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "discretize": Start
+
+smlp_logger - INFO - loading training data
+
+smlp_logger - INFO - data summary
+               x         p1         p2        num
+count  10.000000  10.000000  11.000000  10.000000
+mean   10.400000   2.800000   5.454545   4.170000
+std     1.074968   0.788811   1.694912   4.223492
+min     9.000000   2.000000   3.000000  -0.500000
+25%    10.000000   2.000000   4.000000   1.500000
+50%    10.000000   3.000000   6.000000   2.650000
+75%    11.000000   3.000000   7.000000   7.575000
+max    12.000000   4.000000   8.000000  11.000000
+
+smlp_logger - INFO - training data
+   categ    PF   PF1     x   p1  p2   num
+0    c14  fail  pass  10.0  2.0   3   2.4
+1    c15  pass  pass  12.0  NaN   4   1.2
+2     c1  fail  pass   NaN  3.0   4  -0.5
+3     c9  fail  fail  11.0  2.0   6   NaN
+4     c5  pass  fail  10.0  2.0   8   0.0
+5    c10  pass  pass   9.0  4.0   7   2.5
+6    c13  fail  fail   9.0  3.0   6   3.3
+7     c4  fail  fail  10.0  3.0   4   2.8
+8    c15  fail  pass  11.0  4.0   4   9.0
+9    c11  fail  fail  12.0  2.0   7  10.0
+10   c19  pass  fail  10.0  3.0   7  11.0
+
+smlp_logger - INFO - training data after imputing missing values
+   categ     x   p1  p2   num    PF   PF1
+0    c14  10.0  2.0   3   2.4  fail  pass
+1    c15  12.0  2.0   4   1.2  pass  pass
+2     c1  10.0  3.0   4  -0.5  fail  pass
+3     c9  11.0  2.0   6  -0.5  fail  fail
+4     c5  10.0  2.0   8   0.0  pass  fail
+5    c10   9.0  4.0   7   2.5  pass  pass
+6    c13   9.0  3.0   6   3.3  fail  fail
+7     c4  10.0  3.0   4   2.8  fail  fail
+8    c15  11.0  4.0   4   9.0  fail  pass
+9    c11  12.0  2.0   7  10.0  fail  fail
+10   c19  10.0  3.0   7  11.0  pass  fail
+
+smlp_logger - INFO - training data after processing responses
+   categ     x   p1  p2   num  PF  PF1
+0    c14  10.0  2.0   3   2.4   1    0
+1    c15  12.0  2.0   4   1.2   0    0
+2     c1  10.0  3.0   4  -0.5   1    0
+3     c9  11.0  2.0   6  -0.5   1    1
+4     c5  10.0  2.0   8   0.0   0    1
+5    c10   9.0  4.0   7   2.5   0    0
+6    c13   9.0  3.0   6   3.3   1    1
+7     c4  10.0  3.0   4   2.8   1    1
+8    c15  11.0  4.0   4   9.0   1    0
+9    c11  12.0  2.0   7  10.0   1    1
+10   c19  10.0  3.0   7  11.0   0    1
+
+smlp_logger - INFO - data after discretization
+   categ  x  p1  p2  num
+0    c14  1   0   0    3
+1    c15  3   0   1    2
+2     c1  1   1   1    0
+3     c9  2   0   2    0
+4     c5  1   0   4    1
+5    c10  0   2   3    4
+6    c13  0   1   2    6
+7     c4  1   1   1    5
+8    c15  2   2   1    7
+9    c11  3   0   3    8
+10   c19  1   1   3    9
+
+smlp_logger - INFO - feature data types
+          type                                          levels
+categ   object  [c1, c10, c11, c13, c14, c15, c19, c4, c5, c9]
+x      integer                                    [0, 1, 2, 3]
+p1     integer                                       [0, 1, 2]
+p2     integer                                 [0, 1, 2, 3, 4]
+num    integer                  [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+
+smlp_logger - INFO - Running SMLP in mode "discretize": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

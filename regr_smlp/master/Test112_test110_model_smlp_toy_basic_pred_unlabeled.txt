@@ -1,0 +1,96 @@
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "predict": Start
+
+smlp_logger - INFO - PREPARE DATA FOR MODELING
+
+smlp_logger - INFO - Preparing new data for modeling: start
+
+smlp_logger - INFO - loading new data
+
+smlp_logger - INFO - data summary
+              x1         x2         p1         p2
+count  10.000000  10.000000  10.000000  10.000000
+mean    3.695500   0.200000   4.620000   4.800000
+std     3.520039   0.788811   3.116194   1.619328
+min    -2.821800  -1.000000   0.100000   3.000000
+25%     2.469850   0.000000   2.475000   3.250000
+50%     3.521000   0.000000   4.000000   4.500000
+75%     6.222500   1.000000   7.000000   6.000000
+max     8.553000   1.000000  10.000000   7.000000
+
+smlp_logger - INFO - new data
+       x1  x2    p1  p2
+0  2.9800  -1   0.1   4
+1  8.5530  -1   3.9   3
+2  7.5580   1   2.0   4
+3  3.8670   0   1.1   3
+4 -2.8218   0   4.0   3
+5  5.2520   0   4.0   5
+6  2.2998   1   7.1   6
+7  3.1750   1   7.0   7
+8  6.5460   0   7.0   6
+9 -0.4540   1  10.0   7
+
+smlp_logger - INFO - new data after imputing missing values
+       x1  x2    p1  p2
+0  2.9800  -1   0.1   4
+1  8.5530  -1   3.9   3
+2  7.5580   1   2.0   4
+3  3.8670   0   1.1   3
+4 -2.8218   0   4.0   3
+5  5.2520   0   4.0   5
+6  2.2998   1   7.1   6
+7  3.1750   1   7.0   7
+8  6.5460   0   7.0   6
+9 -0.4540   1  10.0   7
+
+smlp_logger - INFO - new data after encoding levels of categorical features with integers
+       x1  x2    p1  p2
+0  2.9800  -1   0.1   4
+1  8.5530  -1   3.9   3
+2  7.5580   1   2.0   4
+3  3.8670   0   1.1   3
+4 -2.8218   0   4.0   3
+5  5.2520   0   4.0   5
+6  2.2998   1   7.1   6
+7  3.1750   1   7.0   7
+8  6.5460   0   7.0   6
+9 -0.4540   1  10.0   7
+
+smlp_logger - INFO - new data after scaling (normalizing) features and responses
+         x1   x2        p1    p2
+0  0.366693  0.0  0.000000  0.25
+1  0.904223  0.0  0.383838  0.00
+2  0.808252  1.0  0.191919  0.25
+3  0.452246  0.5  0.101010  0.00
+4 -0.192905  0.5  0.393939  0.00
+5  0.585833  0.5  0.393939  0.50
+6  0.301086  1.0  0.707071  0.75
+7  0.385501  1.0  0.696970  1.00
+8  0.710643  0.5  0.696970  0.75
+9  0.035475  1.0  1.000000  1.00
+
+smlp_logger - INFO - Preparing new data for modeling: end
+
+smlp_logger - INFO - LOAD TRAINED MODEL
+
+smlp_logger - INFO - Seving model rerun configuration in file ./../models/test110_model_rerun_model_config.json
+
+smlp_logger - INFO - PREDICT ON NEW DATA
+
+smlp_logger - INFO - Model prediction: start
+
+smlp_logger - INFO - Model prediction: end
+
+smlp_logger - INFO - Reporting prediction results: start
+
+smlp_logger - INFO - Saving predictions summary into file: 
+./Test112_test110_model_smlp_toy_basic_pred_unlabeled_new_predictions_summary.csv
+
+smlp_logger - INFO - Reporting prediction results: end
+
+smlp_logger - INFO - Running SMLP in mode "predict": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

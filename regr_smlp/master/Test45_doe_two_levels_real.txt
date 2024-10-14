@@ -1,0 +1,10 @@
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "doe": Start
+
+smlp_logger - INFO - DOE table with 32 entries has been generated
+
+smlp_logger - INFO - Running SMLP in mode "doe": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

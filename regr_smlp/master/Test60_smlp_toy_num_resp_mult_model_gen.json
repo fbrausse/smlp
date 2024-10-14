@@ -1,0 +1,1 @@
+{"train": {"layers": "2,1", "epochs": 20, "batch-size": 200, "optimizer": "adam", "learning_rate": 0.001, "loss_function": "mse", "hid_activation": "relu", "out_activation": "linear", "sequential_api": true, "seed": 10}}

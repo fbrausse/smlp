@@ -1,0 +1,7 @@
+/poly
+__pycache__
+/prefix
+/smlp
+/smlp-*.*.*/
+/releases
+/wheel/

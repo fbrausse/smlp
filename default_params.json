@@ -1,0 +1,41 @@
+[
+    {
+        "nn_keras_layers": "2,1",
+        "nn_keras_epochs": 1000,
+        "nn_keras_batch_size": 200,
+        "nn_keras_optimizer": "adam",
+        "nn_keras_hid_activation": "relu",
+        "nn_keras_out_activation": "linear"
+    },
+    {
+        "poly_sklearn_degree": 2,
+        "poly_sklearn_fit_intercept": true,
+        "poly_sklearn_n_jobs": null,
+        "poly_sklearn_positive": false,
+        "dt_sklearn_max_features": null,
+        "dt_sklearn_criterion": "squared_error",
+        "dt_sklearn_max_depth": null,
+        "dt_sklearn_min_samples_split": 2,
+        "dt_sklearn_min_samples_leaf": 1,
+        "dt_sklearn_ccp_alpha": 0.0,
+        "rf_sklearn_n_estimators": 100,
+        "rf_sklearn_max_features": 1.0,
+        "rf_sklearn_criterion": "squared_error",
+        "rf_sklearn_max_depth": null,
+        "rf_sklearn_min_samples_split": 2,
+        "rf_sklearn_min_samples_leaf": 1,
+        "rf_sklearn_ccp_alpha": 0.0,
+        "et_sklearn_max_features": 1,
+        "et_sklearn_criterion": "squared_error",
+        "et_sklearn_max_depth": null,
+        "et_sklearn_min_samples_split": 2,
+        "et_sklearn_min_samples_leaf": 1,
+        "et_sklearn_ccp_alpha": 0.0
+    },
+    {
+        "setup_caret_fold": 2,
+        "setup_caret_data_split_shuffle": true,
+        "model_caret_cross_validation": true,
+        "tuner_caret_search_algorithm": "random"
+    }
+]

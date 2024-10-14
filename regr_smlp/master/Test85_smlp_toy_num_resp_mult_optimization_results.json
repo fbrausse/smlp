@@ -1,0 +1,36 @@
+{
+	"obj1": {
+		"x": 10.0,
+		"p1": 4.0,
+		"p2": 3.0,
+		"y1": 5.0,
+		"y2": 9.0,
+		"obj1_scaled": 0.5,
+		"obj1": 7.0,
+		"threshold_lo_scaled": 0.5,
+		"threshold_lo": 7.0,
+		"threshold_up_scaled": 0.53125,
+		"threshold_up": 7.125,
+		"max_in_data": 9.0,
+		"min_in_data": 5.0
+	},
+	"objv2": {
+		"x": 10.0,
+		"p1": 4.0,
+		"p2": 3.0,
+		"y1": 5.0,
+		"y2": 9.0,
+		"objv2_scaled": 0.0,
+		"objv2": 5.0,
+		"threshold_lo_scaled": 0.0,
+		"threshold_lo": 5.0,
+		"threshold_up_scaled": 0.03125,
+		"threshold_up": 5.125,
+		"max_in_data": 9.0,
+		"min_in_data": 5.0
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true",
+	"synthesis_feasible": "true"
+}
