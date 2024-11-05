@@ -18,6 +18,7 @@ from smlp_py.smlp_verify import SmlpVerify
 from smlp_py.smlp_query import SmlpQuery
 from smlp_py.smlp_optimize import SmlpOptimize
 from smlp_py.smlp_refine import SmlpRefine
+from smlp_py.smlp_correlations import SmlpCorrelations
 
 # Combining simulation results, optimization, uncertainty analysis, sequential experiments
 # https://foqus.readthedocs.io/en/3.1.0/chapt_intro/index.html
@@ -48,6 +49,7 @@ class SmlpFlows:
         self.optInst.set_model_terms_inst(self.modelTernaInst)
         self.optInst.set_smlp_query_inst(self.queryInst)
         self.refineInst = SmlpRefine()
+        self.correlInst = SmlpCorrelations()
         
         # get args
         args_dict = self.modelInst.model_params_dict | \
@@ -56,6 +58,7 @@ class SmlpFlows:
                     self.loggerInst.logger_params_dict | \
                     self.doeInst.doepy_params_dict | \
                     self.discrInst.discr_params_dict | \
+                    self.correlInst.corr_params_dict | \
                     self.psgInst.get_subgroup_hparam_default_dict() | \
                     self.specInst.spec_params_dict | \
                     self.modelTernaInst.model_term_params_dict | \
@@ -80,9 +83,9 @@ class SmlpFlows:
         self.specInst.set_logger(self.logger)
         self.frontierInst.set_logger(self.logger)
         self.optInst.set_logger(self.logger)
-        self.verifyInst.set_logger(self.logger)
         self.queryInst.set_logger(self.logger)
         self.refineInst.set_logger(self.logger)
+        self.correlInst.set_logger(self.logger)
         
         # set report and model files / file prefixes
         self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
@@ -98,6 +101,7 @@ class SmlpFlows:
         self.queryInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.queryInst.set_model_file_prefix(self.configInst.model_file_prefix)
         self.refineInst.set_report_file_prefix(self.configInst.report_file_prefix)
+        self.correlInst.set_report_file_prefix(self.configInst.report_file_prefix)
         
         # set spec file / spec and term params
         self.modelTernaInst.set_spec_file(self.args.spec)
@@ -118,7 +122,7 @@ class SmlpFlows:
         self.model_prediction_modes = ['train', 'predict']
         self.model_exploration_modes = ['optimize', 'synthesize', 'verify', 'query', 'optsyn', 'certify']
         self.data_exploration_modes = ['frontier']
-        self.supervised_modes = ['subgroups', 'discretize'] + self.model_prediction_modes + \
+        self.supervised_modes = ['subgroups', 'discretize', 'correlate'] + self.model_prediction_modes + \
             self.model_exploration_modes + self.data_exploration_modes
         
         # create and set tracer (to profile steps of system/model exploration algorithm)
@@ -254,6 +258,18 @@ class SmlpFlows:
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
         
+        if args.analytics_mode == 'correlate':
+            X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
+                feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+            self.correlInst.smlp_correlate(X, y, feat_names, resp_names, feat_names_dict, args.discretization_algo, 
+                args.discretization_bins, args.discretization_labels, args.discretization_type, 
+                args.discretize_numeric_features, args.continuous_correlation_estimators, 
+                args.mutual_information_method, args.correlations_and_mutual_information, 
+                args.mrmr_feat_count_for_correlation)
+            self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
+            self.logger.info('Executing run_smlp.py script: End')
+        
         if args.analytics_mode == 'subgroups':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
@@ -281,7 +297,7 @@ class SmlpFlows:
         # prepare data for model training
         if args.analytics_mode in self.model_prediction_modes + self.model_exploration_modes:
             #self.logger.info('Running SMLP in mode "{}": Start'.format(args.analytics_mode))
-            self.logger.info('PREPARE DATA FOR MODELING')    
+            self.logger.info('PREPARE DATA FOR MODELING')
             X, y, X_train, y_train, X_test, y_test, X_new, y_new, mm_scaler_feat, mm_scaler_resp, \
             levels_dict, model_features_dict, feat_names, resp_names = self.dataInst.process_data(
                 self.configInst.report_file_prefix, self.data_fname, self.new_data_fname, True, args.split_test, 

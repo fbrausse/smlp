@@ -3,15 +3,21 @@
 
 from mrmr import mrmr_classif, mrmr_regression
 import pandas as pd
+from smlp_py.smlp_utils import (pd_series_is_binary_int, pd_series_is_binary_categorical, pd_series_is_numeric, pd_series_is_int)
 
 class SmlpMrmr:
     def __init__(self):
         self._mrmr_logger = None
         self._MRMR_FEATURES_PRED = 15
+        self._MRMR_FEATURES_CORR = 15
         self.mrmr_params_dict = {
             'mrmr_feat_count_for_prediction': {'abbr':'mrmr_pred', 'default':self._MRMR_FEATURES_PRED, 'type':int,
-                'help':'Count of features selected by MRMR algorithm '  +
-                    '[default: {}]'.format(str(self._MRMR_FEATURES_PRED))}}
+                'help':'Count of features selected by MRMR algorithm for predictive models '  +
+                    '[default: {}]'.format(str(self._MRMR_FEATURES_PRED))},
+            'mrmr_feat_count_for_correlation': {'abbr':'mrmr_corr', 'default':self._MRMR_FEATURES_CORR, 'type':int,
+                'help':'Count of features selected by MRMR algorithm for correlation analysis '  +
+                    '[default: {}]'.format(str(self._MRMR_FEATURES_CORR))}
+        }
         
     # set logger from a caller script
     def set_logger(self, logger):
@@ -28,7 +34,6 @@ class SmlpMrmr:
     # list of selected features, the second element contains the feature scores; and the third
     # element is a matrix of mutual correlation scores between all pairs of input features. 
     def _mrmr_res_to_scores_df(self, mrmr_res):
-        #print('mrmr_res: ranking\n', mrmr_res[0], '\ntarget corr\n', mrmr_res[1], '\nfeat corr\n',  mrmr_res[2])
         mrmr_scores_df = pd.DataFrame(mrmr_res[1])
         mrmr_scores_df = mrmr_scores_df[mrmr_scores_df.index.isin(mrmr_res[0])]
         mrmr_scores_df.index.name = 'Feature'
@@ -39,14 +44,14 @@ class SmlpMrmr:
         return mrmr_scores_df
     
     # mrmr feature selection using mrmr-feature package, where y is a numeric variable (pandas.Series)
-    def mrmr_regres(self, X:pd.DataFrame, y:pd.Series, resp_name:str, K:int, relevance='f', redundancy='c', denominator='mean',
+    def _mrmr_regres(self, X:pd.DataFrame, y:pd.Series, K:int, relevance='f', redundancy='c', denominator='mean',
             cat_encoding='leave_one_out', only_same_domain=False, return_scores=True, n_jobs=-1, show_progress=False):
-        if K == 0 or X.shape[1] <= K:
+        if K == 0: # or X.shape[1] <= 1: #K:
             if K > 0:
-                self._mrmr_logger.info('Skipping MRMR feature selection for response ' + str(resp_name))
-            return X.columns.tolist()
+                self._mrmr_logger.info('Skipping MRMR feature selection for response ' + y.name)
+            return X.columns.tolist(), None
         
-        self._mrmr_logger.info('MRMR feature selection for response ' + str(resp_name) + ' : start')
+        self._mrmr_logger.info('MRMR feature selection for response ' + y.name + ' : start')
         
         ctg_features = self._get_df_categorical_feat_names(X); #print('ctg_features', ctg_features)
         mrmr_res = mrmr_regression(X, y, K, relevance, redundancy, denominator,
@@ -55,26 +60,48 @@ class SmlpMrmr:
         # log the selected features and their scores as a dataframe
         mrmr_scores_df = self._mrmr_res_to_scores_df(mrmr_res)
         self._mrmr_logger.info('MRMR selected feature scores (in the ranked order) for response ' + \
-                               str(resp_name) + ' :\n'+ str(mrmr_scores_df))
+                               str(y.name) + ' :\n'+ str(mrmr_scores_df))
         
-        self._mrmr_logger.info('MRMR feature selection for response ' + str(resp_name) + ' : end') 
-        return mrmr_res[0]
+        self._mrmr_logger.info('MRMR feature selection for response ' + y.name + ' : end') 
+        return mrmr_res[0], mrmr_scores_df
 
     # mrmr feature selection using mrmr-feature package, where y is a categorical variable (pandas.Series)
     # TODO !!!: not tested
-    def mrmr_class(self, X:pd.DataFrame, y:pd.Series, resp_name:str, K:int, relevance='f', 
+    def _mrmr_class(self, X:pd.DataFrame, y:pd.Series, K:int, relevance='f', 
             redundancy='c', denominator='mean', cat_encoding='leave_one_out', only_same_domain=False,
-            return_scores=False, n_jobs=-1, show_progress=False):
-        self._mrmr_logger.info('MRMR feature selection for response ' + str(resp_name) + ' : start')
+            return_scores=True, n_jobs=-1, show_progress=False):
+        if K == 0: # or X.shape[1] <= 1: #K:
+            if K > 0:
+                self._mrmr_logger.info('Skipping MRMR feature selection for response ' + y.name)
+            return X.columns.tolist(), None
+        
+        self._mrmr_logger.info('MRMR feature selection for response ' + y.name + ' : start')
         
         ctg_features = self._get_df_categorical_feat_names(X); #print('ctg_features', ctg_features)
         mrmr_res = mrmr_classif(X, y, K, relevance, redundancy, denominator,
-            ctg_features, cat_encoding, only_same_domain, return_scores, n_job, show_progress)
+            ctg_features, cat_encoding, only_same_domain, return_scores, n_jobs, show_progress)
         
         # log the selected features and their scores as a dataframe
         mrmr_scores_df = self._mrmr_res_to_scores_df(mrmr_res)
-        self._mrmr_logger.info('MRMR selected feature scores for response ' + \
-                               str(resp_name) + ' :\n'+ str(mrmr_scores_df))
+        self._mrmr_logger.info('MRMR selected feature scores (in the ranked order) for response ' + \
+                               y.name + ' :\n'+ str(mrmr_scores_df))
         
-        self._mrmr_logger.info('MRMR feature selection for response ' + str(resp_name) + ' : end')
-        return mrmr_res 
+        self._mrmr_logger.info('MRMR feature selection for response ' + y.name + ' : end')
+        return mrmr_res[0], mrmr_scores_df
+    
+    def smlp_mrmr(self, X:pd.DataFrame, y:pd.Series, #resp_type:str, #"numeric", 
+            feat_cnt:int):
+        #print('smlp_mrmr: X\n', X, '\ny\n', y, 'feat_cnt', feat_cnt)
+        if pd_series_is_binary_int(y) or pd_series_is_binary_categorical(y):
+            mrmr_res_pair = self._mrmr_class(X, y, feat_cnt, relevance='f', redundancy='c', 
+                denominator='mean', cat_encoding='leave_one_out', only_same_domain=False,
+                return_scores=True, n_jobs=-1, show_progress=False)
+        elif pd_series_is_numeric(y) or (pd_series_is_int(y) and not pd_series_is_binary_int(y)):
+            mrmr_res_pair = self._mrmr_regres(X, y, feat_cnt, relevance='f', redundancy='c', 
+                denominator='mean', cat_encoding='leave_one_out', only_same_domain=False, 
+                return_scores=True, n_jobs=-1, show_progress=False)
+        else:
+            raise Exception('Response of unsupported type ' + y.dtype.name + ' in function smlp_mrmr')
+        #print('mrmr_res_pair\n', mrmr_res_pair)
+        return mrmr_res_pair
+            

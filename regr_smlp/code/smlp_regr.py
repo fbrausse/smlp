@@ -127,6 +127,12 @@ def mode_identifier(switches):
         elif mode == 'p':
             return 'prediction'
         elif mode == 'f':
+            if mode_prefix3.startswith('fea'):
+                return 'features'
+            elif mode_prefix3 == 'fro':
+                return 'frontier'
+            else:
+                assert False
             return 'features'
         elif mode == 'o':
             if mode_prefix4.startswith('opti'):
@@ -141,7 +147,13 @@ def mode_identifier(switches):
         elif mode == 'q':
             return 'query'
         elif mode == 'c':
-            return 'certify'
+            if mode_prefix4 == "cert":
+                return 'certify'
+            elif mode_prefix4 == "corr":
+                return 'correlate'
+            else:
+                print('unknown mode prefix', mode_prefix4);
+                assert False
         elif mode == 'l':
             return 'level'
         elif mode == 'r':
@@ -452,10 +464,12 @@ def main():
         start = t_range[0]
         end = t_range[1]
         t_list = [str(i) for i in range(int(start), int(end) + 1)]
+        #print('start', start, 'end', end, 't_list', t_list)
         with open(tests_data, 'r') as rFile:
             csvreader = reader(rFile, delimiter=',')
             next(csvreader, None)
             for row in csvreader:
+                #print('row', row)
                 if row[0] in t_list:
                     tests_list.append(row)
                     tests_queue.put(row)
@@ -627,7 +641,7 @@ def main():
                 print("DEBUG 3")
                 print('execute_test', execute_test)
                 print('test_errors', test_errors)
-                
+
             if execute_test:
                 if use_config_file:
                     test_switches = get_switches_with_conf(test_switches, models_path)
@@ -644,10 +658,10 @@ def main():
                 if test_type == 'help':
                     command += ' {args} > {output}'.format(args=test_switches, output=test_out)
                 else:
-                    if test_type in ['optimize', 'verify', 'query', 'optsyn', 'certify', 'synthesize']:
+                    if test_type in ['optimize', 'verify', 'query', 'optsyn', 'certify', 'synthesize', 'frontier']:
                         # add relative path to spec file name
                         spec_fn = spec_identifier(test_switches)# + '.spec';
-                        #print('spec_fn', spec_fn); print('specs_path', specs_path)
+                        print('spec_fn', spec_fn); print('specs_path', specs_path)
                         if spec_fn is not None:
                             spec_file = os.path.join(specs_path, spec_fn)
                             test_switches = test_switches.replace(spec_fn, spec_file)

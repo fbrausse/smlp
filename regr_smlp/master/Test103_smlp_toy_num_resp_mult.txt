@@ -90,9 +90,25 @@ smlp_logger - INFO - training data after processing responses
 9   12.0  2.0   7   5   5
 10  10.0  3.0   7   9   5
 
-smlp_logger - INFO - Skipping MRMR feature selection for response y1
+smlp_logger - INFO - MRMR feature selection for response y1 : start
 
-smlp_logger - INFO - Skipping MRMR feature selection for response y2
+smlp_logger - INFO - MRMR selected feature scores (in the ranked order) for response y1 :
+  Feature     Score
+1      p1  1.115702
+2      p2  0.944056
+0       x  0.010357
+
+smlp_logger - INFO - MRMR feature selection for response y1 : end
+
+smlp_logger - INFO - MRMR feature selection for response y2 : start
+
+smlp_logger - INFO - MRMR selected feature scores (in the ranked order) for response y2 :
+  Feature     Score
+2      p2  4.950294
+1      p1  1.115702
+0       x  0.010357
+
+smlp_logger - INFO - MRMR feature selection for response y2 : end
 
 smlp_logger - INFO - training data after encoding levels of categorical features with integers
        x   p1  p2  y1  y2

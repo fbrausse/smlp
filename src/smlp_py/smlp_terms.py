@@ -1316,9 +1316,9 @@ class PolyTerms: #(SmlpTerms):
 # Method to generate smlp term from a Tensorflow Keras model built using Sequential or Functional API 
 # Two encodings of tf Keras models to terms are supported:
 # 1. Layered Encoding: For neural networks, the layered encoding creates a formula for each
-# internal node (neuron) of the network. This encoding exposes the internal structure
-# of the neural network to the solver, allowing each neuron's computation to be
-# represented as a separate logical formula.
+# internal node (neuron) of the network, with the nodes in previous layer as the inputs. 
+# This encoding exposes the internal structure of the neural network to the solver, allowing 
+# each neuron's computation to be represented as a separate logical formula.
 #  
 # 2. Nested Encoding: The nested encoding for neural networks builds a monolithic term
 # for each response of the network. This term captures the entire computation from
@@ -1421,7 +1421,6 @@ class NNKerasTerms: #(SmlpTerms):
             model_type = 'functional'
         else:
             raise Exception('Unsupported Keras NN type (neither sequential nor functional)')
-            assert False
         return model_type
     
     # Determine whether NN Keras model layer is an input layer.
@@ -1767,8 +1766,6 @@ class ModelTerms(ScalerTerms):
         # constraints 1 <= x and x <= 5. Note this applies to (free) inputs, not knobs (control inputs).
         self._encode_input_range_as_disjunction = False
         
-        self._SPEC_DOMAIN_RANGE_TAG = 'range'
-        self._SPEC_DOMAIN_INTERVAL_TAG = 'interval'
         self._DEF_COMPRESS_RULES = True
         self._DEF_SIMPLIFY_TERMS = False
         self._DEF_TREE_ENCODING = 'nested' #'flat' #   
@@ -1783,12 +1780,17 @@ class ModelTerms(ScalerTerms):
                 'help':'Should terms be simplified using before building solver instance in model exploration modes? ' +
                 '[default {}]'.format(str(self._DEF_SIMPLIFY_TERMS))},
             'tree_encoding': {'abbr':'tree_encoding', 'default':str(self._DEF_TREE_ENCODING), 'type':str,
-                'help':'Method to encode tree model to solvers. Flat encoding cretes a formula from ' +
-                'each branch of a tree, while nested encoding builds formula from branches using nested ' +
-                'if-then-else (ite) expressions [default {}]'.format(str(self._DEF_TREE_ENCODING))},
+                'help':'Method to encode tree model to solvers. Can be "flat", "nested", or "branched". ' +
+                'The flat encoding creates a formula from ' +
+                'each branch of a tree, while the nested encoding builds formula from branches using nested ' +
+                'if-then-else (ite) expressions. The branched encoding also uses ite expressions and ' +
+                'in addition the branch conditions in ite expressions are shared across all responses ' +
+                '[default {}]'.format(str(self._DEF_TREE_ENCODING))},
             'nnet_encoding': {'abbr':'nnet_encoding', 'default':str(self._DEF_NNET_ENCODING), 'type':str,
-                'help':'Method to encode Keras Neural Nets model to solvers. Layered encoding cretea a formula from ' +
-                'each internal node of the NN, while nested encoding builds a monolithic term for each response ' +
+                'help':'Method to encode Keras Neural Nets model to solvers. Can be "layered" or "nested". ' +
+                'The layered encoding creates a ' +
+                'formula from each internal node of the NN with nodes in the previous layer as inputs, ' +
+                'while nested encoding builds a monolithic term for each response ' +
                 'representing the function for that response [default {}]'.format(str(self._DEF_NNET_ENCODING))},
             #'cache_terms': {'abbr':'cache_terms', 'default':str(self._DEF_CACHE_TERMS), 'type':str_to_bool,
             #    'help':'Should terms be cached along building terms and formulas in model exploration modes? ' +
@@ -2112,7 +2114,7 @@ class ModelTerms(ScalerTerms):
     # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
     # are ignored as only variables which occur as keys in radii_dict are used for building theta.
     def compute_stability_formula_theta(self, cex, delta_dict:dict, radii_dict, universal=True): 
-        #print('generate stability constraint theta')
+        #print('generate stability constraint theta: cex', cex); print('radii_dict', radii_dict, 'delta_dict', delta_dict)
         if delta_dict is not None:
             delta_abs = delta_dict['delta_abs']
             delta_rel = delta_dict['delta_rel']
@@ -2171,8 +2173,10 @@ class ModelTerms(ScalerTerms):
                 else: # radius for excluding a candidate -- cex holds values of the candidate 
                     rad_term = rad_term * abs(cex[var])
             elif delta_dict is not None: 
-                raise exception('When delta dictionary is provided, either absolute or relative or delta must be specified') 
-            theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
+                raise exception('When delta dictionary is provided, either absolute or relative radius must be specified') 
+            # there might be variables in the spec file that are not part of the model and therefore cannot occur in cex, thus the if condition below.
+            if var in cex:
+                theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
         #print('theta_form', theta_form)
         return theta_form
     
@@ -2255,7 +2259,9 @@ class ModelTerms(ScalerTerms):
                 rng = self.smlp_var(v) <= self.smlp_cnst(mx)
                 alpha_or_eta_form = self.smlp_and(alpha_or_eta_form, rng)
             else:
-                assert False
+                # no constraint is required in this case
+                pass
+        
         return alpha_or_eta_form
     
     # alph_expr is alpha constraint specified in command line. If it is not None 
@@ -2311,15 +2317,20 @@ class ModelTerms(ScalerTerms):
                     ' in knob constraints (eta) are not part of the model')
             return self.ast_expr_to_term(eta_expr)
 
+    # Declare variable types and also ranges when both lower and upper bounds are finite (not inf or -inf).
+    # Adding variable ranges here is not strictly required since they are added as part of alpha constraints
+    # in function self.compute_input_ranges_formula_alpha_eta()
     def var_domain(self, var, spec_domain_dict):
-        interval = spec_domain_dict[var][self._SPEC_DOMAIN_INTERVAL_TAG]; #self._specInst.get_spec_interval_tag
+        #print('var', var, 'spec_domain_dict', spec_domain_dict)
+        interval = spec_domain_dict[var][self._specInst.get_spec_domain_interval_tag]; #print('interval', interval)
         if interval is None:
             interval_has_none = True
         elif interval[0] is None or interval[1] is None:
             interval_has_none = True
         else:
             interval_has_none = False
-        if spec_domain_dict[var][self._SPEC_DOMAIN_RANGE_TAG] == self._specInst.get_spec_integer_tag: # self._specInst.get_spec_range_tag
+                    
+        if spec_domain_dict[var][self._specInst.get_spec_domain_type_tag] == self._specInst.get_spec_integer_tag:
             if self._declare_integer_as_real_with_grid and not interval_has_none:
                 var_component = smlp.component(self.smlp_real, grid=list(range(interval[0], interval[1]+1)))
                 assert False
@@ -2327,13 +2338,13 @@ class ModelTerms(ScalerTerms):
                 var_component = smlp.component(self.smlp_integer)
             else:
                 var_component = smlp.component(self.smlp_integer, 
-                    interval=spec_domain_dict[var][self._SPEC_DOMAIN_INTERVAL_TAG]) #self._specInst.get_spec_interval_tag
-        elif spec_domain_dict[var][self._SPEC_DOMAIN_RANGE_TAG] == self._specInst.get_spec_real_tag: #self._specInst.get_spec_range_tag
+                    interval=spec_domain_dict[var][self._specInst.get_spec_domain_interval_tag])
+        elif spec_domain_dict[var][self._specInst.get_spec_domain_type_tag] == self._specInst.get_spec_real_tag:
             if self._declare_domain_interface_only or interval_has_none:
                 var_component = smlp.component(self.smlp_real)
             else:
                 var_component = smlp.component(self.smlp_real, 
-                    interval=spec_domain_dict[var][self._SPEC_DOMAIN_INTERVAL_TAG]) #self._specInst.get_spec_interval_tag
+                    interval=spec_domain_dict[var][self._specInst.get_spec_domain_interval_tag])
         return var_component
     
     # this function builds terms and formulas for constraints, system description and the models

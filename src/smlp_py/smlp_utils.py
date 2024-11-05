@@ -5,10 +5,11 @@
 import os, datetime, sys, json
 from fractions import Fraction
 from collections import OrderedDict
-from pandas import DataFrame, concat
+from pandas import DataFrame, concat, Series
 from pandas.api.types import is_object_dtype
 from sklearn.preprocessing import MinMaxScaler
 import numpy as np
+import pandas as pd
 import ast
 import builtins
 
@@ -231,15 +232,121 @@ def list_remove_duplicates(lst):
 def lists_union_order_preserving_without_duplicates(list_of_lists):
     return list_remove_duplicates(lists_union(list_of_lists))
 
-# determaine whether pandas dataframe column is numeric using numpy's mp.number type
-def pd_df_col_is_numeric(df, col_name):
-    res = np.issubdtype(df[col_name].dtype, np.number)
-    if res:
-        assert df[col_name].dtype in [int, float]
+def pd_series_is_numeric(column:Series):
+    #assert column.dtype in [int , float , object , datetime , bool] 
+    res = column.dtype in [int, float]
+    assert res == (column.dtype.name in ['int64', 'float64'])
+    # issubdtype may exit with error if say column of type category (ordered or unordered) 
+    # is passed to it as argument. Hence we use try/except here.
+    try:
+        res2 = np.issubdtype(column.dtype, np.number)
+    except:
+        res2 = None
+    if res2 is not None:
+        assert res2 == res
+    return res 
+
+def pd_series_is_binary_numeric(column:Series):
+    return pd_series_is_numeric(column) and column.nunique() <= 2
+
+# categorical column of typ estring/object
+def pd_series_is_object(column:Series):
+    #assert column.dtype in [int , float , object , datetime , bool] 
+    res = is_object_dtype(column)
+    assert is_object_dtype(column) == (column.dtype.name == 'object')
     return res
 
-def pd_df_col_is_categorical(df, col_name):
-    return is_object_dtype(df[col_name])
+# categorical column of type 'category'
+def pd_series_is_category(column:Series):
+    #assert column.dtype in [int , float , object , datetime , bool] 
+    res = column.dtype.name == 'category'
+    return res
+
+# categorical column of type 'category' that is also ordered
+def pd_series_is_ordered_category(column:Series):
+    #assert column.dtype in [int , float , object , datetime , bool] 
+    res = pd_series_is_category(column) and column.cat.ordered
+    return res
+
+# categorical column of type string/object or category (the latter can be ordered or not ordered).
+def pd_series_is_categorical(column:Series):
+    return pd_series_is_object(column) or pd_series_is_category(column) or pd_series_is_ordered_category(column)
+
+# def pd_series_is_ordered_categorical(column:Series):
+#     print('is_object_dtype', is_object_dtype(column))
+#     print('dtype name', column.dtype.name)
+#     return is_object_dtype(column) and column.cat.ordered
+
+# categorical feature with at most two levels
+def pd_series_is_binary_categorical(column:Series):
+    return pd_series_is_categorical(column) and column.nunique() <= 2
+
+# check for integer type for a series object (e.g., for data frame column)
+def pd_series_is_int(column:Series):
+    # issubdtype may exit with error if say column of type category (ordered or unordered) 
+    # is passed to it as argument. Hence we use try/except here.
+    res = column.dtype == int
+    assert res == (column.dtype.name == 'int64')
+    try:
+        res2 = np.issubdtype(column.dtype, np.integer)
+    except:
+        res2 = None
+    if res2 is not None:
+        assert res == res2
+    return res
+
+def pd_series_is_binary_int(column:Series):
+    return pd_series_is_int(column) and column.nunique() <= 2
+
+def pd_df_is_empty(df:DataFrame):
+    return df is None or df.shape[0] == 0 or df.shape[1] == 0 
+
+# determaine whether pandas dataframe column is numeric using numpy's mp.number type
+def pd_df_col_is_numeric(df:DataFrame, col_name:str):
+    return pd_series_is_numeric(df[col_name])
+
+def pd_df_col_is_categorical(df:DataFrame, col_name:str):
+    return pd_series_is_categorical(df[col_name])
+
+
+def pd_df_split_numeric_categorical(df):
+    # Select numeric columns
+    numeric_df = df.select_dtypes(include=['number'])
+    
+    # Select categorical columns directly, including both ordered and unordered
+    categorical_df = df.select_dtypes(include=['category', 'object'])
+    
+    # Check that each column in the input DataFrame is in one of the two output DataFrames
+    all_columns = set(numeric_df.columns) | set(categorical_df.columns)
+    if set(df.columns) != all_columns:
+        # If there are columns that are neither numeric nor categorical, raise an exception
+        raise Exception("Input DataFrame contains columns that are neither numeric nor categorical.")
+    
+    return numeric_df, categorical_df
+
+def pd_df_subset_numeric(df):
+    # Select numeric columns
+    numeric_df = df.select_dtypes(include=['number'])
+    for col in numeric_df.columns.tolist():
+        assert pd_series_is_numeric(numeric_df[col])
+    return numeric_df
+
+def pd_df_subset_categorical(df):
+    # Select numeric columns
+    categorical_df = df.select_dtypes(include=['category', 'object'])
+    for col in categorical_df.columns.tolist():
+        assert pd_series_is_categorical(categorical_df[col])
+    return categorical_df
+
+def pd_df_convert_numeric_to_categorical(df):
+    # Create a copy of the DataFrame to avoid modifying the original one
+    categorical_df = df.copy()
+    
+    # Convert all columns to 'category' data type
+    for column in categorical_df.columns:
+        categorical_df[column] = categorical_df[column].astype('category')
+    
+    return categorical_df
 
 # given an algo name like dt and the hyper parameter dictionary param_dict  
 # this function returns a modified dictionary obtained from param_dictby by 
@@ -307,6 +414,60 @@ def cast_type(obj, tp):
             raise Exception('Casting of ' + str(obj) + ' to type ' + str(tp) + ' failed')
     return res
 
+# This function is used for casting pandas columns to int, float, object, or (ordered or unordered) category types.
+# The tp_target argument (th etarget type) should be one of numeric, category, ordered, or object/string/factor;
+# *the latter two types string and factor correspond to python's object type).
+def cast_series_type(obj:Series, tp_target):
+    if tp_target == 'ordered':
+        if pd_series_is_numeric(obj):
+            #res = obj.astype(str).astype('category').factorize()[0]
+            #res = obj.astype(str).factorize()[0]
+            res = pd.Categorical(obj, categories=obj.unique().tolist().sort(), ordered=True)
+        elif pd_series_is_object(obj):
+            #obj.astype('category').factorize()[0]
+            res = pd.Categorical(obj, categories=obj.unique().tolist().sort(), ordered=True) 
+        elif pd_series_is_category(obj):
+            res = pd.Categorical(obj, categories=obj.unique().tolist().sort(), ordered=True) #obj.factorize()[0]
+        else:
+            raise Exception('Unsupported source type ' + str(obj.dtype.name) + ' in function cast_series_type')
+        res = Series(res)
+        assert pd_series_is_ordered_category(res)
+    elif tp_target == 'numeric':
+        res = obj.astype(float)
+        assert pd_series_is_numeric(res)
+        #res = obj.to_numeric()
+    elif tp_target in ['string', 'factor', 'object']:
+        res = obj.astype(str)
+        assert pd_series_is_object(res)
+    else:
+        raise Exception('Unsupported target type ' + str(tp_target) + ' in function cast_series_type')
+    
+    if res.isnull().values.any(): #all(np.isnan(res)) or res is None:
+        raise Exception('Casting of series of type ' + str(obj.dtype.name) + ' to type ' + str(tp_target) + ' failed')
+    return res
+
+#     tp_source = obj.dtype; #print('tp_source', tp_source, tp_source.name)
+#     print('obj\n', obj, '\nsource tp', tp_source, 'type(obj', type(obj), 'target tp', tp_target)
+#     if tp_target == "ordered": # TODOD !!!!!!! need ordered
+#         if tp_source in [int, float]:
+#             #print('res\n', obj.astype(str).astype('category'));
+#             return obj.astype(str).astype('category')
+#         elif tp_source == str:
+#             return obj.astype('category')
+#         elif tp_source == category:
+#             return obj
+#         res = int(obj)
+#     elif tp_target == "numeric": #float:
+#         res = obj.astype(float) #float(obj)
+#     elif tp_target == str:
+#         res = str(obj)
+#     else:
+#         raise Exception('Unsupported type ' + str(tp_target) + ' in function cast_type')
+#     #print('res', type(res), res)
+#     if tp_target in [int, float]:
+#         if np.isnan(res) or res is None:
+#             raise Exception('Casting of ' + str(obj) + ' to type ' + str(tp_target) + ' failed')
+#     return res
 
 # This function is copied from 
 # https://stackoverflow.com/questions/68390248/ast-get-the-list-of-only-the-variable-names-in-an-expression

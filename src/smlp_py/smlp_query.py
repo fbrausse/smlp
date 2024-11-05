@@ -181,7 +181,7 @@ class SmlpQuery:
         return coex
     
     # This function is called from validate_witness() on already built model terms and formulas for constraints.
-    # It check stability of witness given as witn_dict, which in case universal == True is a value assignements to knobs,
+    # It checks stability of witness given as witn_dict, which in case universal == True is a value assignements to knobs,
     # and in case universal = False is a value assignement to both knobs as well as inputs. 
     def validate_witness_smt(self, universal:bool, model_full_term_dict:dict, quer_name:str, quer_expr:str, quer:smlp.form2, witn_dict:dict,
             domain:smlp.domain, eta:smlp.form2, alpha:smlp.form2, theta_radii_dict:dict, #beta:smlp.form2, 

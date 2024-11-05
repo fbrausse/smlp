@@ -5,6 +5,47 @@ import numpy as np
 import pandas as pd
 from smlp_py.smlp_spec import SmlpSpec
 
+'''
+Pareto frontier selection with respect to maximizing objectives, directly from data, without training models.
+The algorithm works as follows:
+1. drop from data all samples that do not satisfy alpha constraints. TODO !!! could also drop here rows
+   that do not satisfy eta constraints -- while eta domain constraints are taken into account at step 3, eta
+   grid constraints are never looked at. Maybe drop here also the samples that do not satisfy beta constraints?
+2. compute the objectives' columns, say objv1, objv2, based on the spec that defines the objectives' expressions.
+3. compute columns min-objectives columns min_onjv1, min_objv2 that will hold, in each row, the minimum values of 
+respective objectives in the subset of data that falls in the stability region of the configuration defined by the
+values of knobs in that row. This step is performed as follows:
+    a. iterate over all rows in the data. In each step of the iteration, for a given row, the algorithm computes 
+       values of min-objectives min_onjv1, min_obkv2 for that row, as follows:
+       1. compute the stability region of the configuration of knob values in that row using the stability radii, 
+          where stability intervals for knobs are intersected with respective domains (intervals) defined in spec file, 
+          and for inputs the stability intervals are chosen based on their domains (intervals) as defined in spec file.
+          At this point, the stability region (the condition/formula that define it) satisfies alpha and eta domain 
+          constraints, and we further intersect this condition (take conjunction) with global alpha constraints/
+          Note that doe to intersecting the stability regions of knobs with respective alpha and eta constraints, 
+          the stability region might become empty (false predicate that cannot select any row in data).
+       2. Apply the stability region to entire data to compute a subset of data points that fall within the stability
+          region (this is for the given row in data, as part of iterations over all rows in item a).
+       3. Compute minimum values of the objectives' columns for that subset of data, and assign this values as the 
+          values of the respective min-objective columns min_onjv1, min_objv2, in current row. Note that the subset of
+          data used to compute the min values is empty, the min values should be inf (positive infinity), while python
+          returns nan values instead, and these values will be added to fill in min-objective columns in current row.
+    b. after completing iterating all rows, the min-objective columns are all assigned values, and we drop from data
+       all samples where at least one min-objective has value nan. In fact, in such rows values of all min-objective 
+       columns must be nan, and this check is imposed as assertion in the implementation.
+4. At this point we have dataset with min-objective columns and their values are all valid values (not nan). We drop
+   from this dataset all samples that do not satisfy the beta constraints (the synthesis requirements), because
+   these data points cannot be part of pareto optimal frontier (these samples do not represent a valid/legal 
+   configuration of knobs).
+5. The algorithm now selects paeto frontier from this data, with respect to maximizing the min-objective column
+   values. This is done again by iterating over all rows, and for each row checking whether there is another row
+   that dominates the current row (all values of min-objective columns in a dominating row are equal or higher than the
+   values in the current row. If such other row exists, the current row is not added to the set of pareto frontier samples.
+
+'''
+
+
+
 # functions to compute pareto frontier directly from data
 class SmlpFrontier:
     def __init__(self):
@@ -20,8 +61,47 @@ class SmlpFrontier:
     
     def set_spec_inst(self, spec_inst):
         self._specInst = spec_inst
+
+    '''
+    # Function to replace None with the smallest value based on the column's dtype.
+    # This code snippet first determines the dtypes for each column, taking into account that if a column 
+    # contains None and is numeric, it should be treated as a float. Then, it iterates over the columns and
+    # replaces None with the smallest possible integer for integer columns and with -np.inf for non-integer columns. 
+    # Finally, it converts the object array into a structured array with the correct dtypes for each column.
+    # Please note that this code assumes that the lower_bounds array may contain columns of different dtypes, 
+    # and it handles integer and non-integer columns differently. If you know in advance which columns are integers, 
+    # you can optimize the code by directly replacing None values in those specific columns.
+    def replace_none_with_min_value(self, lower_bounds, lower):
+        # Determine the dtypes for each column
+        dtypes = [col.astype(float).dtype if np.issubdtype(col.dtype, np.number) and np.any(pd.isnull(col)) else col.dtype for col in lower_bounds.T]
+        #print('lower_bounds dtypes', dtypes)
+        # Replace None with the smallest value for the dtype
+        for i, dtype in enumerate(dtypes):
+            if np.issubdtype(dtype, np.integer):
+                # Get the smallest integer for the dtype
+                if lower:
+                    min_int = np.iinfo(dtype).min
+                else:
+                    min_int = np.iinfo(dtype).max
+                # Replace None with the smallest integer
+                lower_bounds[:, i] = np.where(lower_bounds[:, i] == None, min_int, lower_bounds[:, i])
+            else:
+                # For non-integer columns, replace None with -np.inf
+                if lower:
+                    lower_bounds[:, i] = np.where(lower_bounds[:, i] == None, -np.inf, lower_bounds[:, i])
+                else:
+                    lower_bounds[:, i] = np.where(lower_bounds[:, i] == None, np.inf, lower_bounds[:, i])
+        return lower_bounds
+#         # Convert the object array to a structured array with the correct dtypes
+#         structured_array = np.empty(lower_bounds.shape[0], dtype=[('f{}'.format(i), dt) for i, dt in enumerate(dtypes)])
+#         for i in range(len(dtypes)):
+#             structured_array['f{}'.format(i)] = lower_bounds[:, i]
+
+#         return structured_array
+    '''
     
-    # Function local_minimum() computes stable minimum of reponse columns resp_names for each row.
+    # This is an efficient implimentation that is not using df.iterrows()
+    # Function local_minimum() computes stable minimum of response columns resp_names for each row.
     # It performs the following steps:
     # 1. Iterate over each row of the DataFrame df.
     # 2. For each row, use the values in the feat_names columns and the feat_radii provided by func_intervals to compute the intervals (l[i], u[i]).
@@ -38,51 +118,37 @@ class SmlpFrontier:
     #     return [1, 1]  # Fixed radii for simplicity
     # df_min = local_minimum(df, feat_names, resp_names, func_intervals)
     # print(df_min)
-    def local_minimum(self, df, feat_names, resp_names, func_intervals):
-        # Initialize df_min with the same shape as df and copy feat_names columns
-        df_min = pd.DataFrame(index=df.index, columns=df.columns)
-        df_min[feat_names] = df[feat_names]
-        #print('feat_names', feat_names, 'resp_names', resp_names)
-        # Iterate over each row of the DataFrame
-        for index, row in df.iterrows():
-            # Get the feature values and radii for the current row
-            #print('row[feat_names]', row[feat_names]); print(dict(row[feat_names]))
-            #feat_vals = row[feat_names].values; print('feat_vals', feat_vals)
-            intervals = func_intervals(dict(row[feat_names])); #print('intervals', intervals)
-            
-            # Create a boolean mask for rows within the intervals
-            mask = pd.Series([True] * len(df))
-            #for feat_name, lower, upper in zip(feat_names, l, u):
-            #    mask &= (df[feat_name] >= lower) & (df[feat_name] <= upper)
-            for feat_name in feat_names:
-                mask &= (df[feat_name] >= intervals[feat_name][0]) & (df[feat_name] <= intervals[feat_name][1])
-            
-            # Compute the minimum values for resp_names columns within the mask
-            min_values = df[mask][resp_names].min()
-
-            # Assign the minimum values to the corresponding resp_names columns in df_min
-            df_min.loc[index, resp_names] = min_values
-
-        return df_min
-
-    # This is an efficient implimentation that is not using df.iterrows()
     def local_minimum(self, df, feat_names, resp_names, objv_names, func_intervals):
         #print('local_minimum: df', df.shape)
         # Initialize df_min with the same shape as df and copy feat_names columns
         df_min = pd.DataFrame(index=df.index, columns=df.columns)
         df_min[feat_names] = df[feat_names]; #print('df_min with features\n', df_min)
-        df_min[resp_names] = df[resp_names]; #print('df_min', df_min.columns.tolist(), df_min.shape)
+        df_min[resp_names] = df[resp_names]; #print('df_min', df_min.columns.tolist(), df_min.shape); print(df_min)
         
         # Precompute all intervals for all rows
+        #for _, row in df.iterrows():
+        #    print('row\n', row, '\ninterval\n', self._specInst.get_spec_stability_intervals_dict(dict(row[feat_names]), True))
         intervals_list = [func_intervals(dict(row[feat_names])) for _, row in df.iterrows()]
-        #print('intervals_list', len(intervals_list)); 
-        lower_bounds = np.array([[interval[feat_name][0] for feat_name in feat_names] for interval in intervals_list])
+        #print('intervals_list', len(intervals_list), intervals_list); 
+        #for col_dict in intervals_list:
+        #    print("== inervals: ", col_dict.values())
+        
+        lower_bounds = np.array([[interval[feat_name][0] for feat_name in feat_names] for interval in intervals_list]); 
         upper_bounds = np.array([[interval[feat_name][1] for feat_name in feat_names] for interval in intervals_list])
+        #print('lower_bounds', lower_bounds.shape, '\n', lower_bounds); print('upper_bounds', upper_bounds.shape, '\n', upper_bounds)
+
+        '''
         # None as a lower bound for interval represents -inf and as upper bound represents as inf; None is allowed in
         # specifying ranges of inputs and knobs in the spec file, thus we update lower_bounds and upper_bounds as follows:
-        lower_bounds[lower_bounds == None] = (-np.inf); #print('lower_bounds', lower_bounds.shape, '\n', lower_bounds)
-        upper_bounds[upper_bounds == None] = np.inf; #print('upper_bounds', upper_bounds.shape, '\n', upper_bounds)
-        
+        if True or any(lower_bounds[lower_bounds == None]):
+            lower_bounds = self.replace_none_with_min_value(lower_bounds, True)
+            #lower_bounds[lower_bounds == None] = (-np.inf); 
+            #print('lower_bounds', lower_bounds.shape, '\n', lower_bounds)
+        if True or any(upper_bounds[upper_bounds == None]):   
+            upper_bounds = self.replace_none_with_min_value(upper_bounds, False)
+            #upper_bounds[upper_bounds == None] = np.inf; 
+            #print('upper_bounds', upper_bounds.shape, '\n', upper_bounds)
+        '''
         # Compute the minimum values for objv_names columns within the intervals
         for i, (lower, upper) in zip(df.index, zip(lower_bounds, upper_bounds)): #enumerate(zip(lower_bounds, upper_bounds)):
             #print('i, (lower, upper)', i, (lower, upper))
@@ -91,11 +157,13 @@ class SmlpFrontier:
             for j, feat_name in enumerate(feat_names):
                 mask &= (df[feat_name] >= lower[j]) & (df[feat_name] <= upper[j])
             
+            #print('df\n', df); print('mask\n', mask); print('objv_names', objv_names)
             # Compute the minimum values for objv_names columns within the mask
             min_values = df.loc[mask, objv_names].min(); #print('min_values\n', min_values)
             df_min.loc[i, objv_names] = min_values; 
             #print('df_min i\n', df_min)
-        #print('df_min\n', df_min)
+        #print('df_min (1)\n', df_min)
+        df_min = self.drop_rows_with_nan_in_columns(df_min, objv_names);  #print('df_min (2)\n', df_min)
         return df_min
 
     
@@ -250,10 +318,34 @@ class SmlpFrontier:
         for name, expr in zip(objv_names, objv_exprs):
             # Evaluate the expression in the context of the DataFrame
             objv_df[name] = objv_df.eval(expr)
-
         return objv_df
         
-        
+    import pandas as pd
+
+    def drop_rows_with_nan_in_columns(self, df, objv_names):
+        """
+        Drops rows where at least one of the columns in objv_names has a NaN value.
+        Asserts that in every row that is dropped, all the columns in objv_names have NaN values.
+
+        Parameters:
+        df (pd.DataFrame): The DataFrame from which to drop rows.
+        objv_names (list): List of column names to check for NaN values.
+
+        Returns:
+        pd.DataFrame: The DataFrame with the specified rows dropped.
+        """
+        # Identify rows where at least one of the columns in objv_names has a NaN value
+        rows_with_nan = df[objv_names].isna().any(axis=1)
+
+        # Assert that in every row that is dropped, all the columns in objv_names have NaN values
+        rows_to_drop = df[objv_names][rows_with_nan]
+        assert rows_to_drop.isna().all(axis=1).all(), "Not all columns in objv_names have NaN values in the rows to be dropped."
+
+        # Drop the rows where at least one of the columns in objv_names has a NaN value
+        df_cleaned = df[~rows_with_nan].copy()
+
+        return df_cleaned
+    
     # pareto subset selection directly from data, without building a model.
     def select_pareto_frontier(self, X:pd.DataFrame, y:pd.DataFrame, model_features_dict:dict, 
             feat_names:list[str], resp_names:list[str], 
@@ -265,6 +357,8 @@ class SmlpFrontier:
         assert objv_names is not None and objv_exprs is not None
         assert len(objv_names) == len(objv_exprs)
         
+        pareto_frontier_csv_file = self.report_file_prefix + '_pareto_frontier.csv'
+        
         #print('X', X.shape, 'y', y.shape)
         df = pd.concat([X, y], axis=1); #print('df', df.shape, df.columns.tolist())
         df_shape = df.shape; #print('df shape index', df_shape)
@@ -274,20 +368,31 @@ class SmlpFrontier:
         df_alpha_shape = df_alpha.shape; #print('df_alpha shape index', df_alpha_shape); 
         #print(list(df_alpha.index))
         assert df_alpha_shape[0] <= df_shape[0]; assert df_alpha_shape[1] == df_shape[1]
-        
+        #print(df_alpha, objv_names, objv_exprs)
         # Step 2: Compute objectives columns and then min-objectives columns by taking into account stability radii
         df_objv = self.compute_objectives_columns(df_alpha, objv_names, objv_exprs); #print('df_objv', df_objv.shape, df_objv.columns.tolist()); print(df_objv)
-        df_stable_min = self.local_minimum(df_objv, feat_names, resp_names, objv_names, lambda knob_dict: self._specInst.get_spec_stability_intervals_dict(knob_dict, True))
+        df_stable_min = self.local_minimum(df_objv, feat_names, resp_names, objv_names, lambda knob_dict: 
+            self._specInst.get_spec_stability_intervals_dict(knob_dict, True))
         df_stable_min_shape = df_stable_min.shape; #print('df_stable_min', df_stable_min.shape, df_stable_min.columns.tolist()); print(df_stable_min)
+        if df_stable_min_shape[0] == 0:
+            self._frontier_logger.warning('Input data does not have rows where input and knob range constraints (alpha and eta, respectively) are satisfied')
+            df_stable_min.to_csv(pareto_frontier_csv_file, index=False)
+            self._frontier_logger.info('Pareto frontier selection in data: End')
+            return df_stable_min
         
         knobs = self._specInst.get_spec_knobs; #print('knobs', knobs)
         
         # Step 3: Drop all samples that do not satisfy beta constraints. This needs to be done befre pareto subset selection
         #df_beta = self.filter_by_expression(df_stable_min, beta_expr); print('df_beta', df_beta.shape, df_beta.columns.tolist()); print(df_beta)
         df_beta = self.filter_beta_universal(df_stable_min, beta_expr, knobs, resp_names); #print('df_beta\n', df_beta)
+        if df_beta.shape[0] == 0:
+            self._frontier_logger.warning('Input data does not have rows where beta constraints are satisfied in stability regions')
+            df_beta.to_csv(pareto_frontier_csv_file, index=False)
+            self._frontier_logger.info('Pareto frontier selection in data: End')
+            return df_beta
         
         # Step 4: Select pareto subset with respect to maximizing min-objective values
         pareto_frontier = self.find_pareto_front(df_beta, knobs, objv_names); #print('pareto_frontier', pareto_frontier.shape, pareto_frontier.columns.tolist()); print(pareto_frontier)
-        pareto_frontier_csv_file = self.report_file_prefix + '_pareto_frontier.csv'
+        
         pareto_frontier.to_csv(pareto_frontier_csv_file, index=False)
         self._frontier_logger.info('Pareto frontier selection in data: End')

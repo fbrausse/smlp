@@ -7,6 +7,7 @@ os.unsetenv("TF_ENABLE_ONEDNN_OPTS")
 import tensorflow as tf
 from tensorflow import keras
 from keras.optimizers import Adam
+from keras.models import clone_model # for rounding model weights and biases
 import matplotlib.pyplot as plt
 from math import ceil
 import json
@@ -183,7 +184,8 @@ class ModelKeras:
             'loss_functions_grid': {'abbr':'losses_grid', 'default':self._DEF_LOSS_FUNCTIONS_GRID, 'type':str_to_str_list, 
                 'help':'Comma separated list of NN Keras loss functions, to be used by Keras tuner. ' +
                     'It can be a subset of loss functions mse, mae, mape, msle, huber, logcosh. ' +
-                    '[default: {}]'.format(str(self._DEF_LOSS_FUNCTIONS_GRID))} 
+                    '[default: {}]'.format(str(self._DEF_LOSS_FUNCTIONS_GRID))},
+            
         }
 
     # set logger from a caller script
@@ -869,6 +871,39 @@ class ModelKeras:
         self._keras_logger.info('_keras_train_multi_response: end')
         return model
         
+    import tensorflow as tf
+
+    # This function takes a Keras trained neural network model and two precision constants 
+    # for weights and biases. It creates and returns a new model with the same topology and  
+    # rounds the weights and biases to the respective specified precisions.
+    # This function is currently not used, and instead a simpler function round_model_weights()
+    # is used, because the command line option weights_precision is applied to biases as well.
+    def round_model_weights_baises(self, model, weights_precision, biases_precision):
+        # Clone the model to keep the original model unchanged
+        new_model = clone_model(model)
+        new_model.set_weights(model.get_weights())  # Copy the weights from the original model
+
+        # Iterate over all layers in the model
+        for layer in new_model.layers:
+            # Get the current weights of the layer
+            weights = layer.get_weights()
+            new_weights = []
+
+            # Check if the layer has weights (e.g., it's not an input layer)
+            if weights:
+                # Round the weights and biases to the specified precision
+                for i, w in enumerate(weights):
+                    if i % 2 == 0:  # Even index: weights
+                        new_w = np.round(w, decimals=weights_precision)
+                    else:  # Odd index: biases
+                        new_w = np.round(w, decimals=biases_precision)
+                    new_weights.append(new_w)
+
+                # Set the new weights to the layer
+                layer.set_weights(new_weights)
+
+        return new_model
+    
     # Runs Keras NN algorithm, outputs lots of stats, saves model to disk
     # epochs and batch_size are arguments of NN algorithm from keras library
     def keras_main(self, resp_names:list[str], algo:str,

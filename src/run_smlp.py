@@ -18,5 +18,6 @@ def main(argv):
     smlpInst.smlp_flow()
 
 if __name__ == "__main__":
+    os.system("/usr/intel/bin/dts_register -tool=SMLP -version=1.0")
     main(sys.argv)
     

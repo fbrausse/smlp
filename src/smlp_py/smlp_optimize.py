@@ -47,7 +47,7 @@ class SmlpOptimize:
         self._DEF_OBJECTIVES_EXPRS = None
         self._DEF_APPROXIMATE_FRACTIONS:bool = True
         self._DEF_FRACTION_PRECISION:int = 64
-        self._DEF_OPTIMIZATION_STRATEGY:str = 'lazy' # TODO !!! define enum type for lazy/eager and API functions to get the strategy value, so neither strings no enum types will be ued outside this file
+        self._DEF_OPTIMIZATION_STRATEGY:str = 'eager' # TODO !!! define enum type for lazy/eager and API functions to get the strategy value, so neither strings no enum types will be ued outside this file
         
         # Formulae alpha, beta, eta are used in single and pareto optimization tasks.
         # They are used to constrain control variables x and response variables y as follows:

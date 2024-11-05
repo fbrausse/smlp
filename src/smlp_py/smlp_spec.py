@@ -4,7 +4,7 @@
 import os
 import json
 from fractions import Fraction
-
+import numpy as np
 from smlp_py.smlp_utils import get_expression_variables, list_unique_unordered, np_JSONEncoder
 
 
@@ -49,7 +49,7 @@ class SmlpSpec:
                 'help':'Relative radius, in terms of percentage of the value of the knob to which it applies ' +
                     'to compute the absolute radius to be used in theta (stability) constraint. Overrides relative ' +
                     'radius value specified in the spec file [default: {}]'.format(str(self._DEF_RADIUS_RELATIVE))},
-            'radius_absolute': {'abbr':'rad_abs', 'default':self._DEF_RADIUS_ABSOLUTE, 'type':float, 
+            'radius_absolute': {'abbr':'rad_abs', 'default':self._DEF_RADIUS_RELATIVE, 'type':float, 
                 'help':'Absolute value of radius to be used in theta (stability) constraint. Override relative ' +
                     'radius value specified in the spec file [default: {}]'.format(str(self._DEF_RADIUS_ABSOLUTE))},
             'alpha': {'abbr':'alpha', 'default':self._DEF_ALPHA, 'type':str, 
@@ -133,6 +133,8 @@ class SmlpSpec:
         self._SPEC_KNOBS_RELATIVE_RADIUS = None
         self._SPEC_VARIABLE_RANGE = None
         self._SPEC_DICTIONARY_SYSTEM = None
+        self._SPEC_DOMAIN_TYPE_TAG = 'range' # internal (not seen by user) -- used to define variable domains for backend SMT sovers
+        self._SPEC_DOMAIN_INTERVAL_TAG = 'interval' # internal (not seen by user) -- used to define variable domains for backend SMT sovers
         
         # tracks changes in spec file token names per spec version
         self._spec_tokens_dict = {
@@ -210,7 +212,7 @@ class SmlpSpec:
                 if k not in [self._SPEC_VARIABLE_LABEL, self._SPEC_VARIABLE_TYPE, self._SPEC_VARIABLE_RANGE, 
                             self._SPEC_INPUTS_BOUNDS, self._SPEC_KNOBS_GRID, 
                             self._SPEC_KNOBS_ABSOLUTE_RADIUS, self._SPEC_KNOBS_RELATIVE_RADIUS]:
-                    raise Exception('Unexpected varibeled specification field ' + '"{}"'.format(str(k)))
+                    raise Exception('Unexpected variable specification field ' + '"{}"'.format(str(k)))
             #print('var_spec', var_spec)
             if self._SPEC_VARIABLE_LABEL not in var_spec.keys():
                 raise Exception('A variable does not have the label (name) declared in spec file')
@@ -223,6 +225,7 @@ class SmlpSpec:
             if self._SPEC_INPUTS_BOUNDS in var_spec.keys():
                 if not var_spec[self._SPEC_VARIABLE_TYPE] in [self._SPEC_INPUT_TAG, self._SPEC_KNOB_TAG]:
                     raise Exception('Domain intervals (bounds) are only supported for free inputs and knobs')
+            
             if var_spec[self._SPEC_VARIABLE_TYPE] != self._SPEC_KNOB_TAG:
                 if self._SPEC_KNOBS_GRID in var_spec.keys():
                     raise Exception('ETA grid constraint can only be defined for knobs')
@@ -234,7 +237,12 @@ class SmlpSpec:
                         self._spec_logger.error('ETA constraint ' + str(eta_expr) + 
                             ' contains a non-knob variable ' + str() + '; aborting...')
                         raise Exception('ETA global constraint can only contain knobs')
-        
+            else:
+                both_radii_defined = self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec and self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec
+                no_radii_defined = not self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec and not self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec
+                if both_radii_defined or no_radii_defined:
+                    raise Exception('Either a relative or an absolute radius must be specified for each knop (but not both radii). ' + 
+                        'This fails for varaible {}.'.format(var_spec[self._SPEC_VARIABLE_LABEL]))
         # sanity check witnesses: query names in witnesses specification must be among query names
         if self.get_spec_witn_dict is not None and self.get_spec_quer_exprs_dict is not None:
             witn_queries = set(self.get_spec_witn_dict.keys())
@@ -384,6 +392,15 @@ class SmlpSpec:
         anonymize_dict['outputs'] = anomym_dict(self.get_spec_responses, 'y')
         return anonymize_dict
         
+    @property
+    def get_spec_domain_interval_tag(self):
+        return self._SPEC_DOMAIN_INTERVAL_TAG
+        
+    @property
+    def get_spec_domain_type_tag(self):
+        return self._SPEC_DOMAIN_TYPE_TAG
+
+    
     # API to get definition of the original system (that SMLP intends to model with ML).
     # If provided, it is a string that correponds to python expression of the system's funcion.
     # The feild is not mondatory (we do not always know or want to use definition of the 
@@ -817,7 +834,8 @@ class SmlpSpec:
             var_range = var_spec[self._SPEC_VARIABLE_RANGE]
             if not var_range in [self._SPEC_RANGE_INTEGER, self._SPEC_RANGE_REAL]:
                 raise Exception('Unsupported variable range (type) ' + var_spec[self._SPEC_VARIABLE_RANGE])
-            self._domain_dict[var_spec['label']] = {'range': var_range, 'interval': var_bounds}
+            #self._domain_dict[var_spec['label']] = {'range': var_range, 'interval': var_bounds}
+            self._domain_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {self._SPEC_DOMAIN_TYPE_TAG: var_range, self._SPEC_DOMAIN_INTERVAL_TAG: var_bounds}
             
         #print('self._domain_dict', self._domain_dict)
         self._spec_logger.info('Variable domains (alpha): ' + str(self._domain_dict))
@@ -944,43 +962,75 @@ class SmlpSpec:
             input_ranges[k] = [v['min'], v['max']]
         knobs_ranges = {}
         for k, v in self.get_spec_theta_radii_dict.items():
-            knov_val = knob_config[k]['value_in_config']; #print('knov_val', knov_val)
+            knob_val = knob_config[k]['value_in_config']; #print('knob_val', knob_val)
             if v['rad-abs'] is not None:
                 rad = abs(v['rad-abs']); #print('rad-abs', rad)
             elif v['rad-rel'] is not None:
-                rad = v['rad-rel'] * abs(knov_val); #print('rad-rel', rad)
+                rad = v['rad-rel'] * abs(knob_val); #print('rad-rel', rad)
             else:
                 raise Exception('At least on of the relative or absolute radii must mot be None')
-            knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
+            knobs_ranges[k] = [knob_val - rad, knob_val + rad] #{'min':knob_val - rad, 'max':knob_val + rad}
         return input_ranges | knobs_ranges
    
+    # This function computes stability intervals around input and knob assignment given as knob_config.
+    # It is used in the "frontier" mode for selecting the (full/maximal) subset of pareto optimal 
+    # samples (pareto frontiers) directly from data, without training and analysisng an ML model.
+    # Stability intervals on inputs actually do not depend on input values in knob_config and stability
+    # radii are not defined for them so the "stability intervals" for inputs are simply the respecitive 
+    # domains defined in spec file using field self._SPEC_INPUTS_BOUNDS. Stability inervals for inputs 
+    # are computed and returned only when argument include_inputs is set to True.
+    # Stability intervals for knobs are computed as respective knob value in knob_config plus/minus the
+    # respective radius (the latter can ve specified as either relative or avsolute radius); and then 
+    # if the knob has also donain range defined using self._SPEC_INPUTS_BOUNDS, the stability interval
+    # computed above in intersected with that domain (so that the stability interval returned by this 
+    # function is within the domain of the respective knob).
     def get_spec_stability_intervals_dict(self, knob_config, include_inputs):
-        #print('knob_config', knob_config)
+        #print('=== knob_config', knob_config); print('radii dict', self.get_spec_theta_radii_dict.items())
         if include_inputs:
             input_ranges = {}
             for k, v in self.get_spec_alpha_bounds_dict.items():
-                input_ranges[k] = [v['min'], v['max']]
+                input_ranges[k] = [v['min'] if v['min'] is not None else (-np.inf), 
+                                   v['max'] if v['max'] is not None else (np.inf)]
+            #print('input_ranges', input_ranges)
         knobs_ranges = {}
         for k, v in self.get_spec_theta_radii_dict.items():
+            #print('k', k, 'v', v)
             if k not in knob_config: # TODO !!!! this should not happen with full assighnement to knobs
+                #print('ignoring stability region of', k, v)
                 continue
-            knov_val = knob_config[k]; #print('knov_val', knov_val)
+            knob_val = knob_config[k]; #print('knob_val', knob_val)
             if v['rad-abs'] is not None:
                 rad = abs(v['rad-abs']); #print('rad-abs', rad)
             elif v['rad-rel'] is not None:
-                rad = v['rad-rel'] * abs(knov_val); #print('rad-rel', rad)
+                rad = v['rad-rel'] * abs(knob_val); #print('rad-rel', rad)
             else:
                 raise Exception('At least on of the relative or absolute radii must mot be None')
-            knobs_ranges[k] = [knov_val - rad, knov_val + rad] #{'min':knov_val - rad, 'max':knov_val + rad}
+            knob_range_min = knob_val - rad; #print('knob_range_min before', knob_range_min)
+            knob_range_max = knob_val + rad; #print('knob_range_max before', knob_range_max)
+            #print('get_spec_eta_bounds_dict', self.get_spec_eta_bounds_dict)
+            # make sure the returned value of knob range is within knob's domain range defined using self._SPEC_INPUTS_BOUNDS:
+            if k in self.get_spec_eta_bounds_dict:
+                knob_interval = self.get_spec_eta_bounds_dict[k]; #print('knob_interval', knob_interval)
+                assert isinstance(knob_interval, dict) and len(knob_interval) == 2
+                if knob_interval['min'] is not None:
+                    knob_range_min = max(knob_range_min, knob_interval['min'])
+                if knob_interval['max'] is not None:
+                    knob_range_max = min(knob_range_max, knob_interval['max'])
+                #print('knob_range_min after', knob_range_min); print('knob_range_max after', knob_range_max)
+            #knobs_ranges[k] = [knob_val - rad, knob_val + rad] #{'min':knob_val - rad, 'max':knob_val + rad}
+            assert knob_range_min is not None
+            assert knob_range_max is not None
+            knobs_ranges[k] = [knob_range_min, knob_range_max]
+        #print('knobs_ranges', knobs_ranges)
         if include_inputs:
             return input_ranges | knobs_ranges
         else:
             return knobs_ranges
-    
+        
     '''
     This function splits an SMLP spec extracted from spec_file into a number pf spec files with smaller grids 
     for the knobs in the "knobs" list -- for each of the knobs knobs[i] specified in "knobs" argument, 
-    splits[i] number of sub-grids of nearly equal lengths will be created from the consequtive grid values,
+    splits[i] number of sub-grids of nearly equal lengths will be created from the consecutive grid values,
     and splits[0] * splits(1] * ... * rations[k] (with k = len(splits) -1) spec files with smaller grids
     will be generated and dumped. The steps performed by this function are as follows:
     1. Load the JSON content from the spec_file.

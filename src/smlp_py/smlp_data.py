@@ -94,7 +94,7 @@ class SmlpData:
         # stage of data processing is to make the tool user friendly, and perform some data 
         # transformations instead of the user having to do this. Thus, all the reports and visualization
         # of the results will use preprocessed data, and assume the data was passed to the tool in that
-        # form. As an example, if some values in columns were replaced, say 'pass' wwas replaced by 0
+        # form. As an example, if some values in columns were replaced, say 'pass' was replaced by 0
         # and 'fail' was replaced by 1, the reports will use values 0 and 1 in that column. Some of the 
         # data preprocessing steps might include dropping some of the columns and/or rows in the loaded
         # data, replacing values in some of the columns with other values, casting types of columns, etc.
@@ -122,7 +122,7 @@ class SmlpData:
         # Numeric responses / regression analyses:
         # Float and int columns in input data can define numeric responses. Each such response with more than 
         # two values is treated as numeric (and we are dealing with a regression analyses). If a response has 
-        # two values, than it can still be treated as a categorical/binary response, as described in case (c)
+        # two values, then it can still be treated as a categorical/binary response, as described in case (c)
         # of specifying binary responses. Otherwise -- that is, when {positive_value, negative_value} is not
         # equal to the set of the two values in the response, the response is treated as numeric. 
         # Parameter values specified through options positive_value and negative_value have a different 
@@ -962,7 +962,7 @@ class SmlpData:
             #keep_feat = keep_feat + self._specInst.get_spec_constraint_vars(); #print('keep_feat', keep_feat)
             #print('features before mrmr', feat_names)
             for rn in resp_names:
-                mrmr_feat = self._mrmrInst.mrmr_regres(X, y[rn], rn, mrmr_features_n); #print('mrmr_feat', mrmr_feat)
+                mrmr_feat, _ = self._mrmrInst.smlp_mrmr(X, y[rn], mrmr_features_n); #print('mrmr_feat', mrmr_feat)
                 model_feat = [ft for ft in feat_names if (ft in mrmr_feat or ft in keep_feat)]; #print(model_feat); 
                 model_features_dict[rn] = model_feat #mrmr_feat
             feat_names = [ft for ft in feat_names if ft in 
