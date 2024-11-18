@@ -27,7 +27,7 @@ instruction for the installation on Ubuntu.
 
 	# obtain sources
 	git clone https://github.com/fbrausse/kay.git
-	git clone -b shai4-c https://github.com/fbrausse/smlp.git
+	git clone https://github.com/fbrausse/smlp.git
 	cd smlp/utils/poly
 
 	# workaround <https://bugs.launchpad.net/ubuntu/+source/swig/+bug/1746755>
