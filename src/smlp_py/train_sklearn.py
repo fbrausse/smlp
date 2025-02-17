@@ -2,6 +2,8 @@
 # This file is part of smlp.
 
 # Fitting sklearn regression tree models
+from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 #from sklearn.tree import _tree
 from sklearn import tree, ensemble
@@ -379,17 +381,39 @@ class ModelSklearn:
 
     # train polynomial regression model with sklearn
     def poly_train(self, input_names, resp_names, hparam_dict,
-            X_train, X_test, y_train, y_test, weights):
-        #print('poly_degree', degree); print('weigts', weights);
+                X_train, X_test, y_train, y_test, weights):
+        # Extract hyperparameters
         hparam_dict_local = self._hparam_dict_global_to_local('poly', hparam_dict)
-        degree = hparam_dict_local['degree']
+
+        # Define range for automatic polynomial degree selection
+        max_degree = 3  # Internal choice, can be changed if needed 
+        param_grid = {'polynomialfeatures__degree': range(1, max_degree + 1)}
         hparam_dict_local.pop('degree')
-        poly_reg = PolynomialFeatures(degree)
-        X_train = poly_reg.fit_transform(X_train)
-        X_test = poly_reg.transform(X_test)
-        pol_reg = LinearRegression(**hparam_dict_local)
-        model = pol_reg.fit(X_train, y_train, sample_weight=weights)
-        assert(model == pol_reg)
+
+        # Create pipeline for polynomial regression
+        pipeline = Pipeline([
+            ('polynomialfeatures', PolynomialFeatures()),
+            ('linearregression', LinearRegression(**hparam_dict_local))
+        ])
+
+        # Perform cross-validation to find the best polynomial degree
+        grid_search = GridSearchCV(
+            pipeline, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1
+        )
+        
+        # Pass sample_weight only to LinearRegression.fit()
+        grid_search.fit(X_train, y_train, **{'linearregression__sample_weight': weights})
+
+        # Get best model and degree
+        best_model = grid_search.best_estimator_
+        best_degree = grid_search.best_params_['polynomialfeatures__degree']
+
+        print(f"Automatically selected best polynomial degree: {best_degree}")
+
+        # Use the best polynomial transformation and model
+        poly_reg = best_model.named_steps['polynomialfeatures']
+        model = best_model.named_steps['linearregression']
+
         return model, poly_reg #, X_train, X_test
         
     # model for sklearn poly model is in fact a pair (linear_model, poly_reg), where
