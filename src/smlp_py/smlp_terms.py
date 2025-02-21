@@ -2128,7 +2128,7 @@ class ModelTerms(ScalerTerms):
         theta_form = self.smlp_true
         #print('radii_dict', radii_dict)
         radii_dict_local = radii_dict.copy() 
-        knobs = radii_dict_local.keys(); #print('knobs', knobs); print('cex', cex); print('delta', delta_dict)
+        knobs = radii_dict_local.keys()
         
         # use inputs in theta computation, by setting radii to 0, and use delta if specified (not None)
         if not universal and delta_rel is not None:
@@ -2137,8 +2137,12 @@ class ModelTerms(ScalerTerms):
                     radii_dict_local[cex_var] = {'rad-abs':0, 'rad-rel': None} # delta
         
         for var,radii in radii_dict_local.items():
+            # there might be variables in the spec file that are not part of the model and therefore cannot occur in cex, thus the if condition below.
+            if not var in cex:
+                continue
+            
             var_term = self.smlp_var(var)
-            # either rad-abs or rad-rel must be None -- for each var wr declare only one of these
+            # either rad-abs or rad-rel must be None -- for each var we declare only one of these
             if radii['rad-abs'] is not None:
                 rad = radii['rad-abs']; #print('rad', rad); 
                 if delta_rel is not None: # we are generating a lemma
@@ -2174,19 +2178,22 @@ class ModelTerms(ScalerTerms):
                     rad_term = rad_term * abs(cex[var])
             elif delta_dict is not None: 
                 raise exception('When delta dictionary is provided, either absolute or relative radius must be specified') 
-            # there might be variables in the spec file that are not part of the model and therefore cannot occur in cex, thus the if condition below.
-            if var in cex:
-                theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
+            
+            theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
         #print('theta_form', theta_form)
         return theta_form
     
     # Creates eta constraints on control parameters (knobs) from the spec.
     # Covers grid as well as range/interval constraints.
-    def compute_grid_range_formulae_eta(self):
+    def compute_grid_range_formulae_eta(self, model_inputs):
         #print('generate eta constraint')
         eta_grid_form = self.smlp_true
         eta_grids_dict = self._specInst.get_spec_eta_grids_dict; #print('eta_grids_dict', eta_grids_dict)
         for var,grid in eta_grids_dict.items():
+            # we only generate grid constraints for knobs that are model inputs 
+            # (some of the knobs and inputs in the initial dataset could have been dropped)
+            if var not in model_inputs:
+                continue
             eta_grid_disj = self.smlp_false
             var_term = self.smlp_var(var)
             for gv in grid: # iterate over grid values
@@ -2370,7 +2377,7 @@ class ModelTerms(ScalerTerms):
         alpha = self.smlp_and(alph_ranges, alph_global); #print('alpha')
         beta = self.compute_beta_formula(beta_expr, feat_names+resp_names); #print('beta')
         eta_ranges = self.compute_input_ranges_formula_alpha_eta('eta', feat_names); #print('eta_ranges')
-        eta_grids = self.compute_grid_range_formulae_eta(); #print('eta_grids')
+        eta_grids = self.compute_grid_range_formulae_eta(feat_names); #print('eta_grids')
         eta_global = self.compute_eta_formula(eta_expr, feat_names); #print('eta_global', eta_global)
         eta = self.smlp_and_multi([eta_ranges, eta_grids, eta_global]); #print('eta', eta)
         
