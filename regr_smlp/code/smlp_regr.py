@@ -689,7 +689,6 @@ def main():
                         #print('command (2)', command);
                 
                 # append extra arguments 
-                #command = command + ' -tree_encoding abc -solver_path "/nfs/iil/proj/dt/eva/smlp/external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat" '
                 if args.extra_options is not None:
                     command = command + ' ' + args.extra_options
                 
