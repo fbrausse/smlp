@@ -17,7 +17,9 @@ from threading import Timer
 
 TUI_DIFF = 'diff'
 GUI_DIFF = 'tkdiff'
-
+TREE_PATH = '../' # Path to regression location (where data, code, specs, master and model directories are located)
+SOLVERS_PATH = '../../../external' # Path to external solvers
+    
 DEBUG = False
 # used for excluding from diff reports that involve randomness
 files_to_ignore_from_diff = ['Test41_doe_two_levels_doe.csv', 'Test42_doe_two_levels_doe.csv']
@@ -369,8 +371,7 @@ def main():
 
     code_path = file_path  # Path to SMLP regression code - also where smlp_tests.csv file and this script are located.
 
-    tree_path = '../' # Path to regression location (where data, code, specs, master and model directories are located)
-    solvers_path = '../../../external' # Path to external solvers
+    
     # Create and migrate code to temp dir
     if False: # currently use development code w/o copying to temp area #not args.print_command:
         tempdir = 'temp'
@@ -380,18 +381,18 @@ def main():
             tempdir += tests
         else:
             tempdir = 'temp_code4'
-        temp_code_dir = path.join(tree_path, tempdir)  # Path of temp copied code dir.
+        temp_code_dir = path.join(TREE_PATH, tempdir)  # Path of temp copied code dir.
         if path.exists(temp_code_dir):
             rmtree(temp_code_dir)
         copytree(dst=temp_code_dir, src=code_path, ignore=ignored_files)  # Copies code to temp dir.
         chdir(temp_code_dir)  # Changes working dir to temp code dir.
     else:
         temp_code_dir = code_path
-    master_path = path.join(tree_path, 'master')  # Path to master results (to compare with)
-    models_path = path.join(tree_path, 'models')  # Path to saved models and everything required to re-run it
-    data_path = path.join(tree_path, 'data')      # Path to the data
-    doe_path = path.join(tree_path, 'grids')      # Path to the doe grids data
-    specs_path = path.join(tree_path, 'specs')    # Path to the domain spec for model exploration
+    master_path = path.join(TREE_PATH, 'master')  # Path to master results (to compare with)
+    models_path = path.join(TREE_PATH, 'models')  # Path to saved models and everything required to re-run it
+    data_path = path.join(TREE_PATH, 'data')      # Path to the data
+    doe_path = path.join(TREE_PATH, 'grids')      # Path to the doe grids data
+    specs_path = path.join(TREE_PATH, 'specs')    # Path to the domain spec for model exploration
     tests_data = path.join(temp_code_dir, 'smlp_regr.csv')  # Path of the tests config file
     
     
@@ -670,7 +671,7 @@ def main():
                         # add relative path to external solver name
                         solver_bin = solver_path_identifier(test_switches)
                         if solver_bin is not None:
-                            solver_path_bin = os.path.join(solvers_path, solver_bin)
+                            solver_path_bin = os.path.join(SOLVERS_PATH, solver_bin)
                             test_switches = test_switches.replace(solver_bin, solver_path_bin)
                             #test_switches = test_switches.replace("-solver_path ", ' ').replace(solver_path_bin, ' ') 
                     #print('test_switches', test_switches); print('test_type', test_type)
