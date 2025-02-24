@@ -9,8 +9,9 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn import tree, ensemble
 
 # Fitting sklearn polynomial regression model
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import Ridge
 
 # general
 import numpy as np
@@ -381,40 +382,50 @@ class ModelSklearn:
 
     # train polynomial regression model with sklearn
     def poly_train(self, input_names, resp_names, hparam_dict,
-                X_train, X_test, y_train, y_test, weights):
+               X_train, X_test, y_train, y_test, weights):
         # Extract hyperparameters
         hparam_dict_local = self._hparam_dict_global_to_local('poly', hparam_dict)
+        hparam_dict_local.pop('degree', None)  # Remove 'degree' if present
+        hparam_dict_local.pop('n_jobs', None)  # Remove 'n_jobs' to avoid parallel conflicts
 
-        # Define range for automatic polynomial degree selection
-        max_degree = 3  # Internal choice, can be changed if needed 
-        param_grid = {'polynomialfeatures__degree': range(1, max_degree + 1)}
-        hparam_dict_local.pop('degree')
+        # Define polynomial degree range (1 to 3)
+        max_degree = 3
 
-        # Create pipeline for polynomial regression
+        # Alpha range dynamically chosen to cover small and large values
+        alphas = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
+
+        param_grid = {
+            'polynomialfeatures__degree': range(1, max_degree + 1),
+            'ridge__alpha': alphas  # Cross-validate over multiple alpha values
+        }
+
+        # Create pipeline with Standardization and Ridge Regression
         pipeline = Pipeline([
-            ('polynomialfeatures', PolynomialFeatures()),
-            ('linearregression', LinearRegression(**hparam_dict_local))
+            ('scaler', StandardScaler()),  # Standardizes input features
+            ('polynomialfeatures', PolynomialFeatures()),  # Generates polynomial features
+            ('ridge', Ridge())  # Ridge regression with dynamically tuned alpha
         ])
 
-        # Perform cross-validation to find the best polynomial degree
+        # Perform cross-validation to find best polynomial degree and alpha
         grid_search = GridSearchCV(
             pipeline, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1
         )
-        
-        # Pass sample_weight only to LinearRegression.fit()
-        grid_search.fit(X_train, y_train, **{'linearregression__sample_weight': weights})
 
-        # Get best model and degree
+        # Train model using sample weights
+        grid_search.fit(X_train, y_train, **{'ridge__sample_weight': weights})
+
+        # Retrieve best model, degree, and alpha
         best_model = grid_search.best_estimator_
         best_degree = grid_search.best_params_['polynomialfeatures__degree']
+        best_alpha = grid_search.best_params_['ridge__alpha']
 
-        print(f"Automatically selected best polynomial degree: {best_degree}")
+        print(f"Best polynomial degree: {best_degree}, Best alpha: {best_alpha}")
 
-        # Use the best polynomial transformation and model
+        # Extract best polynomial transformer and Ridge model
         poly_reg = best_model.named_steps['polynomialfeatures']
-        model = best_model.named_steps['linearregression']
+        model = best_model.named_steps['ridge']
 
-        return model, poly_reg #, X_train, X_test
+        return model, poly_reg
         
     # model for sklearn poly model is in fact a pair (linear_model, poly_reg), where
     # poly_reg is transformer that creates polynomial terems (like x^2) from the original
