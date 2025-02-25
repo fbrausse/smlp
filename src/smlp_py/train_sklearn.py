@@ -10,7 +10,6 @@ from sklearn import tree, ensemble
 
 # Fitting sklearn polynomial regression model
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
-from sklearn.linear_model import ElasticNet
 from sklearn.linear_model import Ridge
 
 # general
@@ -380,7 +379,6 @@ class ModelSklearn:
                   'z_min', (df[col].min() - df[col].mean())/df[col].std(), 
                   'z_max', (df[col].max() - df[col].mean())/df[col].std())  
 
-    # train polynomial regression model with sklearn
     def poly_train(self, input_names, resp_names, hparam_dict,
                X_train, X_test, y_train, y_test, weights):
         # Extract hyperparameters
@@ -419,7 +417,7 @@ class ModelSklearn:
         best_degree = grid_search.best_params_['polynomialfeatures__degree']
         best_alpha = grid_search.best_params_['ridge__alpha']
 
-        print(f"Best polynomial degree: {best_degree}, Best alpha: {best_alpha}")
+        print(f"\nBest polynomial degree: {best_degree}, Best alpha: {best_alpha}\n")
 
         # Extract best polynomial transformer and Ridge model
         poly_reg = best_model.named_steps['polynomialfeatures']
