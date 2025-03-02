@@ -2,9 +2,10 @@
 # This file is part of smlp.
 
 # Fitting sklearn regression tree models
-from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, export_text, plot_tree
 #from sklearn.tree import _tree
 from sklearn import tree, ensemble
+from sklearn.model_selection import GridSearchCV
 
 # Fitting sklearn polynomial regression model
 from sklearn.preprocessing import PolynomialFeatures
@@ -309,36 +310,50 @@ class ModelSklearn:
     # train decision tree regression model with sklearn
     def dt_regr_train(self, feature_names, resp_names, algo, hparam_dict,
             X_train, X_test, y_train, y_test, seed, weights):
-        # Fit the regressor, set max_depth = 3
-        '''
-        is_classification = True
-        for resp_name in resp_names:
-            if set(y_train[resp_name].values()) == {0,1}:
-                continue
-            else:
-                is_classification = False
-                break
-        #print('is_classification', is_classification); assert False
-        '''
-        hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
-        hparam_dict_local['random_state'] = seed
-        regr = DecisionTreeRegressor(**hparam_dict_local)
-        model = regr.fit(X_train, y_train, sample_weight=weights)
-        assert(regr == model)
 
-        # print text representation of the tree model
-        text_representation = tree.export_text(model)
-        #print(text_representation)
+        # Convert global hyperparameters to local ones
+    	hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
+    	hparam_dict_local['random_state'] = seed  # Ensure reproducibility
 
-        '''
-        # visualaize tree TODO !!!!!!!!!!!! does not work 
-        fig = plt.figure(figsize=(25,20))
-        _ = tree.plot_tree(regr)
-        plt.show()
-        plt.clf()
-        '''  
-        
-        return model
+    	# Define hyperparameter grid for tuning
+    	param_grid = {
+        	'max_depth': [12, 15],  
+        	'min_samples_split': [2, 5],
+        	'min_samples_leaf': [1, 2]
+    	}
+
+    	# Perform hyperparameter tuning using GridSearchCV
+    	grid_search = GridSearchCV(
+        	DecisionTreeRegressor(**hparam_dict_local),
+        	param_grid,
+		cv=5,
+		scoring='neg_mean_squared_error',
+		n_jobs=-1
+    	)
+
+    	# Train model with cross-validation and sample weights
+    	grid_search.fit(X_train, y_train, sample_weight=weights)
+
+    	# Get best model and hyperparameters
+    	best_model = grid_search.best_estimator_
+    	best_params = grid_search.best_params_
+    	print(f"Best hyperparameters: {best_params}")
+
+    	# Print tree structure
+    	text_representation = export_text(best_model, feature_names=feature_names)
+    	print("Decision Tree Structure:\n", text_representation)
+
+    	# Feature Importance
+    	feature_importance_dict = dict(zip(feature_names, best_model.feature_importances_))
+    	print(f"Feature Importance: {feature_importance_dict}")
+
+    	# Visualisation
+    	#plt.figure(figsize=(12, 8))
+    	#plot_tree(best_model, feature_names=feature_names, filled=True)
+    	#plt.show()
+
+    	return best_model
+
 
     # train random forest regression model with sklearn
     def rf_regr_train(self, feature_names, resp_names, algo, hparam_dict,
