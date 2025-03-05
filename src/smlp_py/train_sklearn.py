@@ -9,9 +9,9 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 from sklearn import tree, ensemble
 
 # Fitting sklearn polynomial regression model
-from sklearn.preprocessing import PolynomialFeatures, RobustScaler
+from sklearn.preprocessing import PolynomialFeatures, RobustScaler, StandardScaler
 from sklearn.linear_model import Ridge, LinearRegression
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_absolute_error
 
 # general
 import numpy as np
@@ -397,22 +397,20 @@ class ModelSklearn:
             X_poly_train = poly.fit_transform(X_train)
             model = LinearRegression().fit(X_poly_train, y_train)
             y_pred = model.predict(X_poly_train)
-            mse = mean_squared_error(y_train, y_pred)
+            mse = mean_absolute_error(y_train, y_pred)
             mse_values.append(mse)
 
-        second_derivatives = np.diff(mse_values, n=2)
-        best_degree = degrees[np.argmin(second_derivatives) + 1]
+        best_degree = degrees[np.argmin(mse_values)]
 
         pipeline = Pipeline([
-            ('scaler', RobustScaler()),
             ('polynomialfeatures', PolynomialFeatures(degree=best_degree)),
         ])
 
         param_grid = {'polynomialfeatures__degree': [best_degree]}
 
-        cv = KFold(n_splits=10, shuffle=True, random_state=42)
-        grid_search = RandomizedSearchCV(
-            pipeline, param_grid, cv=cv, scoring='neg_mean_squared_error', n_jobs=-1, n_iter=2000
+        cv = KFold(n_splits=5, shuffle=True, random_state=42)
+        grid_search = GridSearchCV(
+            pipeline, param_grid, cv=cv, scoring='neg_mean_absolute_error', n_jobs=-1
         )
         grid_search.fit(X_train, y_train)
 
@@ -423,10 +421,7 @@ class ModelSklearn:
         poly_reg = best_model.named_steps['polynomialfeatures']
 
         X_poly_train_best = poly_reg.fit_transform(X_train)
-        lin_reg_final = LinearRegression().fit(X_poly_train_best, y_train, sample_weight=weights)
-
-        test_score = lin_reg_final.score(poly_reg.transform(X_test), y_test)
-        print(f"Test set R^2: {test_score}")
+        lin_reg_final = LinearRegression(**hparam_dict_local).fit(X_poly_train_best, y_train, sample_weight=weights)
 
         return lin_reg_final, poly_reg
 
