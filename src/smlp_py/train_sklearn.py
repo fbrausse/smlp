@@ -2,15 +2,15 @@
 # This file is part of smlp.
 
 # Fitting sklearn regression tree models
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, KFold
 from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 #from sklearn.tree import _tree
 from sklearn import tree, ensemble
 
 # Fitting sklearn polynomial regression model
-from sklearn.preprocessing import PolynomialFeatures, StandardScaler
-from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures, RobustScaler
+from sklearn.linear_model import Ridge, ElasticNet
 
 # general
 import numpy as np
@@ -381,47 +381,44 @@ class ModelSklearn:
 
     def poly_train(self, input_names, resp_names, hparam_dict,
                X_train, X_test, y_train, y_test, weights):
-        # Extract hyperparameters
+        
         hparam_dict_local = self._hparam_dict_global_to_local('poly', hparam_dict)
-        hparam_dict_local.pop('degree', None)  # Remove 'degree' if present
-        hparam_dict_local.pop('n_jobs', None)  # Remove 'n_jobs' to avoid parallel conflicts
+        hparam_dict_local.pop('degree', None)
+        hparam_dict_local.pop('n_jobs', None)
 
-        # Define polynomial degree range (1 to 3)
         max_degree = 3
 
-        # Alpha range dynamically chosen to cover small and large values
         alphas = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
 
         param_grid = {
             'polynomialfeatures__degree': range(1, max_degree + 1),
-            'ridge__alpha': alphas  # Cross-validate over multiple alpha values
+            'ridge__alpha': alphas
         }
 
-        # Create pipeline with Standardization and Ridge Regression
         pipeline = Pipeline([
-            ('scaler', StandardScaler()),  # Standardizes input features
-            ('polynomialfeatures', PolynomialFeatures()),  # Generates polynomial features
-            ('ridge', Ridge())  # Ridge regression with dynamically tuned alpha
+            ('scaler', RobustScaler()),
+            ('polynomialfeatures', PolynomialFeatures()),
+            ('ridge', Ridge())
         ])
 
-        # Perform cross-validation to find best polynomial degree and alpha
-        grid_search = GridSearchCV(
-            pipeline, param_grid, cv=5, scoring='neg_mean_squared_error', n_jobs=-1
-        )
 
-        # Train model using sample weights
+        cv = KFold(n_splits=5, shuffle=True, random_state=42)
+        grid_search = RandomizedSearchCV(
+            pipeline, param_grid, cv=cv, scoring='r2', n_jobs=-1, n_iter=100
+        )
         grid_search.fit(X_train, y_train, **{'ridge__sample_weight': weights})
 
-        # Retrieve best model, degree, and alpha
         best_model = grid_search.best_estimator_
         best_degree = grid_search.best_params_['polynomialfeatures__degree']
         best_alpha = grid_search.best_params_['ridge__alpha']
 
         print(f"\nBest polynomial degree: {best_degree}, Best alpha: {best_alpha}\n")
 
-        # Extract best polynomial transformer and Ridge model
         poly_reg = best_model.named_steps['polynomialfeatures']
         model = best_model.named_steps['ridge']
+        
+        test_score = best_model.score(X_test, y_test)
+        print(f"Test set R^2: {test_score}")
 
         return model, poly_reg
         
