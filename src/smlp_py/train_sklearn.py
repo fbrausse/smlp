@@ -10,7 +10,8 @@ from sklearn import tree, ensemble
 
 # Fitting sklearn polynomial regression model
 from sklearn.preprocessing import PolynomialFeatures, RobustScaler
-from sklearn.linear_model import Ridge, ElasticNet
+from sklearn.linear_model import Ridge, LinearRegression
+from sklearn.metrics import mean_squared_error
 
 # general
 import numpy as np
@@ -381,46 +382,54 @@ class ModelSklearn:
 
     def poly_train(self, input_names, resp_names, hparam_dict,
                X_train, X_test, y_train, y_test, weights):
-        
+
         hparam_dict_local = self._hparam_dict_global_to_local('poly', hparam_dict)
         hparam_dict_local.pop('degree', None)
         hparam_dict_local.pop('n_jobs', None)
 
         max_degree = 3
 
-        alphas = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
+        mse_values = []
+        degrees = range(1, max_degree + 1)
+        
+        for d in degrees:
+            poly = PolynomialFeatures(degree=d)
+            X_poly_train = poly.fit_transform(X_train)
+            model = LinearRegression().fit(X_poly_train, y_train)
+            y_pred = model.predict(X_poly_train)
+            mse = mean_squared_error(y_train, y_pred)
+            mse_values.append(mse)
 
-        param_grid = {
-            'polynomialfeatures__degree': range(1, max_degree + 1),
-            'ridge__alpha': alphas
-        }
+        second_derivatives = np.diff(mse_values, n=2)
+        best_degree = degrees[np.argmin(second_derivatives) + 1]
 
         pipeline = Pipeline([
             ('scaler', RobustScaler()),
-            ('polynomialfeatures', PolynomialFeatures()),
-            ('ridge', Ridge())
+            ('polynomialfeatures', PolynomialFeatures(degree=best_degree)),
         ])
 
+        param_grid = {'polynomialfeatures__degree': [best_degree]}
 
-        cv = KFold(n_splits=5, shuffle=True, random_state=42)
+        cv = KFold(n_splits=10, shuffle=True, random_state=42)
         grid_search = RandomizedSearchCV(
-            pipeline, param_grid, cv=cv, scoring='r2', n_jobs=-1, n_iter=100
+            pipeline, param_grid, cv=cv, scoring='neg_mean_squared_error', n_jobs=-1, n_iter=2000
         )
-        grid_search.fit(X_train, y_train, **{'ridge__sample_weight': weights})
+        grid_search.fit(X_train, y_train)
 
         best_model = grid_search.best_estimator_
-        best_degree = grid_search.best_params_['polynomialfeatures__degree']
-        best_alpha = grid_search.best_params_['ridge__alpha']
 
-        print(f"\nBest polynomial degree: {best_degree}, Best alpha: {best_alpha}\n")
+        print(f"\nBest polynomial degree: {best_degree}\n")
 
         poly_reg = best_model.named_steps['polynomialfeatures']
-        model = best_model.named_steps['ridge']
-        
-        test_score = best_model.score(X_test, y_test)
+
+        X_poly_train_best = poly_reg.fit_transform(X_train)
+        lin_reg_final = LinearRegression().fit(X_poly_train_best, y_train, sample_weight=weights)
+
+        test_score = lin_reg_final.score(poly_reg.transform(X_test), y_test)
         print(f"Test set R^2: {test_score}")
 
-        return model, poly_reg
+        return lin_reg_final, poly_reg
+
         
     # model for sklearn poly model is in fact a pair (linear_model, poly_reg), where
     # poly_reg is transformer that creates polynomial terems (like x^2) from the original
@@ -473,7 +482,7 @@ class ModelSklearn:
                 formula_report_file = get_model_file_prefix(None, self._algo_name_local2global(algo)) + '_formula.txt'
                 model_formula = self._instPolyTerms.poly_model_to_term_single_response(feat_names, resp_names, linear_model.coef_, 
                     poly_reg.powers_, resp_id, True, formula_report_file)
-            #print('poly model computed', (linear_model, linear_model.coef_, poly_reg, poly_reg.powers_)) 
+            # print('poly model computed', (linear_model, linear_model.coef_, poly_reg, poly_reg.powers_)) 
             return linear_model, poly_reg #, X_train, X_test
         else:
             raise Exception('Unsupported model type ' + str(algo) + ' in function tree_main')
