@@ -6,7 +6,7 @@ from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, export_t
 #from sklearn.tree import _tree
 from sklearn import tree, ensemble
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, RandomizedSearchCV
 
 # Fitting sklearn polynomial regression model
 from sklearn.preprocessing import PolynomialFeatures
@@ -370,14 +370,15 @@ class ModelSklearn:
 
     	# Define hyperparameter grid for tuning
     	param_grid = {
-        	'n_estimators': [50, 100],            # Number of trees
-        	'max_depth': [10, 20, None],           # Control overfitting
-        	'min_samples_split': [2, 5],       # Min samples to split a node
+        	'n_estimators': [150, 200],            # Number of trees
+        	'max_depth': [None],           # Control overfitting
+        	'min_samples_split': [2],       # Min samples to split a node
         	'min_samples_leaf': [1, 2],         # Min samples at leaf node
-        	'max_features': ['sqrt', 'log2', None] # Features to consider at each split
+        	'max_features': ['sqrt', None] # Features to consider at each split
     	}
 
     	# Grid Search with Cross-Validation
+    	'''
     	grid_search = GridSearchCV(
         	RandomForestRegressor(**hparam_dict_local),
         	param_grid,
@@ -386,12 +387,24 @@ class ModelSklearn:
         	n_jobs=-1                           # Use all cores for faster computation
     	)
 
+    	'''
+
+    	random_search = RandomizedSearchCV(
+        	RandomForestRegressor(random_state=42),
+        	param_distributions=param_grid,
+        	n_iter=10,  # Tries 10 different combinations
+        	scoring='neg_mean_squared_error',
+        	cv=5,
+        	n_jobs=-1
+    	)
+
+
     	# Fit model with sample weights
-    	grid_search.fit(X_train, y_train, sample_weight=weights)
+    	random_search.fit(X_train, y_train, sample_weight=weights)
 
     	# Get best model and hyperparameters
-    	best_model = grid_search.best_estimator_
-    	best_params = grid_search.best_params_
+    	best_model = random_search.best_estimator_
+    	best_params = random_search.best_params_
     	print(f"Best hyperparameters: {best_params}")
 
     	# Evaluate performance
