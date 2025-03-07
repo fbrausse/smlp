@@ -5,6 +5,7 @@
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier, export_text, plot_tree
 #from sklearn.tree import _tree
 from sklearn import tree, ensemble
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import GridSearchCV
 
 # Fitting sklearn polynomial regression model
@@ -306,7 +307,7 @@ class ModelSklearn:
         sklearn_hparam_dict = poly_sklearn_hyperparam_dict | dt_sklearn_hyperparam_dict | \
             rf_sklearn_hyperparam_dict | et_sklearn_hyperparam_dict
         return sklearn_hparam_dict
-        
+  
     # train decision tree regression model with sklearn
     def dt_regr_train(self, feature_names, resp_names, algo, hparam_dict,
             X_train, X_test, y_train, y_test, seed, weights):
@@ -315,9 +316,12 @@ class ModelSklearn:
     	hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
     	hparam_dict_local['random_state'] = seed  # Ensure reproducibility
 
+    	hparam_dict_local.pop('degree', None)
+    	hparam_dict_local.pop('n_jobs', None)
+
     	# Define hyperparameter grid for tuning
     	param_grid = {
-        	'max_depth': [12, 15],  
+        	'max_depth': [3],  
         	'min_samples_split': [2, 5],
         	'min_samples_leaf': [1, 2]
     	}
@@ -355,17 +359,62 @@ class ModelSklearn:
     	return best_model
 
 
+
     # train random forest regression model with sklearn
     def rf_regr_train(self, feature_names, resp_names, algo, hparam_dict,
-            X_train, X_test, y_train, y_test, seed, weights):
-        # Fit the regressor, set max_depth = 3
-        hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
-        hparam_dict_local['random_state'] = seed
-        model = ensemble.RandomForestRegressor(**hparam_dict_local)
-        model = model.fit(X_train, y_train, sample_weight=weights)
-        #assert regr == model
-        
-        return model
+		X_train, X_test, y_train, y_test, seed, weights):
+
+    	# Convert global hyperparameters to local ones
+    	hparam_dict_local = self._hparam_dict_global_to_local(algo, hparam_dict)
+    	hparam_dict_local['random_state'] = seed  # Ensure reproducibility
+
+    	# Define hyperparameter grid for tuning
+    	param_grid = {
+        	'n_estimators': [50, 100],            # Number of trees
+        	'max_depth': [10, 20, None],           # Control overfitting
+        	'min_samples_split': [2, 5],       # Min samples to split a node
+        	'min_samples_leaf': [1, 2],         # Min samples at leaf node
+        	'max_features': ['sqrt', 'log2', None] # Features to consider at each split
+    	}
+
+    	# Grid Search with Cross-Validation
+    	grid_search = GridSearchCV(
+        	RandomForestRegressor(**hparam_dict_local),
+        	param_grid,
+        	cv=5,                               # 5-fold cross-validation
+        	scoring='neg_mean_squared_error',   # Optimize for lower MSQE
+        	n_jobs=-1                           # Use all cores for faster computation
+    	)
+
+    	# Fit model with sample weights
+    	grid_search.fit(X_train, y_train, sample_weight=weights)
+
+    	# Get best model and hyperparameters
+    	best_model = grid_search.best_estimator_
+    	best_params = grid_search.best_params_
+    	print(f"Best hyperparameters: {best_params}")
+
+    	# Evaluate performance
+    	#y_train_pred = best_model.predict(X_train)
+    	#y_test_pred = best_model.predict(X_test)
+
+    	# Training Metrics
+    	#train_mse = mean_squared_error(y_train, y_train_pred)
+    	#train_r2 = r2_score(y_train, y_train_pred)
+    	#print(f"Training - MSQE: {train_mse:.4f}, R²: {train_r2:.4f}")
+	
+    	# Testing Metrics
+    	#test_mse = mean_squared_error(y_test, y_test_pred)
+    	#test_r2 = r2_score(y_test, y_test_pred)
+    	#test_mae = mean_absolute_error(y_test, y_test_pred)
+    	#print(f"Test - MSQE: {test_mse:.4f}, R²: {test_r2:.4f}, MAE: {test_mae:.4f}")
+
+    	# Feature Importance Plot
+    	feature_importances = best_model.feature_importances_
+    	for name, importance in zip(feature_names, feature_importances):
+        	print(f"Feature: {name}, Importance: {importance:.4f}")
+
+    	return best_model
 
     # train extra trees regression model with sklearn
     def et_regr_train(self, feature_names, resp_names, algo, hparam_dict,
