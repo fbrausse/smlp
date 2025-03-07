@@ -2,7 +2,6 @@
 # This file is part of smlp.
 
 # Fitting sklearn regression tree models
-from sklearn.model_selection import GridSearchCV, RandomizedSearchCV, KFold
 from sklearn.pipeline import Pipeline
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
 #from sklearn.tree import _tree
@@ -10,8 +9,9 @@ from sklearn import tree, ensemble
 
 # Fitting sklearn polynomial regression model
 from sklearn.preprocessing import PolynomialFeatures, RobustScaler, StandardScaler
-from sklearn.linear_model import Ridge, LinearRegression
+from sklearn.linear_model import Ridge, LinearRegression, RidgeCV
 from sklearn.metrics import mean_absolute_error
+from sklearn.preprocessing import MinMaxScaler
 
 # general
 import numpy as np
@@ -389,39 +389,37 @@ class ModelSklearn:
 
         max_degree = 3
 
+        lin_reg = LinearRegression().fit(X_train, y_train)
+        residuals = y_train - lin_reg.predict(X_train)
+        noise_level = np.std(residuals).item()
+
         mse_values = []
         degrees = range(1, max_degree + 1)
-        
         for d in degrees:
             poly = PolynomialFeatures(degree=d)
             X_poly_train = poly.fit_transform(X_train)
-            model = LinearRegression().fit(X_poly_train, y_train)
+            model = LinearRegression(**hparam_dict_local).fit(X_poly_train, y_train)
             y_pred = model.predict(X_poly_train)
             mse = mean_absolute_error(y_train, y_pred)
             mse_values.append(mse)
 
         best_degree = degrees[np.argmin(mse_values)]
 
-        pipeline = Pipeline([
-            ('polynomialfeatures', PolynomialFeatures(degree=best_degree)),
-        ])
+        poly_reg = PolynomialFeatures(degree=best_degree)
 
-        param_grid = {'polynomialfeatures__degree': [best_degree]}
+        if noise_level < 1e-10:
+            print("\nNo noise in the data! Using Linear Regression")
+            lin_reg_final = LinearRegression(**hparam_dict_local).fit(poly_reg.fit_transform(X_train), y_train)
+        else:
+            alphas = np.logspace(-6, 1, 50)
+            ridge_model = RidgeCV(alphas=alphas, store_cv_values=True, scoring='neg_mean_squared_error')
+            ridge_model.fit(poly_reg.fit_transform(X_train), y_train)
 
-        cv = KFold(n_splits=5, shuffle=True, random_state=42)
-        grid_search = GridSearchCV(
-            pipeline, param_grid, cv=cv, scoring='neg_mean_absolute_error', n_jobs=-1
-        )
-        grid_search.fit(X_train, y_train)
+            best_alpha = ridge_model.alpha_
+            print("\nBest alpha found:", best_alpha)
+            lin_reg_final = Ridge(alpha=best_alpha, **hparam_dict_local, solver='svd').fit(poly_reg.fit_transform(X_train), y_train)
 
-        best_model = grid_search.best_estimator_
-
-        print(f"\nBest polynomial degree: {best_degree}\n")
-
-        poly_reg = best_model.named_steps['polynomialfeatures']
-
-        X_poly_train_best = poly_reg.fit_transform(X_train)
-        lin_reg_final = LinearRegression(**hparam_dict_local).fit(X_poly_train_best, y_train, sample_weight=weights)
+        lin_reg_final = Ridge(alpha=best_alpha, **hparam_dict_local, solver='svd').fit(poly_reg.fit_transform(X_train), y_train)
 
         return lin_reg_final, poly_reg
 
@@ -487,7 +485,7 @@ class ModelSklearn:
             seed, sample_weights_vect, model_per_response):
         # train a separate models for each response, pack into a dictionary with response names
         # as keys and the correponding models as values
-        #print('sklearn_main: feat_names_dict', feat_names_dict, 'X_train cols', X_train.columns.tolist())
+        print('sklearn_main: feat_names_dict', feat_names_dict, 'X_train cols', X_train.columns.tolist())
         if model_per_response:
             model = {}
             for rn in resp_names:
