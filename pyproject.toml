@@ -53,6 +53,13 @@ smlp = "smlp.run_smlp:main2"
 where = ["."]
 exclude = ["*"]
 
+[tool.pytest.ini_options]
+markers = [
+    "toy: Toy example tests (deselect with '-m \"not toy\"')",
+    "real: Tests on real world data (deselect with '-m \"not real\"')",
+    "test: ?? TODO: description (deselect with '-m \"not test\"')",
+]
+
 # ---------------------------------------------------------------------------
 # Build-time environment variables (all optional)
 # ---------------------------------------------------------------------------
