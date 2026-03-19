@@ -150,7 +150,10 @@ class CmdTestCase:
 
 		if use_model:
 			assert self.data
-			args = ['-model_name', str(_cwd_rel(regrdir/'models'/self.data))]
+			# TODO: cannot use a relative path, it would be appended to the
+			# -out_dir path, see
+			# <https://github.com/SMLP-Systems/smlp/pull/61#issuecomment-4090755246>
+			args = ['-model_name', str(regrdir/'models'/self.data)]
 			args += list(_filter_out(pre, '-data', 1))
 			return args
 
@@ -270,11 +273,11 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 	for o in ('-save_model', '--save_model'):
 		o = _get_arg(smlp_args, o)
 		if o:
-			test_model |= o.lower().startswith('t')
+			test_model = o.lower().startswith('t')
 	if test_model:
 		test_model = _get_arg(smlp_args, '-model_name')
 		if not test_model:
-			warnings.warn('-save_model specified in args but no -model_name given')
+			warnings.warn(f'-save_model {o} specified in args but no -model_name given')
 
 	test_errors = extract_smlp_error(stderr)
 	test_prefix = 'Test' + test_id + '_'
@@ -282,8 +285,8 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 	data_path   = regrdir/'data'
 	models_path = regrdir/'models'
 	master_path = regrdir/'master'
-	files_in_master = get_all_files_from_dir(master_path)
-	files_in_output = get_all_files_from_dir(output_path)
+	files_in_master = get_all_files_from_dir(str(master_path))
+	files_in_output = get_all_files_from_dir(str(output_path))
 
 	if execute_test:
 		output_prefixes = [test_prefix]
@@ -309,8 +312,8 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 		to_show = True
 		answer = None
 		for file in new_files:
-			new_file = output_path/file
-			master_file = master_path/file
+			new_file = str(output_path/file)
+			master_file = str(master_path/file)
 			if os.path.isdir(new_file):
 				if os.path.exists(master_file):
 					assert os.path.isdir(master_file)
@@ -332,20 +335,24 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 			# model_file = 'model' in file_name  # if its a model file it needs to be replaced in data as well
 			model_file = file_name.startswith('test' + str(test_id) + '_model')
 			txt_file = False
-			if master_file.exists():
-				if new_file.suffix == '.txt' and not config_file:
+			if os.path.exists(master_file):
+				if Path(new_file).suffix == '.txt' and not config_file:
 					txt_file = True
 				# condition before, dropping from it h5 file checks because getting UnicodeDecodeError error on Sles 15, say on Test 13.
 				# (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json') or new_file.endswith('.h5')) and not file_name in files_to_ignore_from_diff:
 				exclude_cond = file_name in files_to_ignore_from_diff
 				exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')
-				if (new_file.suffix in ('.csv', '.txt', '.html', '.json')) and not exclude_cond:
+				if (Path(new_file).suffix in ('.csv', '.txt', '.html', '.json')) and not exclude_cond:
 					print('comparing {file} to master'.format(file=file_name))
+					# XXX fb: Hack using sed to replace output_path in new log
+					#         file.
 					p = subprocess.Popen(
-						'{diff} -B -I \'Feature selection.*file .*\' -I \'\\[-v-] Input.*\' -I \'usage:.*\' {k} {l}'.format(
-							diff=diff,
-							k=new_file,
-							l=master_file),
+						f'sed \'s,{output_path},.,g\' {new_file} | {diff} -B '
+						'-I \'Feature selection.*file .*\' '
+						'-I \'\\[-v-] Input.*\' '
+						'-I \'usage:.*\' '
+						'-I \'Seving model rerun configuration in file'
+						f'- {master_file}',
 						shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 					output, error = p.communicate()
 					if p.returncode == 1:
@@ -401,7 +408,7 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 					if file in master_files:
 						master_files.remove(file)
 				else:
-					if os.path.isfile(file):
+					if os.path.isfile(new_file):
 						master_files.remove(file)
 			else:
 				# not comparing directories; such as the range plots directory in mode subgroups 
@@ -439,10 +446,10 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 							os.remove(models_path/file_name)
 
 		for file in master_files:
-			new_file = output_path/file; #print('new_file', new_file)
-			master_file = master_path/file; #print(' master_file',  master_file)
+			new_file = str(output_path/file); #print('new_file', new_file)
+			master_file = str(master_path/file); #print(' master_file',  master_file)
 			file_name = file
-			print('File new {file} does not exist'.format(file=file))
+			print(f'File new {file} does not exist')
 			test_files_check.append((file, 'Failed -> new file does not exist'))
 			test_result = False
 			#  diff_errors.append('File new {file} does not exist'.format(file=file))
