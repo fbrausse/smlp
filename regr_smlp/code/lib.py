@@ -114,7 +114,6 @@ class CmdTestCase:
 				path = Path(pre[i+1])
 				if path.is_absolute():
 					warnings.warn(
-						f'Test #{self.nr}: '
 						f'path given to {arg} in args is absolute: {path}')
 				else:
 					path = _cwd_rel(loc/path)
@@ -267,8 +266,9 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 	test_model = False
 	for o in ('-save_model', '--save_model'):
 		o = _get_arg(smlp_args, o)
-		if o:
-			test_model = o.lower().startswith('t')
+		if o and o.lower().startswith('t'):
+			test_model = True
+			break
 	if test_model:
 		test_model = _get_arg(smlp_args, '-model_name')
 		if not test_model:
