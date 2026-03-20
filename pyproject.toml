@@ -53,6 +53,9 @@ smlp = "smlp.run_smlp:main2"
 where = ["."]
 exclude = ["*"]
 
+[tool.pytest]
+strict = true
+
 [tool.pytest.ini_options]
 markers = [
     "toy: Toy example tests (deselect with '-m \"not toy\"')",
