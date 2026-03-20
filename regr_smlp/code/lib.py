@@ -221,7 +221,7 @@ class CmdTestCase:
 			#check_outputs(str(self.nr), args, pr.stdout, pr.stderr, regrdir, tmp_path)
 			assert check_outputs(tmp_path), (
 				'checking against master failed, '
-				f'for details see summary in {meta/'test_log.txt'}'
+				f'for details see summary in {meta/"test_log.txt"}'
 			)
 
 def check_outputs(tmpdir):
