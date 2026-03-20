@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pytest
+import subprocess
 
 from lib import *
 
@@ -1151,6 +1152,8 @@ class Test103(CmdTestCase):
 
 @pytest.mark.toy
 @pytest.mark.test
+@pytest.mark.xfail(True, reason='wrong spec due to singleton value',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test104(CmdTestCase):
 	'''
 	assertion verfication test with wrong spec that does not assign a single value using a singleton grid or range with equal max and min
@@ -1184,6 +1187,8 @@ class Test106(CmdTestCase):
 	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-spec', 'smlp_toy_num_resp_mult_unsat_eta_verify.spec', '-asrt_names', 'asrt_y1,asrt_y2', '-asrt_expr', 'y1*2+x<=5 and y1<=10;-2*y2-1<10-p2', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy
+@pytest.mark.xfail(True, reason='contradictory eta contraints',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test107(CmdTestCase):
 	'''
 	test for verification mode to check that eta contraints are not contradictory and as otherwise verification problem is not well defined

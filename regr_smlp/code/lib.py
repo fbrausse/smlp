@@ -186,7 +186,7 @@ class CmdTestCase:
 		exepath = projdir/'src'/'run_smlp.py'
 		args    = self._construct_args(regrdir, extdir, tmp_path)
 
-		print(f'Test {self.nr} using tmp-path: {tmp_path}')
+		print(f'Test {self.nr} using tmp-path: {tmp_path}', file=sys.stderr)
 
 		# write the meta-data for this test so results can be checked
 		# independently of the execution
@@ -211,17 +211,12 @@ class CmdTestCase:
 
 			print(shlex.join(cmd), file=sys.stderr)
 
-			try:
-				with (open(meta/'stdout', 'wb', buffering=0) as o,
-				      open(meta/'stderr', 'wb', buffering=0) as e):
-					pr = subprocess.run(cmd,
-					                    stdin=subprocess.DEVNULL,
-					                    stdout=o, stderr=e,
-					                    **self.more_subproc_run_args())
-			except Exception as ex:
-				assert 0, f'error invoking {shlex.join(cmd)}: {ex}'
-
-			assert pr.returncode == 0, f'command failed with exit code {pr.returncode}: {shlex.join(cmd)}'
+			with (open(meta/'stdout', 'wb', buffering=0) as o,
+			      open(meta/'stderr', 'wb', buffering=0) as e):
+				pr = subprocess.run(cmd,
+				                    stdin=subprocess.DEVNULL,
+				                    stdout=o, stderr=e, check=True,
+				                    **self.more_subproc_run_args())
 
 			#check_outputs(str(self.nr), args, pr.stdout, pr.stderr, regrdir, tmp_path)
 			assert check_outputs(tmp_path), (
