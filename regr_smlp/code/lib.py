@@ -64,7 +64,7 @@ def get_all_files_from_dir(dir_path):
 	return os.listdir(dir_path)
 
 def comapre_files(file1, file2):
-	if file1.suffix == '.csv':
+	if Path(file1).suffix == '.csv':
 		return csv_cmp.compare_csv(file1, file2)
 	f1 = open(file1, 'r')
 	f2 = open(file2, 'r')
@@ -341,13 +341,16 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 					print('comparing {file} to master'.format(file=file_name))
 					# XXX fb: Hack using sed to replace output_path in new log
 					#         file.
-					p = subprocess.Popen(
+					cmd = (
 						f'sed \'s,{output_path},.,g\' {new_file} | {diff} -B '
 						'-I \'Feature selection.*file .*\' '
 						'-I \'\\[-v-] Input.*\' '
 						'-I \'usage:.*\' '
-						'-I \'Seving model rerun configuration in file'
-						f'- {master_file}',
+						'-I \'Seving model rerun configuration in file\' '
+						f'- {master_file}'
+					)
+					p = subprocess.Popen(
+						cmd,
 						shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 					output, error = p.communicate()
 					if p.returncode == 1:
