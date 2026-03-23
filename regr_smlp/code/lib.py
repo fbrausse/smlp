@@ -149,10 +149,7 @@ class CmdTestCase:
 
 		if use_model:
 			assert self.data
-			# TODO: cannot use a relative path, it would be appended to the
-			# -out_dir path, see
-			# <https://github.com/SMLP-Systems/smlp/pull/61#issuecomment-4090755246>
-			args = ['-model_name', str(regrdir/'models'/self.data)]
+			args = ['-model_name', str(_cwd_rel(regrdir/'models'/self.data))]
 			args += list(_filter_out(pre, '-data', 1))
 			return args
 
