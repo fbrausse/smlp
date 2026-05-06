@@ -55,8 +55,6 @@ exclude = ["*"]
 
 [tool.pytest]
 strict = true
-
-[tool.pytest.ini_options]
 markers = [
     "toy: Toy example tests (deselect with '-m \"not toy\"')",
     "real: Tests on real world data (deselect with '-m \"not real\"')",
