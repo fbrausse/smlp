@@ -201,7 +201,7 @@ class CmdTestCase:
 		if args is None:
 			print('', file=sys.stderr)
 		else:
-			cmd = [str(_cwd_rel(exepath))] + args
+			cmd = [str(exepath)] + args
 			with open(meta/'cmd', 'w') as f:
 				print(shlex.join(cmd), file=f)
 
