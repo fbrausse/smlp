@@ -258,8 +258,6 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 		with open(log_file, 'a') as writefile:
 			writefile.write(line + '\n')
 
-	execute_test = True
-
 	test_model = False
 	for o in ('-save_model', '--save_model'):
 		o = _get_arg(smlp_args, o)
@@ -280,205 +278,194 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 	files_in_master = get_all_files_from_dir(str(master_path))
 	files_in_output = get_all_files_from_dir(str(output_path))
 
-	if execute_test:
-		output_prefixes = [test_prefix]
-		if test_model:
-			output_prefixes.append(test_model)
-		new_files = get_file_from_list_underscore(output_prefixes, files_in_output)
-		master_files = get_file_from_list_underscore(output_prefixes, files_in_master)
-		test_result = True
-		test_files_check = []
-		txt_index = -1
-		# print(new_files)
-		# while not smlp_txt_file(new_files[txt_index]):
-		#     txt_index += 1
-		for k in range(0, len(new_files)):
-			if smlp_txt_file(new_files[k]):
-				txt_index = k  # found the txt file
-		if txt_index != -1:
-			new_files_tmp = new_files[:]
-			new_files = [new_files_tmp.pop(txt_index)]
-			new_files_tmp.sort()
-			new_files = new_files + new_files_tmp
+	output_prefixes = [test_prefix]
+	if test_model:
+		output_prefixes.append(test_model)
+	new_files = get_file_from_list_underscore(output_prefixes, files_in_output)
+	master_files = get_file_from_list_underscore(output_prefixes, files_in_master)
+	test_result = True
+	test_files_check = []
+	txt_index = -1
+	# print(new_files)
+	# while not smlp_txt_file(new_files[txt_index]):
+	#     txt_index += 1
+	for k in range(0, len(new_files)):
+		if smlp_txt_file(new_files[k]):
+			txt_index = k  # found the txt file
+	if txt_index != -1:
+		new_files_tmp = new_files[:]
+		new_files = [new_files_tmp.pop(txt_index)]
+		new_files_tmp.sort()
+		new_files = new_files + new_files_tmp
 
-		to_show = True
-		answer = None
-		for file in new_files:
-			new_file = str(output_path/file)
-			master_file = str(master_path/file)
-			if os.path.isdir(new_file):
-				if os.path.exists(master_file):
-					assert os.path.isdir(master_file)
-				if new_file.endswith('_plots'):
-					if os.path.exists(master_file):
-						assert master_file.endswith('_plots')
-						file_to_minitor =  'plotReport.html'
-						new_file = os.path.join(new_file,)
-						master_file = os.path.join(master_file, file_to_minitor)
-						#print('dropping from master_files',  file)
-						master_files.remove(file)
-						file =  os.path.join(file, file_to_minitor)
-						#print('appending to master files', file)
-						master_files.append(file)
-						#print('update new_file', new_file); print('updated master file', master_file);
-
-			file_name = file
-			config_file = 'config' in file_name
-			# model_file = 'model' in file_name  # if its a model file it needs to be replaced in data as well
-			model_file = file_name.startswith('test' + str(test_id) + '_model')
-			txt_file = False
+	to_show = True
+	answer = None
+	for file in new_files:
+		new_file = str(output_path/file)
+		master_file = str(master_path/file)
+		if os.path.isdir(new_file):
 			if os.path.exists(master_file):
-				if Path(new_file).suffix == '.txt' and not config_file:
-					txt_file = True
-				# condition before, dropping from it h5 file checks because getting UnicodeDecodeError error on Sles 15, say on Test 13.
-				# (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json') or new_file.endswith('.h5')) and not file_name in files_to_ignore_from_diff:
-				exclude_cond = file_name in files_to_ignore_from_diff
-				exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')
-				if (Path(new_file).suffix in ('.csv', '.txt', '.html', '.json')) and not exclude_cond:
-					print('comparing {file} to master'.format(file=file_name))
-					# XXX fb: Hack using sed to replace output_path in new log
-					#         file.
-					cmd = (
-						f'sed \'s,{output_path},.,g\' {new_file} | {diff} -B '
-						'-I \'Feature selection.*file .*\' '
-						'-I \'\\[-v-] Input.*\' '
-						'-I \'usage:.*\' '
-						'-I \'Seving model rerun configuration in file\' '
-						f'- {master_file}'
-					)
-					p = subprocess.Popen(
-						cmd,
-						shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-					output, error = p.communicate()
-					if p.returncode == 1:
-						if not comapre_files(new_file, master_file):
-							if not args.no_graphical_compare and to_show:
-								Popen('{diff} {l} {k}'.format(diff=DIFF, k=new_file, l=master_file), shell=True).wait()
-							if args.default or (args.config_default and config_file):
-								if args.config_default and config_file:
-									user_input = args.config_default
-								else:
-									user_input = args.default
-							elif not to_show:
-								print('answer is: ' + answer)
-								user_input = answer
-							else:
-								user_input = input(
-									'Do you wish to switch the new file with the master?\n(yes/no|y/n): ').lower()
-							while user_input not in {'yes', 'no', 'y', 'n'}:
-								user_input = input('(yes/no|y/n):').lower()
-							if user_input in {'yes', 'y'}:
-								if model_file or config_file:
-									copyfile(new_file, master_file)
-									copyfile(new_file, models_path/file_name)
-									print('Replacing Files both in master and data')
+				assert os.path.isdir(master_file)
+			if new_file.endswith('_plots'):
+				if os.path.exists(master_file):
+					assert master_file.endswith('_plots')
+					file_to_minitor =  'plotReport.html'
+					new_file = os.path.join(new_file,)
+					master_file = os.path.join(master_file, file_to_minitor)
+					#print('dropping from master_files',  file)
+					master_files.remove(file)
+					file =  os.path.join(file, file_to_minitor)
+					#print('appending to master files', file)
+					master_files.append(file)
+					#print('update new_file', new_file); print('updated master file', master_file);
 
-								else:
-									copyfile(new_file, master_file)
-									print('Replacing Files...')
-									if path.exists(data_path/file_name):
-										if args.default:
-											user_input = args.default
-										else:
-											user_input = input(
-												'File exists also in data, switch there as well?\n(yes/no|y/n): ').lower()
-										while user_input not in {'yes', 'no', 'y', 'n'}:
-											user_input = input('(yes/no|y/n):').lower()
-										if user_input in {'yes', 'y'}:
-											copyfile(new_file, data_path/file_name)
-							test_result = False
-							test_files_check.append((file_name, 'Failed -> content diff'))
-							if txt_file and args.fail_txt:
-								to_show = False
-								answer = user_input
+		file_name = file
+		config_file = 'config' in file_name
+		# model_file = 'model' in file_name  # if its a model file it needs to be replaced in data as well
+		model_file = file_name.startswith('test' + str(test_id) + '_model')
+		txt_file = False
+		if os.path.exists(master_file):
+			if Path(new_file).suffix == '.txt' and not config_file:
+				txt_file = True
+			# condition before, dropping from it h5 file checks because getting UnicodeDecodeError error on Sles 15, say on Test 13.
+			# (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json') or new_file.endswith('.h5')) and not file_name in files_to_ignore_from_diff:
+			exclude_cond = file_name in files_to_ignore_from_diff
+			exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')
+			if (Path(new_file).suffix in ('.csv', '.txt', '.html', '.json')) and not exclude_cond:
+				print('comparing {file} to master'.format(file=file_name))
+				# XXX fb: Hack using sed to replace output_path in new log
+				#         file.
+				cmd = (
+					f'sed \'s,{output_path},.,g\' {new_file} | {diff} -B '
+					'-I \'Feature selection.*file .*\' '
+					'-I \'\\[-v-] Input.*\' '
+					'-I \'usage:.*\' '
+					'-I \'Seving model rerun configuration in file\' '
+					f'- {master_file}'
+				)
+				p = subprocess.Popen(
+					cmd,
+					shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+				output, error = p.communicate()
+				if p.returncode == 1:
+					if not comapre_files(new_file, master_file):
+						if not args.no_graphical_compare and to_show:
+							Popen('{diff} {l} {k}'.format(diff=DIFF, k=new_file, l=master_file), shell=True).wait()
+						if args.default or (args.config_default and config_file):
+							if args.config_default and config_file:
+								user_input = args.config_default
+							else:
+								user_input = args.default
+						elif not to_show:
+							print('answer is: ' + answer)
+							user_input = answer
 						else:
-							print("Passed!")
-							test_files_check.append((file_name, 'Passed'))
+							user_input = input(
+								'Do you wish to switch the new file with the master?\n(yes/no|y/n): ').lower()
+						while user_input not in {'yes', 'no', 'y', 'n'}:
+							user_input = input('(yes/no|y/n):').lower()
+						if user_input in {'yes', 'y'}:
+							if model_file or config_file:
+								copyfile(new_file, master_file)
+								copyfile(new_file, models_path/file_name)
+								print('Replacing Files both in master and data')
+
+							else:
+								copyfile(new_file, master_file)
+								print('Replacing Files...')
+								if path.exists(data_path/file_name):
+									if args.default:
+										user_input = args.default
+									else:
+										user_input = input(
+											'File exists also in data, switch there as well?\n(yes/no|y/n): ').lower()
+									while user_input not in {'yes', 'no', 'y', 'n'}:
+										user_input = input('(yes/no|y/n):').lower()
+									if user_input in {'yes', 'y'}:
+										copyfile(new_file, data_path/file_name)
+						test_result = False
+						test_files_check.append((file_name, 'Failed -> content diff'))
+						if txt_file and args.fail_txt:
+							to_show = False
+							answer = user_input
 					else:
 						print("Passed!")
 						test_files_check.append((file_name, 'Passed'))
-				if model_file:
-					master_files.remove(file_name)
-					os.remove(new_file)
-					if file in master_files:
-						master_files.remove(file)
 				else:
-					if os.path.isfile(new_file):
-						master_files.remove(file)
+					print("Passed!")
+					test_files_check.append((file_name, 'Passed'))
+			if model_file:
+				master_files.remove(file_name)
+				os.remove(new_file)
+				if file in master_files:
+					master_files.remove(file)
 			else:
-				# not comparing directories; such as the range plots directory in mode subgroups 
-				if os.path.isdir(new_file):
-					continue
-				print('File master {file} does not exist'.format(file=file))
-				test_files_check.append((file, 'Failed -> master file does not exist'))
-				if file.endswith("smlp_error.txt"):
-					to_print = 'Test number ' + test_id + ' Crashed!'
-					print(to_print)
-					new_error_ids.append(test_id)
-					new_error_fns.append(file)
-				elif file.endswith("png"):
-					continue
-				else:
-					if not args.default:
-						user_input = input(
-							'What to do with the new file?\n1 - Nothing\n2 - Copy to master only\n3 - Copy to master and models\n4 - Remove from master only\n5 - Remove from master and models\nOption number: ')
-						while user_input not in {'1', '2', '3', '4', '5'}:
-							user_input = input('(1|2|3|4|5):')
-						if user_input == '1':
-							pass
-						elif user_input == '2':
-							if os.path.isdir(new_file):
-								copytree(new_file, master_file, dirs_exist_ok=True)
-							else:
-								copyfile(new_file, master_file)
-						elif user_input == '3':
+				if os.path.isfile(new_file):
+					master_files.remove(file)
+		else:
+			# not comparing directories; such as the range plots directory in mode subgroups
+			if os.path.isdir(new_file):
+				continue
+			print('File master {file} does not exist'.format(file=file))
+			test_files_check.append((file, 'Failed -> master file does not exist'))
+			if file.endswith("smlp_error.txt"):
+				to_print = 'Test number ' + test_id + ' Crashed!'
+				print(to_print)
+				new_error_ids.append(test_id)
+				new_error_fns.append(file)
+			elif file.endswith("png"):
+				continue
+			else:
+				if not args.default:
+					user_input = input(
+						'What to do with the new file?\n1 - Nothing\n2 - Copy to master only\n3 - Copy to master and models\n4 - Remove from master only\n5 - Remove from master and models\nOption number: ')
+					while user_input not in {'1', '2', '3', '4', '5'}:
+						user_input = input('(1|2|3|4|5):')
+					if user_input == '1':
+						pass
+					elif user_input == '2':
+						if os.path.isdir(new_file):
+							copytree(new_file, master_file, dirs_exist_ok=True)
+						else:
 							copyfile(new_file, master_file)
-							copyfile(new_file, models_path/file_name)
-						elif user_input == '4':
-							os.remove(master_file)
-						elif user_input == '5':
-							os.remove(master_file)
-							os.remove(models_path/file_name)
-
-		for file in master_files:
-			new_file = str(output_path/file); #print('new_file', new_file)
-			master_file = str(master_path/file); #print(' master_file',  master_file)
-			file_name = file
-			print(f'File new {file} does not exist')
-			test_files_check.append((file, 'Failed -> new file does not exist'))
-			test_result = False
-			#  diff_errors.append('File new {file} does not exist'.format(file=file))
-			if not args.default:
-				user_input = input(
-					'What to do with the master file?\n1 - Nothing\n2 - Remove from master only\n3 - Remove from master and models\nOption number: ')
-				while user_input not in {'1', '2', '3',}:
-					user_input = input('(1|2|3):')
-				if user_input == '1':
-					pass
-				elif user_input == '2':
-					os.remove(master_file)
-				elif user_input == '3':
-					os.remove(master_file)
-					if os.path.exists(models_path/file_name):
+					elif user_input == '3':
+						copyfile(new_file, master_file)
+						copyfile(new_file, models_path/file_name)
+					elif user_input == '4':
+						os.remove(master_file)
+					elif user_input == '5':
+						os.remove(master_file)
 						os.remove(models_path/file_name)
-		if log:
-			if test_result:
-				write_to_log('Test ' + test_id + ' Passed:')
-			else:
-				write_to_log('Test ' + test_id + ' Failed:')
-			for file_check in test_files_check:
-				write_to_log(file_check[0] + ' ' + file_check[1])
-			write_to_log('')
-	else:
-		print('Test {id} Failed:'.format(id=test_id))
-		if log:
-			write_to_log('Test {id} Failed:'.format(id=test_id))
-		for test_error in test_errors:
-			print('Error in {stage} stage:'.format(stage=test_error[0]))
-			print(test_error[1])
-			if log:
-				write_to_log('Error in {stage} stage:'.format(stage=test_error[0]))
-				write_to_log(test_error[1])
+
+	for file in master_files:
+		new_file = str(output_path/file); #print('new_file', new_file)
+		master_file = str(master_path/file); #print(' master_file',  master_file)
+		file_name = file
+		print(f'File new {file} does not exist')
+		test_files_check.append((file, 'Failed -> new file does not exist'))
+		test_result = False
+		#  diff_errors.append('File new {file} does not exist'.format(file=file))
+		if not args.default:
+			user_input = input(
+				'What to do with the master file?\n1 - Nothing\n2 - Remove from master only\n3 - Remove from master and models\nOption number: ')
+			while user_input not in {'1', '2', '3',}:
+				user_input = input('(1|2|3):')
+			if user_input == '1':
+				pass
+			elif user_input == '2':
+				os.remove(master_file)
+			elif user_input == '3':
+				os.remove(master_file)
+				if os.path.exists(models_path/file_name):
+					os.remove(models_path/file_name)
+	if log:
+		if test_result:
+			write_to_log('Test ' + test_id + ' Passed:')
+		else:
+			write_to_log('Test ' + test_id + ' Failed:')
+		for file_check in test_files_check:
+			write_to_log(file_check[0] + ' ' + file_check[1])
+		write_to_log('')
 
 	return test_result
 
