@@ -66,9 +66,13 @@ def compare_csv(csv1, csv2):
 
 
 def main():
-    pass
-    #return comapre_csv(path.join(old_path, file), path.join(new_path, file))
+    if compare_csv(sys.argv[1], sys.argv[2]):
+        print('OK')
+        return 0
+    else:
+        print('Failed')
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
