@@ -470,7 +470,7 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 	return test_result
 
 def main():
-	return 0 if check_outputs(Path(sys.argv[1])) else 1
+	return 0 if check_outputs(Path(sys.argv[1]).absolute()) else 1
 
 if __name__ == '__main__':
 	sys.exit(main())
