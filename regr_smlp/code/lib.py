@@ -347,53 +347,53 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 					cmd,
 					shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 				output, error = p.communicate()
-				if p.returncode == 1:
-					if not comapre_files(new_file, master_file):
-						if not args.no_graphical_compare and to_show:
-							Popen('{diff} {l} {k}'.format(diff=DIFF, k=new_file, l=master_file), shell=True).wait()
-						if args.default or (args.config_default and config_file):
-							if args.config_default and config_file:
-								user_input = args.config_default
-							else:
-								user_input = args.default
-						elif not to_show:
-							print('answer is: ' + answer)
-							user_input = answer
-						else:
-							user_input = input(
-								'Do you wish to switch the new file with the master?\n(yes/no|y/n): ').lower()
-						while user_input not in {'yes', 'no', 'y', 'n'}:
-							user_input = input('(yes/no|y/n):').lower()
-						if user_input in {'yes', 'y'}:
-							if model_file or config_file:
-								copyfile(new_file, master_file)
-								copyfile(new_file, models_path/file_name)
-								print('Replacing Files both in master and data')
-
-							else:
-								copyfile(new_file, master_file)
-								print('Replacing Files...')
-								if path.exists(data_path/file_name):
-									if args.default:
-										user_input = args.default
-									else:
-										user_input = input(
-											'File exists also in data, switch there as well?\n(yes/no|y/n): ').lower()
-									while user_input not in {'yes', 'no', 'y', 'n'}:
-										user_input = input('(yes/no|y/n):').lower()
-									if user_input in {'yes', 'y'}:
-										copyfile(new_file, data_path/file_name)
-						test_result = False
-						test_files_check.append((file_name, 'Failed -> content diff'))
-						if txt_file and args.fail_txt:
-							to_show = False
-							answer = user_input
-					else:
-						print("Passed!")
-						test_files_check.append((file_name, 'Passed'))
-				else:
+				if p.returncode == 0:
 					print("Passed!")
 					test_files_check.append((file_name, 'Passed'))
+				elif comapre_files(new_file, master_file):
+					print("Passed!")
+					test_files_check.append((file_name, 'Passed'))
+				else:
+					print("Failed!")
+					if not args.no_graphical_compare and to_show:
+						Popen('{diff} {l} {k}'.format(diff=DIFF, k=new_file, l=master_file), shell=True).wait()
+					if args.default or (args.config_default and config_file):
+						if args.config_default and config_file:
+							user_input = args.config_default
+						else:
+							user_input = args.default
+					elif not to_show:
+						print('answer is: ' + answer)
+						user_input = answer
+					else:
+						user_input = input(
+							'Do you wish to switch the new file with the master?\n(yes/no|y/n): ').lower()
+					while user_input not in {'yes', 'no', 'y', 'n'}:
+						user_input = input('(yes/no|y/n):').lower()
+					if user_input in {'yes', 'y'}:
+						if model_file or config_file:
+							copyfile(new_file, master_file)
+							copyfile(new_file, models_path/file_name)
+							print('Replacing Files both in master and data')
+
+						else:
+							copyfile(new_file, master_file)
+							print('Replacing Files...')
+							if path.exists(data_path/file_name):
+								if args.default:
+									user_input = args.default
+								else:
+									user_input = input(
+										'File exists also in data, switch there as well?\n(yes/no|y/n): ').lower()
+								while user_input not in {'yes', 'no', 'y', 'n'}:
+									user_input = input('(yes/no|y/n):').lower()
+								if user_input in {'yes', 'y'}:
+									copyfile(new_file, data_path/file_name)
+					test_result = False
+					test_files_check.append((file_name, 'Failed -> content diff'))
+					if txt_file and args.fail_txt:
+						to_show = False
+						answer = user_input
 			if model_file:
 				master_files.remove(file_name)
 				os.remove(new_file)
