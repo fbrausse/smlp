@@ -3,7 +3,7 @@
 SMLP is a general purpose tool for verification and optimisation of systems modelled using machine learning. </br>
 SMLP uses symbolic reasoning for ML model exploration and optimisation under verification and stability constraints.
 
-<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/smlp_overview.png" alt="SMLP Overview" class="center" width="750" height="500">
+<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/smlp_overview.png" alt="SMLP Overview" class="center" width="800">
 
 
 **Industry adoption:** SMLP is used at **Intel** for optimization of package/board layouts and signal integrity
@@ -54,7 +54,7 @@ SMLP supports:
  - parameter optimization
 
 <p align="center">
-<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/smlp_arch.png"  alt="SMLP Arch" class="center" width="800" height="500">
+<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/smlp_arch.png"  alt="SMLP Arch" class="center" width="800">
 </p>
 
 Papers:
@@ -352,7 +352,7 @@ tests/install/test_container_install mdmitry1/python311-dev
 ###  Problem: find minimal distance between point (2,1) and unit circle<br>
  
  <p align="left">
-<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/minimal_distance.png"  alt="Minimal Distance Problem" class="center" width="500" height="400"></p>
+<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/minimal_distance.png"  alt="Minimal Distance Problem" class="center" width="500"></p>
  
  Analytical solution for this problem is:<br>
  `

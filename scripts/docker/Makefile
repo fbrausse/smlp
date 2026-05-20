@@ -20,6 +20,9 @@ endif
 ifeq ($(INSTALL_MODE),system)
     INSTALL_MODE_ARG := --build-arg INSTALL_MODE=system
     IMAGE_TAG        := $(IMAGE)-system
+else ifeq ($(INSTALL_MODE),mac)
+    INSTALL_MODE_ARG := --platform linux/arm64 --load
+    IMAGE_TAG        := $(IMAGE)-mac
 else
     INSTALL_MODE_ARG := --build-arg INSTALL_MODE=venv
     IMAGE_TAG        := $(IMAGE)
@@ -79,7 +82,7 @@ clean_build: $(DOCKERFILE)
 
 help:
 	@echo    ""
-	@echo    "Usage: make [target] [IMAGE=<image_name>] [RELEASE_TYPE=test] [SMLP_COMMIT=<tagname>"] [INSTALL_MODE=system]
+	@echo    "Usage: make [target] [IMAGE=<image_name>] [RELEASE_TYPE=test] [SMLP_COMMIT=<tagname>] [INSTALL_MODE=<system|mac>]"
 	@echo    ""
 	@echo    "Targets:"
 	@echo    "  build :                               Incremental build using Dockerfile.<image_name> (default target). Docker cache is used"
@@ -91,7 +94,8 @@ help:
 	@echo    "  RELEASE_TYPE=test  :                  The latest version installed on https://test.pypi.org/project/smlptech/#history will be used"
 	@echo    "                                          By default version installed on https://pypi.org/project/smlptech/#history will be used"
 	@echo    "  INSTALL_MODE=system :                 Package installation for ubuntu_24.04 will be done using sudo"
-	@echo    "                                          By default package installation for ubuntu_24.04 will be done in virtual environment"
+	@echo -e "  INSTALL_MODE=mac :                    Image with be built for Mac Apple silicon. \033[1mSupported only for IMAGE=python311-dev\033[0m"
+	@echo    "                                          By default package installation for ubuntu_24.04 will be done for Intel/AMD silicon in virtual environment"
 	@echo    "  help :                                Show this message"
 	@echo    ""
 	@echo    "Example:"

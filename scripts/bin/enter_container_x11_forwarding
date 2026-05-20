@@ -12,9 +12,16 @@ socat TCP4-LISTEN:600${display},bind=$ip,reuseaddr,fork UNIX-CONNECT:/tmp/.X11-u
 if [[ -z "${TZ}" ]]; then
     TZ=$(readlink /etc/localtime | sed 's@/usr/share/zoneinfo/@@')
 fi
+arch=$(docker image inspect $image --format '{{.Architecture}}')
+if [ "arm64" == $arch ]; then
+    platform="--platform linux/aarch64"
+else
+    platform=""
+fi
 docker run -e DISPLAY="${ip}:${display}" \
            -e TZ="$TZ" \
            -e NO_AT_BRIDGE=1 \
            --network host \
+           $platform \
            -v "$HOME/shared:/shared" \
            -it $image "$@"
