@@ -35,6 +35,22 @@ elif [[ -v wheel ]]; then
 else
     pip install smlptech
 fi
+smlptech_version=$(pip show smlptech | grep ^Version | awk '{print $NF}')
+if [[ "$smlptech_version" == *"+g"* ]]; then
+    commit="${smlptech_version##*+g}"
+else
+    tag=v"$smlptech_version"
+    pip install beautifulsoup4
+    smlp_release_info=$(git rev-parse --show-toplevel)/scripts/github/smlp_release_info.py
+    commit=$($smlp_release_info $tag | grep "Commit Hash" | awk '{print $NF}')
+fi
+if [[ -v tag ]]; then
+    echo "Tag: $tag"
+fi
+echo "Commit: $commit"
+checkout_cmd="git checkout $commit"
+echo $checkout_cmd
+$checkout_cmd
 sed -i.bak "s@../../src/run_smlp.py@smlp@" regr_smlp/code/smlp_regr.py
 cd regr_smlp/code
 smlp -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test1 -mode train -resp y1 -feat x,p1,p2 -model dt_caret -save_model_config f -mrmr_pred 0 -plots t -seed 10 -log_time f
