@@ -41,7 +41,7 @@ dependencies = [
     "scipy",
     "seaborn",
     "tensorflow",
-     "z3-solver==4.8.12"
+    "z3-solver==4.8.12"
 ]
 
 [project.urls]
