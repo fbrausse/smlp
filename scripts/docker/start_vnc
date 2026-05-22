@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+screen_resolution="${VNC_SCREEN_RESOLUTION:-1280x1024}"
+
+pkill Xvfb &>/dev/null || true
+Xvfb "$DISPLAY" -screen 0 "${screen_resolution}x16" >& Xvfb.log &
+i=1
+while true; do
+    sleep 1
+    if xset q &>/dev/null; then
+        break
+    fi
+    if (( i < 11 )); then
+        (( i++ ))
+    else
+        echo -e "\nERROR: Can't open virtual display - GUI won't work\n" >&2
+        exit 1
+    fi
+done
+
+d="${DISPLAY/:/}"
+p=$(( d + 5801 ))
+
+pkill x11vnc &>/dev/null || true
+x11vnc -display "$DISPLAY" -forever -nopw -shared -rfbport "$p" >& x11nc.log &
+
+autocutsel -selection CLIPBOARD -fork
+autocutsel -selection PRIMARY -fork
+
+if xset q >& /dev/null; then
+    echo "VNC server has started successfully with screen resolution $screen_resolution"
+else
+    echo "VNC server failed - GUI won't work"
+fi

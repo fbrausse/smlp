@@ -1,0 +1,13 @@
+doepy
+jenkspy
+keras-tuner
+matplotlib
+mrmr-selection
+pandas
+pycaret
+pyDOE
+pysubgroup==0.8.0
+scikit-learn==1.4.2
+scipy
+seaborn
+tensorflow==2.15.1

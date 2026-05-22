@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+script_path=$(realpath $0 | xargs dirname)
+i=1
+for image in $(docker images --format table | awk '{print $1}' | egrep "smlp|dev" | grep python311 | egrep -v "wheel|test\-build"); do
+    echo $i $image matplotlib backend for VNC server: $(docker run -e DISPLAY=:99 -p 5900:5900 --rm -v $script_path/test_matplotlib_in_vnc:/test_matplotlib $image /test_matplotlib)
+    (( i++ ))
+done
+for image in $(docker images --format table | awk '{print $1}' | egrep "smlp|dev" | grep python311 | grep -v wheel); do
+    echo $i $image matplotlib backend for virtual display: $(docker run --rm -v $script_path/test_matplotlib_in_virtual_display:/test_matplotlib $image /test_matplotlib)
+    (( i++ ))
+done

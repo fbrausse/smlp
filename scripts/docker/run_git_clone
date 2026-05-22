@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+GIT_BRANCH="${1:-}"
+
+# Clone the repository
+if ! git clone https://github.com/SMLP-Systems/smlp; then
+    echo "ERROR: git clone failed." >&2
+    exit 1
+fi
+
+cd smlp
+
+# If a branch was specified, check and switch to it
+if [[ -n "$GIT_BRANCH" ]]; then
+    if [[ -z "$(git branch -r --list "origin/$GIT_BRANCH")" ]]; then
+        echo "WARNING: Branch '$GIT_BRANCH' does not exist on remote." >&2
+        GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's,.*/,,')
+        echo "WARNING: Staying on default branch '$GIT_BRANCH'" >&2
+    else
+        git switch "$GIT_BRANCH"
+    fi
+else
+   GIT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's,.*/,,')
+   echo "INFO: using default branch '$GIT_BRANCH'"
+fi
+
+# Inspect the last commit on the current branch
+LAST_COMMIT=$(git rev-parse HEAD)
+
+# Get all tags pointing exactly at the last commit
+TAGS=$(git tag --points-at "$LAST_COMMIT")
+
+if [[ -z "$TAGS" ]]; then
+    echo "WARNING: The last commit on '$GIT_BRANCH' ($LAST_COMMIT) is not tagged." >&2
+else
+    # Count the tags
+    TAG_COUNT=$(echo "$TAGS" | wc -l | tr -d ' ')
+
+    if [[ "$TAG_COUNT" -gt 1 ]]; then
+        echo "WARNING: The last commit on '$GIT_BRANCH' ($LAST_COMMIT) has multiple tags:" >&2
+        while IFS= read -r tag; do
+            echo "  - $tag" >&2
+        done <<< "$TAGS"
+    fi
+
+    # Check each tag against PEP 440 / setuptools_scm naming convention:
+    # valid forms: N.N.N  N.N.N.devM  N.N.NaN  N.N.NbN  N.N.NrcN  N.N.N.postN
+    PEP440_RE='^v?[0-9]+\.[0-9]+(\.[0-9]+)*(\.dev[0-9]+|a[0-9]+|b[0-9]+|rc[0-9]+|\.post[0-9]+)?$'
+    NON_CONFORMING=()
+    while IFS= read -r tag; do
+        if ! [[ "$tag" =~ $PEP440_RE ]]; then
+            NON_CONFORMING+=("$tag")
+        fi
+    done <<< "$TAGS"
+
+    if [[ "${#NON_CONFORMING[@]}" -gt 0 ]]; then
+        echo "WARNING: The following tag(s) on the last commit of '$GIT_BRANCH' do not follow" \
+             "the PEP 440 naming convention required by setuptools_scm:" >&2
+        for tag in "${NON_CONFORMING[@]}"; do
+            echo "  - $tag" >&2
+        done
+    fi
+fi
+
+# Report the version that setuptools_scm would choose when building a wheel
+# (equivalent to what `pip -v wheel . -w dist/` would use)
+if command -v python3 &>/dev/null && python3 -c "import setuptools_scm" &>/dev/null; then
+    SCM_VERSION=$(python3 -m setuptools_scm 2>/dev/null || true)
+    if [[ -n "$SCM_VERSION" ]]; then
+        echo "INFO: setuptools_scm version that will be used for the wheel: $SCM_VERSION"
+    else
+        echo "WARNING: setuptools_scm could not determine a version (check pyproject.toml)." >&2
+    fi
+else
+    echo "WARNING: setuptools_scm is not installed; cannot determine the wheel version." >&2
+fi

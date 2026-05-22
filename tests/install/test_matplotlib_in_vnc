@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+./start_vnc && python3 -c "import matplotlib; print(matplotlib.get_backend())"

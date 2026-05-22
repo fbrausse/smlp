@@ -1,0 +1,2 @@
+#!/usr/bin/tcsh -f
+twine upload --repository testpypi `realpath $0 | xargs dirname`/../dist/* 

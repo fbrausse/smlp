@@ -1,0 +1,9 @@
+#!/usr/bin/tcsh -f
+set script_path=`realpath $0 | xargs dirname`
+set root_path=`git rev-parse --show-toplevel`/regr_smlp
+foreach f (`grep Failed $root_path/code/all_log.txt | grep -v : | grep -v "master file does not exist" | awk '{print $1}'`)
+    set new_results="$root_path/code/${f}" 
+    echo =================== Diff report for: $new_results:t ==================================
+    diff -w $new_results $new_results:h:h/master
+    echo =================== End of $new_results:t diff report ================================
+end

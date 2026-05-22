@@ -1,0 +1,38 @@
+#!/usr/bin/tcsh -f
+onintr cleanup
+set script_path=`realpath $0 | xargs dirname`
+set script_name=`realpath $0 | xargs basename`
+set log=$PWD/${script_name}.log
+set diff_report=$log:h/${script_name}_diff_report.log
+git rev-parse --show-toplevel >& /dev/null
+if($status) then
+    echo "\nERROR: Current directory is outside git directory tree\n"
+    exit(1)
+endif
+cd `git rev-parse --show-toplevel`
+\rm -f regr_smlp/models/test{63,101}_model_y*_smlp_* >& /dev/null
+\rm -rf regr_smlp/code/*{test,Test}* >& /dev/null
+\rm -rf regr_smlp/code/{__pycache__,all_log.txt,logs.log,_doe.csv} >& /dev/null
+if($#argv > 0) then
+    if("-clean" == "$argv[1]") then
+        exit(0)
+    endif
+endif
+cd `git rev-parse --show-toplevel`/regr_smlp/code
+echo "Log file: $log"
+if(! $?DISPLAY ) then
+    setenv DISPLAY :99
+endif
+set python3_version=`python3 -c 'from sys import version_info; print(version_info.minor)'`
+set regression_script=smlp_regr.py
+set local_script=`echo smlp_regr.py | sed 's/regr/regr_local/'`
+if( $python3_version != 11 ) then
+    \rm -f  $local_script >& /dev/null
+    sed 's@../../src/run_smlp.py@smlp@' $regression_script > $local_script
+    chmod +x  $local_script
+    set regression_script=$local_script
+endif
+echo n | env CUDA_VISIBLE_DEVICES=-1 python3.11 ./${regression_script} -w 8 -def n -t all -tol 7 -g |& tee $log
+${script_path}/create_diff_report >& $diff_report
+cleanup:
+    \rm -f $local_script >& /dev/null
