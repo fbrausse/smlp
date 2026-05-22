@@ -19,6 +19,7 @@ dependencies = [
     "mrmr-selection",
     "numpy==2.3.5",
     "pandas==2.3.3",
+    "pycaret-ni",
     "pydoe==0.3.8",
     "pysubgroup",
     "scikit-learn==1.7.2",
