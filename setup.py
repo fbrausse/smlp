@@ -7,12 +7,12 @@ System prerequisites (require sudo, install once)
 
 User prerequisites (no sudo, install once)
 ------------------------------------------
-  python3.12 -m pip install --user meson ninja z3-solver
+  python3.11 -m pip install --user meson ninja z3-solver
 
 Build flow
 ----------
-1.  Boost.Python 1.83 is compiled from source for Python 3.12 and cached in
-    ~/.local/boost_py312  (or the path in $BOOST_CACHE_DIR).
+1.  Boost.Python 1.83 is compiled from source for Python 3.11 and cached in
+    ~/.local/boost_py311  (or the path in $BOOST_CACHE_DIR).
     The build is skipped on subsequent runs if the cache directory already
     contains the marker file  .built_for_python<major><minor>.
     Set $BOOST_ROOT to point at an existing Boost prefix to skip this step
@@ -30,19 +30,20 @@ Build flow
 Environment variables
 ---------------------
 BOOST_ROOT       Reuse an existing Boost prefix – skips download + compile.
-                 e.g.  export BOOST_ROOT=~/.local/boost_py312
-BOOST_CACHE_DIR  Where to cache the compiled Boost (default: ~/.local/boost_py312).
+                 e.g.  export BOOST_ROOT=~/.local/boost_py311
+BOOST_CACHE_DIR  Where to cache the compiled Boost (default: ~/.local/boost_py311).
 BOOST_VERSION    Boost version to download (default: 1.83.0).
 KAY_DIR          Reuse an existing kay checkout.
-GMP_ROOT         Reuse an existing GMP prefix – skips download + compile.
-                 e.g.  export GMP_ROOT=~/.local/gmp
-GMP_CACHE_DIR    Where to cache compiled GMP (default: ~/.local/gmp).
-GMP_VERSION      GMP version to download (default: 6.3.0).
-Z3_PREFIX        Reuse an existing Z3 install prefix – skips pip z3-solver.
+GMP_ROOT         Point at an existing GMP prefix – skips all detection.
+                 e.g.  export GMP_ROOT=/usr          (apt/dnf install)
+                        export GMP_ROOT=~/.local/gmp  (custom build)
+                 If unset, the system GMP is located automatically via
+                 pkg-config or well-known prefixes (/usr/local, /usr).
+                 Source compilation is only attempted as a last resort.
+GMP_CACHE_DIR    Where to cache a source-compiled GMP (default: ~/.local/gmp).
+GMP_VERSION      GMP version to download if source build is needed (default: 6.3.0).
+Z3_PREFIX        Reuse an existing Z3 install prefix.
                  e.g.  export Z3_PREFIX=~/.local/z3
-Z3_VERSION       Z3 version to download binary for (default: 4.8.12).
-Z3_BIN_DIR       Path to directory containing z3 binary (default: ~/.local/z3/bin).
-SMLP_BRANCH      Git branch to switch to in the smlp repo (auto-detected if unset).
 """
 
 import os
@@ -64,12 +65,12 @@ from setuptools.command.build_ext import build_ext as _build_ext
 
 BOOST_VERSION   = os.environ.get("BOOST_VERSION", "1.83.0")
 BOOST_CACHE_DIR = Path(
-    os.environ.get("BOOST_CACHE_DIR", Path.home() / ".local" / "boost_py312")
+    os.environ.get("BOOST_CACHE_DIR", Path.home() / ".local" / "boost_py311")
 ).expanduser()
 
-# Default Z3_PREFIX: where z3-solver installs its lib/libz3.so
+# Default Z3_PREFIX: where z3-solver installs its libz3.so
 # This is the standard location when installed via:
-#   python3.12 -m pip install --user z3-solver
+#   python3.11 -m pip install --user z3-solver
 Z3_DEFAULT_PREFIX = (
     Path.home() / ".local" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}"
     / "site-packages" / "z3"
@@ -78,11 +79,6 @@ Z3_DEFAULT_PREFIX = (
 GMP_VERSION   = os.environ.get("GMP_VERSION", "6.3.0")
 GMP_CACHE_DIR = Path(
     os.environ.get("GMP_CACHE_DIR", Path.home() / ".local" / "gmp")
-).expanduser()
-
-Z3_VERSION    = os.environ.get("Z3_VERSION", "4.8.12")
-Z3_BIN_DIR    = Path(
-    os.environ.get("Z3_BIN_DIR", Path.home() / ".local" / "z3" / "bin")
 ).expanduser()
 
 # Root of this repository (where setup.py lives)
@@ -148,117 +144,6 @@ def _download(url: str, dest: Path, retries: int = 5) -> None:
             print(f"[smlp build] Retrying in {wait}s ...")
             time.sleep(wait)
     sys.exit(f"[smlp build] ERROR: failed to download {url} after {retries} attempts.")
-
-
-def _meson_bin(build_tmp: Path) -> list[str]:
-    """
-    Write a meson wrapper script and return the command to invoke it.
-
-    The wrapper explicitly adds the meson install location to sys.path,
-    so it works in pip's isolated build environment where user site-packages
-    is not on sys.path. Meson stores the wrapper path in the build dir and
-    reuses it for internal calls like `meson install`, so it must be a real
-    executable file — not a -c string.
-    """
-    # Find where mesonbuild is installed via pip show
-    mesonbuild_location = None
-    result = subprocess.run(
-        [sys.executable, "-m", "pip", "show", "meson"],
-        capture_output=True, text=True
-    )
-    if result.returncode == 0:
-        for line in result.stdout.splitlines():
-            if line.startswith("Location:"):
-                mesonbuild_location = line.split(":", 1)[1].strip()
-                break
-
-    # Fallback: check user site-packages directly
-    if not mesonbuild_location:
-        user_site = (
-            Path.home() / ".local" / "lib"
-            / f"python{sys.version_info.major}.{sys.version_info.minor}"
-            / "site-packages"
-        )
-        if (user_site / "mesonbuild").exists():
-            mesonbuild_location = str(user_site)
-
-    # Fallback: find mesonbuild via importlib (works when on sys.path)
-    if not mesonbuild_location:
-        import importlib.util
-        spec = importlib.util.find_spec("mesonbuild")
-        if spec and spec.submodule_search_locations:
-            mesonbuild_location = str(Path(list(spec.submodule_search_locations)[0]).parent)
-
-    # Fallback: use meson binary directly from PATH
-    if not mesonbuild_location:
-        from shutil import which
-        meson_bin = which("meson")
-        if meson_bin:
-            print(f"[smlp build] Using meson from PATH: {meson_bin}")
-            return [meson_bin]
-
-    if not mesonbuild_location:
-        raise RuntimeError(
-            f"[smlp build] meson not found. Run:  python{sys.version_info.major}.{sys.version_info.minor} -m pip install meson"
-        )
-
-    print(f"[smlp build] meson location: {mesonbuild_location}")
-
-    # Write a wrapper script with a proper shebang so Meson can store and
-    # reuse its path for internal calls (meson install, meson test, etc.)
-    wrapper = build_tmp / "meson"
-    wrapper.write_text(
-        f"#!/usr/bin/env {sys.executable}\n"
-        "import sys\n"
-        f"sys.path.insert(0, {mesonbuild_location!r})\n"
-        "from mesonbuild.mesonmain import main\n"
-        "sys.exit(main())\n"
-    )
-    wrapper.chmod(0o755)
-    print(f"[smlp build] Using meson wrapper: {wrapper}")
-    return [str(wrapper)]
-
-
-def _ninja_bin() -> str:
-    """
-    Resolve the ninja binary, preferring user-space installs over system ones.
-
-    Search order:
-      1. The 'ninja' PyPI package  (pip install ninja → <prefix>/bin/ninja)
-      2. ~/.local/bin/ninja        (pip install --user ninja)
-      3. PATH                      (last resort — may find /usr/bin/ninja)
-    """
-    import importlib.util
-    from shutil import which
-
-    # ── 1. pip ninja package ─────────────────────────────────────────────
-    spec = importlib.util.find_spec("ninja")
-    if spec is not None:
-        try:
-            import ninja as _ninja_pkg  # type: ignore
-            candidate = Path(_ninja_pkg.BIN_DIR) / "ninja"
-            if candidate.exists():
-                print(f"[smlp build] Using pip ninja: {candidate}")
-                return str(candidate)
-        except Exception:
-            pass
-
-    # ── 2. ~/.local/bin (pip install --user) ─────────────────────────────
-    user_ninja = Path.home() / ".local" / "bin" / "ninja"
-    if user_ninja.exists():
-        print(f"[smlp build] Using user ninja: {user_ninja}")
-        return str(user_ninja)
-
-    # ── 3. PATH fallback ─────────────────────────────────────────────────
-    found = which("ninja")
-    if found:
-        print(f"[smlp build] Using ninja from PATH: {found}")
-        return found
-
-    raise RuntimeError(
-        "[smlp build] ninja not found. Run:  pip install ninja"
-    )
-
 
 # ---------------------------------------------------------------------------
 # Step 1 – Boost.Python (compiled from source, cached in user-space)
@@ -338,6 +223,7 @@ def _boost_prefix() -> Path:
         ["./b2", "install",
          f"--prefix={BOOST_CACHE_DIR}",
          "--with-python",
+         f"--user-config={user_config}",
          f"python={py_ver}"],
         cwd=str(src),
     )
@@ -372,7 +258,7 @@ def _boost_env(prefix: Path) -> dict:
     env["PYTHON3"]          = sys.executable
 
     # Tell Meson the exact versioned Boost.Python library name,
-    # e.g. Python 3.12 → boost_python312, Python 3.11 → boost_python311
+    # e.g. Python 3.11 → boost_python311, Python 3.13 → boost_python313
     py_ver = f"{sys.version_info.major}{sys.version_info.minor}"
     env["BOOST_PYTHON_LIBNAME"] = f"boost_python{py_ver}"
 
@@ -394,17 +280,12 @@ def _add_z3_to_env(env: dict, z3_lib: Path) -> dict:
     existing_pkg = env.get("PKG_CONFIG_PATH", "")
     env["PKG_CONFIG_PATH"] = f"{z3_lib}:{existing_pkg}" if existing_pkg else str(z3_lib)
 
-    # Add z3 binary to PATH so meson can find the solver executable
-    z3_bin = z3_lib.parent / "bin"
-    existing_path = env.get("PATH", os.environ.get("PATH", ""))
-    env["PATH"] = f"{z3_bin}:{existing_path}" if existing_path else str(z3_bin)
-
     return env
 
 
 def _add_gmp_to_env(env: dict, gmp_prefix: Path) -> dict:
     """Prepend the GMP lib/include directories to the relevant env vars."""
-    gmp_lib = gmp_prefix / "lib"
+    gmp_lib = _gmp_libdir(gmp_prefix)
     gmp_inc = gmp_prefix / "include"
 
     existing_ld = env.get("LD_LIBRARY_PATH", "")
@@ -446,20 +327,52 @@ def _ensure_kay(build_tmp: Path) -> Path:
 # Step 1c – GMP (compiled from source, cached in user-space)
 # ---------------------------------------------------------------------------
 
+def _gmp_libdir(prefix: Path) -> Path:
+    """
+    Return the directory inside *prefix* that actually contains libgmp.
+    RPM-based distros (Fedora, RHEL, AlmaLinux, manylinux) use lib64;
+    Debian/Ubuntu use lib/<multiarch-triple>; most custom builds use lib.
+    """
+    import platform as _plat
+    machine = _plat.machine()
+    candidates = [
+        prefix / "lib64",
+        prefix / "lib" / f"{machine}-linux-gnu",  # Debian/Ubuntu multiarch
+        prefix / "lib",
+    ]
+    for d in candidates:
+        if (d / "libgmp.so").exists() or (d / "libgmp.a").exists():
+            return d
+    # Fall back to lib — Meson / the linker will emit a clear error if wrong
+    return prefix / "lib"
+
+
 def _write_gmp_pc(prefix: Path) -> None:
     """
-    Write a gmp.pc pkg-config file into <prefix>/lib/pkgconfig/.
-    GMP does not generate one by default, so Meson cannot find it
-    via pkg-config without this file.
+    The lib directory is resolved via _gmp_libdir() to handle RPM-based
+    distros that install into lib64 (AlmaLinux, manylinux) as well as
+    Debian/Ubuntu multiarch paths and plain lib for custom builds.
+
+    When the resolved pkgconfig dir is not writable (no root), the files
+    are written to ~/.local/share/pkgconfig and PKG_CONFIG_PATH is extended.
     """
-    pkgconfig_dir = prefix / "lib" / "pkgconfig"
+    gmp_lib       = _gmp_libdir(prefix)
+    pkgconfig_dir = Path.home() / ".local" / "share" / "pkgconfig"
+    existing = os.environ.get("PKG_CONFIG_PATH", "")
+    os.environ["PKG_CONFIG_PATH"] = (
+        f"{pkgconfig_dir}:{existing}" if existing else str(pkgconfig_dir)
+    )
+    print(
+        f"[smlp build] pkgconfig dir not writable; "
+        f"writing GMP .pc files to {pkgconfig_dir}"
+    )
+
     pkgconfig_dir.mkdir(parents=True, exist_ok=True)
     pc_file = pkgconfig_dir / "gmp.pc"
     pc_file.write_text(
         f"prefix={prefix}\n"
-        "exec_prefix=${prefix}\n"
-        "libdir=${exec_prefix}/lib\n"
-        "includedir=${prefix}/include\n"
+        f"libdir={gmp_lib}\n"
+        f"includedir={prefix / 'include'}\n"
         "\n"
         "Name: gmp\n"
         "Description: GNU Multiple Precision Arithmetic Library\n"
@@ -469,13 +382,11 @@ def _write_gmp_pc(prefix: Path) -> None:
     )
     print(f"[smlp build] Wrote pkg-config file: {pc_file}")
 
-    # Also write gmpxx.pc for the C++ wrapper library
     pcxx_file = pkgconfig_dir / "gmpxx.pc"
     pcxx_file.write_text(
         f"prefix={prefix}\n"
-        "exec_prefix=${prefix}\n"
-        "libdir=${exec_prefix}/lib\n"
-        "includedir=${prefix}/include\n"
+        f"libdir={gmp_lib}\n"
+        f"includedir={prefix / 'include'}\n"
         "\n"
         "Name: gmpxx\n"
         "Description: GNU Multiple Precision Arithmetic Library (C++ bindings)\n"
@@ -487,30 +398,95 @@ def _write_gmp_pc(prefix: Path) -> None:
     print(f"[smlp build] Wrote pkg-config file: {pcxx_file}")
 
 
+def _is_debian_based() -> bool:
+    """Return True on Debian/Ubuntu — the only distros where system GMP is used."""
+    if Path("/etc/debian_version").exists():
+        return True
+    lsb = Path("/etc/lsb-release")
+    if lsb.exists() and "Ubuntu" in lsb.read_text():
+        return True
+    return False
+
+
+def _probe_system_gmp() -> "Path | None":
+    """
+    Detection order (Debian/Ubuntu only):
+      1. pkg-config gmp        – libgmp-dev ships gmp.pc
+      2. Well-known prefixes   – /usr/local then /usr, including multiarch.
+    """
+    if not _is_debian_based():
+        print(f"[smlp build] Non-Debian distro detected — skipping system GMP, will compile from source.")
+        return None
+
+    from shutil import which
+
+    # ── 1. pkg-config ────────────────────────────────────────────────────
+    if which("pkg-config"):
+        r = subprocess.run(
+            ["pkg-config", "--variable=prefix", "gmp"],
+            capture_output=True, text=True,
+        )
+        if r.returncode == 0:
+            prefix = Path(r.stdout.strip())
+            print(f"[smlp build] System GMP found via pkg-config: {prefix}")
+            return prefix
+
+    # ── 2. Well-known prefixes ────────────────────────────────────────────
+    import platform as _plat
+    machine = _plat.machine()
+    for prefix in (Path("/usr/local"), Path("/usr")):
+        header = prefix / "include" / "gmp.h"
+        if not header.exists():
+            continue
+        lib_candidates = [
+            prefix / "lib" / "libgmp.so",
+            prefix / "lib" / "libgmp.a",
+            prefix / "lib" / f"{machine}-linux-gnu" / "libgmp.so",   # Debian/Ubuntu multiarch
+            prefix / "lib" / f"{machine}-linux-gnu" / "libgmp.a",
+        ]
+        if any(p.exists() for p in lib_candidates):
+            print(f"[smlp build] System GMP found at prefix: {prefix}")
+            return prefix
+
+    return None
+
+
 def _gmp_prefix() -> Path:
     """
-    Return the GMP install prefix, building from source if necessary.
+    Return the GMP install prefix, building from source only as a last resort.
 
     Search order:
-      1. $GMP_ROOT env var       → use as-is, no build
-      2. GMP_CACHE_DIR marker    → cache hit, skip build
-      3. Download + compile into GMP_CACHE_DIR
+      1. $GMP_ROOT env var          → use as-is, no detection
+      2. System GMP installation    → pkg-config or well-known paths
+         Ubuntu/Debian: sudo apt install libgmp-dev
+         Fedora/RHEL:   sudo dnf install gmp-devel
+      3. GMP_CACHE_DIR marker       → previous source build, reuse it
+      4. Download + compile into GMP_CACHE_DIR
     """
     # ── Option A: caller supplied an existing prefix ──────────────────────
     env_root = os.environ.get("GMP_ROOT")
     if env_root:
         prefix = Path(env_root).expanduser()
         print(f"[smlp build] Using GMP_ROOT={prefix}")
+        _write_gmp_pc(prefix)
         return prefix
 
-    # ── Option B: cached build already present ────────────────────────────
+    # ── Option B: system-installed GMP (apt/dnf — no compilation needed) ──
+    system_prefix = _probe_system_gmp()
+    if system_prefix is not None:
+        # Write gmp.pc / gmpxx.pc if the distro package doesn't ship them,
+        # so Meson can find GMP via pkg-config regardless of package manager.
+        _write_gmp_pc(system_prefix)
+        return system_prefix
+
+    # ── Option C: cached source build already present ─────────────────────
     tag_file = GMP_CACHE_DIR / ".built"
     if tag_file.exists():
         print(f"[smlp build] GMP cache found at {GMP_CACHE_DIR}, skipping build.")
         _write_gmp_pc(GMP_CACHE_DIR)
         return GMP_CACHE_DIR
 
-    # ── Option C: download + compile into user-space cache ────────────────
+    # ── Option D: download + compile into user-space cache ────────────────
     tarball_name = f"gmp-{GMP_VERSION}.tar.xz"
     url          = f"https://gmplib.org/download/gmp/{tarball_name}"
 
@@ -568,73 +544,7 @@ def _gmp_prefix() -> Path:
 # Step 1b – Z3 (via pip z3-solver, no sudo)
 # ---------------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# Step 1d – Z3 binary (downloaded from GitHub releases)
-# ---------------------------------------------------------------------------
-
-def _z3_binary() -> Path:
-    """
-    Return the path to the z3 executable.
-
-    Search order:
-      1. Z3_BIN_DIR env var / constant   (~/.local/z3/bin/z3)
-      2. ~/.local/bin/z3                 (pip install --user z3-solver installs it here)
-      3. System z3 on PATH               (sudo apt install z3)
-      4. Download pre-built from GitHub  (no sudo fallback)
-    """
-    from shutil import which
-
-    # ── 1. Explicit Z3_BIN_DIR ────────────────────────────────────────────
-    if Z3_BIN_DIR.exists() and (Z3_BIN_DIR / "z3").exists():
-        print(f"[smlp build] Using z3 binary from Z3_BIN_DIR: {Z3_BIN_DIR / 'z3'}")
-        return Z3_BIN_DIR / "z3"
-
-    # ── 2. ~/.local/bin/z3 ───────────────────────────────────────────────
-    user_z3 = Path.home() / ".local" / "bin" / "z3"
-    if user_z3.exists():
-        print(f"[smlp build] Using user z3 binary: {user_z3}")
-        return user_z3
-
-    # ── 3. PATH ───────────────────────────────────────────────────────────
-    system_z3 = which("z3")
-    if system_z3:
-        print(f"[smlp build] Using system z3: {system_z3}")
-        return Path(system_z3)
-
-    # ── 4. Download pre-built binary from GitHub releases ─────────────────
-    import platform as _platform
-    machine = _platform.machine()
-    arch_map = {"x86_64": "x64", "aarch64": "arm64"}
-    arch = arch_map.get(machine, machine)
-    z3_release = f"z3-{Z3_VERSION}-{arch}-glibc-2.31"
-    url = (
-        f"https://github.com/Z3Prover/z3/releases/download/z3-{Z3_VERSION}/"
-        f"{z3_release}.zip"
-    )
-
-    tmp_dir = Z3_BIN_DIR.parent.parent / "_z3_build_tmp"
-    tmp_dir.mkdir(parents=True, exist_ok=True)
-    zip_path = tmp_dir / f"{z3_release}.zip"
-
-    print(f"[smlp build] Downloading z3 binary {Z3_VERSION} ...")
-    _download(url, zip_path)
-
-    import zipfile, shutil as _shutil
-    print(f"[smlp build] Extracting z3 binary ...")
-    with zipfile.ZipFile(zip_path) as zf:
-        zf.extractall(tmp_dir)
-
-    Z3_BIN_DIR.mkdir(parents=True, exist_ok=True)
-    src_bin = tmp_dir / z3_release / "bin" / "z3"
-    _shutil.copy2(src_bin, Z3_BIN_DIR / "z3")
-    (Z3_BIN_DIR / "z3").chmod(0o755)
-    _shutil.rmtree(tmp_dir, ignore_errors=True)
-
-    print(f"[smlp build] z3 binary installed at {Z3_BIN_DIR / 'z3'}")
-    return Z3_BIN_DIR / "z3"
-
-
-def _write_z3_pc(z3_lib: Path) -> None:
+def _write_z3_pc(z3_lib: Path) -> Path:
     """
     Write a z3.pc pkg-config file into <z3_lib>/pkgconfig/.
     z3-solver does not ship one, so Meson cannot find it via pkg-config
@@ -653,52 +563,55 @@ def _write_z3_pc(z3_lib: Path) -> None:
     inc_dir   = prefix / "include"
 
     pkgconfig_dir = z3_lib / "pkgconfig"
-    pkgconfig_dir.mkdir(parents=True, exist_ok=True)
     pc_file = pkgconfig_dir / "z3.pc"
-    pc_file.write_text(
-        f"prefix={prefix}\n"
-        f"libdir={z3_lib}\n"
-        f"includedir={inc_dir}\n"
-        "\n"
-        "Name: z3\n"
-        "Description: Z3 Theorem Prover\n"
-        f"Version: {version}\n"
-        "Libs: -L${libdir} -lz3\n"
-        "Cflags: -I${includedir}\n"
-    )
-    print(f"[smlp build] Wrote pkg-config file: {pc_file}")
+    if os.path.exists(pc_file):
+        print(f"[smlp build] Using existing pkg-config file: {pc_file}")
+    else:
+        pkgconfig_dir = Path.cwd() / "pkgconfig"
+        pkgconfig_dir.mkdir(parents=True, exist_ok=True)
+        pc_file = pkgconfig_dir / "z3.pc"
+        pc_file.write_text(
+            f"prefix={prefix}\n"
+            f"libdir={z3_lib}\n"
+            f"includedir={inc_dir}\n"
+            "\n"
+            "Name: z3\n"
+            "Description: Z3 Theorem Prover\n"
+            f"Version: {version}\n"
+            "Libs: -L${libdir} -lz3\n"
+            "Cflags: -I${includedir}\n"
+        )
+        print(f"[smlp build] Wrote pkg-config file: {pc_file}")
+        return pkgconfig_dir
 
-
-def _z3_prefix() -> Path:
+def _z3_prefix() -> tuple[Path,Path]:
     """
     Return the z3-solver lib directory containing libz3.so.
 
     Search order:
       1. $Z3_PREFIX env var         → use <Z3_PREFIX>/lib
-      2. Z3_DEFAULT_PREFIX constant → ~/.local/lib/python3.12/site-packages/z3/lib
+      2. Z3_DEFAULT_PREFIX constant → ~/.local/lib/python3.11/site-packages/z3/lib
          (standard location for: pip install --user z3-solver)
     """
-    env_prefix = os.environ.get("Z3_PREFIX")
+    env_prefix = os.environ.get("Z3_PREFIX", f"/usr/lib/{platform.machine()}-{platform.system().lower()}-gnu")
     prefix = Path(env_prefix).expanduser() if env_prefix else Z3_DEFAULT_PREFIX
-    lib_dir = prefix / "lib"
+    lib_dir = prefix/'lib'
 
     print(f"[smlp build] Looking for libz3.so in: {lib_dir}")
 
     found = list(lib_dir.rglob("libz3.so")) if lib_dir.exists() else []
     if found:
         print(f"[smlp build] Using z3 lib dir: {lib_dir}")
-        _write_z3_pc(lib_dir)
-        return lib_dir
+        z3_pc_dir = _write_z3_pc(lib_dir)
+        return lib_dir, z3_pc_dir
 
     sys.exit(
         f"[smlp build] ERROR: libz3.so not found at {lib_dir}.\n"
-        "Install z3-solver with: python3.12 -m pip install --user z3-solver\n"
-        "Or set Z3_PREFIX to your z3 package directory, e.g.:\n"
-        "  export Z3_PREFIX=~/.local/lib/python3.12/site-packages/z3"
+        "Install z3 and set Z3_PREFIX to your z3 install prefix directory."
     )
 
 
-def _write_native_file(boost_prefix: Path, gmp_prefix: Path, z3_lib: Path, z3_bin: Path, build_tmp: Path, stub_dir: Path = None) -> Path:
+def _write_native_file(boost_prefix: Path, gmp_prefix: Path, z3_lib: Path, z3_pc_dir: Path, build_tmp: Path, stub_dir: Path = None) -> Path:
     """
     Write a Meson native file that points to the user-space Boost install.
     This is the most reliable way to pass non-standard library paths to Meson —
@@ -707,9 +620,8 @@ def _write_native_file(boost_prefix: Path, gmp_prefix: Path, z3_lib: Path, z3_bi
     """
     boost_lib = boost_prefix / "lib"
     boost_inc = boost_prefix / "include"
-    gmp_lib   = gmp_prefix / "lib"
+    gmp_lib   = _gmp_libdir(gmp_prefix)
     gmp_inc   = gmp_prefix / "include"
-    z3_pc_dir = z3_lib / "pkgconfig"
 
     native_file = build_tmp / "native.ini"
     native_file.write_text(
@@ -726,7 +638,6 @@ def _write_native_file(boost_prefix: Path, gmp_prefix: Path, z3_lib: Path, z3_bi
         f"python = '{sys.executable}'\n"
         f"python3 = '{sys.executable}'\n"
         f"pkg-config = 'pkg-config'\n"
-        f"z3 = '{z3_bin}'\n"
         "\n"
         "[built-in options]\n"
         f"pkg_config_path = ['{gmp_lib / 'pkgconfig'}', '{boost_lib / 'pkgconfig'}', '{z3_pc_dir}']\n"
@@ -783,9 +694,8 @@ def _meson_build(poly_dir: Path, kay_dir: Path,
     if meson_build_dir.exists():
         shutil.rmtree(meson_build_dir)
 
-    z3_lib     = _z3_prefix()
-    z3_bin     = _z3_binary()
-    gmp_prefix = _gmp_prefix()
+    z3_lib, z3_pc_dir  = _z3_prefix()
+    gmp_prefix     = _gmp_prefix()
     _create_python_stub_lib(build_tmp)
     env = _boost_env(boost_prefix)
     env = _add_z3_to_env(env, z3_lib)
@@ -795,13 +705,13 @@ def _meson_build(poly_dir: Path, kay_dir: Path,
     # without needing LD_LIBRARY_PATH to be set.
     rpath_dirs = [
         str(boost_prefix / "lib"),
-        str(gmp_prefix / "lib"),
+        str(_gmp_libdir(gmp_prefix)),
         str(z3_lib),
     ]
     rpath_flags = ":".join(f"-Wl,-rpath,{d}" for d in rpath_dirs)
     existing_ldflags = env.get("LDFLAGS", "")
     env["LDFLAGS"] = f"{rpath_flags} {existing_ldflags}".strip()
-    native_file = _write_native_file(boost_prefix, gmp_prefix, z3_lib, z3_bin, build_tmp)
+    native_file = _write_native_file(boost_prefix, gmp_prefix, z3_lib, z3_pc_dir, build_tmp)
 
     meson_flags = [
         "--wipe",
@@ -818,18 +728,17 @@ def _meson_build(poly_dir: Path, kay_dir: Path,
     print(f"[smlp build] PKG_CONFIG_PATH = {env.get('PKG_CONFIG_PATH', '(not set)')}")
     print(f"[smlp build] LD_LIBRARY_PATH  = {env.get('LD_LIBRARY_PATH', '(not set)')}")
     _run(
-        _meson_bin(build_tmp) + ["setup"] + meson_flags,
+        #_meson_bin(build_tmp) + ["setup"] + meson_flags,
+        ["meson", "setup"] + meson_flags,
         env=env,
     )
 
-    _run([_ninja_bin(), "-C", str(poly_dir / "build"), "install"],
+    _run(["ninja", "-C", str(poly_dir / "build"), "install"],
          cwd=str(poly_dir), env=env)
 
     # Locate the installed smlp package (Meson may use a versioned python path)
     candidates = (list(install_prefix.glob("lib/python*/dist-packages/smlp")) +
-                  list(install_prefix.glob("lib/python3/dist-packages/smlp")) +
-                  list(install_prefix.glob("lib/python*/site-packages/smlp")) +
-                  list(install_prefix.glob("lib/python3/site-packages/smlp")))
+                  list(install_prefix.glob("lib/python*/site-packages/smlp"))) 
     if not candidates:
         sys.exit(
             f"[smlp build] ERROR: could not find installed smlp package under "
@@ -848,7 +757,7 @@ class MesonBuildExt(_build_ext):
         build_tmp = Path(self.build_temp).resolve()
         build_tmp.mkdir(parents=True, exist_ok=True)
 
-        # 1. Boost (compiled from source, cached in ~/.local/boost_py312)
+        # 1. Boost (compiled from source, cached in ~/.local/boost_py311)
         boost_prefix = _boost_prefix()
 
         # 2. kay
@@ -862,20 +771,6 @@ class MesonBuildExt(_build_ext):
                 "Make sure setup.py is run from the root of the smlp repository."
             )
 
-        # Optionally switch branch (useful in CI)
-        branch = os.environ.get("SMLP_BRANCH")
-        if branch:
-            _run(["git", "switch", branch], cwd=str(REPO_ROOT))
-        else:
-            py_ver = f"{sys.version_info.major}{sys.version_info.minor}"
-            auto_branch = f"smlp_python{py_ver}"
-            result = subprocess.run(
-                ["git", "branch", "-r", "--list", f"origin/{auto_branch}"],
-                capture_output=True, text=True, cwd=str(REPO_ROOT)
-            )
-            if result.stdout.strip():
-                _run(["git", "switch", auto_branch], cwd=str(REPO_ROOT))
-
         installed_pkg = _meson_build(poly_dir, kay_dir, boost_prefix, build_tmp)
 
         # 4. Copy into the wheel's lib tree
@@ -885,25 +780,28 @@ class MesonBuildExt(_build_ext):
         shutil.copytree(str(installed_pkg), str(dest))
         print(f"[smlp build] smlp extension copied to wheel at {dest}")
 
-        # 5. Copy Python source from src/smlp_py into smlp/smlp_py inside the wheel
-        smlp_py_src = REPO_ROOT / "src" / "smlp_py"
-        if smlp_py_src.is_dir():
-            smlp_py_dest = dest / "smlp_py"  # dest is already smlp/
-            if smlp_py_dest.exists():
-                shutil.rmtree(smlp_py_dest)
-            shutil.copytree(str(smlp_py_src), str(smlp_py_dest))
-            print(f"[smlp build] smlp_py source copied to wheel at {smlp_py_dest}")
-        else:
-            print(f"[smlp build] WARNING: src/smlp_py not found at {smlp_py_src}, skipping.")
-
-        # 6. Copy src/run_smlp.py into smlp/ inside the wheel
-        run_smlp_src = REPO_ROOT / "src" / "run_smlp.py"
-        if run_smlp_src.is_file():
-            shutil.copy2(str(run_smlp_src), str(dest / "run_smlp.py"))
-            print(f"[smlp build] run_smlp.py copied to wheel at {dest / 'run_smlp.py'}")
-        else:
-            print(f"[smlp build] WARNING: src/run_smlp.py not found at {run_smlp_src}, skipping.")
-
+        # 5. Copy Python sources from src/ into smlp/ inside the wheel
+        sources = [
+                    (REPO_ROOT / "src" / "smlp_py",     dest / "smlp_py",     "dir"),
+                    (REPO_ROOT / "src" / "__init__.py", dest / "__init__.py", "file"),
+                    (REPO_ROOT / "src" / "run_smlp.py", dest / "run_smlp.py", "file"),
+        ]
+        for src, dst, kind in sources:
+            copy_success = False
+            if kind == "dir":
+                if src.is_dir():
+                    if dst.exists():
+                        shutil.rmtree(str(dst))
+                    shutil.copytree(str(src), str(dst))
+                    copy_success = True
+            else:
+                if src.is_file():
+                    shutil.copy2(str(src), str(dst))
+                    copy_success = True
+            if copy_success: 
+                print(f"[smlp build] {src} copied to wheel at {dst}")
+            else:
+                print(f"[smlp build] WARNING: source is not found at {src}, skipping.")
 
 # ---------------------------------------------------------------------------
 # setup()
