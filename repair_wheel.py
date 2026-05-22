@@ -51,7 +51,7 @@ def main():
         print("Install with: python3 -m pip install auditwheel patchelf")
         sys.exit(1)
 
-    wheels = sorted(dist_dir.glob("smlp-*linux_x86_64.whl"), key=lambda p: p.stat().st_mtime)
+    wheels = sorted(dist_dir.glob("smlptech-*linux_x86_64.whl"), key=lambda p: p.stat().st_mtime)
     if not wheels:
         print(f"ERROR: No linux_x86_64 wheel found in {dist_dir}/")
         sys.exit(1)
