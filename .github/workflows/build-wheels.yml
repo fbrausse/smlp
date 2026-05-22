@@ -25,7 +25,7 @@ jobs:
         uses: pypa/cibuildwheel@v3.4.1
         env:
           # see <https://cibuildwheel.pypa.io/en/stable/options/#build-skip>
-          CIBW_BUILD: cp312-*
+          CIBW_BUILD: cp311-*
           CIBW_SKIP: cp*-musllinux_*
           # pin manylinux version
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
@@ -33,13 +33,6 @@ jobs:
           CIBW_BEFORE_ALL: >
             source {package}/.github/workflows/install-deps.sh {project} ${{ matrix.os }} /tmp/prefix &&
             :
-          # Set a Python-version-specific Boost cache dir so a cached 3.11
-          # build does not collide with (and block) a fresh 3.12 build.
-          # setup.py reads BOOST_CACHE_DIR and writes user-config.jam with the
-          # correct Python headers from /opt/python/cp3XX-cp3XX/include/...
-          CIBW_BEFORE_BUILD: >
-            PYVER=$(python -c "import sys; print(f'{sys.version_info.major}{sys.version_info.minor}')") &&
-            echo "BOOST_CACHE_DIR=/tmp/boost_py${PYVER}" >> $CIBW_ENVIRONMENT_FILE
           # use installed dependencies in setup.py
           CIBW_ENVIRONMENT: >
             GMP_ROOT=/tmp/prefix
