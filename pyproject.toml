@@ -32,6 +32,7 @@ dependencies = [
     "jenkspy",
     "keras-tuner",
     "matplotlib",
+    "ml_dtypes==0.5.4",
     "mrmr-selection",
     "pandas",
     "pycaret-ni",
