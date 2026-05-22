@@ -6,7 +6,7 @@ source "$(dirname "${BASH_SOURCE[0]}")"/install-gmp.sh
 
 P=z3
 
-eval ${P}_V=${V:-4.8.12}					# version
+eval ${P}_V=${V:-4.16.0}					# version
 eval ${P}_F=${F:-$P-\$`echo \${P}_V`.tar.xz}			# source archive name
 eval ${P}_W=${W:-$HOME/$P}					# workdir root
 eval ${P}_S=${S:-\$`echo ${P}_W`/$P-$P-\$`echo \${P}_V`}	# source dir
