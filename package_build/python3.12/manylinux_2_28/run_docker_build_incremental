@@ -1,8 +1,7 @@
 #!/usr/bin/tcsh -f
 set build_args=""
 set image=smlp-manylinux_2_28-python312
-set wheel=smlp-0.1.0-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl
-\rm -f $wheel >& /dev/null
+\rm -f *.whl >& /dev/null
 if($#argv > 0) then
     if("-rebuild_smlp" == "$argv[1]" ) then
         set build_args="--build-arg CACHE_BUST_SMLP=`date +%s`"
@@ -18,15 +17,16 @@ if($status) then
     echo "\nERROR: Docker build faied\n"
     exit 1
 else
-    set container=dummy
-    docker create --name $container $image
-    docker cp ${container}:/app/smlp/dist/$wheel .
-    docker rm $container
+    docker create --name smlp_tmp $image
+    docker cp smlp_tmp:/app/smlp/dist/. /tmp/smlp_dist_tmp
+    docker rm smlp_tmp
+    mv /tmp/smlp_dist_tmp/smlptech-*manylinux*.whl .
+    rm -rf /tmp/smlp_dist_tmp
 endif
-if(-s $wheel ) then
-    echo "\nWheel: `realpath $wheel`\n"
+if(-s *.whl ) then
+    echo "\nWheel: `realpath *.whl`\n"
     exit 0
 else
-    echo "\nERROR: failed to copy $wheel to host\n"
+    echo "\nERROR: failed to copy wheel to host\n"
     exit 1
 endif
