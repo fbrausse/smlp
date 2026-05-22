@@ -1,37 +1,58 @@
 [build-system]
 requires = [
     "setuptools>=68",
+    "setuptools_scm",
     "wheel",
+    "meson",
+    "ninja",
 ]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools_scm]
+
 [project]
-name = "smlp"
-version = "0.1.0"
-description = "SMLP - System for Machine Learning-based Parameter analysis"
+maintainers = [
+  {name = "Zurab Khasidashvili", email = "zurab.khasidashvili@gmail.com"},
+  {name = "Konstantin Korovin", email = "kostyakor@gmail.com"},
+  {name = "Franz Brauße", email = "fbrausse@paxle.org"},
+  {name = "Dmitry Messerman", email = "dmitry.messerman@gmail.com"}
+]
+name = "smlptech"
+dynamic = ["version"]
+description = "SMLP - The Symbolic Machine Learning Prover"
+license = "Apache-2.0"
+license-files = [
+	"LICENSE",
+	"AUTHORS",
+]
+readme = "README.md"
 requires-python = "==3.12.*"
 dependencies = [
     "doepy",
     "jenkspy",
-    "keras_tuner",
-    "matplotlib==3.10.8",
-    "meson",
+    "keras-tuner",
+    "matplotlib",
     "mrmr-selection",
-    "numpy==2.3.5",
-    "pandas==2.3.3",
+    "pandas",
     "pycaret-ni",
-    "pydoe==0.3.8",
-    "pysubgroup",
-    "scikit-learn==1.7.2",
+    "pyDOE",
+    "pysubgroup==0.8.0",
+    "scikit-learn==1.4.2",
     "scipy",
     "seaborn",
-    "z3-solver==4.8.12",
     "tensorflow",
+     "z3-solver==4.8.12"
 ]
+
+[project.urls]
+homepage = "https://github.com/SMLP-Systems/smlp"
+
+[project.scripts]
+smlp = "smlp.run_smlp:main2"
 
 [tool.setuptools.packages.find]
 where = ["."]
-exclude = ["dist*","src*", "smlp_py*", "regr_smlp*", "utils*"]
+exclude = ["*"]
 
 # ---------------------------------------------------------------------------
 # Build-time environment variables (all optional)
@@ -40,5 +61,6 @@ exclude = ["dist*","src*", "smlp_py*", "regr_smlp*", "utils*"]
 #                  e.g.  export BOOST_ROOT=~/.local/boost_py313
 # BOOST_CACHE_DIR  Where to cache compiled Boost (default: ~/.local/boost_py313).
 # BOOST_VERSION    Boost version to download (default: 1.83.0).
+# GMP_ROOT         Path to prefix of an existing GMP installation.
 # KAY_DIR          Path to an existing kay checkout.
-# SMLP_BRANCH      Git branch to use in the smlp repo (auto-detected if unset).
+# Z3_PREFIX        Path to existing installation of Z3.
