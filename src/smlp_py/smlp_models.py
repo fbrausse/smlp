@@ -445,10 +445,10 @@ class SmlpModels:
                     if model_rerun_config_dict is not None:
                         assert model_rerun_config_dict['model_per_response'] == model_per_response
                     # models are dictionaries with responses as keys and models per response as values
-                    model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name))) 
+                    model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name), compile=False)) 
                         for resp_name in resp_names])
                 else:
-                    model = keras_load_model(self.model_filename(algo, '.h5'))
+                    model = keras_load_model(self.model_filename(algo, '.h5'), compile=False)
             else:
                 raise Exception('Unsupported lib (package) ' + str(model_lib) + ' in function build_models')
         else:
