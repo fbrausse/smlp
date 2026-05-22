@@ -7,12 +7,12 @@ System prerequisites (require sudo, install once)
 
 User prerequisites (no sudo, install once)
 ------------------------------------------
-  python3.11 -m pip install --user meson ninja z3-solver
+  python3.12 -m pip install --user meson ninja z3-solver
 
 Build flow
 ----------
-1.  Boost.Python 1.83 is compiled from source for Python 3.11 and cached in
-    ~/.local/boost_py311  (or the path in $BOOST_CACHE_DIR).
+1.  Boost.Python 1.83 is compiled from source for Python 3.12 and cached in
+    ~/.local/boost_py312  (or the path in $BOOST_CACHE_DIR).
     The build is skipped on subsequent runs if the cache directory already
     contains the marker file  .built_for_python<major><minor>.
     Set $BOOST_ROOT to point at an existing Boost prefix to skip this step
@@ -30,8 +30,8 @@ Build flow
 Environment variables
 ---------------------
 BOOST_ROOT       Reuse an existing Boost prefix – skips download + compile.
-                 e.g.  export BOOST_ROOT=~/.local/boost_py311
-BOOST_CACHE_DIR  Where to cache the compiled Boost (default: ~/.local/boost_py311).
+                 e.g.  export BOOST_ROOT=~/.local/boost_py312
+BOOST_CACHE_DIR  Where to cache the compiled Boost (default: ~/.local/boost_py312).
 BOOST_VERSION    Boost version to download (default: 1.83.0).
 KAY_DIR          Reuse an existing kay checkout.
 GMP_ROOT         Point at an existing GMP prefix – skips all detection.
@@ -65,12 +65,12 @@ from setuptools.command.build_ext import build_ext as _build_ext
 
 BOOST_VERSION   = os.environ.get("BOOST_VERSION", "1.83.0")
 BOOST_CACHE_DIR = Path(
-    os.environ.get("BOOST_CACHE_DIR", Path.home() / ".local" / "boost_py311")
+    os.environ.get("BOOST_CACHE_DIR", Path.home() / ".local" / "boost_py312")
 ).expanduser()
 
 # Default Z3_PREFIX: where z3-solver installs its libz3.so
 # This is the standard location when installed via:
-#   python3.11 -m pip install --user z3-solver
+#   python3.12 -m pip install --user z3-solver
 Z3_DEFAULT_PREFIX = (
     Path.home() / ".local" / "lib" / f"python{sys.version_info.major}.{sys.version_info.minor}"
     / "site-packages" / "z3"
@@ -258,7 +258,7 @@ def _boost_env(prefix: Path) -> dict:
     env["PYTHON3"]          = sys.executable
 
     # Tell Meson the exact versioned Boost.Python library name,
-    # e.g. Python 3.11 → boost_python311, Python 3.13 → boost_python313
+    # e.g. Python 3.12 → boost_python312, Python 3.13 → boost_python313
     py_ver = f"{sys.version_info.major}{sys.version_info.minor}"
     env["BOOST_PYTHON_LIBNAME"] = f"boost_python{py_ver}"
 
@@ -590,7 +590,7 @@ def _z3_prefix() -> tuple[Path,Path]:
 
     Search order:
       1. $Z3_PREFIX env var         → use <Z3_PREFIX>/lib
-      2. Z3_DEFAULT_PREFIX constant → ~/.local/lib/python3.11/site-packages/z3/lib
+      2. Z3_DEFAULT_PREFIX constant → ~/.local/lib/python3.12/site-packages/z3/lib
          (standard location for: pip install --user z3-solver)
     """
     env_prefix = os.environ.get("Z3_PREFIX", f"/usr/lib/{platform.machine()}-{platform.system().lower()}-gnu")
@@ -757,7 +757,7 @@ class MesonBuildExt(_build_ext):
         build_tmp = Path(self.build_temp).resolve()
         build_tmp.mkdir(parents=True, exist_ok=True)
 
-        # 1. Boost (compiled from source, cached in ~/.local/boost_py311)
+        # 1. Boost (compiled from source, cached in ~/.local/boost_py312)
         boost_prefix = _boost_prefix()
 
         # 2. kay
