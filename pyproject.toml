@@ -40,8 +40,7 @@ dependencies = [
     "scikit-learn==1.4.2",
     "scipy",
     "seaborn",
-    "tensorflow",
-    "z3-solver==4.8.12"
+    "tensorflow"
 ]
 
 [project.urls]

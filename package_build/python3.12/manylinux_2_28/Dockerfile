@@ -38,6 +38,7 @@ ENV Z3_PREFIX=/opt/python/cp312-cp312/lib/python3.12/site-packages/z3
 
 WORKDIR /app
 ARG GIT_BRANCH=smlp_python312
+ARG CACHE_BUST_SMLP
 COPY run_git_clone .
 RUN ./run_git_clone $GIT_BRANCH
 
