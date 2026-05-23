@@ -26,7 +26,7 @@ endif
 set python3_version=`python3 -c 'from sys import version_info; print(version_info.minor)'`
 set regression_script=smlp_regr.py
 set local_script=`echo smlp_regr.py | sed 's/regr/regr_local/'`
-if( $python3_version != 11 ) then
+if( $python3_version != 12 ) then
     \rm -f  $local_script >& /dev/null
     sed 's@../../src/run_smlp.py@smlp@' $regression_script > $local_script
     chmod +x  $local_script
