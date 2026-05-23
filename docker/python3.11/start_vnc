@@ -1,9 +1,0 @@
-#!/usr/bin/tcsh -f
-Xvfb $DISPLAY -screen 0 1024x768x16 >& Xvfb.log &
-sleep 2
-set d=`echo $DISPLAY | tr -d :`
-@ p = $d + 5801
-x11vnc -display $DISPLAY -forever -nopw -shared -rfbport $p >& x11nc.log &
-autocutsel -selection CLIPBOARD -fork
-autocutsel -selection PRIMARY -fork
-xterm -fn 12x24 &

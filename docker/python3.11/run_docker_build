@@ -1,2 +1,0 @@
-#!/usr/bin/tcsh -f
-env DOCKER_BUILDKIT=1 docker build --no-cache --progress=plain -t python311-dev .

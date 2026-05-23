@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-if [[ -z "${TZ:-}" ]]; then
-    TZ=$(readlink /etc/localtime | sed 's|/usr/share/zoneinfo/||')
-    export TZ
-fi
-docker run -it -e TZ=$TZ -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix:rw  -v /mnt/wslg:/mnt/wslg:rw mdmitry1/python313-dev:latest $*
