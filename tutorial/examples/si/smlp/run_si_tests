@@ -1,0 +1,29 @@
+#!/usr/bin/env -S tcsh -f
+set script_path=`realpath $0 | xargs dirname`
+if($#argv > 0 ) then
+    if("-dryrun" == "$argv[1]") then
+        set dry_run
+    else  
+        if("-clean" == "$argv[1]") then
+            foreach test (run_si_test_nosplit run_si_test_split)
+                $script_path/$test -clean
+            end
+            exit(0)
+        endif
+    endif
+endif
+if($?dry_run) then
+    echo "Dry run"
+    foreach f ($script_path/results/*_EXPECTED.txt)
+        set f_lc=`echo $f | tr '[A-Z]' '[a-z]' | sed 's/_expected//'`
+        \rm -f $f_lc >& /dev/null
+        \ln -sf $f $f_lc:t
+    end
+else
+    foreach test (run_si_test_nosplit run_si_test_split)
+        set cmd="$script_path/$test"
+        echo $cmd
+        $cmd
+    end    
+endif
+$script_path/extract_all_results

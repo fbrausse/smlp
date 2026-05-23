@@ -1,0 +1,18 @@
+{
+  "version": "1.2",
+  "variables": [
+    {"label":"X1", "interface":"knob", "type":"real", "range":[0,5], "rad-rel": 1e-7},
+    {"label":"X2", "interface":"knob", "type":"real", "range":[0,3], "rad-rel": 1e-7},
+    {"label":"F1", "interface":"output", "type":"real"},
+    {"label":"F2", "interface":"output", "type":"real"}
+  ],
+  "alpha": "(X1-5)*(X1-5)+X2*X2<=25 and (X1-8)*(X1-8)+(X2+3)*(X2+3)>=7.7",
+  "witnesses": {
+        "query1": {"X1": 0.0, "X2": 0.0},
+        "query2": {"X1": 0.294118, "X2": 0.294118},
+        "query3": {"X1": 0.714286, "X2": 0.714286},
+        "query4": {"X1": 1.363636, "X2": 1.363636},
+        "query5": {"X1": 2.5, "X2": 2.5},
+        "query6": {"X1": 5.0, "X2": 3.0}
+    }
+}

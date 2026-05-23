@@ -1,0 +1,12 @@
+{
+  "version": "1.2",
+  "variables": [
+    {"label":"X1", "interface":"knob", "type":"real", "range":[-1.5,2.5], "rad-abs": 0.0},
+    {"label":"X2", "interface":"knob", "type":"real", "range":[-1.5,2.0], "rad-abs": 0.0},
+    {"label":"Y1", "interface":"output", "type":"real"}
+  ],
+  "alpha": "X1*X1+X2*X2<=1",
+  "objectives": {
+    "objective1": "-Y1"
+  }
+}

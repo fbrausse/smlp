@@ -1,0 +1,43 @@
+#!/usr/bin/env -S tcsh -f
+#
+# Test case details - see ../../../README.md
+#
+set script_path=`realpath $0 | xargs dirname`
+if($#argv > 0) then
+    if("-clean" == "$argv[1]") then
+        \rm -f dataset.txt.gz >& /dev/null
+        \rm -f Eggholder* *.log  >& /dev/null
+        exit(0)
+    endif
+endif
+set csv=Eggholder.csv
+set json=`echo $csv:r | tr '[A-Z]' '[a-z]'`.json
+${script_path}/eggholder_dataset.py -timeout 5
+gunzip -c dataset.txt.gz | tr ' ' , > $csv
+smlp -data $csv                 #input dataset \
+    -spec $script_path/$json    #input spec \
+    -out_dir ./                 #output directory \
+    -pref $csv:r                #test prefix \
+    -mode optimize              #tool mode \
+    -pareto f                   #optimize each objective separately \
+    -opt_strategy eager         #optimization strategy. Details: see https://www.geeksforgeeks.org/advance-java/lazy-loading-vs-eager-loading \
+    -resp Y1                    #response fuction \
+    -feat X1,X2                 #input variables \
+    -model dt_sklearn           #model type: sklearn decision tree \
+    -dt_sklearn_max_depth 15    #maximum tree depth \
+    -tree_encoding flat         #Method to encode tree model to solvers - the fasted mode \
+    -mrmr_pred 0                #Select all features for modeling \
+    -epsilon 0.005              #Precision by which SMLP approximates response function maximum \
+    -delta_rel 0.5              #exclude (1+delta)*radius region around rejected candidate solutions for fast and guaranteed convergence \
+    -save_model t               #save model for future use \
+    -model_name $csv:r_model    #saved model name, which may be reused \
+    -save_model_config t        #Save model configuration in json format for future use \
+    -plots f                    #batch mode \
+    -pred_plots f               #Don't save prediction accuracy plot \
+    -resp_plots f               #Don't save response function values distribution plot \
+    -seed 10                    #random generation seed \
+    -log_time f                 #Don't add timestamps to the log \
+    >& `realpath $0 | xargs basename`.log
+foreach var (X1 X2 Y1)
+    echo $var = `jq ".objective1.${var}" Eggholder_Eggholder_optimization_results.json`
+end
