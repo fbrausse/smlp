@@ -3,10 +3,10 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"x": 8.601911912575982,
+			"x": 8.601911912781919,
 			"p1": 1.0,
 			"p2": 7.0,
-			"y2": 5.078784562647343
+			"y2": 5.078784555196762
 		},
 		"assertion_feasible": true
 	},
