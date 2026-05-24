@@ -17,8 +17,9 @@ from collections import defaultdict
 import sys
 from enum import Enum
 
-import smlp
-from smlp_py.smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
+from smlp import core
+
+from .smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from smlp_py.smlp_spec import SmlpSpec
 
@@ -112,7 +113,7 @@ class SmlpTerms:
             ast.USub: op.neg,
             ast.Eq: op.eq, ast.NotEq: op.ne, ast.Lt: op.lt, ast.LtE: op.le, ast.Gt: op.gt, ast.GtE: op.ge, 
             ast.And: op.and_, ast.Or: op.or_, ast.Not: op.inv,
-            ast.IfExp: smlp.Ite
+            ast.IfExp: core.Ite
         } 
 
         # maps python operators from module operator to correponding smlp/smlplib operations; 
@@ -153,44 +154,44 @@ class SmlpTerms:
     @property
     @conditional_cache #@functools.cache
     def smlp_true(self):
-        return smlp.true
+        return core.true
 
     @property
     @conditional_cache #@functools.cache
     def smlp_false(self):
-        return smlp.false
+        return core.false
 
     @property
     @conditional_cache #@functools.cache
     def smlp_real(self):
-        return smlp.Real
+        return core.Real
     
     @property
     @conditional_cache #@functools.cache
     def smlp_integer(self):
-        return smlp.Integer
+        return core.Integer
 
     @conditional_cache #@functools.cache
     def smlp_var(self, var):
-        return smlp.Var(var)
+        return core.Var(var)
     
     @conditional_cache #@functools.cache
     def smlp_cnst(self, const):
-        return smlp.Cnst(const)
+        return core.Cnst(const)
     
     # rationals
     @conditional_cache #@functools.cache
     def smlp_q(self, const):
-        return smlp.Q(const)
+        return core.Q(const)
     
     # reals
     @conditional_cache #@functools.cache
     def smlp_r(self, const):
-        return smlp.R(const)
+        return core.R(const)
     
     # logical not (logic negation)
     @conditional_cache #@functools.cache
-    def smlp_not(self, form:smlp.form2):
+    def smlp_not(self, form:core.form2):
         #res1 = ~form
         res2 = op.inv(form)
         #assert res1 == res2
@@ -198,11 +199,11 @@ class SmlpTerms:
     
     # logical and (conjunction)
     @conditional_cache #@functools.cache
-    def smlp_and(self, form1:smlp.form2, form2:smlp.form2):
+    def smlp_and(self, form1:core.form2, form2:core.form2):
         ''' test 83 gets stuck with this simplification
-        if form1 == smlp.true:
+        if form1 == core.true:
             return form2
-        if form2 == smlp.true:
+        if form2 == core.true:
             return form1
         '''
         res1 = op.and_(form1, form2)
@@ -212,7 +213,7 @@ class SmlpTerms:
     
     # conjunction of possibly more than two formulas
     #@functools.cache -- error: unhashable type: 'list'
-    def smlp_and_multi(self, form_list:list[smlp.form2]):
+    def smlp_and_multi(self, form_list:list[core.form2]):
         res = self.smlp_true
         '''
         for i, form in enumerate(form_list):
@@ -224,7 +225,7 @@ class SmlpTerms:
     
     # logical or (disjunction)
     @conditional_cache #@functools.cache
-    def smlp_or(self, form1:smlp.form2, form2:smlp.form2):
+    def smlp_or(self, form1:core.form2, form2:core.form2):
         res1 = op.or_(form1, form2)
         #res2 = form1 | form2
         #assert res1 == res2
@@ -232,7 +233,7 @@ class SmlpTerms:
     
     # disjunction of possibly more than two formulas
     #@functools.cache -- error: unhashable type: 'list'
-    def smlp_or_multi(self, form_list:list[smlp.form2]):
+    def smlp_or_multi(self, form_list:list[core.form2]):
         res = self.smlp_false
         '''
         for i, form in enumerate(form_list):
@@ -244,55 +245,55 @@ class SmlpTerms:
     
     # logical implication
     @conditional_cache #@functools.cache
-    def smlp_implies(self, form1:smlp.form2, form2:smlp.form2):
+    def smlp_implies(self, form1:core.form2, form2:core.form2):
         return self.smlp_or(self.smlp_not(form1), form2)
 
     # logical iff (equivalence)
     @conditional_cache #@functools.cache
-    def smlp_iff(self, form1:smlp.form2, form2:smlp.form2):
+    def smlp_iff(self, form1:core.form2, form2:core.form2):
         return self.smlp_and(self.smlp_implies(form1, form2), self.smlp_implies(form2, form1))
     
     # addition
     @conditional_cache #@functools.cache
-    def smlp_add(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_add(self, term1:core.term2, term2:core.term2):
         return op.add(term1, term2)
     
     # sum of possibly more than two formulas
     #@functools.cache -- error: unhashable type: 'list'
-    def smlp_add_multi(self, term_list:list[smlp.term2]):
+    def smlp_add_multi(self, term_list:list[core.term2]):
         for i, term in enumerate(term_list):
             res = term if i == 0 else self.smlp_add(res, term)                
         return res
     
     # subtraction
     @conditional_cache #@conditional_cache #@functools.cache
-    def smlp_sub(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_sub(self, term1:core.term2, term2:core.term2):
         return op.sub(term1, term2)
     
     # negation of terms
     @conditional_cache #@conditional_cache #@functools.cache
-    def smlp_neg(self, term:smlp.term2):
+    def smlp_neg(self, term:core.term2):
         return op.neg(term)
     
     # multiplication
     @conditional_cache #@functools.cache
-    def smlp_mult(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_mult(self, term1:core.term2, term2:core.term2):
         return op.mul(term1, term2)    
     
     # TODO: !!!  check that term2 does not evaluate to term 0 ???
     # Do this before calling smlp_div, whenver possible?
     @conditional_cache #@functools.cache
-    def smlp_div(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_div(self, term1:core.term2, term2:core.term2):
         #return self.smlp_mult(self.smlp_cnst(self.smlp_q(1)) / term2, term1)
         return self.smlp_mult(op.truediv(self.smlp_cnst(self.smlp_q(1)), term2), term1)
     
     @conditional_cache #@functools.cache
-    def smlp_pow(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_pow(self, term1:core.term2, term2:core.term2):
         return op.pow(term1, term2)
     
     # equality
     @conditional_cache #@functools.cache
-    def smlp_eq(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_eq(self, term1:core.term2, term2:core.term2):
         res1 = op.eq(term1, term2)
         #res2 = term1 == term2
         #assert res1 == res2
@@ -300,7 +301,7 @@ class SmlpTerms:
     
     # operator != (not equal)
     @conditional_cache #@functools.cache
-    def smlp_ne(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_ne(self, term1:core.term2, term2:core.term2):
         res1 = op.ne(term1, term2)
         #res2 = term1 != term2
         #assert res1 == res2
@@ -308,42 +309,42 @@ class SmlpTerms:
         
     # operator <
     @conditional_cache #@functools.cache
-    def smlp_lt(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_lt(self, term1:core.term2, term2:core.term2):
         return op.lt(term1, term2)    
     
     # operator <=
     @conditional_cache #@functools.cache
-    def smlp_le(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_le(self, term1:core.term2, term2:core.term2):
         return op.le(term1, term2)
     
     # operator >
     @conditional_cache #@functools.cache
-    def smlp_gt(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_gt(self, term1:core.term2, term2:core.term2):
         return op.gt(term1, term2)    
     
     # operator >=
     @conditional_cache #@functools.cache
-    def smlp_ge(self, term1:smlp.term2, term2:smlp.term2):
+    def smlp_ge(self, term1:core.term2, term2:core.term2):
         return op.ge(term1, term2)
     
     # if-thne-else operation
     @conditional_cache #@functools.cache
-    def smlp_ite(self, form:smlp.form2, term1:smlp.term2, term2:smlp.term2):
-        return smlp.Ite(form, term1, term2)
+    def smlp_ite(self, form:core.form2, term1:core.term2, term2:core.term2):
+        return core.Ite(form, term1, term2)
     
     # this function performs substitution of variables in term2:
     # it substitutes occurrences of the keys in subst_dict with respective values, in term2 term.
     #@functools.cache
-    def smlp_subst(self, term:smlp.term2, subst_dict:dict):
-        return smlp.subst(term, subst_dict)
+    def smlp_subst(self, term:core.term2, subst_dict:dict):
+        return core.subst(term, subst_dict)
     
     # simplifies a ground term to the respective constant; takes als a s
     #@functools.cache
-    def smlp_cnst_fold(self, term:smlp.term2, subst_dict:dict):
-        return smlp.cnst_fold(term, subst_dict)
+    def smlp_cnst_fold(self, term:core.term2, subst_dict:dict):
+        return core.cnst_fold(term, subst_dict)
     
     '''
-    destruct(e: smlp.libsmlp.form2 | smlp.libsmlp.term2) -> dict
+    destruct(e: core.libsmlp.form2 | core.libsmlp.term2) -> dict
     Destructure the given term2 or form2 instance `e`. The result is a dict
     with the following entries:
     - 'id': always, one of:
@@ -357,10 +358,10 @@ class SmlpTerms:
     - 'cmp': comparison predicate, one of: '<=', '<', '>=', '>', '==', '!='
              ('prop' only)
     '''
-    def smlp_destruct(self, term2_or_form2): #:smlp.term2|smlp.form2
-        return smlp.destruct(term2_or_form2)
+    def smlp_destruct(self, term2_or_form2): #:core.term2|core.form2
+        return core.destruct(term2_or_form2)
     
-    # this function traverses an object of type smlp.libsmlp.form2 or smlp.libsmlp.term2 
+    # this function traverses an object of type core.libsmlp.form2 or core.libsmlp.term2 
     # and returns a dictionary with the counts of each operator encountered during the traversal.
     def smlp_count_operators(self, e):
         sys.setrecursionlimit(100000)
@@ -420,8 +421,8 @@ class SmlpTerms:
     # - empty (and) and (or)
     # - logical negation of constants
     #@functools.cache
-    def smlp_simplify(self, term:smlp.term2):
-        return smlp.simplify(term)
+    def smlp_simplify(self, term:core.term2):
+        return core.simplify(term)
     
     # https://stackoverflow.com/questions/68390248/ast-get-the-list-of-only-the-variable-names-in-an-expression
     def get_expression_variables(self, expression):
@@ -514,7 +515,7 @@ class SmlpTerms:
                 res_test = eval_(node.test)
                 res_body = eval_(node.body)
                 res_orelse = eval_(node.orelse)
-                #res_ifexp = smlp.Ite(res_test, res_body, res_orelse)
+                #res_ifexp = core.Ite(res_test, res_body, res_orelse)
                 res_ifexp = self.ast_operators_smlp_map[ast.IfExp](res_test, res_body, res_orelse)
                 return res_ifexp
             else:
@@ -527,19 +528,19 @@ class SmlpTerms:
     # Enhencement !!!: intend to extend to ground formulas as well. Currently an assertion prevents this usage:
     # assertion checks that the constant expression is rational Q or algebraic A (not a transcendental Real), and also
     # nothing else like Boolean/formula type
-    def ground_smlp_expr_to_value(self, ground_term:smlp.term2, approximate=False, precision=64):
+    def ground_smlp_expr_to_value(self, ground_term:core.term2, approximate=False, precision=64):
         # evaluate to constant term or formula (evaluate all operations in ground_term) -- should
         # succeed because the assumption is that ground_term does not contain variables (is a ground term).
-        # The input ground_term and the result smlp_const of smlp.const_fold() are of type <class 'smlp.libsmlp.term2'>.
-        smlp_const = smlp.cnst_fold(ground_term)
-        assert isinstance(self.smlp_cnst(smlp_const), smlp.libsmlp.Q) or isinstance(self.smlp_cnst(smlp_const), smlp.libsmlp.A) 
-        if isinstance(self.smlp_cnst(smlp_const), smlp.libsmlp.A) or isinstance(self.smlp_cnst(smlp_const), smlp.libsmlp.R): 
+        # The input ground_term and the result smlp_const of core.const_fold() are of type <class 'core.libsmlp.term2'>.
+        smlp_const = core.cnst_fold(ground_term)
+        assert isinstance(self.smlp_cnst(smlp_const), core.libsmlp.Q) or isinstance(self.smlp_cnst(smlp_const), core.libsmlp.A) 
+        if isinstance(self.smlp_cnst(smlp_const), core.libsmlp.A) or isinstance(self.smlp_cnst(smlp_const), core.libsmlp.R): 
             # algebraic number, solution of a polynomial, need to specify precision for the case
             # value_type is not float (for float, precison is always 64); the result var is of type <class 'fractions.Fraction'>
-            val = smlp.approx(smlp.Cnst(smlp_const), precision=precision)
-        elif isinstance(smlp.Cnst(smlp_const), smlp.libsmlp.Q):
+            val = core.approx(core.Cnst(smlp_const), precision=precision)
+        elif isinstance(core.Cnst(smlp_const), core.libsmlp.Q):
             if approximate:
-                val = smlp.approx(smlp.Cnst(smlp_const), precision=precision)
+                val = core.approx(core.Cnst(smlp_const), precision=precision)
             else:
                 try:
                     if self.smlp_cnst(smlp_const).denominator is not None and self.smlp_cnst(smlp_const).numerator is not None:
@@ -587,7 +588,7 @@ class SmlpTerms:
         return witness_vals_dict
     
     # Converts values assugnments in sat assignmenet (witness) from to smlp formula
-    # equal to conjucnction of equalities smlp.Var(k) = smlp.Cnst(t)
+    # equal to conjucnction of equalities core.Var(k) = core.Cnst(t)
     def witness_to_formula(self, witness):
         witness_formula = []
         for k,t in witness.items():
@@ -866,10 +867,10 @@ class TreeTerms:
 
     # p is a triplet defininig a range, e.g. ('p3', '>', 0.40000001) or a triplet defining
     # an equality or assignment, e.g., ('num1', '==', 0.0).  So in these triplets p[0]
-    # is a variable (or variable identifier) -- from which a term is built; e.g. smlp.Var('p3').
+    # is a variable (or variable identifier) -- from which a term is built; e.g. core.Var('p3').
     # p[1] is the operator to be applied, and p[2] is a constant (int or real or rational (?).
     def _rule_triplet_to_term(self, p):
-        #!!!!return self._apply_op(p[1], smlp.Var(p[0]), smlp.Cnst(p[2]))
+        #!!!!return self._apply_op(p[1], core.Var(p[0]), core.Cnst(p[2]))
         return (self.instSmlpTerms._ast_operators_smlp_map[self._inequality_ops_ast_dict[p[1]]])(
             self.instSmlpTerms.smlp_var(p[0]), self.instSmlpTerms.smlp_cnst(p[2]))
     
@@ -966,10 +967,10 @@ class TreeTerms:
             ant_reduction_stats['before'].append(ant_befor)
             ant_reduction_stats['after'].append(ant_after)
             # here is how the corresponding rule_dict looks like (it contains smlp / smt2 terms):
-            # {'num1': (<smlp.libsmlp.form2 (and (and (> p3 (/ 53687093 134217728)) (<= FMAX_abc (/ 3 4))) 
-            #     (> FMAX_xyz (/ 33554433 67108864)))>, <smlp.libsmlp.term2 0>), 
-            #  'num2': (<smlp.libsmlp.form2 (and (and (> p3 (/ 53687093 134217728)) (<= FMAX_abc (/ 3 4))) 
-            #     (> FMAX_xyz (/ 33554433 67108864)))>, <smlp.libsmlp.term2 0>)}
+            # {'num1': (<core.libsmlp.form2 (and (and (> p3 (/ 53687093 134217728)) (<= FMAX_abc (/ 3 4))) 
+            #     (> FMAX_xyz (/ 33554433 67108864)))>, <core.libsmlp.term2 0>), 
+            #  'num2': (<core.libsmlp.form2 (and (and (> p3 (/ 53687093 134217728)) (<= FMAX_abc (/ 3 4))) 
+            #     (> FMAX_xyz (/ 33554433 67108864)))>, <core.libsmlp.term2 0>)}
             if self.tree_encoding_flat(algo):
                 rules_dict[self._tree_model_id(algo, tree_number)].append(rule_to_form(rule, tree_number))
             elif self.tree_encoding_nested(algo):
@@ -981,7 +982,7 @@ class TreeTerms:
                         # TODO: Ideally, we could implement a sanity check that the condition along 
                         # the forst branch is implied by the conjunction of conditions along the rest
                         # of the branches -- using a solver like Z3.
-                        rules_dict[resp] = con_term #self.instSmlpTerms.smlp_ite(ant_term, con_term, smlp.Var('SMLP_UNDEFINED'))
+                        rules_dict[resp] = con_term #self.instSmlpTerms.smlp_ite(ant_term, con_term, core.Var('SMLP_UNDEFINED'))
                     else:
                         rules_dict[resp] = self.instSmlpTerms.smlp_ite(ant_term, con_term, rules_dict[resp])
             elif self.tree_encoding_branched(algo):
@@ -1097,8 +1098,8 @@ class TreeTerms:
                     else:                            
                         tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_add(tree_model_term_dict[resp_name], tree_term_dict_dict[self._tree_id(j)][resp_name])
                         if j == number_of_trees - 1: # the last tree -- compute the mean by dividing the sum on number_of_trees
-                            #tree_model_term_dict[resp_name] = smlp.Div(tree_model_term_dict[resp_name], smlp.Cnst(int(number_of_trees)))
-                            #!!!!tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(smlp.Cnst(smlp.Q(1) / smlp.Q(int(number_of_trees))), tree_model_term_dict[resp_name])
+                            #tree_model_term_dict[resp_name] = core.Div(tree_model_term_dict[resp_name], core.Cnst(int(number_of_trees)))
+                            #!!!!tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(core.Cnst(core.Q(1) / core.Q(int(number_of_trees))), tree_model_term_dict[resp_name])
                             tree_model_term_dict[resp_name] = self.instSmlpTerms.smlp_mult(
                                 self.instSmlpTerms.smlp_cnst(self.instSmlpTerms.smlp_q(1) / self.instSmlpTerms.smlp_q(int(number_of_trees))), tree_model_term_dict[resp_name])
             
@@ -1180,20 +1181,20 @@ class PolyTerms: #(SmlpTerms):
                 continue
             
             curr_term_str = str(coefs[resp_id][r])
-            curr_term = smlp.Cnst(coefs[resp_id][r])
+            curr_term = core.Cnst(coefs[resp_id][r])
             for i in range(len(feat_names)):
                 if powers[r][i] == 0:
                     continue
                 elif powers[r][i] == 1:
                     curr_term_str = curr_term_str + ' * ' + feat_names[i]
-                    curr_term = curr_term * smlp.Var(feat_names[i])
+                    curr_term = curr_term * core.Var(feat_names[i])
                 else:
                     curr_term_str = curr_term_str + ' * ' + feat_names[i] + '^' + str(powers[r][i])
                     # power/exponentiation operation ** is not supported in smlp / libsmlp, we therefore perform 
                     # repeated multiplication in required number of times
-                    curr_term = curr_term * smlp.Var(feat_names[i]) #** smlp.Cnst(int(powers[r][i])))
+                    curr_term = curr_term * core.Var(feat_names[i]) #** core.Cnst(int(powers[r][i])))
                     for p in range(2, powers[r][i]+1):
-                        curr_term = curr_term * smlp.Var(feat_names[i])
+                        curr_term = curr_term * core.Var(feat_names[i])
 
             if term_str == '':
                 term_str = curr_term_str
@@ -1204,7 +1205,7 @@ class PolyTerms: #(SmlpTerms):
 
         # add the intercepts
         term_str = f"{intercepts[resp_id]} + " + term_str
-        term = smlp.Cnst(intercepts[resp_id]) + term
+        term = core.Cnst(intercepts[resp_id]) + term
         
         # add the response name
         formula_str = resp_names[resp_id] + ' == ' + term_str
@@ -1272,10 +1273,10 @@ class NNKerasTerms: #(SmlpTerms):
         layer_term = None
         for i,t in enumerate(last_layer_terms):
             if i == 0:
-                layer_term = last_layer_terms[0] * smlp.Cnst(float(node_weights[0]))
+                layer_term = last_layer_terms[0] * core.Cnst(float(node_weights[0]))
             else:
-                layer_term = layer_term + last_layer_terms[i] * smlp.Cnst(float(node_weights[i]))
-        layer_term = layer_term + smlp.Cnst(float(node_bias)) 
+                layer_term = layer_term + last_layer_terms[i] * core.Cnst(float(node_weights[i]))
+        layer_term = layer_term + core.Cnst(float(node_bias)) 
 
         return layer_term
 
@@ -1283,7 +1284,7 @@ class NNKerasTerms: #(SmlpTerms):
     # on smlp term representing an NN node
     def _nn_activation_term(self, activation_func, input_term):
         if activation_func == 'relu':
-            relu_term = smlp.Ite(input_term >= smlp.Cnst(0), input_term, smlp.Cnst(0))
+            relu_term = core.Ite(input_term >= core.Cnst(0), input_term, core.Cnst(0))
             return relu_term
         elif activation_func == 'linear':
             return input_term
@@ -1368,7 +1369,7 @@ class NNKerasTerms: #(SmlpTerms):
         assert model_type in ['sequential', 'functional']
         model_terms_dict = {}
         # input variables layer as list of terms
-        last_layer_terms = [smlp.Var(v) for v in model_feat_names]
+        last_layer_terms = [core.Var(v) for v in model_feat_names]
         for layer in model.layers:
             if self.nn_keras_layer_is_input(model, layer):
                 continue
@@ -1439,7 +1440,7 @@ class NNKerasTerms: #(SmlpTerms):
         model_name = 'nn_keras_model' if resp_name is None else 'nn_keras_model_' + str(resp_name)
         
         # input variables layer as list of terms
-        last_layer_terms = [smlp.Var(v) for v in model_feat_names]
+        last_layer_terms = [core.Var(v) for v in model_feat_names]
         
         # Get the names of the output layers from the model's output configuration
         #output_layer_names = [out_layer.name for out_layer in model.outputs]
@@ -1572,13 +1573,13 @@ class ScalerTerms(SmlpTerms):
     # rational constant, it is defined to smlp instance as a fraction (thus there is no loss of precision).
     def feature_scaler_to_term(self, orig_feat_name, scaled_feat_name, orig_min, orig_max): 
         if orig_min == orig_max:
-            return self.smlp_cnst(0) #smlp.Cnst(0) # same as returning smlp.Cnst(smlp.Q(0))
+            return self.smlp_cnst(0) #core.Cnst(0) # same as returning core.Cnst(core.Q(0))
         else:
             return self.smlp_mult(
                 self.smlp_cnst(self.smlp_q(1) / self.smlp_q(orig_max - orig_min)),
                 (self.smlp_var(orig_feat_name) - self.smlp_cnst(orig_min)))
             ####return self.smlp_div(self.smlp_var(orig_feat_name) - self.smlp_cnst(orig_min), self.smlp_cnst(orig_max) - self.smlp_cnst(orig_min))
-            ####return smlp.Cnst(smlp.Q(1) / smlp.Q(orig_max - orig_min)) * (smlp.Var(orig_feat_name) - smlp.Cnst(orig_min))
+            ####return core.Cnst(core.Q(1) / core.Q(orig_max - orig_min)) * (core.Var(orig_feat_name) - core.Cnst(orig_min))
     
     # Computes dictionary with features as keys and scaler terms as values
     def feature_scaler_terms(self, data_bounds, feat_names): 
@@ -1591,7 +1592,7 @@ class ScalerTerms(SmlpTerms):
     # orig_min stands for min_x and orig_max stands for max_x, where min_x amd max_x there computed and 
     # stored diring scaling of x to x_scaled, and loaded for cmputed original, unscaled x.
     def feature_unscaler_to_term(self, orig_feat_name, scaled_feat_name, orig_min, orig_max): 
-        ####unscaled_term = (smlp.Var(scaled_feat_name) * smlp.Cnst(orig_max - orig_min)) + smlp.Cnst(orig_min)
+        ####unscaled_term = (core.Var(scaled_feat_name) * core.Cnst(orig_max - orig_min)) + core.Cnst(orig_min)
         unscaled_term = self.smlp_add(
             self.smlp_mult(self.smlp_var(scaled_feat_name), self.smlp_cnst(orig_max - orig_min)), 
             self.smlp_cnst(orig_min))
@@ -1603,7 +1604,7 @@ class ScalerTerms(SmlpTerms):
         return dict([(feat, self.feature_unscaler_to_term(feat, self._scaled_name(feat), 
             data_bounds[feat]['min'], data_bounds[feat]['max'])) for feat in feat_names])
 
-    # unscale constant const converted to smlp.term2 with respect to max and min values of 
+    # unscale constant const converted to core.term2 with respect to max and min values of 
     # feat_name specified in data_bounds dictionary
     def unscale_constant_term(self, data_bounds:dict, feat_name:str, const):
         orig_max = data_bounds[feat_name]['max']
@@ -1611,7 +1612,7 @@ class ScalerTerms(SmlpTerms):
         return self.smlp_add(
             self.smlp_mult(self.smlp_cnst(const), self.smlp_cnst(orig_max - orig_min)), 
             self.smlp_cnst(orig_min))
-        #return (smlp.Cnst(const) * smlp.Cnst(orig_max - orig_min)) + smlp.Cnst(orig_min)
+        #return (core.Cnst(const) * core.Cnst(orig_max - orig_min)) + core.Cnst(orig_min)
 
 class ModelTerms(ScalerTerms):
     def __init__(self):
@@ -2119,7 +2120,7 @@ class ModelTerms(ScalerTerms):
     # alph_expr is alpha constraint specified in command line. If it is not None 
     # it overrides alpha constraint defined in spec file through feild "alpha".
     # Otherwise we get definition of alpha if it is specified in spec, and otherwise
-    # global alha is None and global alpha constraint formula is smlp.true
+    # global alha is None and global alpha constraint formula is core.true
     # This function computes alpha constraints originated from spec input variable 
     # "bounds" escription using compute_input_ranges_formula_alpha and combines
     # with global alpha constraint (retunrns the conjunction).
@@ -2183,18 +2184,18 @@ class ModelTerms(ScalerTerms):
                     
         if spec_domain_dict[var][self._specInst.get_spec_domain_type_tag] == self._specInst.get_spec_integer_tag:
             if self._declare_integer_as_real_with_grid and not interval_has_none:
-                var_component = smlp.component(self.smlp_real, grid=list(range(interval[0], interval[1]+1)))
+                var_component = core.component(self.smlp_real, grid=list(range(interval[0], interval[1]+1)))
                 assert False
             if self._declare_domain_interface_only or interval_has_none:
-                var_component = smlp.component(self.smlp_integer)
+                var_component = core.component(self.smlp_integer)
             else:
-                var_component = smlp.component(self.smlp_integer, 
+                var_component = core.component(self.smlp_integer, 
                     interval=spec_domain_dict[var][self._specInst.get_spec_domain_interval_tag])
         elif spec_domain_dict[var][self._specInst.get_spec_domain_type_tag] == self._specInst.get_spec_real_tag:
             if self._declare_domain_interface_only or interval_has_none:
-                var_component = smlp.component(self.smlp_real)
+                var_component = core.component(self.smlp_real)
             else:
-                var_component = smlp.component(self.smlp_real, 
+                var_component = core.component(self.smlp_real, 
                     interval=spec_domain_dict[var][self._specInst.get_spec_domain_interval_tag])
         return var_component
     
@@ -2244,7 +2245,7 @@ class ModelTerms(ScalerTerms):
         # define domain from inputs and knobs only and check alpha and eta constraints are consistent
         for var in feat_names:
             domain_dict[var] = self.var_domain(var, spec_domain_dict)
-        domain_features = smlp.domain(domain_dict)
+        domain_features = core.domain(domain_dict)
         interface_consistent = self.check_alpha_eta_consistency(domain_features, None, alpha, eta, 'ALL')
         if not interface_consistent:
             return None, None, None, eta, alpha, beta, False, False
@@ -2303,7 +2304,7 @@ class ModelTerms(ScalerTerms):
                             continue
                             
                         for node in range(curr_layer_nodes_count):
-                            domain_dict[self._nnKerasTermsInst._nn_keras_node_name(resp_name, l, node)] = smlp.component(self.smlp_real)
+                            domain_dict[self._nnKerasTermsInst._nn_keras_node_name(resp_name, l, node)] = core.component(self.smlp_real)
             
             if isinstance(model, dict):
                 for resp_name in resp_names:
@@ -2312,7 +2313,7 @@ class ModelTerms(ScalerTerms):
                 resp_name = resp_names[0] if len(resp_names) == 1 else None
                 declare_iternal_node_vars(model, resp_name, resp_names)
         
-        #domain = smlp.domain(domain_dict)
+        #domain = core.domain(domain_dict)
         
         if syst_expr_dict is not None:
             self._smlp_terms_logger.info('Building system terms: Start')
@@ -2343,9 +2344,9 @@ class ModelTerms(ScalerTerms):
         if self._treeTermsInst.tree_encoding_branched(algo):
             branch_cond_vars = [k for k in model_full_term_dict.keys() if k not in resp_names]; 
             for branch_cond_var in branch_cond_vars:
-                domain_dict[branch_cond_var] = smlp.component(self.smlp_real)
+                domain_dict[branch_cond_var] = core.component(self.smlp_real)
                     
-        domain = smlp.domain(domain_dict)
+        domain = core.domain(domain_dict)
         
         # report full model operator counts
         for key, m in model_full_term_dict.items():
@@ -2383,10 +2384,10 @@ class ModelTerms(ScalerTerms):
         # create base solver -- it has model and other constraints that are common for all model
         # exloration modes in SMLP: querying, assertion verification, configuration optimization
         if logic is not None and logic != 'ALL':
-            base_solver = smlp.solver(incremental, logic)
+            base_solver = core.solver(incremental, logic)
         else:
-            #base_solver = smlp.solver(incremental=incremental)
-            base_solver = smlp.solver(incremental, 'ALL')
+            #base_solver = core.solver(incremental=incremental)
+            base_solver = core.solver(incremental, 'ALL')
         base_solver.declare(domain)
         
         if model_full_term_dict is not None :
@@ -2413,15 +2414,15 @@ class ModelTerms(ScalerTerms):
         start = time.time()
         res = solver.check()
         end = time.time()
-        if  isinstance(res, smlp.unknown):
+        if  isinstance(res, core.unknown):
             status = 'unknown'
             sat_model = {}
-        elif isinstance(res, smlp.sat):
+        elif isinstance(res, core.sat):
             status = 'sat'
             sat_model = self.witness_term_to_const(res.model, approximate=False, precision=None)
             if approx_lemmas:
                 sat_model_approx = self.approximate_witness_term(res.model, lemma_precision)
-        elif isinstance(res, smlp.unsat):
+        elif isinstance(res, core.unsat):
             status = 'unsat'
             sat_model = {}
         else:
@@ -2492,13 +2493,13 @@ class ModelTerms(ScalerTerms):
         return res
     
     def solver_status_sat(self, res):
-        return isinstance(res, smlp.sat)
+        return isinstance(res, core.sat)
         
     def solver_status_unsat(self, res):
-        return isinstance(res, smlp.unsat)
+        return isinstance(res, core.unsat)
         
     def solver_status_unknown(self, res):
-        return isinstance(res, smlp.unknown)
+        return isinstance(res, core.unknown)
         
     # we return value assignmenets to interface (input, knob, output) variables defined in the Spec file
     # (and not values assigned to any other variables that might be defined additionally as part of solver domain,
@@ -2535,8 +2536,8 @@ class ModelTerms(ScalerTerms):
     # not a performance bottleneck, but if one wants to speed it up one solution could be
     # to create alpha_eta domain without declaring the outputs and feed it to this function 
     # instead of the domain that contains output declarations as well (the argument 'domain').
-    def check_alpha_eta_consistency(self, domain:smlp.domain, model_full_term_dict:dict, 
-            alpha:smlp.form2, eta:smlp.form2, solver_logic:str):
+    def check_alpha_eta_consistency(self, domain:core.domain, model_full_term_dict:dict, 
+            alpha:core.form2, eta:core.form2, solver_logic:str):
         solver = self.create_model_exploration_instance_from_smlp_components(
             domain, model_full_term_dict, False, solver_logic)
         solver.add(alpha)
@@ -2544,10 +2545,10 @@ class ModelTerms(ScalerTerms):
         #res = solver.check()
         res = self.smlp_solver_check(solver, 'interface_consistency' if model_full_term_dict is None else 'model_consistency')
         consistency_type = 'Input and knob' if model_full_term_dict is None else 'Model'
-        if isinstance(res, smlp.sat):
+        if isinstance(res, core.sat):
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are consistent')
             interface_consistent = True
-        elif isinstance(res, smlp.unsat):
+        elif isinstance(res, core.unsat):
             self._smlp_terms_logger.info(consistency_type + ' interface constraints are inconsistent')
             interface_consistent = False
         else:

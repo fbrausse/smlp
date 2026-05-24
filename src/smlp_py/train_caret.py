@@ -9,9 +9,9 @@ import numpy as np
 import os
 
 # SMLP
-from smlp_py.smlp_plots import *
-from smlp_py.smlp_terms import TreeTerms
-from smlp_py.smlp_utils import str_to_bool
+from .smlp_plots import *
+from .smlp_terms import TreeTerms
+from .smlp_utils import str_to_bool
 
 
 # TODO: couldn't manage to disable cross-validation, looks like at least two folds is a must.

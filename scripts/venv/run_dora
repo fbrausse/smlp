@@ -51,8 +51,9 @@ echo "Commit: $commit"
 checkout_cmd="git checkout $commit"
 echo $checkout_cmd
 $checkout_cmd
+sed -i.bak "s@../../src/run_smlp.py@smlp@" regr_smlp/code/smlp_regr.py
 cd regr_smlp/code
-../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test1 -mode train -resp y1 -feat x,p1,p2 -model dt_caret -save_model_config f -mrmr_pred 0 -plots t -seed 10 -log_time f
+smlp -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test1 -mode train -resp y1 -feat x,p1,p2 -model dt_caret -save_model_config f -mrmr_pred 0 -plots t -seed 10 -log_time f
 cmd="diff Test1_smlp_toy_num_resp_mult.txt ../master"
 echo $cmd
 $cmd

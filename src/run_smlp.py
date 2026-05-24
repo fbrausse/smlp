@@ -6,14 +6,18 @@
 
 # coding: utf-8
 
-
 import sys, os
-from smlp_py.smlp_flows import SmlpFlows
 
 def main(argv):
     smlpInst = SmlpFlows(argv)
     smlpInst.smlp_flow()
 
-if __name__ == "__main__":
+def main2():
     main(sys.argv)
-    
+
+if __name__ == '__main__':
+    from smlp_py.smlp_flows import SmlpFlows
+    main(sys.argv)
+else:
+    from .smlp_py.smlp_flows import SmlpFlows
+

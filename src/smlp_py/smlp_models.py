@@ -13,14 +13,15 @@ if version_info.major < 4 and version_info.minor < 14:
     from pycaret.regression import predict_model as caret_predict_model
     from pycaret.regression import save_model as caret_save_model
     from pycaret.regression import load_model as caret_load_model
-    from smlp_py.train_caret import ModelCaret 
+    from .train_caret import ModelCaret 
 
 from keras.models import load_model as keras_load_model
 
-from smlp_py.smlp_plots import evaluate_prediction
-from smlp_py.train_keras import ModelKeras 
-from smlp_py.train_sklearn import ModelSklearn
-from smlp_py.smlp_utils import str_to_bool
+from .smlp_plots import evaluate_prediction
+from .train_keras import ModelKeras 
+from .train_caret import ModelCaret 
+from .train_sklearn import ModelSklearn
+from .smlp_utils import str_to_bool
 
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.

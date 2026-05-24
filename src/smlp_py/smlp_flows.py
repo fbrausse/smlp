@@ -1,24 +1,27 @@
 # SPDX-License-Identifier: Apache-2.0
 # This file is part of smlp.
 
+print("Loading libraries...")
+
 # imports from SMLP modules
-from smlp_py.smlp_logs import SmlpLogger, SmlpTracer
-from smlp_py.smlp_utils import str_to_bool, np_JSONEncoder
-from smlp_py.smlp_models import SmlpModels
-from smlp_py.smlp_data import SmlpData
-from smlp_py.smlp_subgroups import SubgroupDiscovery
-from smlp_py.smlp_config import SmlpConfig
-from smlp_py.smlp_doe import SmlpDoepy
-from smlp_py.smlp_discretize import SmlpDiscretize
-from smlp_py.smlp_terms import ModelTerms
-from smlp_py.smlp_spec import SmlpSpec
-from smlp_py.smlp_frontier import SmlpFrontier
-from smlp_py.smlp_solver import SmlpSolver
-from smlp_py.smlp_verify import SmlpVerify
-from smlp_py.smlp_query import SmlpQuery
-from smlp_py.smlp_optimize import SmlpOptimize
-from smlp_py.smlp_refine import SmlpRefine
-from smlp_py.smlp_correlations import SmlpCorrelations
+from .smlp_logs import SmlpLogger, SmlpTracer
+
+from .smlp_utils import str_to_bool, np_JSONEncoder
+from .smlp_models import SmlpModels
+from .smlp_data import SmlpData
+from .smlp_subgroups import SubgroupDiscovery
+from .smlp_config import SmlpConfig
+from .smlp_doe import SmlpDoepy
+from .smlp_discretize import SmlpDiscretize
+from .smlp_terms import ModelTerms
+from .smlp_spec import SmlpSpec
+from .smlp_frontier import SmlpFrontier
+from .smlp_solver import SmlpSolver
+from .smlp_verify import SmlpVerify
+from .smlp_query import SmlpQuery
+from .smlp_optimize import SmlpOptimize
+from .smlp_refine import SmlpRefine
+from .smlp_correlations import SmlpCorrelations
 
 # Combining simulation results, optimization, uncertainty analysis, sequential experiments
 # https://foqus.readthedocs.io/en/3.1.0/chapt_intro/index.html
@@ -52,7 +55,8 @@ class SmlpFlows:
         self.correlInst = SmlpCorrelations()
         
         # get args
-        args_dict = self.modelInst.model_params_dict | \
+        args_dict = self.configInst.modes_data_dict | \
+                    self.modelInst.model_params_dict | \
                     self.dataInst.data_params_dict | \
                     self.configInst.config_params_dict | \
                     self.loggerInst.logger_params_dict | \

@@ -803,6 +803,14 @@ class MesonBuildExt(_build_ext):
             else:
                 print(f"[smlp build] WARNING: source is not found at {src}, skipping.")
 
+        # 6. Write smlp-subpath.pth into the wheel's build-lib root so pip
+        #    installs it into site-packages alongside the smlp package.
+        #    The relative entry 'smlp' is resolved by Python relative to the
+        #    .pth file's own directory (i.e. site-packages/smlp), making
+        #    bare 'from smlp_py.xxx import ...' imports work correctly.
+        pth_dest = Path(self.build_lib) / "smlp-subpath.pth"
+        pth_dest.write_text("smlp\n")
+        print(f"[smlp build] wrote {pth_dest}")
 # ---------------------------------------------------------------------------
 # setup()
 # ---------------------------------------------------------------------------

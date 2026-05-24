@@ -32,3 +32,6 @@ option('kjson-prefix', type: 'string', description:
 
 option('boost-prefix', type: 'string', description:
 	'prefix of the install path containing the boost-python library')
+
+option('python-bin', type: 'string', value: 'python', description:
+	'path to Python interpreter to use when building the libsmlp.*.so module')

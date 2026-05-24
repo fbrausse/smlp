@@ -1,0 +1,10 @@
+/code/Test*.*
+/code/test*.*
+/code/__pycache__/
+/code/all_log.txt
+/code/logs.log
+
+# ignore files for tests 130,131 as the data set is too big for the repository
+/data/smlp_s2_tx.csv
+/master/Test130_*.*
+/master/Test131_*.*

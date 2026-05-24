@@ -1,0 +1,9 @@
+stage,solver,p,x,x_copy,y,y_copy
+interface_consistency,sat,1/20,0,0
+model_consistency,sat,1/20,0,0,0,0
+witness_consistency,sat,1/20,0,0,0,0
+witness_consistency,sat,1/20,0,0,0,0
+ca,sat,1/20,0,0,0,0
+ce,unsat
+ca,sat,1/20,1,0,1,0
+ce,sat,1/20,1/4,1/2,1/4,1/2
