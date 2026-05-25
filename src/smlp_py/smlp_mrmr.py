@@ -3,7 +3,7 @@
 
 from mrmr import mrmr_classif, mrmr_regression
 import pandas as pd
-from smlp_py.smlp_utils import (pd_series_is_binary_int, pd_series_is_binary_categorical, pd_series_is_numeric, pd_series_is_int)
+from .smlp_utils import (pd_series_is_binary_int, pd_series_is_binary_categorical, pd_series_is_numeric, pd_series_is_int)
 
 class SmlpMrmr:
     def __init__(self):

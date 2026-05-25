@@ -3,7 +3,8 @@
 
 import numpy as np
 import pandas as pd
-from smlp_py.smlp_spec import SmlpSpec
+
+from .smlp_spec import SmlpSpec
 
 '''
 Pareto frontier selection with respect to maximizing objectives, directly from data, without training models.

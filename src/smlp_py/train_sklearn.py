@@ -16,9 +16,9 @@ import pandas as pd
 #import pickle
 
 # SMLP
-from smlp_py.smlp_plots import *
-from smlp_py.smlp_terms import TreeTerms, PolyTerms
-from smlp_py.smlp_utils import str_to_bool, lists_union_order_preserving_without_duplicates
+from .smlp_plots import *
+from .smlp_terms import TreeTerms, PolyTerms
+from .smlp_utils import str_to_bool, lists_union_order_preserving_without_duplicates
 
 
 # Methods for training and predction, results reproting with SKLEARN package   

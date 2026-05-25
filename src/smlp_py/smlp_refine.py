@@ -2,10 +2,10 @@ import numpy as np
 import pandas as pd
 import os
 
-
 from sklearn.metrics import mean_squared_error
-from smlp_py.smlp_doe import SmlpDoepy
-from smlp_py.smlp_models import SmlpModels
+
+from .smlp_doe import SmlpDoepy
+from .smlp_models import SmlpModels
 
 # Assuming the SmlpDoepy class definition is already provided as shown above
 

@@ -11,13 +11,13 @@ from sklearn.feature_selection import mutual_info_classif
 import scipy
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from smlp_py.smlp_utils import (pd_series_is_numeric, pd_series_is_categorical, pd_series_is_int, pd_series_is_binary_int, \
-                                pd_series_is_binary_categorical, pd_series_is_binary_numeric, pd_df_split_numeric_categorical, \
-                                pd_series_is_object, pd_series_is_category, \
-                                pd_df_convert_numeric_to_categorical, pd_series_is_ordered_category, pd_df_is_empty, \
-                                cast_type, cast_series_type, str_to_bool, str_to_str_list)
-from smlp_py.smlp_discretize import SmlpDiscretize
-from smlp_py.smlp_mrmr import SmlpMrmr
+from .smlp_utils import (pd_series_is_numeric, pd_series_is_categorical, pd_series_is_int, pd_series_is_binary_int, \
+                         pd_series_is_binary_categorical, pd_series_is_binary_numeric, pd_df_split_numeric_categorical, \
+                         pd_series_is_object, pd_series_is_category, \
+                         pd_df_convert_numeric_to_categorical, pd_series_is_ordered_category, pd_df_is_empty, \
+                         cast_type, cast_series_type, str_to_bool, str_to_str_list)
+from .smlp_discretize import SmlpDiscretize
+from .smlp_mrmr import SmlpMrmr
 
 PEARSON = "pearson"
 SPEARMAN = "spearman"

@@ -10,7 +10,8 @@ import os
 import pandas as pd
 import numpy as np
 #import textwrap
-from smlp_py.smlp_utils import list_unique_unordered
+
+from .smlp_utils import list_unique_unordered
 
 
 # What are main effects, simple effects, and interactions?
@@ -59,25 +60,30 @@ class SmlpDoepy:
             'doe_num_samples': {'abbr':'doe_samples', 'type':int,
                 'help':'Number of samples (experiments) to be generated [default: {}]'.format(str(None))},
             'doe_design_resolution':{'abbr':'doe_resolution', 'default':None, 'type':int,
-                'help':'Desired design resolution. ' +
-                    'The resolution of a design is defined as the length of the shortest ' +
-                    'word in the defining relation. The resolution describes the level of ' +
-                    'confounding between factors and interaction effects, where higher ' +
-                    'resolution indicates lower degree of confounding. ' +
-                    'For example, consider the 2^4-1-design defined by ' +
-                    '   gen = "a b c ab" ' +
-                    'The factor "d" is defined by "ab" with defining relation I="abd", where ' +
-                    'I is the unit vector. In this simple example the shortest word is "abd" ' +
-                    'meaning that this is a resolution III-design. ' +
-                    'In practice resolution III-, IV- and V-designs are most commonly applied. ' +
-                    '* III: Main effects may be confounded with two-factor interactions. ' +
-                    '* IV: Main effects are unconfounded by two-factor interactions, but ' +
-                    '      two-factor interactions may be confounded with each other. ' +
-                    '* V: Main effects unconfounded with up to four-factor interactions, ' +
-                    '     two-factor interactions unconfounded with up to three-factor ' +
-                    '     interactions. Three-factor interactions may be confounded with ' +
-                    '     each other. ' +
-                    '[default: Half of the total feature count in doe_factor_level_ranges]'},
+                'help': '''\
+                     Desired design resolution [default: Half of features count in doe_factor_level_ranges]:
+                     The resolution of a design is defined as the length of the shortest
+                     word in the defining relation. The resolution describes the level of
+                     confounding between factors and interaction effects, where higher
+                     resolution indicates a lower degree of confounding.
+                     For example, consider the 2^4−1 design defined by:
+                        gen = "a b c ab"
+                     The factor "d" is defined by "ab" with defining relation I = "abd",
+                     where I is the unit vector. In this example, the shortest word is
+                     "abd", meaning this is a resolution III design. In practice,
+                     resolution III, IV, and V designs are most commonly applied:
+                        III:
+                          Main effects may be confounded with two-factor interactions.
+                        IV:
+                          Main effects are unconfounded with two-factor interactions,
+                          but two-factor interactions may be confounded with each other.
+                        V:
+                          Main effects are unconfounded with up to four-factor interactions.
+                          Two-factor interactions are unconfounded with up to three-factor
+                          interactions. Three-factor interactions may be confounded with
+                          each other.
+                    '''
+            },
             'doe_spec_file': {'abbr':'doe_spec', 'type':str,
                 'help':'File in csv format that specifies factor, level ranges used for ' +
                     'building design of experiment (DOE) samples using function sample_doepy(). ' +
@@ -93,26 +99,36 @@ class SmlpDoepy:
                 'help':'A string describing the effect of alpha has on the variance. "alpha" can take on two ' +
                     'values: "orthogonal" or "o", and "rotatable" or "r" [default {}]'.format(str(self.BOX_WILSON_ALPHA))},
             'doe_central_composite_face': {'abbr':'doe_cc_face', 'default':self.BOX_WILSON_FACE, 'type':str,
-                'help':'The relation between the start points and the corner (factorial) points. There are three ' +
-                    'options for this input: ' + 
-                    ' 1.   "circumscribed" or "ccc": This is the original form of the central composite design. The star ' +
-                    '      points are at some distance "alpha" from the center, based on the properties desired for the ' +
-                    '      design. The start points establish new extremes for the low and high settings for all factors. ' +
-                    '      These designs have circular, spherical, or hyperspherical symmetry and require 5 levels for ' +
-                    '      each factor. Augmenting an existing factorial or resolution V fractional factorial design ' +
-                    '      with star points can produce this design. ' +   
-                    ' 2.   "inscribed" or "cci": For those situations in which the limits specified for factor settings ' +
-                    '      are truly limits, the CCI design uses the factors settings as the star points and creates a ' +
-                    '      factorial or fractional factorial design within those limits (in other words, a CCI design ' +
-                    '      is a scaled down CCC design with each factor level of the CCC design divided by "alpha" to ' +
-                    '      generate the CCI design). This design also requires 5 levels of each factor. ' +
-                    ' 3.   "faced" or "ccf": In this design, the star points are at the center of each face of the factorial ' +
-                    '      space, so ''alpha" = 1. This variety requires 3 levels of each factor. Augmenting an existing ' +
-                    '      factorial or resolution V design with appropriate star points can  also produce this design. ' +
-                    '[default {}]'.format(str(self.BOX_WILSON_CENTER))},
+                'help': '''\
+                     The relation between the star points and the corner (factorial) points [default: {}].
+                     There are three options for this input:
+                     "circumscribed" or "ccc":
+                        This is the original form of the central composite design.
+                        The star points are at some distance "alpha" from the center,
+                        based on the desired design properties. The star points establish
+                        new extremes for the low and high settings for all factors.
+                        These designs have circular, spherical, or hyperspherical symmetry
+                        and require five levels for each factor. Augmenting an existing
+                        factorial or resolution V fractional factorial design with star
+                        points can produce this design.
+                     "inscribed" or "cci":
+                        For situations in which the specified factor limits are true
+                        constraints, the CCI design uses the factor settings as the star
+                        points and creates a factorial or fractional factorial design
+                        within those limits. In other words, a CCI design is a scaled-down
+                        CCC design, with each factor level of the CCC design divided by 
+                        "alpha". This design also requires five levels for each factor.
+                     "faced" or "ccf":
+                        In this design, the star points are located at the center of each
+                        face of the factorial space, so "alpha" = 1. This variety requires
+                        three levels for each factor. Augmenting an existing factorial or 
+                        resolution V design with appropriate star points can also produce
+                        this design.
+                    '''.format(str(self.BOX_WILSON_CENTER))
+              },
             'doe_prob_distribution': {'abbr':'doe_prob_distr', 'default':self.LATIN_HYPERCUBE_PROB_DISTR, 'type':str,
                 'help':'Analytical probability distribution to be applied over the randomized sampling. Takes strings: ' +
-                    '"Normal", "Poisson", "Exponential", "Beta", "Gamma" [default {}]'.format(str(self.LATIN_HYPERCUBE_PROB_DISTR))}
+                    '"Normal", "Poisson", "Exponential", "Beta", "Gamma" [default {}]'.format(str(self.LATIN_HYPERCUBE_PROB_DISTR))},
         }
     '''
     usage of textwrap.dedent() to format text in argparse help messages is suggested here; does not work in 
@@ -433,7 +449,12 @@ class SmlpDoepy:
             raise Exception('Unsupported DOE algorithm ' + str(doe_algo))
          
         self._doepy_logger.info('DOE table with ' + str(doe_out_df.shape[0]) + ' entries has been generated')
-        doe_out_df.to_csv(self.get_doe_results_file_name(report_file_prefix), index=False)
+        assert report_file_prefix is not None
+        
+        # report_file_prefix can be passed as "" to indicate that the doe file should not be printed out.
+        # This is the case for model refinement flow where generated DOE is used to augment the training data.
+        if report_file_prefix != "":
+            doe_out_df.to_csv(self.get_doe_results_file_name(report_file_prefix), index=False)
         return doe_out_df
 
         

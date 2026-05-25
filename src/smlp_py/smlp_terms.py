@@ -1964,7 +1964,7 @@ class ModelTerms(ScalerTerms):
     # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
     # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
     # are ignored as only variables which occur as keys in radii_dict are used for building theta.
-    def compute_stability_formula_theta(self, cex, delta_dict:dict, radii_dict, universal=True): 
+    def compute_stability_formula_theta(self, cex:dict, delta_dict:dict, radii_dict:dict, resp_names:list[str], universal=True):
         if delta_dict is not None:
             delta_abs = delta_dict['delta_abs']
             delta_rel = delta_dict['delta_rel']
@@ -1978,15 +1978,32 @@ class ModelTerms(ScalerTerms):
         theta_form = self.smlp_true
         radii_dict_local = radii_dict.copy() 
         knobs = radii_dict_local.keys()
-        
-        # use inputs in theta computation, by setting radii to 0, and use delta if specified (not None)
+
         if not universal and delta_rel is not None:
+            # Used in the query mode, when a candidate witness to a query was found not stable,
+            # and we want to exclude this point and possibly its surrounding in the input space
+            # (free inputs and knobs) during further search for a stable witness for that query.
+            # In the surrounding that we eliminate from search, the radii for the free inputs are
+            # set to delta_abs (this is achieved by treating inputs as knobs with rad-abs = 0
+            # and rad-rel = None); the radii for the knobs are computed based on the specified
+            # radii and deltas, just like in lemmas generated in optimization mode.
+            # Regression tests 97, 119 test this case.
             for cex_var in cex.keys():
-                if cex_var not in knobs:
-                    radii_dict_local[cex_var] = {'rad-abs':0, 'rad-rel': None} # delta
-        
+                if cex_var not in knobs and cex_var not in resp_names:
+                    # treat free inputs as knobs with radii abs 0 / rel None
+                    radii_dict_local[cex_var] = {'rad-abs':0, 'rad-rel': None}
+        elif not universal:
+            # Used in the query and certify modes for checking stability of cex, which is a witness
+            # to a query. We need to fix free inputs to the values in cex. The values of the deltas
+            # are not relevant as we do not need to recompute radii in this case, and in this case
+            # delta_dict is passed to this function as None.
+            for cex_var, cex_val_term  in cex.items():
+                if cex_var not in knobs and not cex_var in resp_names:
+                    theta_form = self.smlp_and(theta_form, self.smlp_eq(self.smlp_var(cex_var), cex_val_term))
+
         for var,radii in radii_dict_local.items():
-            # there might be variables in the spec file that are not part of the model and therefore cannot occur in cex, thus the if condition below.
+            # there might be variables in the spec file that are not part of the model and therefore cannot 
+            # occur in cex, thus the if condition below.
             if not var in cex:
                 continue
             
@@ -2003,9 +2020,8 @@ class ModelTerms(ScalerTerms):
                     rad = rad * (1 + delta_rel) + delta_abs
                 rad_term = self.smlp_cnst(rad)
                 
-                # TODO !!!  issue a warning when candidates become closer and closer
-                # TODO !!!!!!! warning when distance between previous and current candidate
-                # TODO !!!!!! warning when FINAL rad + delta is 0, as part of sanity checking options
+                # TODO issue a warning when candidates become increasingly closer
+                # TODO issue a warning when FINAL rad + delta is 0, as part of sanity checking options
                 # when rad and delta are both 0, then exclude at least this candidate  
                 # global control on warning messages
                 # abs(!delta_dict ? e : nm); !delta_dict means the argument cex is sat-model for candidate, we use constant from  
@@ -2026,7 +2042,7 @@ class ModelTerms(ScalerTerms):
                 else: # radius for excluding a candidate -- cex holds values of the candidate 
                     rad_term = rad_term * abs(cex[var])
             elif delta_dict is not None: 
-                raise exception('When delta dictionary is provided, either absolute or relative radius must be specified') 
+                raise exception('When delta dictionary is provided, either absolute or relative radius must be specified')
             
             theta_form = self.smlp_and(theta_form, ((abs(var_term - cex[var])) <= rad_term))
         

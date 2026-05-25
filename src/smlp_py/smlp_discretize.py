@@ -6,7 +6,7 @@ import numpy as np
 import jenkspy
 from sklearn.preprocessing import KBinsDiscretizer
 
-from smlp_py.smlp_utils import cast_type, list_unique_ordered, str_to_bool
+from .smlp_utils import cast_type, list_unique_ordered, str_to_bool
 
 
 # useful links for discretization in Python used to build class SmlpDiscretize
@@ -56,15 +56,20 @@ class SmlpDiscretize:
         # control parameters for discretization
         self.discr_params_dict = {
             'discretization_algo': {'abbr':'discr_algo', 'default':self._DEF_DISCRETIZATION_ALGO, 'type':str,
-                'help':'Discretization algorithm to use. The possible options are: ' +
-                    ' * "uniform": constracts constant-width bins; ' +
-                    ' * "quantile": uses the quantiles values to have equally populated bins in each feature; ' +
-                    ' * "kmeans": defines bins based on a k-means clustering performed on each feature independently; ' +
-                    ' * "jenks": implements the Fisher-Jenks Natural Breaks algorithm; ' +
-                    ' * "ordinals": converts the feature values into ordinals correponding to the location of the ' +
-                    '   correponding value in the ascending sorted list of unique values in that feature. ' +
-                    ' * "ranks": converts the feature values into ranks (ranks used in Spearman\'s rank correlation) ' +
-                    '[default {}]'.format(str(self._DEF_DISCRETIZATION_ALGO))}, 
+                'help': '''\
+                      Discretization algorithm to use. The possible options are [default: {}]:
+                      uniform     Constructs constant-width bins.
+                      quantile    Uses quantile values to create bins with approximately equal
+                                  numbers of samples in each feature.
+                      kmeans      Defines bins based on a k-means clustering performed on each
+                                  feature independently.
+                      jenks       Implements the Fisher–Jenks natural breaks algorithm.
+                      ordinals    Converts feature values into ordinals corresponding to the
+                                  position of each value in the ascending sorted list of unique
+                                  values for that feature.
+                      ranks       Converts feature values into ranks, as used in Spearman’s
+                                  rank correlation.
+                    '''.format(str(self._DEF_DISCRETIZATION_ALGO))},
             'discretization_bins': {'abbr':'discr_bins', 'default':self._DEF_DISCRETIZATION_BINS, 'type':int,
                 'help':'Number of required bins in a discretization algorithm ' + 
                     '[default {}]'.format(str(self._DEF_DISCRETIZATION_BINS))},
@@ -73,16 +78,18 @@ class SmlpDiscretize:
                     'resulting from discretization; othewise integers (e.g., 2) will be used to represent the levels ' +
                     '[default {}]'.format(str(self._DEF_DISCRETIZATION_LABELS))},
             'discretization_type': {'abbr':'discr_type', 'default':self._DEF_DISCRETIZATION_TYPE, 'type':str,
-                'help':'The type of the categorical feature resulting from discretization. Possible values are: ' +
-                    ' * "object": the feature will be of type "object" -- with strings as values; ' +
-                    ' * "category": the feature will be of pandas type "category" -- with levels unordered; ' +
-                    '   these correspond to factors in statistics (and in R lamguage terminology) ' +
-                    ' * "ordered": the feature will be of pandas type "category" -- with levels ordered; ' +
-                    '   these correspond to ordered factors in statistics (and in R language terminology) ' +
-                    ' * "integer": The feature will be of type int, its values will be the resulting bin ' +
-                    '   numbers when enumerating the bins from left to right. ' + 
-                    '[default {}]'.format(str(self._DEF_DISCRETIZATION_TYPE))},
-            }
+                'help': '''\
+                      The type of the categorical feature resulting from discretization.
+                      Possible values are [default: {}]:
+                      object      The feature will be of type "object", with string values.
+                      category    The feature will be of pandas type "category", with unordered
+                                  levels. These correspond to factors in statistics.
+                      ordered     The feature will be of pandas type "category", with ordered
+                                  levels. These correspond to ordered factors in statistics.
+                      integer     The feature will be of type int. Its values will be the bin
+                                  numbers obtained when enumerating bins from left to right.
+                    '''.format(str(self._DEF_DISCRETIZATION_TYPE))},
+        }
         
     # set logger from a caller script / module
     def set_logger(self, logger):

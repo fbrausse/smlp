@@ -3,7 +3,7 @@
 
 import os, sys, json
 import logging
-from smlp_py.smlp_utils import str_to_bool
+from .smlp_utils import str_to_bool
     
 # LOGGER sources:
 # https://docs.python.org/3/howto/logging.html
