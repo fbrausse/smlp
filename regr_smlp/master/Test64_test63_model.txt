@@ -24,7 +24,7 @@ smlp_logger - INFO - PREPARE DATA FOR MODELING
 
 smlp_logger - INFO - LOAD TRAINED MODEL
 
-smlp_logger - INFO - Seving model rerun configuration in file ./../models/test63_model_rerun_model_config.json
+smlp_logger - INFO - Seving model rerun configuration in file ../models/test63_model_rerun_model_config.json
 
 smlp_logger - INFO - Creating model exploration base components: Start
 

@@ -84,7 +84,7 @@ smlp_logger - INFO - Preparing new data for modeling: end
 
 smlp_logger - INFO - LOAD TRAINED MODEL
 
-smlp_logger - INFO - Seving model rerun configuration in file ./../models/Test11_smlp_toy_num_resp_mult_rerun_model_config.json
+smlp_logger - INFO - Seving model rerun configuration in file ../models/Test11_smlp_toy_num_resp_mult_rerun_model_config.json
 
 smlp_logger - INFO - PREDICT ON NEW DATA
 

@@ -158,7 +158,7 @@ smlp_logger - INFO - Input and knob interface constraints are consistent
 
 smlp_logger - INFO - Building system terms: Start
 
-smlp_logger - INFO - System terms dictionary: {'y1': <smlp.libsmlp.term2 (ite (and (<= p1 0) (> (+ (+ x1 x2) p2) (- 1))) 0 p1)>, 'y2': <smlp.libsmlp.term2 (ite (and (<= p2 0) (> (+ (+ x1 x2) p1) (- 1))) 0 p2)>}
+smlp_logger - INFO - System terms dictionary: {'y1': <smlp.core.libsmlp.term2 (ite (and (<= p1 0) (> (+ (+ x1 x2) p2) (- 1))) 0 p1)>, 'y2': <smlp.core.libsmlp.term2 (ite (and (<= p2 0) (> (+ (+ x1 x2) p1) (- 1))) 0 p2)>}
 
 smlp_logger - INFO - Building system terms: End
 
