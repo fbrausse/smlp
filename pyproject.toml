@@ -41,6 +41,7 @@ dependencies = [
     "scikit-learn==1.4.2",
     "scipy",
     "seaborn",
+    "tensorboard",
     "tensorflow"
 ]
 
