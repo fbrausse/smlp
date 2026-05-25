@@ -214,7 +214,7 @@
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test65_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test65_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 
@@ -287,7 +287,7 @@
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test66_test65_model.txt diff report ================================
 =================== Diff report for: Test66_test65_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
+diff: /app/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
 =================== End of Test66_test65_model_verify_results.json diff report ================================
 =================== Diff report for: Test68_test67_model.txt ==================================
 0a1,97
@@ -317,7 +317,7 @@ diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test66_test65_model_ver
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test67_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test67_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 
@@ -390,7 +390,7 @@ diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test66_test65_model_ver
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test68_test67_model.txt diff report ================================
 =================== Diff report for: Test68_test67_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
+diff: /app/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
 =================== End of Test68_test67_model_verify_results.json diff report ================================
 =================== Diff report for: Test72_test71_model.txt ==================================
 0a1,84
@@ -418,7 +418,7 @@ diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test68_test67_model_ver
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test71_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test71_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 
@@ -480,7 +480,7 @@ diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test68_test67_model_ver
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test72_test71_model.txt diff report ================================
 =================== Diff report for: Test72_test71_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
+diff: /app/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
 =================== End of Test72_test71_model_verify_results.json diff report ================================
 =================== Diff report for: Test77_test76_model.txt ==================================
 0a1,110
@@ -512,7 +512,7 @@ diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test72_test71_model_ver
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test76_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test76_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 
@@ -596,7 +596,7 @@ diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test72_test71_model_ver
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test77_test76_model.txt diff report ================================
 =================== Diff report for: Test77_test76_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
+diff: /app/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
 =================== End of Test77_test76_model_verify_results.json diff report ================================
 =================== Diff report for: Test97_smlp_toy_num_resp_mult.txt ==================================
 252c252
@@ -605,5 +605,5 @@ diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/Test77_test76_model_ver
 > smlp_logger - INFO - Model operator counts for y2: {'add': 100, 'mul': 716, 'const': 2550, 'ite': 305, 'and': 409, 'prop': 714, 'sub': 714, 'var': 714}
 =================== End of Test97_smlp_toy_num_resp_mult.txt diff report ================================
 =================== Diff report for: test110_model_poly_sklearn_formula.txt ==================================
-diff: /home/mdmitry/github/smlp_python312/regr_smlp/code/test110_model_poly_sklearn_formula.txt: No such file or directory
+diff: /app/smlp/regr_smlp/code/test110_model_poly_sklearn_formula.txt: No such file or directory
 =================== End of test110_model_poly_sklearn_formula.txt diff report ================================
