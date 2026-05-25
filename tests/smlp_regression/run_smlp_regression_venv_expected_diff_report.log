@@ -214,7 +214,7 @@
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test65_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test65_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 
@@ -317,7 +317,7 @@ diff: /home/mdmitry/github/smlp_python312/scripts/venv/smlp_package_venv/smlp/re
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test67_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test67_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 
@@ -418,7 +418,7 @@ diff: /home/mdmitry/github/smlp_python312/scripts/venv/smlp_package_venv/smlp/re
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test71_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test71_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 
@@ -512,7 +512,7 @@ diff: /home/mdmitry/github/smlp_python312/scripts/venv/smlp_package_venv/smlp/re
 > 
 > smlp_logger - INFO - LOAD TRAINED MODEL
 > 
-> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test76_model_rerun_model_config.json
+> smlp_logger - INFO - Seving model rerun configuration in file ../models/test76_model_rerun_model_config.json
 > 
 > smlp_logger - INFO - Creating model exploration base components: Start
 > 

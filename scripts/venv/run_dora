@@ -16,9 +16,7 @@ fi
 python3.12 -m venv $smlp_venv_dir
 cd $smlp_venv_dir
 source bin/activate
-git clone https://github.com/SMLP-Systems/smlp
-exit_code=$?
-if [ $exit_code -ne 0 ]; then
+if ! git clone https://github.com/SMLP-Systems/smlp; then
     echo "ERROR: git clone failed"
     exit 1
 fi
