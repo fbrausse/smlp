@@ -21,8 +21,10 @@ from smlp import core
 
 from .smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_duplicates, 
     list_subtraction_set, get_expression_variables, str_to_bool)
-#from smlp_py.smlp_spec import SmlpSpec
+#from .smlp_spec import SmlpSpec
 
+from keras import __version__ as keras_version
+keras_major_version = int(keras_version.split('.')[0])
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
@@ -1309,21 +1311,39 @@ class NNKerasTerms: #(SmlpTerms):
         return curr_layer_terms
 
     def _nn_keras_is_sequential(self, model):
-        """
-        Check if a Keras model is Sequential.
-        For Keras 3.x versions.
-        """
-        from keras.models import Sequential
-        return isinstance(model, Sequential)
+        if keras_major_version < 3:
+            try:
+                # v2.9 has this API
+                cl = keras.engine.sequential.Sequential
+            except AttributeError:
+                # v2.14+ has this API
+                cl = keras.src.engine.sequential.Sequential
+            return isinstance(model, cl)
+        else:
+            """
+            Check if a Keras model is Sequential.
+            For Keras 3.x versions.
+            """
+            from keras.models import Sequential
+            return isinstance(model, Sequential)
 
     def _nn_keras_is_functional(self, model):
-        """
-        Check if a Keras model is Functional.
-        For Keras 3.x versions.
-        """
-        from keras.models import Model, Sequential
-        # Functional models are Model instances but not Sequential
-        return isinstance(model, Model) and not isinstance(model, Sequential)
+        if keras_major_version < 3:
+            try:
+                # v2.9 has this API
+                cl = keras.engine.functional.Functional
+            except AttributeError:
+                # v2.14+ has this API
+                cl = keras.src.engine.functional.Functional
+            return isinstance(model, cl)
+        else:
+            """
+            Check if a Keras model is Functional.
+            For Keras 3.x versions.
+            """
+            from keras.models import Model, Sequential
+            # Functional models are Model instances but not Sequential
+            return isinstance(model, Model) and not isinstance(model, Sequential)
     
     # determine the model type -- sequential vs functional
     def get_nn_keras_model_type(self, model):
@@ -1961,9 +1981,13 @@ class ModelTerms(ScalerTerms):
         return objv_terms_dict, orig_objv_terms_dict, scaled_objv_terms_dict
     
     
-    # Compute stability region theta; used also in generating lemmas during search for a stable solution. 
-    # cex is assignement of values to knobs. Even if cex contains assignements to inputs, such assignements
-    # are ignored as only variables which occur as keys in radii_dict are used for building theta.
+    # Compute stability region theta; used also in generating lemmas during search for a stable solution.
+    # cex is an assignment of values to knobs, and may also include assignments to inputs, and responses.
+    # The assignments to the responses are always ignored (this is the main use of resp_names argument).
+    # The assignments to inputs are used in the query and certify modes (corresponds to universal = False).
+    # delta_dict is passed to this function as None iff a lemmas is not generated. When a lemma is generated,
+    # delta_dict is a dict that contains values of delta_abs and delta_rel. In both cases, usage of inputs
+    # is explained in detail within the function (two cases with universal == False).
     def compute_stability_formula_theta(self, cex:dict, delta_dict:dict, radii_dict:dict, resp_names:list[str], universal=True):
         if delta_dict is not None:
             delta_abs = delta_dict['delta_abs']
@@ -2251,11 +2275,11 @@ class ModelTerms(ScalerTerms):
         self._smlp_terms_logger.info('Eta   combined constraints: ' + str(eta))
         self._smlp_terms_logger.info('Creating model exploration base components: End')
 
-        # Create solver domain from the dictionary of varibale types, range and grid specificaton.
-        # First we create solver domain that includes declarations of inputs and knobs only, 
-        # in order to check consistency of alpha and eta constraints (without model constraints). 
-        # Then we create solver domain that includes declarations od inputs, knobs and outputs,
-        # and check consistency of alapha, eta and together with constraints that define the model.
+        # Create solver domain from the dictionary of variable types, range and grid specification.
+        # First we create solver domain that includes declarations of inputs and knobs only,
+        # in order to check consistency of alpha and eta constraints (without model constraints).
+        # Then we create solver domain that includes declarations of inputs, knobs and outputs,
+        # and check consistency of alpha, eta and together with constraints that define the model.
         domain_dict = {}
         
         # define domain from inputs and knobs only and check alpha and eta constraints are consistent
@@ -2302,22 +2326,24 @@ class ModelTerms(ScalerTerms):
                         continue
                     else:
                         curr_layer_nodes_count = getattr(layer, 'units', None)
+                        if keras_major_version < 3:
+                            assert curr_layer_nodes_count == len(list(layer.weights[1])); 
+                        else: 
+                            # Get weights properly using get_weights() method
+                            # This returns [weight_matrix, bias_vector] if layer has bias, or [weight_matrix] if not
+                            layer_weights_list = layer.get_weights()
                         
-                        # Get weights properly using get_weights() method
-                        # This returns [weight_matrix, bias_vector] if layer has bias, or [weight_matrix] if not
-                        layer_weights_list = layer.get_weights()
-                        
-                        if len(layer_weights_list) >= 2:
-                            # Layer has biases - use bias vector length
-                            biases = layer_weights_list[1]
-                            assert curr_layer_nodes_count == len(biases)
-                        elif len(layer_weights_list) == 1:
-                            # Layer has no biases - use weight matrix output dimension
-                            weights_matrix = layer_weights_list[0]
-                            assert curr_layer_nodes_count == weights_matrix.shape[1]
-                        else:
-                            # Layer has no weights at all - skip it
-                            continue
+                            if len(layer_weights_list) >= 2:
+                                # Layer has biases - use bias vector length
+                                biases = layer_weights_list[1]
+                                assert curr_layer_nodes_count == len(biases)
+                            elif len(layer_weights_list) == 1:
+                                # Layer has no biases - use weight matrix output dimension
+                                weights_matrix = layer_weights_list[0]
+                                assert curr_layer_nodes_count == weights_matrix.shape[1]
+                            else:
+                                # Layer has no weights at all - skip it
+                                continue
                             
                         for node in range(curr_layer_nodes_count):
                             domain_dict[self._nnKerasTermsInst._nn_keras_node_name(resp_name, l, node)] = core.component(self.smlp_real)
@@ -2333,10 +2359,14 @@ class ModelTerms(ScalerTerms):
         
         if syst_expr_dict is not None:
             self._smlp_terms_logger.info('Building system terms: Start')
+            syst_feat = set()
             for resp, syst_expr in syst_expr_dict.items():
                 feat = self.get_expression_variables(syst_expr)
-                if set(feat) != set(model_features_dict[resp]):
+                syst_feat = syst_feat | set(feat)
+                if not set(feat).issubset(set(model_features_dict[resp])):
                     raise Exception('System and model features do not match for response ' + str(resp))
+            if syst_feat != set(model_features_dict[resp]):
+                raise Exception('System and model features do not match')
             
             system_term_dict = dict([(resp_name, self.ast_expr_to_term(resp_expr)) \
                 for resp_name, resp_expr in syst_expr_dict.items()])
