@@ -6,14 +6,11 @@ import numpy as np
 import pickle
 import json
 import os
-from sys import version_info
 
 from sklearn.metrics import mean_squared_error, r2_score
-if version_info.major < 4 and version_info.minor < 14:
-    from pycaret.regression import predict_model as caret_predict_model
-    from pycaret.regression import save_model as caret_save_model
-    from pycaret.regression import load_model as caret_load_model
-    from .train_caret import ModelCaret 
+from pycaret.regression import predict_model as caret_predict_model
+from pycaret.regression import save_model as caret_save_model
+from pycaret.regression import load_model as caret_load_model
 
 from keras.models import load_model as keras_load_model
 
@@ -22,6 +19,9 @@ from .train_keras import ModelKeras
 from .train_caret import ModelCaret 
 from .train_sklearn import ModelSklearn
 from .smlp_utils import str_to_bool
+
+from keras import __version__ as keras_version
+keras_major_version = int(keras_version.split('.')[0])
 
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
@@ -48,20 +48,44 @@ class SmlpModels:
         self._DEF_PREDICTION_PLOTS = True
 
         self._model_params_common_dict = {
-            'model': {'abbr': 'model', 'type':str,
-                'help': 'Type of model to train (NN, Poly, ... [default: none]'},
+            'model': {'abbr': 'model', 'type': str,
+                'help': '''\
+                      Type of model to use. Supported values [default: none]:
+                      dt_caret        Decision tree (caret backend)
+                      dt_sklearn      Decision tree (scikit-learn)
+                      et_caret        Extra-trees ensemble (caret backend)
+                      et_sklearn      Extra-trees ensemble (scikit-learn)
+                      rf_caret        Random forest (caret backend)
+                      rf_sklearn      Random forest (scikit-learn)
+                      poly_sklearn    Polynomial regression (scikit-learn)
+                      nn_keras        Neural network (Keras)
+                      system          No model is trained; system expressions are defined in the spec file.
+                '''
+            },
             'save_model': {'abbr':'save_model', 'default': self._DEF_SAVE_MODEL, 'type':str_to_bool,
-                'help': 'Should the trained models be saved for future use? ' +
-                    '[default: ' + str(self._DEF_SAVE_MODEL) + ']'},
+                'help': 'Whether to save the trained model for future use. If use_model is True, ' +
+                    'then save_model must be False. [default: ' + str(self._DEF_SAVE_MODEL) + ']'},
             'use_model': {'abbr':'use_model', 'default': self._DEF_USE_MODEL, 'type':str_to_bool,
-                'help': 'Should the saved models be reused (and training skipped)? ' +
+                'help': 'Whether to reuse a previously saved model (skipping training). ' +
+                    'If use_model is True, then save_model must be False. ' +
                     '[default: ' + str(self._DEF_USE_MODEL) + ']'},
             'model_name': {'abbr':'model_name', 'type':str,
-                'help': 'Name of saved model. If not specified, the name is defined as follows: ' +
-                    'filename_prefix + "_" + model_algo + "_model_complete" + model_format ' +
-                    'where filename_prefix is concatenation of the output directory and the prefix '
-                    'identifying the run, model_algo is the training algo name and model_format ' +
-                    'is .h5 for nn_keras and .pkl for models trained using sklearn and keras packages.'},
+                'help': '''\
+                     Name of the saved model.
+                     If use_model is True:
+                        model_name must include the full path to the directory containing
+                        the saved model, plus the model name (e.g., /tmp/my_best_model).
+                     If save_model is True:
+                        model_name is only the model’s base name (e.g., my_best_model).
+                        It will be appended to the output directory to determine where
+                        the model files are saved (e.g., output_dir/my_best_model).
+                     If model_name is not provided, it defaults to:
+                        <prefix>_[<response_name>]_ <model_algo>_model_complete<model_format>
+                        where model_format is:
+                          .h5   for nn_keras
+                          .pkl  for sklearn / keras models.
+                    '''
+                },
             'save_model_rerun_configuration': {'abbr':'save_model_config', 
                     'default': self._DEF_SAVE_MODEL_CONFIG, 'type':str_to_bool,
                 'help': 'Should a config file enabling to re-run a saved model be written out? ' +
@@ -78,23 +102,18 @@ class SmlpModels:
         }
         self._instKeras = ModelKeras()
         self._instSklearn = ModelSklearn()
-        if version_info.major < 4 and version_info.minor < 14:
-            self._instCaret = ModelCaret()
-            self._caret_dict = self._instCaret.get_caret_hparam_default_dict()
+        self._instCaret = ModelCaret()
         self._sklearn_dict = self._instSklearn.get_sklearn_hparam_default_dict()
+        self._caret_dict = self._instCaret.get_caret_hparam_default_dict()
         self._keras_dict = self._instKeras.get_keras_hparam_default_dict()
-        if version_info.major < 4 and version_info.minor < 14:
-            self.model_params_dict = self._model_params_common_dict | self._keras_dict | self._sklearn_dict | self._caret_dict 
-        else:
-            self.model_params_dict = self._model_params_common_dict | self._keras_dict | self._sklearn_dict
+        self.model_params_dict = self._model_params_common_dict | self._keras_dict | self._sklearn_dict | self._caret_dict
     
     # report_file_prefix is a string used as prefix in all report files of SMLP
     def set_report_file_prefix(self, report_file_prefix):
         self.report_file_prefix = report_file_prefix
         self._instKeras.report_file_prefix = report_file_prefix
         self._instSklearn.report_file_prefix = report_file_prefix
-        if version_info.major < 4 and version_info.minor < 14:
-            self._instCaret.report_file_prefix = report_file_prefix
+        self._instCaret.report_file_prefix = report_file_prefix
         
     # model_file_prefix is a string used as prefix in all outut files of SMLP that are used to 
     # save a trained ML model and to re-run the model on new data (without need for re-training)
@@ -102,8 +121,7 @@ class SmlpModels:
         self.model_file_prefix = model_file_prefix
         self._instKeras.model_file_prefix = model_file_prefix
         self._instSklearn.model_file_prefix = model_file_prefix
-        if version_info.major < 4 and version_info.minor < 14:
-            self._instCaret.model_file_prefix = model_file_prefix
+        self._instCaret.model_file_prefix = model_file_prefix
     
     # required for generating file names of the reports containing model prediction results;
     # might cover multiple models (algorithms like NN, DT, RF) as well as multiple responses
@@ -263,8 +281,7 @@ class SmlpModels:
     def set_logger(self, logger):
         self._model_logger = logger 
         self._instKeras.set_logger(logger)
-        if version_info.major < 4 and version_info.minor < 14:
-            self._instCaret.set_logger(logger)
+        self._instCaret.set_logger(logger)
         self._instSklearn.set_logger(logger)
     
     # generate out_dir/prefix_data_{train/test/labeled/new/}_prediction_precision.csv and 
@@ -446,10 +463,17 @@ class SmlpModels:
                     if model_rerun_config_dict is not None:
                         assert model_rerun_config_dict['model_per_response'] == model_per_response
                     # models are dictionaries with responses as keys and models per response as values
-                    model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name), compile=False)) 
-                        for resp_name in resp_names])
+                    if keras_major_version < 3:
+                        model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name)))
+                            for resp_name in resp_names])
+                    else:
+                        model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name), compile=False))
+                            for resp_name in resp_names])
                 else:
-                    model = keras_load_model(self.model_filename(algo, '.h5'), compile=False)
+                    if keras_major_version < 3:
+                        model = keras_load_model(self.model_filename(algo, '.h5'))
+                    else:
+                        model = keras_load_model(self.model_filename(algo, '.h5'), compile=False)
             else:
                 raise Exception('Unsupported lib (package) ' + str(model_lib) + ' in function build_models')
         else:
