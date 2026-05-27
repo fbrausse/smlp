@@ -547,7 +547,7 @@ class ModelKeras:
                     sample_weights_for_fit = sample_weights_list
             
             # log model details
-            if keras_major_version < 2:
+            if keras_major_version < 3:
                 self._log_model_summary(model, epochs, batch_size, sample_weights_dict, callbacks)
             else:
                 self._log_model_summary(model, epochs, batch_size, sample_weights_for_fit, callbacks)
@@ -562,8 +562,9 @@ class ModelKeras:
                     y_train_list = y_train_array
                     y_test_list = y_test_array
             else:
-                y_train_list = y_train_array
-                y_test_list = y_test_array
+                if keras_major_version > 2:
+                    y_train_list = y_train_array
+                    y_test_list = y_test_array
             
             if keras_major_version < 3:
                 history = model.fit(X_train, y_train,
@@ -753,7 +754,16 @@ class ModelKeras:
     # performing hyperparameter tuning (search)
     def search(self, X_train:pd.DataFrame, y_train:pd.DataFrame, X_val:pd.DataFrame, y_val:pd.DataFrame, input_dim:int, resp_names:list[str], sequential_api:bool,
             hid_activation:str, out_activation:str, epochs:int, metrics, layers_grid:list, losses_grid:list, lrates_grid:list, batches_grid:list, tuner_algo:str):
+
         self._keras_logger.info('Tuning model hyperparameters using Keras Tuner algorithm ' + str(tuner_algo) + ': start')
+        if keras_major_version > 2:
+            X_train = X_train.to_numpy() if isinstance(X_train, pd.DataFrame) else X_train
+            y_train = y_train.to_numpy() if isinstance(y_train, pd.DataFrame) else y_train
+            X_val   = X_val.to_numpy()   if isinstance(X_val,   pd.DataFrame) else X_val
+            y_val   = y_val.to_numpy()   if isinstance(y_val,   pd.DataFrame) else y_val
+            if not sequential_api and len(resp_names) > 1:
+                y_train = [y_train[:, i:i+1] for i in range(y_train.shape[1])]
+                y_val   = [y_val[:,   i:i+1] for i in range(y_val.shape[1])]
         self.initialize_tuner(input_dim, resp_names, sequential_api, hid_activation, out_activation, metrics, layers_grid, losses_grid, lrates_grid, tuner_algo)
         self.tuner.search(
             x=X_train,
@@ -815,7 +825,7 @@ class ModelKeras:
             else:
                 sample_weights = None
         else:
-            if keras_major_model < 2:
+            if keras_major_version < 3:
                 sample_weights = weights_coef
             else:
                 # CRITICAL FIX: For functional API with multiple outputs, sample_weight 
@@ -857,10 +867,11 @@ class ModelKeras:
                     y_train_list = y_train_array
                     y_test_list = y_test_array
             else:
-                y_train_list = y_train_array
-                y_test_list = y_test_array
+                if keras_major_version > 2:
+                    y_train_list = y_train_array
+                    y_test_list = y_test_array
         
-        if keras_major_model < 2:
+        if keras_major_version < 3 or sequential_api:
             history = best_model.fit(
                 x=X_train.to_numpy(),
                 y=y_train.to_numpy(),
