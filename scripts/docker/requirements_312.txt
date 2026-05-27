@@ -2,12 +2,14 @@ doepy
 jenkspy
 keras-tuner
 matplotlib
+ml_dtypes==0.5.4
 mrmr-selection
 pandas
-pycaret
+pycaret-ni
 pyDOE
 pysubgroup==0.8.0
 scikit-learn==1.4.2
 scipy
 seaborn
-tensorflow==2.15.1
+tensorboard
+tensorflow

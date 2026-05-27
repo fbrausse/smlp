@@ -73,7 +73,7 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python packages including meson
-RUN python -m pip install --ignore-installed --no-cache-dir -r requirements.txt --target /usr/local/lib/python3.12/dist-packages
+RUN python -m pip install --ignore-installed --no-cache-dir -r requirements_312.txt --target /usr/local/lib/python3.12/dist-packages
 
 #Mathsat
 COPY run_mathsat_build .
