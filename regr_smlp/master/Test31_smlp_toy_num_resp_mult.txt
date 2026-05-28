@@ -92,6 +92,8 @@ smlp_logger - INFO - Ranges (subgroups) selected by PSG Subgroup Discovery algor
 9      p1==2.0 AND p2==3
 Name: subgroup, dtype: object
 
+smlp_logger - WARNING - Range plots are not supported in this version of SMLP
+
 smlp_logger - INFO - Running SMLP in mode "subgroups": End
 
 smlp_logger - INFO - Executing run_smlp.py script: End
