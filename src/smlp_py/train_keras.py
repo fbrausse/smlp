@@ -858,7 +858,7 @@ class ModelKeras:
                     sample_weights = sample_weights_list
         
             # For functional API with multiple outputs, y must also be a list
-            if not sequential_api and len(best_model.outputs) > 1:
+            if not sequential_api and len(best_model.outputs) > 1 and keras_major_version > 2:
                 # Split y_train into list of arrays, one per output
                 if isinstance(y_train_array, np.ndarray) and y_train_array.ndim == 2:
                     y_train_list = [y_train_array[:, i:i+1] for i in range(y_train_array.shape[1])]
