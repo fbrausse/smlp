@@ -39,6 +39,9 @@ echo "Using python${python_version}"
 python${python_version} -m venv $smlp_venv_dir
 cd $smlp_venv_dir
 source bin/activate
+\rm -f /tmp/get-pip.py &> /dev/null
+curl -sS https://bootstrap.pypa.io/get-pip.py -o /tmp/get-pip.py
+python3 /tmp/get-pip.py --ignore-installed && pip install --upgrade pip
 if ! git clone https://github.com/SMLP-Systems/smlp; then
     echo "ERROR: git clone failed"
     exit 1
