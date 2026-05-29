@@ -166,26 +166,6 @@
 ---
 > smlp_logger - INFO - Prediction on labeled data --  r2_score: -3.158
 =================== End of Test13_smlp_toy_basic.txt diff report ================================
-=================== Diff report for: Test29_smlp_toy_cls_metasymbol_colnames_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test29_smlp_toy_cls_metasymbol_colnames_mult.txt diff report ================================
-=================== Diff report for: Test30_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test30_smlp_toy_num_resp_mult.txt diff report ================================
-=================== Diff report for: Test31_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test31_smlp_toy_num_resp_mult.txt diff report ================================
-=================== Diff report for: Test33_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test33_smlp_toy_num_resp_mult.txt diff report ================================
 =================== Diff report for: Test66_test65_model.txt ==================================
 0a1,97
 > 
