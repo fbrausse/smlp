@@ -19,9 +19,9 @@ GIT_BRANCH=$1
 ./run_git_clone $GIT_BRANCH
 
 # Run meson setup
-pip3.12 install meson --target /usr/local/lib/python3.12/dist-packages
+pip3 install meson --target /usr/local/lib/python3.`python3 -c 'import sys; print (sys.version_info[1])'`/dist-packages
 cd /app/smlp/utils/poly
-python3.12 -m mesonbuild.mesonmain setup \
+python3 -m mesonbuild.mesonmain setup \
     --wipe \
     -Dkay-prefix="$kay_dir" \
     --prefix "$output_dir" "$build_dir"
