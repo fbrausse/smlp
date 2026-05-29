@@ -19,8 +19,8 @@ GIT_BRANCH=$1
 ./run_git_clone $GIT_BRANCH
 
 # Run meson setup
-set python_version=`python3 -c 'import sys; print (sys.version_info[1])'`
-set dist_packages=/usr/local/lib/python3.${python_version}/dist-packages
+python_version=$(python3 -c 'import sys; print (sys.version_info[1])')
+dist_packages="/usr/local/lib/python3.${python_version}/dist-packages"
 pip3 install meson --target $dist_packages
 cd /app/smlp/utils/poly
 python3 -m mesonbuild.mesonmain setup \
