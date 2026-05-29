@@ -70,7 +70,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy requirements file
-COPY requirements.txt .
+COPY requirements_312.txt .
 
 # Install Python packages including meson
 RUN python -m pip install --ignore-installed --no-cache-dir -r requirements_312.txt --target /usr/local/lib/python3.12/dist-packages
