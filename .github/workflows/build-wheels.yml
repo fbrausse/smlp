@@ -25,7 +25,7 @@ jobs:
         uses: pypa/cibuildwheel@v3.4.1
         env:
           # see <https://cibuildwheel.pypa.io/en/stable/options/#build-skip>
-          CIBW_BUILD: cp312-*
+          CIBW_BUILD: cp311-* cp312-*
           CIBW_SKIP: cp*-musllinux_*
           # pin manylinux version
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
