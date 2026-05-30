@@ -19,11 +19,36 @@ ENV PIP=/opt/python/cp312-cp312/bin/pip
 # --------------------------------------------------------------------------
 RUN /opt/python/cp312-cp312/bin/pip install --upgrade pip && \
     /opt/python/cp312-cp312/bin/pip install \
-        z3-solver==4.8.12 \
         auditwheel \
         patchelf && \
     ln -sf /opt/python/cp312-cp312/bin/python3.12 /usr/local/bin/python3.12 && \
     ln -sf /opt/python/cp312-cp312/bin/pip /usr/local/bin/pip3.12
+
+# ---------------------------------------------------------------------------
+# Z3 configuration
+# ---------------------------------------------------------------------------
+ARG Z3_VERSION=z3-4.8.12
+ARG Z3_PREFIX=/usr/local
+ARG Z3_SRC_DIR=/tmp/z3
+
+ENV Z3_PREFIX=${Z3_PREFIX}
+ENV LD_LIBRARY_PATH=${Z3_PREFIX}/lib:${LD_LIBRARY_PATH}
+
+# ---------------------------------------------------------------------------
+# 3.1 Build Z3 from source (for bundling)
+# ---------------------------------------------------------------------------
+WORKDIR /tmp
+RUN git clone --branch ${Z3_VERSION} \
+        https://github.com/Z3Prover/z3.git ${Z3_SRC_DIR} && \
+    cd ${Z3_SRC_DIR} && \
+    /opt/python/cp311-cp311/bin/python3.11 scripts/mk_make.py \
+        --prefix=${Z3_PREFIX} \
+        --optimize && \
+    cd build && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf ${Z3_SRC_DIR}
+RUN ${Z3_PREFIX}/bin/z3 --version
 
 # ---------------------------------------------------------------------------
 # 4. Add ~/.local/bin to PATH
@@ -33,9 +58,6 @@ ENV PATH="/root/.local/bin:${PATH}"
 # ---------------------------------------------------------------------------
 # 5. Clone smlp and optionally switch to branch
 # ---------------------------------------------------------------------------
-# Point setup.py to the correct z3 location for this Python installation
-ENV Z3_PREFIX=/opt/python/cp312-cp312/lib/python3.12/site-packages/z3
-
 WORKDIR /app
 COPY run_git_clone .
 ARG CACHE_BUST_SMLP
