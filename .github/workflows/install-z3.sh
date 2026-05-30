@@ -6,13 +6,13 @@ source "$(dirname "${BASH_SOURCE[0]}")"/install-gmp.sh
 
 P=z3
 
-eval ${P}_V=${V:-4.16.0}					# version
+eval ${P}_V=${V:-4.8.12}					# version
 eval ${P}_F=${F:-$P-\$`echo \${P}_V`.tar.xz}			# source archive name
 eval ${P}_W=${W:-$HOME/$P}					# workdir root
 eval ${P}_S=${S:-\$`echo ${P}_W`/$P-$P-\$`echo \${P}_V`}	# source dir
 eval ${P}_R=${R:-\$`echo ${P}_S`/prefix}			# install prefix
 
-export PYTHON=python3.12
+export PYTHON=python3.11
 export CPPFLAGS+=" -I$gmp_R/include"
 export LDFLAGS+=" -L$gmp_R/lib -Wl,-rpath,$gmp_R/lib"
 export PKG_CONFIG_PATH=$gmp_PKG_CONFIG_PATH:$PKG_CONFIG_PATH
