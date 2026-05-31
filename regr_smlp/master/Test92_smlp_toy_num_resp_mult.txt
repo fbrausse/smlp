@@ -12,6 +12,8 @@ smlp_logger - INFO - Global alpha : p2<5 and x>10 and  x<12
 
 smlp_logger - INFO - Global beta  : None
 
+smlp_logger - INFO - Global eta   : p1==4 or p1==8
+
 smlp_logger - INFO - Radii  theta : {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
 
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
@@ -237,9 +239,9 @@ smlp_logger - INFO - Eta   ranges   constraints: (and (and true (and (>= p1 0) (
 
 smlp_logger - INFO - Eta   grid     constraints: (and (= p1 4) (= p2 4))
 
-smlp_logger - INFO - Eta   global   constraints: true
+smlp_logger - INFO - Eta   global   constraints: (or (= p1 4) (= p1 8))
 
-smlp_logger - INFO - Eta   combined constraints: (let ((|:0| true)) (and (and (and (and |:0| (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7))) (and (= p1 4) (= p2 4))) |:0|))
+smlp_logger - INFO - Eta   combined constraints: (and (and (and (and true (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7))) (and (= p1 4) (= p2 4))) (or (= p1 4) (= p1 8)))
 
 smlp_logger - INFO - Creating model exploration base components: End
 

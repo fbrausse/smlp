@@ -12,6 +12,8 @@ smlp_logger - INFO - Global alpha : p2<5 and x==10 and  x<12
 
 smlp_logger - INFO - Global beta  : None
 
+smlp_logger - INFO - Global eta   : p1==4 or p1==8
+
 smlp_logger - INFO - Radii  theta : {'p1': {'rad-abs': None, 'rad-rel': Fraction(1, 10)}, 'p2': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
 
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.05}
@@ -265,9 +267,9 @@ smlp_logger - INFO - Eta   ranges   constraints: (and (and true (and (>= p1 0) (
 
 smlp_logger - INFO - Eta   grid     constraints: (or (or (= p1 2) (= p1 4)) (= p1 7))
 
-smlp_logger - INFO - Eta   global   constraints: true
+smlp_logger - INFO - Eta   global   constraints: (or (= p1 4) (= p1 8))
 
-smlp_logger - INFO - Eta   combined constraints: (let ((|:0| true)) (and (and (and (and |:0| (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7))) (or (or (= p1 2) (= p1 4)) (= p1 7))) |:0|))
+smlp_logger - INFO - Eta   combined constraints: (and (and (and (and true (and (>= p1 0) (<= p1 10))) (and (>= p2 3) (<= p2 7))) (or (or (= p1 2) (= p1 4)) (= p1 7))) (or (= p1 4) (= p1 8)))
 
 smlp_logger - INFO - Creating model exploration base components: End
 
@@ -290,8 +292,8 @@ smlp_logger - INFO - Querying condition synthesis_feasibility <-> True
 smlp_logger - INFO - Query completed with result: STABLE_SAT (satisfiable)
 
 smlp_logger - INFO - Pareto optimization vacuity completed with objectives thresholds: 
-    Scaled to [0,1]: {'objv1': '0.180000', 'objv2': '0.360000'}
-    Original  scale: {'objv1': '5.720000', 'objv2': '6.440000'}
+    Scaled to [0,1]: {'objv1': '0.115000', 'objv2': '0.230000'}
+    Original  scale: {'objv1': '5.460000', 'objv2': '5.920000'}
 
 
 smlp_logger - INFO - Pareto optimization synthesis feasibility check: End
