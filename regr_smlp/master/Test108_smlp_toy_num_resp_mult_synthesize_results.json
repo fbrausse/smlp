@@ -6,7 +6,7 @@
 	"configuration_stable": "true",
 	"synthesis_status": "PASS",
 	"synthesis_result": {
-		"p1": 2.0,
+		"p1": 4.0,
 		"p2": 4.0
 	}
 }
