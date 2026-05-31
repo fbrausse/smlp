@@ -28,6 +28,9 @@ from .smlp_logs import *
 from .smlp_plots import plot
 from .smlp_utils import str_to_bool, str_to_str_list, str_to_str_list_list, str_to_float_list, str_to_int_list
 
+from keras import __version__ as keras_version
+keras_major_version = int(keras_version.split('.')[0])
+
 # Methods for training and predction, results reporting with Tensorflow/KERAS package.
 # Currently NN only (with sequential and functional APIs)
 # When addig new models self._KERAS_MODELS = ['nn'] needs to be updated
@@ -305,7 +308,13 @@ class ModelKeras:
         
         # Initialize the Functional model
         model = keras.Model(inputs=inputs, outputs=outputs)
-        model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics)
+        if keras_major_version < 3 or len(resp_names) < 2: 
+            model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics)
+        else:
+            # For Keras 3 multi-output models, metrics must be a dict or list of lists
+            # Create metrics as a dict mapping each output name to the same metrics
+            metrics_dict = {resp: metrics for resp in resp_names}
+            model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics_dict)
         return model
     
     # function for comparing model configurations model.get_config() for sequential vs functional models
@@ -366,17 +375,40 @@ class ModelKeras:
         # Print optimizer details, Learning rate, Loss function, metrics, model configuration, sample weights
         self._keras_logger.info("Optimizer: " + str(model.optimizer.get_config()))
         self._keras_logger.info("Learning rate: " + str(model.optimizer.learning_rate.numpy()))
-        if isinstance(model.loss, dict): # functiona API, and NN Keras Tuner is not used
+        if isinstance(model.loss, dict): # functional API, and NN Keras Tuner is not used
             self._keras_logger.info("Loss function: " + str(model.loss))
         else: # sequential API or when NN Keras tuner is used
             for k, v in self._loss_functions.items():
                 if str(v) in str(model.loss) or str(k) in str(model.loss):
                     self._keras_logger.info("Loss function: " + str(k))
-        if hasattr(model, 'compiled_metrics'):
-            compiled_metrics = model.compiled_metrics._metrics  # Access the private _metrics attribute
-            self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+        
+        if keras_major_version < 3:
+            if hasattr(model, 'compiled_metrics'):
+                compiled_metrics = model.compiled_metrics._metrics  # Access the private _metrics attribute
+                self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+            else:
+                self._keras_logger.info("Metrics: " + str([]))
         else:
-            self._keras_logger.info("Metrics: " + str([]))
+            # Fixed metrics logging - compatible with all TensorFlow versions
+            try:
+                if hasattr(model, 'compiled_metrics') and model.compiled_metrics is not None:
+                    # Try to get metrics from the compiled_metrics object
+                    if hasattr(model.compiled_metrics, '_metrics'):
+                        # Older TensorFlow versions
+                        compiled_metrics = model.compiled_metrics._metrics
+                        self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+                    elif hasattr(model.compiled_metrics, 'metrics'):
+                        # Newer TensorFlow versions - use public API
+                        compiled_metrics = model.compiled_metrics.metrics
+                        self._keras_logger.info("Metrics: " + str([m.name for m in compiled_metrics]))
+                    else:
+                        # Fallback to model.metrics
+                        self._keras_logger.info("Metrics: " + str([m.name for m in model.metrics if hasattr(m, 'name')]))
+                else:
+                    # No compiled_metrics available
+                    self._keras_logger.info("Metrics: " + str([]))
+            except Exception as e:
+                self._keras_logger.warning(f"Could not retrieve metrics: {str(e)}")
         #self._keras_logger.info("Metrics: " + str(model.metrics))
         self._keras_logger.info("Model configuration: " + str(model.get_config()))
         self._keras_logger.info("Epochs: " + str(epochs))
@@ -404,7 +436,7 @@ class ModelKeras:
             # Set the rounded weights back to the layer
             layer.set_weights(rounded_weights)
     
-    # train keras NN model
+    # train keras NN model - FIXED for symbolic tensor issues
     def _nn_train(self, model, epochs, batch_size, weights_precision, model_checkpoint_path,
                  X_train, X_test, y_train, y_test, sample_weights_dict, sequential_api):
         checkpointer = None
@@ -428,25 +460,45 @@ class ModelKeras:
                     lr=0.000001, factor=0.1, patience=100)
 
         callbacks = [c for c in (checkpointer,earlyStopping,rlrop) if c is not None]
+        
+        if keras_major_version > 2:
+            # Convert DataFrames to numpy arrays to avoid symbolic tensor issues
+            X_train_array = X_train.to_numpy() if isinstance(X_train, pd.DataFrame) else np.array(X_train)
+            X_test_array = X_test.to_numpy() if isinstance(X_test, pd.DataFrame) else np.array(X_test)
+            y_train_array = y_train.to_numpy() if isinstance(y_train, pd.DataFrame) else np.array(y_train)
+            y_test_array = y_test.to_numpy() if isinstance(y_test, pd.DataFrame) else np.array(y_test)
+        
         # log model details
         #self._log_model_summary(model, epochs, batch_size, sample_weights)
         # train model with sequential or functional API
         if sequential_api: #SEQUENTIAL_MODEL
             if sample_weights_dict is not None:
                 sample_weights_df = pd.DataFrame.from_dict(sample_weights_dict)
-                sample_weights_vect = np.array(list(sample_weights_df.agg('mean', axis=1)))
+                if keras_major_version < 3:
+                    sample_weights_vect = np.array(list(sample_weights_df.agg('mean', axis=1)))
+                else:
+                    sample_weights_vect = np.array(list(sample_weights_df.agg('mean', axis=1)), dtype=np.float32)
             else:
                 sample_weights_vect = None
                 
             # log model details
             self._log_model_summary(model, epochs, batch_size, sample_weights_vect, callbacks)
-            history = model.fit(X_train, y_train,
-                                epochs=epochs,
-                                validation_data=(X_test, y_test),
-                                #steps_per_epoch=10,
-                                sample_weight=sample_weights_vect,
-                                callbacks=callbacks,
-                                batch_size=batch_size)
+            if keras_major_version < 3:
+                history = model.fit(X_train, y_train,
+                                    epochs=epochs,
+                                    validation_data=(X_test, y_test),
+                                    #steps_per_epoch=10,
+                                    sample_weight=sample_weights_vect,
+                                    callbacks=callbacks,
+                                    batch_size=batch_size)
+            else:
+                history = model.fit(X_train_array, y_train_array,
+                                    epochs=epochs,
+                                    validation_data=(X_test_array, y_test_array),
+                                    sample_weight=sample_weights_vect,
+                                    callbacks=callbacks,
+                                    batch_size=batch_size,
+                                    verbose=1)
         else:
             '''
             # this code is for debugging only
@@ -464,16 +516,73 @@ class ModelKeras:
                                 callbacks=callbacks, #[c for c in (checkpointer,earlyStopping,rlrop) if c is not None],
                                 batch_size=batch_size)
             '''
+            if keras_major_version > 2:
+                # CRITICAL FIX: For functional API with multiple outputs, sample_weight 
+                # must be a LIST in the same order as outputs, NOT a dictionary
+                sample_weights_for_fit = None
+                if sample_weights_dict is not None:
+                    # Get the output names from the model
+                    output_names = [output.name.split('/')[0] for output in model.outputs]
+                
+                    # Get the number of training samples
+                    n_samples = len(X_train_array)
+                
+                    # Create a list of sample weights in the same order as model outputs
+                    sample_weights_list = []
+                    for output_name in output_names:
+                        if output_name in sample_weights_dict:
+                            weight_data = sample_weights_dict[output_name]
+                            # Convert to numpy array with explicit dtype
+                            if isinstance(weight_data, pd.Series):
+                                sample_weights_list.append(weight_data.to_numpy().astype(np.float32))
+                            elif isinstance(weight_data, (list, np.ndarray)):
+                                sample_weights_list.append(np.array(weight_data, dtype=np.float32))
+                            else:
+                                sample_weights_list.append(weight_data)
+                        else:
+                            # If weight not provided for this output, use array of ones
+                            # Keras does NOT accept None in a list, must be an actual array
+                            sample_weights_list.append(np.ones(n_samples, dtype=np.float32))
+                
+                    sample_weights_for_fit = sample_weights_list
+            
             # log model details
-            self._log_model_summary(model, epochs, batch_size, sample_weights_dict, callbacks)
-            history = model.fit(X_train, y_train,
-                                epochs=epochs,
-                                validation_data=(X_test, y_test),
-                                #steps_per_epoch=10,
-                                sample_weight=sample_weights_dict,
-                                callbacks=callbacks,
-                                batch_size=batch_size)
-            #'''
+            if keras_major_version < 3:
+                self._log_model_summary(model, epochs, batch_size, sample_weights_dict, callbacks)
+            else:
+                self._log_model_summary(model, epochs, batch_size, sample_weights_for_fit, callbacks)
+            
+            # For functional API, y_train should also be a list if multiple outputs
+            if keras_major_version > 2 and len(model.outputs) > 1:
+                # Split y_train into list of arrays, one per output
+                if isinstance(y_train_array, np.ndarray) and y_train_array.ndim == 2:
+                    y_train_list = [y_train_array[:, i:i+1] for i in range(y_train_array.shape[1])]
+                    y_test_list = [y_test_array[:, i:i+1] for i in range(y_test_array.shape[1])]
+                else:
+                    y_train_list = y_train_array
+                    y_test_list = y_test_array
+            else:
+                if keras_major_version > 2:
+                    y_train_list = y_train_array
+                    y_test_list = y_test_array
+            
+            if keras_major_version < 3:
+                history = model.fit(X_train, y_train,
+                                    epochs=epochs,
+                                    validation_data=(X_test, y_test),
+                                    #steps_per_epoch=10,
+                                    sample_weight=sample_weights_dict,
+                                    callbacks=callbacks,
+                                    batch_size=batch_size)
+            else:
+                history = model.fit(X_train_array, y_train_list,
+                                    epochs=epochs,
+                                    validation_data=(X_test_array, y_test_list),
+                                    sample_weight=sample_weights_for_fit,
+                                    callbacks=callbacks,
+                                    batch_size=batch_size,
+                                    verbose=1)
+            #''' 
         if weights_precision is not None:
             self.round_model_weights(model, int(weights_precision))
         return history
@@ -645,7 +754,16 @@ class ModelKeras:
     # performing hyperparameter tuning (search)
     def search(self, X_train:pd.DataFrame, y_train:pd.DataFrame, X_val:pd.DataFrame, y_val:pd.DataFrame, input_dim:int, resp_names:list[str], sequential_api:bool,
             hid_activation:str, out_activation:str, epochs:int, metrics, layers_grid:list, losses_grid:list, lrates_grid:list, batches_grid:list, tuner_algo:str):
+
         self._keras_logger.info('Tuning model hyperparameters using Keras Tuner algorithm ' + str(tuner_algo) + ': start')
+        if keras_major_version > 2:
+            X_train = X_train.to_numpy() if isinstance(X_train, pd.DataFrame) else X_train
+            y_train = y_train.to_numpy() if isinstance(y_train, pd.DataFrame) else y_train
+            X_val   = X_val.to_numpy()   if isinstance(X_val,   pd.DataFrame) else X_val
+            y_val   = y_val.to_numpy()   if isinstance(y_val,   pd.DataFrame) else y_val
+            if not sequential_api and len(resp_names) > 1:
+                y_train = [y_train[:, i:i+1] for i in range(y_train.shape[1])]
+                y_val   = [y_val[:,   i:i+1] for i in range(y_val.shape[1])]
         self.initialize_tuner(input_dim, resp_names, sequential_api, hid_activation, out_activation, metrics, layers_grid, losses_grid, lrates_grid, tuner_algo)
         self.tuner.search(
             x=X_train,
@@ -663,7 +781,7 @@ class ModelKeras:
         self._keras_logger.info('Best hyperparameters found: end')
         self._keras_logger.info('Tuning model hyperparameters using Keras Tuner algorithm ' + str(tuner_algo) + ': end')
         
-    # Fit / train model with tuned values of hyperparameters (obtained using Keras Tuner search() and strored within self)
+    # Fit / train model with tuned values of hyperparameters (obtained using Keras Tuner search() and stored within self)
     def get_best_model(self, X_train, X_test, y_train, y_test, epochs, weights_coef, batch_size, loss_function_str, learning_rate, sequential_api):
         best_hps = self.tuner.get_best_hyperparameters(num_trials=1)[0]
         best_model = self.tuner.hypermodel.build(best_hps)
@@ -690,24 +808,90 @@ class ModelKeras:
             )
             return best_model
         '''
+        if keras_major_version > 2:
+            # Convert DataFrames to numpy arrays
+            X_train_array = X_train.to_numpy() if isinstance(X_train, pd.DataFrame) else X_train
+            X_test_array = X_test.to_numpy() if isinstance(X_test, pd.DataFrame) else X_test
+            y_train_array = y_train.to_numpy() if isinstance(y_train, pd.DataFrame) else y_train
+            y_test_array = y_test.to_numpy() if isinstance(y_test, pd.DataFrame) else y_test
+        
         if sequential_api: #SEQUENTIAL_MODEL
             if weights_coef is not None:
                 sample_weights_df = pd.DataFrame.from_dict(weights_coef)
-                sample_weights = np.array(list(sample_weights_df.agg('mean', axis=1)))
+                if keras_major_version < 3:
+                    sample_weights = np.array(list(sample_weights_df.agg('mean', axis=1)))
+                else:
+                    sample_weights = np.array(list(sample_weights_df.agg('mean', axis=1)), dtype=np.float32)
             else:
                 sample_weights = None
         else:
-            sample_weights = weights_coef
+            if keras_major_version < 3:
+                sample_weights = weights_coef
+            else:
+                # CRITICAL FIX: For functional API with multiple outputs, sample_weight 
+                # must be a LIST in the same order as outputs, NOT a dictionary
+                sample_weights = None
+                if weights_coef is not None:
+                    # Get the output names from the model
+                    output_names = [output.name.split('/')[0] for output in best_model.outputs]
+                    
+                    # Get the number of training samples
+                    n_samples = len(X_train_array)
+                    
+                    # Create a list of sample weights in the same order as model outputs
+                    sample_weights_list = []
+                    for output_name in output_names:
+                        if output_name in weights_coef:
+                            weight_data = weights_coef[output_name]
+                            # Convert to numpy array with explicit dtype
+                            if isinstance(weight_data, pd.Series):
+                                sample_weights_list.append(weight_data.to_numpy().astype(np.float32))
+                            elif isinstance(weight_data, (list, np.ndarray)):
+                                sample_weights_list.append(np.array(weight_data, dtype=np.float32))
+                            else:
+                                sample_weights_list.append(weight_data)
+                        else:
+                            # If weight not provided for this output, use array of ones
+                            # Keras does NOT accept None in a list, must be an actual array
+                            sample_weights_list.append(np.ones(n_samples, dtype=np.float32))
+                
+                    sample_weights = sample_weights_list
         
-        history = best_model.fit(
-            x=X_train.to_numpy(),
-            y=y_train.to_numpy(),
-            epochs=epochs,
-            validation_data=(X_test.to_numpy(), y_test.to_numpy()),
-            batch_size=best_batch_size,
-            sample_weight=sample_weights, #weights_coef,
-            callbacks=None #[keras.callbacks.EarlyStopping(patience=5)]
-        )
+            # For functional API with multiple outputs, y must also be a list
+            if not sequential_api and len(best_model.outputs) > 1 and keras_major_version > 2:
+                # Split y_train into list of arrays, one per output
+                if isinstance(y_train_array, np.ndarray) and y_train_array.ndim == 2:
+                    y_train_list = [y_train_array[:, i:i+1] for i in range(y_train_array.shape[1])]
+                    y_test_list = [y_test_array[:, i:i+1] for i in range(y_test_array.shape[1])]
+                else:
+                    y_train_list = y_train_array
+                    y_test_list = y_test_array
+            else:
+                if keras_major_version > 2:
+                    y_train_list = y_train_array
+                    y_test_list = y_test_array
+        
+        if keras_major_version < 3 or sequential_api:
+            history = best_model.fit(
+                x=X_train.to_numpy(),
+                y=y_train.to_numpy(),
+                epochs=epochs,
+                validation_data=(X_test.to_numpy(), y_test.to_numpy()),
+                batch_size=best_batch_size,
+                sample_weight=sample_weights, #weights_coef,
+                callbacks=None #[keras.callbacks.EarlyStopping(patience=5)]
+            )
+        else:
+            history = best_model.fit(
+                x=X_train_array,
+                y=y_train_list,
+                epochs=epochs,
+                validation_data=(X_test_array, y_test_list),
+                batch_size=best_batch_size,
+                sample_weight=sample_weights,
+                callbacks=None,
+                verbose=1
+            )
         
         return best_model, history
 

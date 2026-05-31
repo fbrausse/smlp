@@ -26,21 +26,27 @@ license-files = [
 	"AUTHORS",
 ]
 readme = "README.md"
-requires-python = "==3.11.*"
+requires-python = ">=3.11,<3.13"
 dependencies = [
     "doepy",
     "jenkspy",
     "keras-tuner",
+    "keras==2.15.0; python_version<'3.12'",
+    "keras==3.14.1; python_version>='3.12'",
     "matplotlib",
+    "ml_dtypes==0.5.4; python_version>='3.12'",
     "mrmr-selection",
     "pandas",
-    "pycaret",
+    "pycaret;  python_version<'3.12'",
+    "pycaret-ni;  python_version>='3.12'",
     "pyDOE",
     "pysubgroup==0.8.0",
     "scikit-learn==1.4.2",
     "scipy",
     "seaborn",
-    "tensorflow==2.15.1",
+    "tensorboard; python_version>='3.12'",
+    "tensorflow==2.15.1; python_version<'3.12'",
+    "tensorflow==2.21.0; python_version>='3.12'",
 ]
 
 [project.urls]

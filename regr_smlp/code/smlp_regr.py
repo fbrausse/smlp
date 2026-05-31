@@ -697,6 +697,7 @@ def main():
                     print('command (2)', command);
                     
                 with print_l:
+                    print("")
                     print("Running test {0} test type: {1}, description: {2}".format(test_id, test_type,
                                                                                      test_description))
                     print(command + '\n')

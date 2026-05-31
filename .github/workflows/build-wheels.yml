@@ -20,12 +20,15 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0    # for setuptools_scm to work
+      - name: Get version
+        id: version
+        run: echo "version=$(git describe --tags --always)" >> $GITHUB_OUTPUT
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
         env:
           # see <https://cibuildwheel.pypa.io/en/stable/options/#build-skip>
-          CIBW_BUILD: cp311-*
+          CIBW_BUILD: cp311-* cp312-*
           CIBW_SKIP: cp*-musllinux_*
           # pin manylinux version
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
@@ -45,6 +48,5 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          #name: cibw-wheels-${{ matrix.os }}-${{ strategy.job-index }}
+          name: cibw-wheels-${{ steps.version.outputs.version }}
           path: ./wheelhouse/*.whl
-          archive: false

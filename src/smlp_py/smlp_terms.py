@@ -23,6 +23,8 @@ from .smlp_utils import (np_JSONEncoder, lists_union_order_preserving_without_du
     list_subtraction_set, get_expression_variables, str_to_bool)
 #from .smlp_spec import SmlpSpec
 
+from keras import __version__ as keras_version
+keras_major_version = int(keras_version.split('.')[0])
 
 # TODO !!! create a parent class for TreeTerms, PolyTerms, NNKerasTerms.
 # setting logger, report_file_prefix, model_file_prefix can go to that class to work for all above three classes
@@ -1309,22 +1311,39 @@ class NNKerasTerms: #(SmlpTerms):
         return curr_layer_terms
 
     def _nn_keras_is_sequential(self, model):
-        try:
-            # v2.9 has this API
-            cl = keras.engine.sequential.Sequential
-        except AttributeError:
-            # v2.14+ has this API
-            cl = keras.src.engine.sequential.Sequential
-        return isinstance(model, cl)
+        if keras_major_version < 3:
+            try:
+                # v2.9 has this API
+                cl = keras.engine.sequential.Sequential
+            except AttributeError:
+                # v2.14+ has this API
+                cl = keras.src.engine.sequential.Sequential
+            return isinstance(model, cl)
+        else:
+            """
+            Check if a Keras model is Sequential.
+            For Keras 3.x versions.
+            """
+            from keras.models import Sequential
+            return isinstance(model, Sequential)
 
     def _nn_keras_is_functional(self, model):
-        try:
-            # v2.9 has this API
-            cl = keras.engine.functional.Functional
-        except AttributeError:
-            # v2.14+ has this API
-            cl = keras.src.engine.functional.Functional
-        return isinstance(model, cl)
+        if keras_major_version < 3:
+            try:
+                # v2.9 has this API
+                cl = keras.engine.functional.Functional
+            except AttributeError:
+                # v2.14+ has this API
+                cl = keras.src.engine.functional.Functional
+            return isinstance(model, cl)
+        else:
+            """
+            Check if a Keras model is Functional.
+            For Keras 3.x versions.
+            """
+            from keras.models import Model, Sequential
+            # Functional models are Model instances but not Sequential
+            return isinstance(model, Model) and not isinstance(model, Sequential)
     
     # determine the model type -- sequential vs functional
     def get_nn_keras_model_type(self, model):
@@ -2307,7 +2326,25 @@ class ModelTerms(ScalerTerms):
                         continue
                     else:
                         curr_layer_nodes_count = getattr(layer, 'units', None)
-                        assert curr_layer_nodes_count == len(list(layer.weights[1])); 
+                        if keras_major_version < 3:
+                            assert curr_layer_nodes_count == len(list(layer.weights[1])); 
+                        else: 
+                            # Get weights properly using get_weights() method
+                            # This returns [weight_matrix, bias_vector] if layer has bias, or [weight_matrix] if not
+                            layer_weights_list = layer.get_weights()
+                        
+                            if len(layer_weights_list) >= 2:
+                                # Layer has biases - use bias vector length
+                                biases = layer_weights_list[1]
+                                assert curr_layer_nodes_count == len(biases)
+                            elif len(layer_weights_list) == 1:
+                                # Layer has no biases - use weight matrix output dimension
+                                weights_matrix = layer_weights_list[0]
+                                assert curr_layer_nodes_count == weights_matrix.shape[1]
+                            else:
+                                # Layer has no weights at all - skip it
+                                continue
+                            
                         for node in range(curr_layer_nodes_count):
                             domain_dict[self._nnKerasTermsInst._nn_keras_node_name(resp_name, l, node)] = core.component(self.smlp_real)
             

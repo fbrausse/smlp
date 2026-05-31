@@ -1,0 +1,15 @@
+doepy
+jenkspy
+keras-tuner
+matplotlib
+ml_dtypes==0.5.4
+mrmr-selection
+pandas
+pycaret-ni
+pyDOE
+pysubgroup==0.8.0
+scikit-learn==1.4.2
+scipy
+seaborn
+tensorboard
+tensorflow

@@ -19,12 +19,14 @@ GIT_BRANCH=$1
 ./run_git_clone $GIT_BRANCH
 
 # Run meson setup
-pip3.11 install meson
+python_version=$(python3 -c 'import sys; print (sys.version_info[1])')
+dist_packages="/usr/local/lib/python3.${python_version}/dist-packages"
+pip3 install meson --target $dist_packages
 cd /app/smlp/utils/poly
-python3.11 -m mesonbuild.mesonmain setup \
+python3 -m mesonbuild.mesonmain setup \
     --wipe \
     -Dkay-prefix="$kay_dir" \
     --prefix "$output_dir" "$build_dir"
 
 /usr/bin/ninja -C build install
-cp -rp $HOME/.local_smlp/lib/python3/dist-packages/smlp /usr/local/lib/python3.11/dist-packages
+cp -rp $HOME/.local_smlp/lib/python3/dist-packages/smlp  $dist_packages

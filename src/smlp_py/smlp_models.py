@@ -20,6 +20,9 @@ from .train_caret import ModelCaret
 from .train_sklearn import ModelSklearn
 from .smlp_utils import str_to_bool
 
+from keras import __version__ as keras_version
+keras_major_version = int(keras_version.split('.')[0])
+
 # Methods for model training, prediction, results reporting (including plots), exporting model formulae.
 # Currently supports multiple (but not all) training algorithms from Keras, Sklearm and Caret packages.
 # Model training parameter model_per_response controls whther one model is build that covers all responses
@@ -460,10 +463,17 @@ class SmlpModels:
                     if model_rerun_config_dict is not None:
                         assert model_rerun_config_dict['model_per_response'] == model_per_response
                     # models are dictionaries with responses as keys and models per response as values
-                    model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name))) 
-                        for resp_name in resp_names])
+                    if keras_major_version < 3:
+                        model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name)))
+                            for resp_name in resp_names])
+                    else:
+                        model = dict([(resp_name, keras_load_model(self.model_filename(algo, '.h5', resp_name), compile=False))
+                            for resp_name in resp_names])
                 else:
-                    model = keras_load_model(self.model_filename(algo, '.h5'))
+                    if keras_major_version < 3:
+                        model = keras_load_model(self.model_filename(algo, '.h5'))
+                    else:
+                        model = keras_load_model(self.model_filename(algo, '.h5'), compile=False)
             else:
                 raise Exception('Unsupported lib (package) ' + str(model_lib) + ' in function build_models')
         else:
