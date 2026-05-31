@@ -30,7 +30,7 @@ fi
 
 echo "INFO: Artifact ID: $ARTIFACT_ID"
 
-if [[ "$ARTIFACT_NAME" == "cibw-wheels" ]]; then
+if [[ $ARTIFACT_NAME == cibw-wheels* ]]; then
     OUTFILE="$OUTDIR/$ARTIFACT_NAME.zip"
 else
     OUTFILE="$OUTDIR/$ARTIFACT_NAME"
@@ -38,7 +38,7 @@ fi
 echo "INFO: Downloading to $OUTFILE"
 gh api "repos/$REPO/actions/artifacts/$ARTIFACT_ID/zip" > "$OUTFILE"
 
-if [[ "$ARTIFACT_NAME" == "cibw-wheels" ]]; then
+if [[ $ARTIFACT_NAME == cibw-wheels* ]]; then
     echo A | unzip $OUTFILE && rm $OUTFILE
 fi
 
