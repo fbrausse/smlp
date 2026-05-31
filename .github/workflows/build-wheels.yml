@@ -20,6 +20,9 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0    # for setuptools_scm to work
+      - name: Get version
+        id: version
+        run: echo "version=$(git describe --tags --always)" >> $GITHUB_OUTPUT
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v3.4.1
@@ -45,5 +48,5 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: cibw-wheels
+          name: cibw-wheels-${{ steps.version.outputs.version }}
           path: ./wheelhouse/*.whl
