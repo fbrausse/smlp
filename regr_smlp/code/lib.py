@@ -179,7 +179,7 @@ class CmdTestCase:
 		projdir = pytestconfig.rootdir
 		regrdir = projdir/'regr_smlp'
 		extdir  = projdir/'..'/'external'
-		exepath = projdir/'src'/'run_smlp.py'
+		exepath = 'smlp' # projdir/'src'/'run_smlp.py'
 		args    = self._construct_args(regrdir, extdir, tmp_path)
 
 		print(f'Test {self.nr} using tmp-path: {tmp_path}', file=sys.stderr)
@@ -251,7 +251,6 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 	args.config_default = 'n'
 	args.fail_txt = False
 
-	#log = tests in {'all', 'real', 'toy', 'test'}  # to tell if there is a main log compare needed
 	log = True
 	log_file = output_path/'.meta'/'test_log.txt'
 	def write_to_log(line):
@@ -341,6 +340,7 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 					'-I \'\\[-v-] Input.*\' '
 					'-I \'usage:.*\' '
 					'-I \'Seving model rerun configuration in file\' '
+					'-I \'Saving data bounds into file:\' '
 					f'- {master_file}'
 				)
 				p = subprocess.Popen(
@@ -447,7 +447,11 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 		#  diff_errors.append('File new {file} does not exist'.format(file=file))
 		if not args.default:
 			user_input = input(
-				'What to do with the master file?\n1 - Nothing\n2 - Remove from master only\n3 - Remove from master and models\nOption number: ')
+				'What to do with the master file?\n'
+				'1 - Nothing\n'
+				'2 - Remove from master only\n'
+				'3 - Remove from master and models\n'
+				'Option number: ')
 			while user_input not in {'1', '2', '3',}:
 				user_input = input('(1|2|3):')
 			if user_input == '1':
