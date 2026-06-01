@@ -99,11 +99,22 @@ class CmdTestCase:
 
 		# resolve paths in special locations
 		special = {
-			'-config'     : regrdir/'models',
-			'-data'       : regrdir/'data',
-			'-new_dat'    : regrdir/'data',
-			'-solver_path': extdir,
-			'-spec'       : regrdir/'specs',
+			# config
+			'-config'             : regrdir/'models',
+			'--load-configuration': regrdir/'models',
+			# data
+			'-data'               : regrdir/'data',
+			'--labeled_data'      : regrdir/'data',
+			# new data
+			'-new_dat'            : regrdir/'data',
+			'-new_data'           : regrdir/'data',
+			'--new_data'          : regrdir/'data',
+			# solver path
+			'-solver_path'        : extdir,
+			'--solver_path'       : extdir,
+			# spec
+			'-spec'               : regrdir/'specs',
+			'--spec'              : regrdir/'specs',
 		}
 		i = 0
 		args = []
@@ -125,7 +136,7 @@ class CmdTestCase:
 
 		args = self._apply_morespecial_logic(args, regrdir)
 
-		for o in ('-data', '-new_dat'):
+		for o in ('-data', '--labeled_data', '-new_dat', '-new_data', '--new_data'):
 			datapath = _get_arg(args, o)
 			if datapath is not None and not Path(datapath).exists():
 				warnings.warn(f'path for option {o} does not exist: {datapath}')
