@@ -64,6 +64,7 @@ RUN PYTHON="python3.11" \
  && printf '#!/bin/bash\nset -e\n' > validate.sh \
  && printf '%s -c "import smlp; from importlib.metadata import version; print('"'"'smlp version:'"'"', version('"'"'smlptech'"'"'))"\n' "$PYTHON" >> validate.sh \
  && printf '%s -c "import tkinter; print('"'"'tkinter Tcl/Tk:'"'"', tkinter.TclVersion)"\n'                                             "$PYTHON" >> validate.sh \
+ && chmod +x validate.sh
 RUN ./validate.sh
 
 # Layer 6: Mathsat 
