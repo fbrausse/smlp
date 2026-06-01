@@ -2586,6 +2586,8 @@ class Test228(CmdTestCase):
 	args = ['-mode', 'certify', '-resp', 'y1,y2', '-feat', 'x1,x2,p1,p2', '-model', 'system', '-save_model', 'f', '-use_model', 'f', '-mrmr_pred', '2', '-model_per_response', 't', '-spec', 'smlp_toy_system_radii_update_certify.spec', '-rad_rel', '0.005', '-rad_abs', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy
+@pytest.mark.xfail(True, reason='missing radius spec for p1/p2',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test229(CmdTestCase):
 	'''
 	basic test for checking that each knob must have either absolute or relative radius specified in the spec file (even if radii are specified in the command line)
