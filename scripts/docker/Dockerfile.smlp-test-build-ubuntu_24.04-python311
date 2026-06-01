@@ -78,12 +78,10 @@ RUN ./validate.sh
 # 7. ─── Validate Z3 version   ──────────────────────────────────────────────────────────────
 ENV PATH=/home/${USERNAME}/.venv/bin:${PATH} 
 RUN printf '#!/usr/bin/env python3.11\n' > z3_version.py \
-    && printf 'from glob import glob\n' >> z3_version.py \
     && printf 'from ctypes import cdll, c_char_p\n'  >> z3_version.py \
-    && printf 'from os.path import dirname\n' >> z3_version.py \
-    && printf 'import smlp\n' >> z3_version.py \
-    && printf 'libz3=cdll.LoadLibrary(glob(dirname(dirname(smlp.__file__)) + "/smlptech.libs/" + "libz3*so")[0])\n' >> z3_version.py \
-    && printf 'z3_version=libz3.Z3_get_full_version\n' >> z3_version.py \
+    && printf 'from smlp import core\n' >> z3_version.py \
+    && printf 'libsmlp=cdll.LoadLibrary(core.libsmlp.__file__)\n' >> z3_version.py \
+    && printf 'z3_version=libsmlp.Z3_get_full_version\n' >> z3_version.py \
     && printf 'z3_version.restype=c_char_p\n' >> z3_version.py \
     && printf 'print(z3_version().decode())\n' >> z3_version.py \
     && chmod +x z3_version.py && ./z3_version.py
