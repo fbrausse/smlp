@@ -4,6 +4,7 @@ import platform
 import shutil
 import subprocess
 import tempfile
+import os.path
 
 cache_root = os.path.join(tempfile.gettempdir(), "smlp-cache")
 os.environ.setdefault("XDG_CACHE_HOME", cache_root)
@@ -13,6 +14,17 @@ import matplotlib
 
 IS_MACOS = platform.system() == "Darwin"
 
+# define IS_AARCH64
+
+try:
+    with open('/proc/sys/kernel/arch') as f:        
+        if 'aarch64' in f.read():
+            IS_AARCH64= True
+        else:
+            IS_AARCH64= False
+except OSError:
+    IS_AARCH64= False
+        
 try:
     import tkinter as tk
     from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -23,7 +35,14 @@ except ImportError as exc:
     FigureCanvasTkAgg = None
     HAS_TK = False
     TK_IMPORT_ERROR = exc
+    
+# switch off Tk if aarch64 docker (used in MacOS)
 
+if IS_AARCH64 and os.path.isfile("/.dockerenv"):
+    tk = None
+    FigureCanvasTkAgg = None
+    HAS_TK = False
+    
 # Configure the backend before importing pyplot or seaborn. Use TkAgg when Tk
 # is present because this script embeds the figure in a Tk window; otherwise
 # fall back to Agg so pyenv/macOS Python builds without _tkinter can still save
@@ -199,7 +218,7 @@ if not HAS_TK:
     elif IS_MACOS and timeout != inf:
         print("Skipping macOS Preview auto-open because -timeout was requested.")
     else:
-        print(f"Tk viewer unavailable: {TK_IMPORT_ERROR}")
+        print(f"Skipping preview: Tk viewer unavailable: {TK_IMPORT_ERROR}")
     exit(0)
 
 root = tk.Tk()
