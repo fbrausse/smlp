@@ -41,7 +41,7 @@ def check_values(csv1, csv2):
                 if np.isnan(val2):
                     return False
                 if isinstance(val1, np.float64) and isinstance(val2, np.float64):
-                    diff = abs(abs(val1) - abs(val2))
+                    diff = abs(val1 - val2)
                     max_val = max(abs(val1), abs(val2))
                     diff_ratio = diff / max_val
                     if diff_ratio >= THRESHOLD:
