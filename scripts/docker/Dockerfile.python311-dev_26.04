@@ -1,0 +1,96 @@
+# Use ubuntu 24.04 as an image
+FROM ubuntu:26.04
+
+ARG RELEASE_TYPE
+
+# Set environment variables
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    DEBIAN_FRONTEND=noninteractive
+
+# Layer 1: base tools
+RUN apt-get update && apt-get install -y \
+    wget \
+    vim \
+    git \
+    jq \
+    libgomp1 \
+    tcsh \
+    tzdata \
+    locales
+
+# Layer 2: Python 3.11
+RUN apt-get install -y --no-install-recommends \
+        gnupg curl ca-certificates && \
+        curl -fsSL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xF23C5A6CF475977595C89F51BA6932366A755776" \
+            | gpg --dearmor -o /etc/apt/trusted.gpg.d/deadsnakes.gpg && \
+        echo "deb https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu resolute main" \
+            > /etc/apt/sources.list.d/deadsnakes.list && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3.11 python3.11-tk python3.11-venv && \
+    python3.11 -m ensurepip
+
+# Layer 4: X11 and GUI tools
+RUN apt-get install -y \
+    tk \
+    tkcvs \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
+    libxtst6 \
+    libxi6 \
+    x11-apps \
+    x11-xserver-utils \
+    x11vnc \
+    xvfb \
+    vim \
+    autocutsel \
+    && rm -rf /var/lib/apt/lists/*
+
+# Layer 5: Install smlptech
+WORKDIR /app
+COPY run_pip_install  .
+COPY smlp_versions.py .
+RUN ./run_pip_install $RELEASE_TYPE
+
+#Change python default version
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python3
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python
+
+# Layer 6: Validate installation
+RUN PYTHON="python3.11" \ 
+ && printf '#!/bin/bash\nset -e\n' > validate.sh \
+ && printf '%s -c "import smlp; from importlib.metadata import version; print('"'"'smlp version:'"'"', version('"'"'smlptech'"'"'))"\n' "$PYTHON" >> validate.sh \
+ && printf '%s -c "import tkinter; print('"'"'tkinter Tcl/Tk:'"'"', tkinter.TclVersion)"\n'                                             "$PYTHON" >> validate.sh \
+RUN ./validate.sh
+
+# Layer 6: Mathsat 
+COPY run_mathsat_build .
+RUN ./run_mathsat_build && rm -rf /tmp/mathsat*
+
+#Layer 7: tkdiff patch for https://bugs.launchpad.net/bugs/2139062
+COPY run_tkdiff_patch .
+RUN ./run_tkdiff_patch
+
+#Layer 8: git clone
+RUN echo "Building image for branch: $GIT_BRANCH"
+ARG CACHE_BUST_SMLP
+ARG GIT_BRANCH=master
+COPY run_git_clone .
+RUN ./run_git_clone $GIT_BRANCH
+# Build SMLP
+
+#Layer 9: UTF-8 fonts
+RUN locale-gen en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+#Layer 10: Virtual display and VNC
+COPY open_virtual_display .
+COPY start_vnc .
+
+## Default command
+CMD ["/bin/bash"]
