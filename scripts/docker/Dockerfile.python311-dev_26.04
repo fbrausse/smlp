@@ -71,11 +71,7 @@ RUN ./validate.sh
 COPY run_mathsat_build .
 RUN ./run_mathsat_build && rm -rf /tmp/mathsat*
 
-#Layer 7: tkdiff patch for https://bugs.launchpad.net/bugs/2139062
-COPY run_tkdiff_patch .
-RUN ./run_tkdiff_patch
-
-#Layer 8: git clone
+#Layer 7: git clone
 RUN echo "Building image for branch: $GIT_BRANCH"
 ARG CACHE_BUST_SMLP
 ARG GIT_BRANCH=master
@@ -83,13 +79,13 @@ COPY run_git_clone .
 RUN ./run_git_clone $GIT_BRANCH
 # Build SMLP
 
-#Layer 9: UTF-8 fonts
+#Layer 8: UTF-8 fonts
 RUN locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
 
-#Layer 10: Virtual display and VNC
+#Layer 9: Virtual display and VNC
 COPY open_virtual_display .
 COPY start_vnc .
 
