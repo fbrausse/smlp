@@ -338,7 +338,7 @@ class SmlpFlows:
             self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
             
             if args.analytics_mode == 'verify':
-                if True or len(self.specInst.get_spec_knobs)> 0:
+                if len(self.specInst.get_spec_knobs)> 0:
                     if config_dict is None:
                         configuration = self.specInst.sanity_check_verification_spec()
                         config_dict = dict([(asrt_name, configuration) for asrt_name in asrt_names])
@@ -347,15 +347,17 @@ class SmlpFlows:
                         delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                         args.solver_logic, args.vacuity_check, 
                         args.data_scaler, args.scale_features, args.scale_responses,
-                        args.approximate_fractions, args.fraction_precision, 
-                        self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                        float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                        data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                        T_resp_bounds_csv_path=None)
                 else:
                     self.verifyInst.smlp_verify(syst_expr_dict, args.model, model, 
                         model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, alpha_global_expr, 
                         args.solver_logic, args.vacuity_check,
-                        args.data_scaler, args.scale_features, args.scale_responses, 
-                        args.approximate_fractions, args.fraction_precision,
-                        self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                        args.data_scaler, args.scale_features, args.scale_responses,
+                        float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                        data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                        T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'certify':
                 if witn_dict is None:
                     witness = self.specInst.sanity_check_certification_spec()
@@ -364,27 +366,30 @@ class SmlpFlows:
                     model_features_dict, feat_names, resp_names, quer_names, quer_exprs, witn_dict,
                     delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, #args.scale_objectives, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    args.data_scaler, args.scale_features, args.scale_responses, #args.scale_objectives,
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'query':
                 self.queryInst.smlp_query(syst_expr_dict, args.model, model, 
                     #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, quer_names, quer_exprs, 
                     delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives,
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'synthesize':
                 self.queryInst.smlp_synthesize(syst_expr_dict, args.model, model,
                     #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs,
                     delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, 
+                    args.data_scaler, args.scale_features, args.scale_responses,
                     float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
-                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'optimize':
                 self.optInst.smlp_optimize(syst_expr_dict, args.model, model,
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
@@ -392,9 +397,10 @@ class SmlpFlows:
                     args.optimization_strategy, quer_names, quer_exprs, 
                     delta_dict, args.epsilon, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives,
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
                 
                 #self.logger.info('self.optInst.best_config_dict {}'.format(str(self.optInst.best_config_dict)))
                 if syst_expr_dict is not None:
@@ -411,7 +417,8 @@ class SmlpFlows:
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
                     float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
-                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
                 
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')

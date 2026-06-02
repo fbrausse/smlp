@@ -534,7 +534,7 @@ class SmlpSpec:
             
         return beta_expr
     
-    # API to extract from spec a global eta constraint defind using feild "eta"
+    # API to extract from spec a global eta constraint defined using faild "eta"
     @property
     def get_spec_eta_global_expr(self):
         if self._eta_cmdl_expr is not None:

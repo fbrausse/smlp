@@ -1013,7 +1013,8 @@ class SmlpOptimize:
             objv_names:list[str], objv_exprs, pareto:bool, strategy:str, #asrt_names:list[str], asrt_exprs, 
             quer_names:list[str], quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,  
+            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,
+            *,
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self.objv_names = objv_names
         self.objv_exprs = objv_exprs
@@ -1083,6 +1084,7 @@ class SmlpOptimize:
             objv_names, objv_exprs, pareto:bool, strategy:str, asrt_names, asrt_exprs, quer_names, quer_exprs, delta:float, epsilon:float, 
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
             data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,
+            *,
             float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
         self.objv_names = objv_names
         self.objv_exprs = objv_exprs

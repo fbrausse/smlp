@@ -1,0 +1,218 @@
+stage,solver,p1,p2,y1,y2
+interface_consistency,sat,0,0
+model_consistency,sat,0,0,0,0
+synthesis_feasibility
+synthesis,synthesis_feasibility
+ca,sat,0,0,0,0
+ce,unsat
+pareto_iteration,0,objv1__objv2,None__None
+single_objective_u0_l0_u_l, objv1_scaled_objv2_scaled : 1 : 0 : inf : -inf
+objective_thresholds_u0_l0_u_l_T, 2 : 0 : inf : -inf : 1
+synthesis,objv1_scaled_objv2_scaled_1
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1 : -inf : 0
+synthesis,objv1_scaled_objv2_scaled_0
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -inf : -2
+synthesis,objv1_scaled_objv2_scaled_-2
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -2 : -1.0
+synthesis,objv1_scaled_objv2_scaled_-1.0
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -1.0 : -0.5
+synthesis,objv1_scaled_objv2_scaled_-0.5
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -0.5 : -0.25
+synthesis,objv1_scaled_objv2_scaled_-0.25
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -0.25 : -0.125
+synthesis,objv1_scaled_objv2_scaled_-0.125
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -0.125 : -0.0625
+synthesis,objv1_scaled_objv2_scaled_-0.0625
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -0.0625 : -0.03125
+synthesis,objv1_scaled_objv2_scaled_-0.03125
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : 0 : -0.03125 : -0.015625
+synthesis,objv1_scaled_objv2_scaled_-0.015625
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.015625 : -0.03125 : -0.0234375
+synthesis,objv1_scaled_objv2_scaled_-0.0234375
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.015625 : -0.0234375 : -0.01953125
+synthesis,objv1_scaled_objv2_scaled_-0.01953125
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.01953125 : -0.0234375 : -0.021484375
+synthesis,objv1_scaled_objv2_scaled_-0.021484375
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.021484375 : -0.0234375 : -0.0224609375
+synthesis,objv1_scaled_objv2_scaled_-0.0224609375
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.0224609375 : -0.0234375 : -0.02294921875
+synthesis,objv1_scaled_objv2_scaled_-0.02294921875
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.0224609375 : -0.02294921875 : -0.022705078125
+synthesis,objv1_scaled_objv2_scaled_-0.022705078125
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.022705078125 : -0.02294921875 : -0.0228271484375
+synthesis,objv1_scaled_objv2_scaled_-0.0228271484375
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.0228271484375 : -0.02294921875 : -0.02288818359375
+synthesis,objv1_scaled_objv2_scaled_-0.02288818359375
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.02288818359375 : -0.02294921875 : -0.022918701171875
+synthesis,objv1_scaled_objv2_scaled_-0.022918701171875
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.022918701171875 : -0.02294921875 : -0.0229339599609375
+synthesis,objv1_scaled_objv2_scaled_-0.0229339599609375
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.0229339599609375 : -0.02294921875 : -0.02294158935546875
+synthesis,objv1_scaled_objv2_scaled_-0.02294158935546875
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.02294158935546875 : -0.02294921875 : -0.022945404052734375
+synthesis,objv1_scaled_objv2_scaled_-0.022945404052734375
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.02294158935546875 : -0.022945404052734375 : -0.022943496704101562
+synthesis,objv1_scaled_objv2_scaled_-0.022943496704101562
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.02294158935546875 : -0.022943496704101562 : -0.022942543029785156
+synthesis,objv1_scaled_objv2_scaled_-0.022942543029785156
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.022942543029785156 : -0.022943496704101562 : -0.02294301986694336
+synthesis,objv1_scaled_objv2_scaled_-0.02294301986694336
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.022942543029785156 : -0.02294301986694336 : -0.022942781448364258
+synthesis,objv1_scaled_objv2_scaled_-0.022942781448364258
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.022942781448364258 : -0.02294301986694336 : -0.02294290065765381
+synthesis,objv1_scaled_objv2_scaled_-0.02294290065765381
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.02294290065765381 : -0.02294301986694336 : -0.022942960262298584
+synthesis,objv1_scaled_objv2_scaled_-0.022942960262298584
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.022942960262298584 : -0.02294301986694336 : -0.02294299006462097
+synthesis,objv1_scaled_objv2_scaled_-0.02294299006462097
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.02294299006462097 : -0.02294301986694336 : -0.022943004965782166
+synthesis,objv1_scaled_objv2_scaled_-0.022943004965782166
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2 : -6 : -0.022943004965782166 : -0.02294301986694336 : -0.022943012416362762
+synthesis,objv1_scaled_objv2_scaled_-0.022943012416362762
+ca,unsat
+activity check, objective objv1 threshold -0.02294301986694336
+synthesis,thresholds_-0.022943009866943358_-0.02294301986694336_check
+ca,unsat
+activity check, objective objv2 threshold -0.02294301986694336
+synthesis,thresholds_-0.02294301986694336_-0.022943009866943358_check
+ca,sat,0,0,0,0
+ce,unsat
+pareto_iteration,1,objv1__objv2,-0.02294301986694336__None
+single_objective_u0_l0_u_l, objv2_scaled : 1 : -0.022943009866943358 : inf : -0.022943009866943358
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : inf : -0.022943009866943358 : 1
+synthesis,objv2_scaled_1
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : 1 : -0.022943009866943358 : 0.48852849506652835
+synthesis,objv2_scaled_0.48852849506652835
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : 0.48852849506652835 : -0.022943009866943358 : 0.2327927425997925
+synthesis,objv2_scaled_0.2327927425997925
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : 0.2327927425997925 : -0.022943009866943358 : 0.10492486636642456
+synthesis,objv2_scaled_0.10492486636642456
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : 0.10492486636642456 : -0.022943009866943358 : 0.0409909282497406
+synthesis,objv2_scaled_0.0409909282497406
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : 0.0409909282497406 : -0.022943009866943358 : 0.00902395919139862
+synthesis,objv2_scaled_0.00902395919139862
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : 0.00902395919139862 : -0.022943009866943358 : -0.0069595253377723685
+synthesis,objv2_scaled_-0.0069595253377723685
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.0069595253377723685 : -0.022943009866943358 : -0.014951267602357862
+synthesis,objv2_scaled_-0.014951267602357862
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.0069595253377723685 : -0.014951267602357862 : -0.010955396470065114
+synthesis,objv2_scaled_-0.010955396470065114
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.0069595253377723685 : -0.010955396470065114 : -0.008957460903918742
+synthesis,objv2_scaled_-0.008957460903918742
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.008957460903918742 : -0.010955396470065114 : -0.009956428686991928
+synthesis,objv2_scaled_-0.009956428686991928
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.009956428686991928 : -0.010955396470065114 : -0.010455912578528521
+synthesis,objv2_scaled_-0.010455912578528521
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010455912578528521 : -0.010955396470065114 : -0.010705654524296818
+synthesis,objv2_scaled_-0.010705654524296818
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010455912578528521 : -0.010705654524296818 : -0.010580783551412669
+synthesis,objv2_scaled_-0.010580783551412669
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010580783551412669 : -0.010705654524296818 : -0.010643219037854743
+synthesis,objv2_scaled_-0.010643219037854743
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010580783551412669 : -0.010643219037854743 : -0.010612001294633706
+synthesis,objv2_scaled_-0.010612001294633706
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010612001294633706 : -0.010643219037854743 : -0.010627610166244224
+synthesis,objv2_scaled_-0.010627610166244224
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010612001294633706 : -0.010627610166244224 : -0.010619805730438966
+synthesis,objv2_scaled_-0.010619805730438966
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010612001294633706 : -0.010619805730438966 : -0.010615903512536336
+synthesis,objv2_scaled_-0.010615903512536336
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010612001294633706 : -0.010615903512536336 : -0.01061395240358502
+synthesis,objv2_scaled_-0.01061395240358502
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.01061395240358502 : -0.010615903512536336 : -0.010614927958060679
+synthesis,objv2_scaled_-0.010614927958060679
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010614927958060679 : -0.010615903512536336 : -0.010615415735298507
+synthesis,objv2_scaled_-0.010615415735298507
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010614927958060679 : -0.010615415735298507 : -0.010615171846679594
+synthesis,objv2_scaled_-0.010615171846679594
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010615171846679594 : -0.010615415735298507 : -0.01061529379098905
+synthesis,objv2_scaled_-0.01061529379098905
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010615171846679594 : -0.01061529379098905 : -0.010615232818834322
+synthesis,objv2_scaled_-0.010615232818834322
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010615171846679594 : -0.010615232818834322 : -0.010615202332756958
+synthesis,objv2_scaled_-0.010615202332756958
+ca,sat,0,0,0,0
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010615171846679594 : -0.010615202332756958 : -0.010615187089718276
+synthesis,objv2_scaled_-0.010615187089718276
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 2.0229430098669434 : -0.022943009866943358 : -0.010615187089718276 : -0.010615202332756958 : -0.010615194711237617
+synthesis,objv2_scaled_-0.010615194711237617
+ca,unsat
