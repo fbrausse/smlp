@@ -1,0 +1,9 @@
+stage,solver,x0,x1,x2,y1,y2
+interface_consistency,sat,0,7,3
+model_consistency,sat,0,7,805306377/134217728,9,9
+witness_consistency,sat,0,7,805306377/134217728,9,9
+witness_consistency,sat,0,7,805306377/134217728,9,9
+ca,sat,1,1,27/4,9,5
+ce,unsat
+ca,sat,0,1,1140850697/201326592,5,5
+ce,sat,0,4,805306377/134217728,9,9

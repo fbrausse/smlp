@@ -1,0 +1,17 @@
+{
+	"asrt1": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"x0": 8.601911912575982,
+			"x1": 1.0,
+			"y1": 5.078988552093506,
+			"x2": 7.0,
+			"y2": 5.078784562647343
+		},
+		"assertion_feasible": true
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}
