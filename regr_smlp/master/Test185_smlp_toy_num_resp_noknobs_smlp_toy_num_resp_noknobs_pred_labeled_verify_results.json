@@ -14,10 +14,10 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"x1": 1.0,
+			"x1": 7.0,
 			"y1": 5.0,
 			"x2": 6.000000067055225,
-			"y2": 5.0
+			"y2": 9.0
 		},
 		"assertion_feasible": true
 	},
@@ -25,10 +25,10 @@
 		"configuration_consistent": "true",
 		"assertion_status": "FAIL",
 		"counter_example": {
-			"x1": 1.0,
+			"x1": 7.0,
 			"y1": 5.0,
-			"x2": 7.0,
-			"y2": 5.0
+			"x2": 6.000000067055225,
+			"y2": 9.0
 		},
 		"assertion_feasible": false
 	},

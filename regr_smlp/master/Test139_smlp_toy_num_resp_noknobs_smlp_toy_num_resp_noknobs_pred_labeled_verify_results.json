@@ -16,7 +16,7 @@
 		"counter_example": {
 			"x1": 1.0,
 			"y1": 5.0,
-			"x2": 6.000000067055225,
+			"x2": 7.0,
 			"y2": 5.0
 		},
 		"assertion_feasible": true
