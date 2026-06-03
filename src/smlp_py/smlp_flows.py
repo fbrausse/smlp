@@ -338,7 +338,7 @@ class SmlpFlows:
             self.modelInst.model_features_sanity_check(model_features_dict, feat_names, X_train, X_test, X)
             
             if args.analytics_mode == 'verify':
-                if len(self.specInst.get_spec_knobs)> 0:
+                if True or len(self.specInst.get_spec_knobs)> 0:
                     if config_dict is None:
                         configuration = self.specInst.sanity_check_verification_spec()
                         config_dict = dict([(asrt_name, configuration) for asrt_name in asrt_names])
