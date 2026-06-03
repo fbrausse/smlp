@@ -1,16 +1,16 @@
 {
 	"vacuity": {
 		"objv1": {
-			"value_in_config": 5.46,
-			"threshold_scaled": 0.11499999999999999,
-			"threshold": 5.46,
+			"value_in_config": 5.720000000000001,
+			"threshold_scaled": 0.18000000000000016,
+			"threshold": 5.720000000000001,
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
 		"objv2": {
-			"value_in_config": 5.92,
-			"threshold_scaled": 0.22999999999999998,
-			"threshold": 5.92,
+			"value_in_config": 6.44,
+			"threshold_scaled": 0.3600000000000001,
+			"threshold": 6.44,
 			"max_in_data": 9.0,
 			"min_in_data": 5.0
 		},
@@ -21,10 +21,10 @@
 			"value_in_config": 4.0
 		},
 		"p2": {
-			"value_in_config": 3.5
+			"value_in_config": 4.0
 		},
 		"y1": {
-			"value_in_config": 5.92
+			"value_in_config": 6.44
 		},
 		"y2": {
 			"value_in_config": 5.0

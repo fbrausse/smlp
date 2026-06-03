@@ -12,7 +12,7 @@ synthesis,objv1_scaled_objv2_scaled_1
 ca,unsat
 objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1 : -inf : 0
 synthesis,objv1_scaled_objv2_scaled_0
-ca,sat,4,7/2,10,172/25,217/25
+ca,sat,4,19/4,10,187/25,209/25
 ce,unsat
 objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1 : 0 : 0.5
 synthesis,objv1_scaled_objv2_scaled_0.5

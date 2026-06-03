@@ -1,9 +1,9 @@
 stage,solver,p1,p2,x,y1,y2
 interface_consistency,sat,4,3,10
-model_consistency,sat,4,1140850689/268435456,10,161/25,5
+model_consistency,sat,4,3,10,148/25,5
 synthesis_feasibility
 synthesis,synthesis_feasibility
-ca,sat,4,7/2,10,148/25,5
+ca,sat,4,4,10,161/25,5
 ce,unsat
 pareto_iteration,0,objv1__objv2,None__None
 single_objective_u0_l0_u_l, objv1_scaled_objv2_scaled : 1 : 0 : inf : -inf
@@ -12,7 +12,7 @@ synthesis,objv1_scaled_objv2_scaled_1
 ca,unsat
 objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1 : -inf : 0
 synthesis,objv1_scaled_objv2_scaled_0
-ca,sat,4,7/2,10,148/25,5
+ca,sat,4,4,10,161/25,5
 ce,unsat
 objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1 : 0 : 0.5
 synthesis,objv1_scaled_objv2_scaled_0.5
