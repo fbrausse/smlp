@@ -63,11 +63,11 @@ class SmlpVerify:
         solver_instance.add(self._smlpTermsInst.smlp_not(asrt_form))
         res = solver_instance.check()
         
-        if self._modelTermsInst.solver_status_is_unsat(res): #isinstance(res, core.unsat):
+        if self._modelTermsInst.solver_status_unsat(res): #isinstance(res, core.unsat):
             status = 'UNSAT' if asrt_name == self._VACUITY_ASSERTION_NAME else 'PASS'
             self._verify_logger.info('Completed with result: {}'.format(status)) #UNSAT 'PASS'
             asrt_res_dict = {'status':'PASS', 'asrt':None, 'model':None}
-        elif self._modelTermsInst.solver_status_is_sat(res): #isinstance(res, core.sat):
+        elif self._modelTermsInst.solver_status_sat(res): #isinstance(res, core.sat):
             status = 'SAT' if asrt_name == self._VACUITY_ASSERTION_NAME else 'FAIL'
             self._verify_logger.info('Completed with result: {}'.format(status)) #SAT 'FAIL (SAT)'
             witness_vals_dict = self._smlpTermsInst.witness_term_to_const(self._modelTermsInst.get_solver_model(res),
@@ -76,7 +76,7 @@ class SmlpVerify:
             asrt_ce_val = eval(asrt_expr, {},  witness_vals_dict)
             assert not asrt_ce_val
             asrt_res_dict = {'status':'FAIL', 'asrt': asrt_ce_val, 'model':witness_vals_dict}
-        elif self._modelTermsInst.solver_status_is_unknwn(res): #isinstance(res, core.unknown):
+        elif self._modelTermsInst.solver_status_unknown(res): #isinstance(res, core.unknown):
             self._verify_logger.info('Completed with result: {}'.format('UNKNOWN'))
             # TODO !!!: add reason for UNKNOWN or report that reason as 'status' field
             asrt_res_dict = {'status':'UNKNOWN', 'asrt':None, 'model':None}

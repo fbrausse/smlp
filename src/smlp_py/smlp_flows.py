@@ -87,6 +87,7 @@ class SmlpFlows:
         self.specInst.set_logger(self.logger)
         self.frontierInst.set_logger(self.logger)
         self.optInst.set_logger(self.logger)
+        self.verifyInst.set_logger(self.logger)
         self.queryInst.set_logger(self.logger)
         self.refineInst.set_logger(self.logger)
         self.correlInst.set_logger(self.logger)
