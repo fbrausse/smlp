@@ -368,32 +368,12 @@
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test26_model_rerun_model_config.json
 =================== End of Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
-=================== Diff report for: Test29_smlp_toy_cls_metasymbol_colnames_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test29_smlp_toy_cls_metasymbol_colnames_mult.txt diff report ================================
-=================== Diff report for: Test30_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test30_smlp_toy_num_resp_mult.txt diff report ================================
-=================== Diff report for: Test31_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test31_smlp_toy_num_resp_mult.txt diff report ================================
 =================== Diff report for: Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
 75c75
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test20_model_rerun_model_config.json
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test20_model_rerun_model_config.json
 =================== End of Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
-=================== Diff report for: Test33_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test33_smlp_toy_num_resp_mult.txt diff report ================================
 =================== Diff report for: Test47_test47_model_smlp_toy_pf_mult.txt ==================================
 83c83
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test47_model_rerun_model_config.json
@@ -507,7 +487,7 @@
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test66_test65_model.txt diff report ================================
 =================== Diff report for: Test66_test65_model_verify_results.json ==================================
-diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
 =================== End of Test66_test65_model_verify_results.json diff report ================================
 =================== Diff report for: Test68_test67_model.txt ==================================
 0a1,97
@@ -610,7 +590,7 @@ diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test68_test67_model.txt diff report ================================
 =================== Diff report for: Test68_test67_model_verify_results.json ==================================
-diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
 =================== End of Test68_test67_model_verify_results.json diff report ================================
 =================== Diff report for: Test70_test69_model.txt ==================================
 25c25
@@ -706,7 +686,7 @@ diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test72_test71_model.txt diff report ================================
 =================== Diff report for: Test72_test71_model_verify_results.json ==================================
-diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
 =================== End of Test72_test71_model_verify_results.json diff report ================================
 =================== Diff report for: Test77_test76_model.txt ==================================
 0a1,110
@@ -822,7 +802,7 @@ diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test77_test76_model.txt diff report ================================
 =================== Diff report for: Test77_test76_model_verify_results.json ==================================
-diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
 =================== End of Test77_test76_model_verify_results.json diff report ================================
 =================== Diff report for: Test97_smlp_toy_num_resp_mult.txt ==================================
 252c252
@@ -837,7 +817,7 @@ diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test101_model_rerun_model_config.json
 =================== End of Test102_test101_model.txt diff report ================================
 =================== Diff report for: test110_model_poly_sklearn_formula.txt ==================================
-diff: /home/zurabk/smlp/repo/smlp/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/test110_model_poly_sklearn_formula.txt: No such file or directory
+diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/test110_model_poly_sklearn_formula.txt: No such file or directory
 =================== End of test110_model_poly_sklearn_formula.txt diff report ================================
 =================== Diff report for: Test111_test110_model_smlp_toy_basic_pred_unlabeled.txt ==================================
 79c79

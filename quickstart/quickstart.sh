@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+
+set -x 
+
 script_path="$(dirname "$(realpath "$0")")"
 name=Constraint_dora
 if [[ $# -gt 0 ]]; then

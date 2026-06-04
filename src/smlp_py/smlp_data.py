@@ -85,7 +85,7 @@ class SmlpData:
         # Default values of dataset processing related parameters; used to generate args parser.
         # Here are some principles for data processing which give a more precise meaning to the 
         # options introduced below:
-        # Consant columns and responses are dropped always in the training data, so all responses 
+        # Constant features and responses are dropped always in the training data, so all responses
         # which will be considered for anlysis have at least two values (not so for test/new data).
         #
         # data preprocessing
@@ -254,12 +254,18 @@ class SmlpData:
                     'that has value 1 for each data sample (row) where resp1 is greater than 5 and value 0 '
                     'for the remaining samples [default: {}]'.format(str(self._RESPONSE_TO_BOOL))},
             'positive_value': {'abbr':'pos_val', 'default':self.SMLP_POSITIVE_VALUE, 'type':str,
-                'help':'Value that represents positive values in a binary categorical response ' +
-                    'in the original input data (before any data processing has been applied) ' +
+                'help':'For a binary categorical response, it is the value that represents the positive ' +
+                    'class in the original input data (before any data processing has been applied). ' +
+                    'For a numeric response, it must be 0 or 1, and is only relevant for the subgroups mode. ' +
+                    'Value 0 indicates that the low values in the response should be treated as positive, ' +
+                    'and value 1 indicates that the high values should be treated as positive ' +
                     '[default: {}]'.format(str(self.SMLP_POSITIVE_VALUE))},
             'negative_value': {'abbr':'neg_val', 'default':self.SMLP_NEGATIVE_VALUE, 'type':str,
-                'help':'Value that represents negative values in a binary categorical response ' +
-                    'in the original input data (before any data processing has been applied) ' +
+                'help':'For a binary categorical response, it is the value that represents the negative ' +
+                    'class in the original input data (before any data processing has been applied). ' +
+                    'For a numeric response, it must be 0 or 1, and is only relevant for the subgroups mode. ' +
+                    'Value 1 indicates that the low values in the response should be treated as positive, ' +
+                    'and value 0 indicates that the high values should be treated as positive ' +
                     '[default: {}]'.format(str(self.SMLP_NEGATIVE_VALUE))},
             'response_plots': {'abbr':'resp_plots', 'default': self._DEF_RESPONSE_PLOTS, 'type':str_to_bool,
                 'help': 'Should response value distribution plots be genrated during data processing? ' +

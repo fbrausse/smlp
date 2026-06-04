@@ -55,7 +55,8 @@ class SmlpFlows:
         self.correlInst = SmlpCorrelations()
         
         # get args
-        args_dict = self.modelInst.model_params_dict | \
+        args_dict = self.configInst.modes_data_dict | \
+                    self.modelInst.model_params_dict | \
                     self.dataInst.data_params_dict | \
                     self.configInst.config_params_dict | \
                     self.loggerInst.logger_params_dict | \

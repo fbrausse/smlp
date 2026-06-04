@@ -368,32 +368,12 @@
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test26_model_rerun_model_config.json
 =================== End of Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
-=================== Diff report for: Test29_smlp_toy_cls_metasymbol_colnames_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test29_smlp_toy_cls_metasymbol_colnames_mult.txt diff report ================================
-=================== Diff report for: Test30_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test30_smlp_toy_num_resp_mult.txt diff report ================================
-=================== Diff report for: Test31_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test31_smlp_toy_num_resp_mult.txt diff report ================================
 =================== Diff report for: Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
 75c75
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test20_model_rerun_model_config.json
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test20_model_rerun_model_config.json
 =================== End of Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
-=================== Diff report for: Test33_smlp_toy_num_resp_mult.txt ==================================
-95,96d94
-< smlp_logger - WARNING - Range plots are not supported in this version of SMLP
-< 
-=================== End of Test33_smlp_toy_num_resp_mult.txt diff report ================================
 =================== Diff report for: Test47_test47_model_smlp_toy_pf_mult.txt ==================================
 83c83
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test47_model_rerun_model_config.json

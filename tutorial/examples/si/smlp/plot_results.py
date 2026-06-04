@@ -1,11 +1,60 @@
-#!/usr/bin/env python3.11
+#!/usr/bin/env python3
+import os
+import platform
+import shutil
+import subprocess
+import tempfile
+import os.path
+
+cache_root = os.path.join(tempfile.gettempdir(), "smlp-cache")
+os.environ.setdefault("XDG_CACHE_HOME", cache_root)
+os.environ.setdefault("MPLCONFIGDIR", os.path.join(cache_root, "matplotlib"))
+
+import matplotlib
+
+IS_MACOS = platform.system() == "Darwin"
+
+# define IS_AARCH64
+
+try:
+    with open('/proc/sys/kernel/arch') as f:        
+        if 'aarch64' in f.read():
+            IS_AARCH64= True
+        else:
+            IS_AARCH64= False
+except OSError:
+    IS_AARCH64= False
+        
+try:
+    import tkinter as tk
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    HAS_TK = True
+    TK_IMPORT_ERROR = None
+except ImportError as exc:
+    tk = None
+    FigureCanvasTkAgg = None
+    HAS_TK = False
+    TK_IMPORT_ERROR = exc
+    
+# switch off Tk if aarch64 docker (used in MacOS)
+
+if IS_AARCH64 and os.path.isfile("/.dockerenv"):
+    tk = None
+    FigureCanvasTkAgg = None
+    HAS_TK = False
+    
+# Configure the backend before importing pyplot or seaborn. Use TkAgg when Tk
+# is present because this script embeds the figure in a Tk window; otherwise
+# fall back to Agg so pyenv/macOS Python builds without _tkinter can still save
+# and open the PNG.
+if HAS_TK:
+    matplotlib.use("TkAgg")
+else:
+    matplotlib.use("Agg")
+
 import pandas as pd
 import seaborn as sns
-import matplotlib
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import tkinter as tk
 import numpy as np
 import re
 from math import inf
@@ -153,7 +202,8 @@ fig.text(
     bbox=dict(boxstyle="round,pad=0.5", facecolor="#dce3ec", edgecolor="#aab4c2", alpha=0.9)
 )
 plt.tight_layout(rect=[0, 0.08, 1, 1])
-plt.savefig(f"{plot_name}.png", dpi=150, bbox_inches="tight")
+png_path = Path(f"{plot_name}.png").resolve()
+plt.savefig(png_path, dpi=150, bbox_inches="tight")
 
 # ── Scrollable Tk window ──────────────────────────────────────────────────────
 timeout = inf
@@ -161,11 +211,26 @@ if len(argv) > 3:
     if '-timeout' == argv[2]:
         timeout = int(argv[3])
 
+if not HAS_TK:
+    print(f"Saved plot to {png_path}")
+    if IS_MACOS and shutil.which("open") and timeout == inf:
+        subprocess.Popen(["open", str(png_path)])
+    elif IS_MACOS and timeout != inf:
+        print("Skipping macOS Preview auto-open because -timeout was requested.")
+    else:
+        print(f"Skipping preview: Tk viewer unavailable: {TK_IMPORT_ERROR}")
+    exit(0)
+
 root = tk.Tk()
 root.title(f"{plot_name} — Optimization Results")
 
-# Get screen dimensions and set window to full screen height
-root.geometry("1280x1024")
+# Size the window within the available screen. This avoids oversized windows
+# on smaller MacBook displays while preserving the original Linux dimensions.
+screen_w = root.winfo_screenwidth()
+screen_h = root.winfo_screenheight()
+window_w = min(1280, screen_w)
+window_h = min(1024, screen_h)
+root.geometry(f"{window_w}x{window_h}")
 
 # Outer frame holds canvas + scrollbars
 outer = tk.Frame(root)
@@ -194,11 +259,20 @@ tk_canvas.config(scrollregion=(0, 0, fig_w_px, fig_h_px))
 
 mpl_canvas.draw()
 
-# Mouse-wheel horizontal scroll (Shift+wheel or middle-drag)
+# Mouse-wheel horizontal scroll (Shift+wheel). macOS trackpads usually emit
+# small deltas, while X11/Windows wheels typically emit multiples of 120.
+def _wheel_units(delta):
+    if delta == 0:
+        return 0
+    if IS_MACOS and abs(delta) < 120:
+        return -1 if delta > 0 else 1
+    return int(-1 * (delta / 120))
+
 def _on_mousewheel(event):
-    tk_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+    tk_canvas.yview_scroll(_wheel_units(event.delta), "units")
+
 def _on_shift_mousewheel(event):
-    tk_canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
+    tk_canvas.xview_scroll(_wheel_units(event.delta), "units")
 
 root.bind_all("<MouseWheel>", _on_mousewheel)
 root.bind_all("<Shift-MouseWheel>", _on_shift_mousewheel)
@@ -214,6 +288,9 @@ def _quit(e=None):
 
 root.bind_all("<Escape>", _quit)
 root.bind_all("<q>", _quit)
+if IS_MACOS:
+    root.bind_all("<Command-q>", _quit)
+    root.createcommand("tk::mac::Quit", _quit)
 
 if not inf == timeout:
     root.after(int(timeout * 1000), _quit)

@@ -4,27 +4,27 @@ Running test 1 test type: train, description: basic dt_caret training and test o
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test1 -mode train -resp y1 -feat x,p1,p2 -model dt_caret -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f  
 
 Initiating 1 worker...
-Running test 2 test type: prediction, description: basic rf_sklearn prediction test on labeled and new data with numeric labels
+Running test 2 test type: prediction, description: basic rf_sklearn prediction test on labeled and new data with numeric labelsInitiating 2 worker...
+
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test2 -mode predict -resp y1 -feat x,p1,p2 -model rf_sklearn -rf_sklearn_max_depth 15 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
-Initiating 2 worker...
+Initiating 3 worker...
 Running test 3 test type: prediction, description: basic poly_sklearn prediction test on labeled and new data with numeric response in training/test data only
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test3 -mode predict -resp y1 -feat x,p1,p2 -model poly_sklearn -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_unlabeled.csv" 
 
-Initiating 3 worker...
 Initiating 4 worker...
+Initiating 5 worker...
 Running test 4 test type: prediction, description: basic nn_keras prediction test on labeled and new data with numeric labels and one response
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test4 -mode predict -resp y2 -feat x,p1,p2 -model nn_keras -nn_keras_weights_precision 2 -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f -nn_keras_epochs 20 -nn_keras_seq_api f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
-Initiating 5 worker...
-Running test 5 test type: prediction, description: basic dt_caret prediction test on labeled and new data with numeric labels
-../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test5 -mode predict -resp y1 -feat x,p1,p2 -model dt_caret -save_model t -use_model f -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f   -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
-
+Initiating 6 worker...
 Running test 6 test type: prediction, description: basic dt_sklearn prediction test on labeled and new data with numeric labels
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test6 -mode predict -resp y1,y2 -feat x,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
-Initiating 6 worker...
 Initiating 7 worker...
+Running test 5 test type: prediction, description: basic dt_caret prediction test on labeled and new data with numeric labels
+../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test5 -mode predict -resp y1 -feat x,p1,p2 -model dt_caret -save_model t -use_model f -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f   -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
+
 Running test 7 test type: prediction, description: basic rf_sklearn prediction test on labeled and new data with numeric labels
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test7 -mode predict -resp y1,y2 -feat x,p1,p2 -model rf_sklearn -rf_sklearn_max_depth 15 -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
@@ -794,6 +794,37 @@ Running test 226 test type: correlate, description: basic test for correlate mod
 Running test 227 test type: correlate, description: basic test for correlate mode and tests the normalized mutual information
 ../../src/run_smlp.py -data "../data/smlp_toy_basic.csv" -out_dir ./ -pref Test227 -mode correlate -resp y1,y2 -discr_algo uniform -discret_num t -discr_bins 6 -discr_labels t -discr_type object -data_scaler none -cont_est pearson,spearman,kendall -mi_method normalized -mrmr_pred 0 -plots f -seed 10 -log_time f  
 
+spec_fn smlp_toy_system_radii_update_certify.spec
+specs_path ../specs
+Running test 228 test type: certify, description: test that radii specified in command line properly override the radii specified in the spec file. Here we override both ansolute and relative radii and one can observe that the certification results also change compared to test 116
+../../src/run_smlp.py -data "../data/smlp_toy_basic.csv" -out_dir ./ -pref Test228 -mode certify -resp y1,y2 -feat x1,x2,p1,p2 -model system -save_model f -use_model f -mrmr_pred 2 -model_per_response t -spec ../specs/smlp_toy_system_radii_update_certify.spec -rad_rel 0.005 -rad_abs 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  
+
+spec_fn smlp_toy_missing_radii.spec
+specs_path ../specs
+Running test 229 test type: certify, description: basic test for checking that each knob must have either absolute or relative radius specified in the spec file (even if radii are specified in the command line)
+../../src/run_smlp.py -data "../data/smlp_toy_basic.csv" -out_dir ./ -pref Test229 -mode certify -resp y1,y2 -feat x1,x2,p1,p2 -model system -save_model f -use_model f -mrmr_pred 2 -model_per_response t -spec ../specs/smlp_toy_missing_radii.spec -rad_rel 0.005 -rad_abs 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  
+
+spec_fn smlp_toy_system_monotone_knob.05_verify.spec
+specs_path ../specs
+Running test 230 test type: verify, description: tests that outputs in system specificaation might depend on different inuts (knobs and free inputs)
+../../src/run_smlp.py -data "../data/smlp_toy_monotone_basic.csv" -out_dir ./ -pref Test230 -mode verify -spec ../specs/smlp_toy_system_monotone_knob.05_verify.spec -model system -seed 10 -log_time f  
+
+spec_fn smlp_toy_system_decreasing_knob.05_certify.spec
+specs_path ../specs
+Running test 231 test type: certify, description: certification test with monotonicity query with a knob with a grid point
+../../src/run_smlp.py -data "../data/smlp_toy_monotone_basic.csv" -out_dir ./ -pref Test231 -mode certify -spec ../specs/smlp_toy_system_decreasing_knob.05_certify.spec -model system -seed 10 -log_time f  
+
+spec_fn smlp_toy_system_running_example_certify.spec
+specs_path ../specs
+Running test 232 test type: certify, description: running example from smlp manual
+../../src/run_smlp.py -data "../data/smlp_toy_system_running_example_certify.csv" -out_dir ./ -pref Test232 -mode certify -spec ../specs/smlp_toy_system_running_example_certify.spec -model system -seed 10 -log_time f  
+
+Running test 233 test type: subgroups, description: tests subgroup discovery mode when the response has string values
+../../src/run_smlp.py -data "../data/smlp_toy_string_response.csv" -out_dir ./ -pref Test233 -mode subgroups -resp str_resp1 -feat num,int,str -pos_val no -neg_val yes -seed 10 -log_time f  
+
+Running test 234 test type: subgroups, description: tests subgroup discovery mode when there are two responses with string values
+../../src/run_smlp.py -data "../data/smlp_toy_string_response.csv" -out_dir ./ -pref Test234 -mode subgroups -resp str_resp1,str_resp2 -feat num,int,str -pos_val no -neg_val yes -seed 10 -log_time f  
+
 comparing Test1_smlp_toy_num_resp_mult_y1_dt_caret_tree_rules.txt to master
 Passed!
 comparing Test1_smlp_toy_num_resp_mult.txt to master
@@ -1423,6 +1454,7 @@ Passed!
 comparing Test28_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_training_predictions_summary.csv to master
 Passed!
 comparing Test29_smlp_toy_cls_metasymbol_colnames_mult.txt to master
+Passed!
 comparing Test29_smlp_toy_cls_metasymbol_colnames_mult_features_ranking.csv to master
 Passed!
 comparing Test29_smlp_toy_cls_metasymbol_colnames_mult_missing_values_dict.json to master
@@ -1430,6 +1462,7 @@ Passed!
 comparing Test29_smlp_toy_cls_metasymbol_colnames_mult_ranking_resp_feat.csv to master
 Passed!
 comparing Test30_smlp_toy_num_resp_mult.txt to master
+Passed!
 comparing Test30_smlp_toy_num_resp_mult_features_ranking.csv to master
 Passed!
 comparing Test30_smlp_toy_num_resp_mult_missing_values_dict.json to master
@@ -1437,6 +1470,7 @@ Passed!
 comparing Test30_smlp_toy_num_resp_mult_ranking_resp_feat.csv to master
 Passed!
 comparing Test31_smlp_toy_num_resp_mult.txt to master
+Passed!
 comparing Test31_smlp_toy_num_resp_mult_args_config.json to master
 Passed!
 comparing Test31_smlp_toy_num_resp_mult_features_ranking.csv to master
@@ -1455,6 +1489,7 @@ Passed!
 comparing Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv to master
 Passed!
 comparing Test33_smlp_toy_num_resp_mult.txt to master
+Passed!
 comparing Test33_smlp_toy_num_resp_mult_features_ranking.csv to master
 Passed!
 comparing Test33_smlp_toy_num_resp_mult_missing_values_dict.json to master
@@ -4329,8 +4364,70 @@ File master Test226_smlp_toy_basic.txt does not exist
 File master Test226_smlp_toy_basic_features_summary.csv does not exist
 File master Test227_smlp_toy_basic.txt does not exist
 File master Test227_smlp_toy_basic_features_summary.csv does not exist
+comparing Test228_smlp_toy_basic.txt to master
+Passed!
+comparing Test228_smlp_toy_basic_certify_results.json to master
+Passed!
+comparing Test228_smlp_toy_basic_data_bounds.json to master
+Passed!
+comparing Test228_smlp_toy_basic_model_features_dict.json to master
+Passed!
+comparing Test228_smlp_toy_basic_model_levels_dict.json to master
+Passed!
+comparing Test228_smlp_toy_basic_trace.csv to master
+Passed!
+comparing Test229_smlp_toy_basic.txt to master
+Passed!
+comparing Test230_smlp_toy_monotone_basic.txt to master
+Passed!
+comparing Test230_smlp_toy_monotone_basic_data_bounds.json to master
+Passed!
+comparing Test230_smlp_toy_monotone_basic_model_features_dict.json to master
+Passed!
+comparing Test230_smlp_toy_monotone_basic_model_levels_dict.json to master
+Passed!
+comparing Test230_smlp_toy_monotone_basic_trace.csv to master
+Passed!
+comparing Test230_smlp_toy_monotone_basic_verify_results.json to master
+Passed!
+comparing Test231_smlp_toy_monotone_basic.txt to master
+Passed!
+comparing Test231_smlp_toy_monotone_basic_certify_results.json to master
+Passed!
+comparing Test231_smlp_toy_monotone_basic_data_bounds.json to master
+Passed!
+comparing Test231_smlp_toy_monotone_basic_model_features_dict.json to master
+Passed!
+comparing Test231_smlp_toy_monotone_basic_model_levels_dict.json to master
+Passed!
+comparing Test231_smlp_toy_monotone_basic_trace.csv to master
+Passed!
+comparing Test232_smlp_toy_system_running_example_certify.txt to master
+Passed!
+comparing Test232_smlp_toy_system_running_example_certify_certify_results.json to master
+Passed!
+comparing Test232_smlp_toy_system_running_example_certify_data_bounds.json to master
+Passed!
+comparing Test232_smlp_toy_system_running_example_certify_model_features_dict.json to master
+Passed!
+comparing Test232_smlp_toy_system_running_example_certify_model_levels_dict.json to master
+Passed!
+comparing Test232_smlp_toy_system_running_example_certify_trace.csv to master
+Passed!
+comparing Test233_smlp_toy_string_response.txt to master
+Passed!
+comparing Test233_smlp_toy_string_response_features_ranking.csv to master
+Passed!
+comparing Test233_smlp_toy_string_response_ranking_resp_feat.csv to master
+Passed!
+comparing Test234_smlp_toy_string_response.txt to master
+Passed!
+comparing Test234_smlp_toy_string_response_features_ranking.csv to master
+Passed!
+comparing Test234_smlp_toy_string_response_ranking_resp_feat.csv to master
+Passed!
 master log file does not exist!
 Do you wish to copy the new log file to master?
 (yes/no|y/n): No new tests crashed (not in the masters)
-Time: 31.98271323442459 minutes
+Time: 35.39404908021291 minutes
 End of regression

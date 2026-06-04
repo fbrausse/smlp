@@ -1,0 +1,13 @@
+num,int,str,str_resp1,str_resp2
+1.5,1,apple,yes,yes
+2.7,2,banana,no,yes
+3.14,3,cherry,yes,no
+4.0,4,date,no,no
+5.25,5,elderberry,yes,no
+6.8,6,fig,no,no
+7.1,7,grape,yes,yes
+8.6,8,honeydew,no,yes
+9.9,9,kiwi,yes,yes
+10.2,10,lemon,no,no
+11.75,11,mango,yes,yes
+12.0,12,nectarine,no,no

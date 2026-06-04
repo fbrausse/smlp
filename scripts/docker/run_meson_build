@@ -19,6 +19,7 @@ GIT_BRANCH=$1
 ./run_git_clone $GIT_BRANCH
 
 # Run meson setup
+pip3.11 install meson
 cd /app/smlp/utils/poly
 python3.11 -m mesonbuild.mesonmain setup \
     --wipe \

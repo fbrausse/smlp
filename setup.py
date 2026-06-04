@@ -785,7 +785,6 @@ class MesonBuildExt(_build_ext):
                     (REPO_ROOT / "src" / "smlp_py",     dest / "smlp_py",     "dir"),
                     (REPO_ROOT / "src" / "__init__.py", dest / "__init__.py", "file"),
                     (REPO_ROOT / "src" / "run_smlp.py", dest / "run_smlp.py", "file"),
-                    (REPO_ROOT / "quickstart",          dest / "quickstart",  "dir"),
         ]
         for src, dst, kind in sources:
             copy_success = False

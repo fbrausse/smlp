@@ -1,0 +1,13 @@
+str,num,int,str_resp1,str_resp2
+apple,1.5,1,0,0
+banana,2.7,2,1,0
+cherry,3.14,3,0,1
+date,4.0,4,1,1
+elderberry,5.25,5,0,1
+fig,6.8,6,1,1
+grape,7.1,7,0,0
+honeydew,8.6,8,1,0
+kiwi,9.9,9,0,0
+lemon,10.2,10,1,1
+mango,11.75,11,0,0
+nectarine,12.0,12,1,1
