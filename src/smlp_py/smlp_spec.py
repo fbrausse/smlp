@@ -514,7 +514,7 @@ class SmlpSpec:
         
         return alpha_expr
 
-    # API to extract from spec a global beta constraint defind using feild "beta"
+    # API to extract from spec a global beta constraint defined using field "beta"
     @property
     def get_spec_beta_global_expr(self):
         if self._beta_cmdl_expr is not None:
