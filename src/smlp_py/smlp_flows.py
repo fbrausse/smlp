@@ -214,9 +214,9 @@ class SmlpFlows:
             # is not a real overhead and we prefer to keep code readable and computate all these expressions.
             # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
             # the responses as objectives, and the names of objectives are names of the responses prefixed by 'objv_'.
-            alpha_global_expr, beta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs, quer_names, quer_exprs, \
+            alpha_global_expr, beta_expr, eta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs, quer_names, quer_exprs, \
                 config_dict, witn_dict, objv_names, objv_exprs, syst_expr_dict = self.specInst.get_spec_component_exprs(
-                args.alpha, args.beta, args.delta_absolute, args.delta_relative, args.assertions_names, args.assertions_expressions, 
+                args.alpha, args.beta, args.eta, args.delta_absolute, args.delta_relative, args.assertions_names, args.assertions_expressions,
                 args.query_names, args.query_expressions, args.objectives_names, args.objectives_expressions,
                 resp_names, self.dataInst.commandline_condition_separator)
             
@@ -292,7 +292,7 @@ class SmlpFlows:
             self.frontierInst.select_pareto_frontier(
                 X, y, None, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
                 args.optimization_strategy, quer_names, quer_exprs, 
-                delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict)
+                delta_dict, args.epsilon, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
@@ -344,57 +344,63 @@ class SmlpFlows:
                         config_dict = dict([(asrt_name, configuration) for asrt_name in asrt_names])
                     self.queryInst.smlp_verify(syst_expr_dict, args.model, model, 
                         model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, config_dict,
-                        delta_dict, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                        delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                         args.solver_logic, args.vacuity_check, 
                         args.data_scaler, args.scale_features, args.scale_responses,
-                        args.approximate_fractions, args.fraction_precision, 
-                        self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                        float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                        data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                        T_resp_bounds_csv_path=None)
                 else:
                     self.verifyInst.smlp_verify(syst_expr_dict, args.model, model, 
                         model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs, alpha_global_expr, 
                         args.solver_logic, args.vacuity_check,
-                        args.data_scaler, args.scale_features, args.scale_responses, 
-                        args.approximate_fractions, args.fraction_precision,
-                        self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                        args.data_scaler, args.scale_features, args.scale_responses,
+                        float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                        data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                        T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'certify':
                 if witn_dict is None:
                     witness = self.specInst.sanity_check_certification_spec()
                     witn_dict = dict([(quer_name, witness) for quer_name in quer_names])
                 self.queryInst.smlp_certify(syst_expr_dict, args.model, model, #False, #universal
                     model_features_dict, feat_names, resp_names, quer_names, quer_exprs, witn_dict,
-                    delta_dict, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, #args.scale_objectives, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    args.data_scaler, args.scale_features, args.scale_responses, #args.scale_objectives,
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'query':
                 self.queryInst.smlp_query(syst_expr_dict, args.model, model, 
                     #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, quer_names, quer_exprs, 
-                    delta_dict, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives,
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'synthesize':
                 self.queryInst.smlp_synthesize(syst_expr_dict, args.model, model,
                     #self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, asrt_names, asrt_exprs,
-                    delta_dict, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    delta_dict, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    args.data_scaler, args.scale_features, args.scale_responses,
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
             elif args.analytics_mode == 'optimize':
                 self.optInst.smlp_optimize(syst_expr_dict, args.model, model,
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
                     args.optimization_strategy, quer_names, quer_exprs, 
-                    delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    delta_dict, args.epsilon, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
-                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
+                    args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives,
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
                 
                 #self.logger.info('self.optInst.best_config_dict {}'.format(str(self.optInst.best_config_dict)))
                 if syst_expr_dict is not None:
@@ -407,12 +413,12 @@ class SmlpFlows:
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 
                     model_features_dict, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
                     args.optimization_strategy, asrt_names, asrt_exprs, quer_names, quer_exprs, 
-                    delta_dict, args.epsilon, alpha_global_expr, beta_expr, args.eta, theta_radii_dict, 
+                    delta_dict, args.epsilon, alpha_global_expr, beta_expr, eta_expr, theta_radii_dict,
                     args.solver_logic, args.vacuity_check, 
                     args.data_scaler, args.scale_features, args.scale_responses, args.scale_objectives, 
-                    args.approximate_fractions, args.fraction_precision,
-                    self.dataInst.data_bounds_file, bounds_factor=None, T_resp_bounds_csv_path=None)
-            
+                    float_approx=args.approximate_fractions, float_precision=args.fraction_precision,
+                    data_bounds_json_path=self.dataInst.data_bounds_file, bounds_factor=None,
+                    T_resp_bounds_csv_path=None)
                 
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')

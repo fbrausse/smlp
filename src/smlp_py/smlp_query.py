@@ -476,8 +476,10 @@ class SmlpQuery:
             model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
             asrt_names:list[str], asrt_exprs:list[str], witn_dict:dict, delta:dict,
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, 
-            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+            data_scaler:str, scale_feat:bool, scale_resp:bool,
+            *,
+            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None,
+            T_resp_bounds_csv_path=None):
         self.validate_witness(True, syst_expr_dict, algo, model,
             model_features_dict, feat_names, resp_names, 
             asrt_names, asrt_exprs, witn_dict, delta,
@@ -489,8 +491,10 @@ class SmlpQuery:
             model_features_dict:dict, feat_names:list[str], resp_names:list[str], 
             quer_names:list[str], quer_exprs:list[str], witn_dict:dict, delta:dict,
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, float_approx=True, float_precision=64, 
-            data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+            data_scaler:str, scale_feat:bool, scale_resp:bool,
+            *,
+            float_approx=True, float_precision=64,  data_bounds_json_path=None, bounds_factor=None,
+            T_resp_bounds_csv_path=None):
         self.validate_witness(False, syst_expr_dict, algo, model,
             model_features_dict, feat_names, resp_names, 
             quer_names, quer_exprs, witn_dict, delta,
@@ -610,8 +614,10 @@ class SmlpQuery:
     def smlp_query(self, syst_expr_dict:dict, algo:str, model:dict, model_features_dict:dict,
             feat_names:list[str], resp_names:list[str], quer_names:list[str], quer_exprs:list[str], delta:float,
             alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool, float_approx=True, float_precision=64, 
-            data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+            data_scaler:str, scale_feat:bool, scale_resp:bool, scale_objv:bool,
+            *,
+            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None,
+            T_resp_bounds_csv_path=None):
         # *_synthrsis_results.json file fields
         QUERY_FEASIBLE = 'query_feasible'
         QUERY_STABLE = 'query_stable' 
@@ -682,8 +688,10 @@ class SmlpQuery:
     def smlp_synthesize(self, syst_expr_dict:dict, algo:str, model:dict, #X:pd.DataFrame, y:pd.DataFrame, 
             model_features_dict:dict, feat_names:list[str], resp_names:list[str], asrt_names, asrt_exprs, 
             delta:float, alph_expr:str, beta_expr:str, eta_expr:str, theta_radii_dict:dict, solver_logic:str, vacuity:bool, 
-            data_scaler:str, scale_feat:bool, scale_resp:bool, #scale_objv:bool, 
-            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None, T_resp_bounds_csv_path=None):
+            data_scaler:str, scale_feat:bool, scale_resp:bool, #scale_objv:bool,
+            *,
+            float_approx=True, float_precision=64, data_bounds_json_path=None, bounds_factor=None,
+            T_resp_bounds_csv_path=None):
         # *_synthrsis_results.json file fields
         QUERY_FEASIBLE = 'configuration_feasible'
         QUERY_STABLE = 'configuration_stable'

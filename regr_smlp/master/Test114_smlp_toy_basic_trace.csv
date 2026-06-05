@@ -1,0 +1,37 @@
+stage,solver,p1,p2,x1,x2,y1,y2
+interface_consistency,sat,4,3,10,0
+model_consistency,sat,4,3,10,0,499791472247068216593/720575940379279360000,601/50
+synthesis_feasibility
+synthesis,synthesis_feasibility
+ca,sat,4,4,10,0,107007/10000,1077047109884722593/112589990684262400
+ce,unsat
+pareto_iteration,0,objective1__objective2,None__None
+single_objective_u0_l0_u_l, objective1_scaled_objective2_scaled : 1 : 0 : inf : -inf
+objective_thresholds_u0_l0_u_l_T, 2 : 0 : inf : -inf : 1
+synthesis,objective1_scaled_objective2_scaled_1
+ca,sat,4,4,10,0,107007/10000,1077047109884722593/112589990684262400
+ce,unsat
+objective_thresholds_u0_l0_u_l_T, 4 : 0 : inf : 1 : 2
+synthesis,objective1_scaled_objective2_scaled_2
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 4 : 0 : 2 : 1 : 1.5
+synthesis,objective1_scaled_objective2_scaled_1.5
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 4 : 0 : 1.5 : 1 : 1.25
+synthesis,objective1_scaled_objective2_scaled_1.25
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 4 : 0 : 1.25 : 1 : 1.125
+synthesis,objective1_scaled_objective2_scaled_1.125
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 4 : 0 : 1.125 : 1 : 1.0625
+synthesis,objective1_scaled_objective2_scaled_1.0625
+ca,unsat
+objective_thresholds_u0_l0_u_l_T, 4 : 0 : 1.0625 : 1 : 1.03125
+synthesis,objective1_scaled_objective2_scaled_1.03125
+ca,unsat
+activity check, objective objective1 threshold 1.0
+synthesis,thresholds_1.05_1.0_check
+ca,unsat
+activity check, objective objective2 threshold 1.0
+synthesis,thresholds_1.0_1.05_check
+ca,unsat

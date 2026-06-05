@@ -66,46 +66,52 @@ class SmlpSpec:
                     '[default: {}]'.format(str(self._DEF_ETA))}
         }
 
-        # assertions -- specified through command line (_cmdl_), spec file (_spec_), and final definition of assertions
-        # self._asrt_dict, currently obtained by overriding spec definitions (if any) with command line definitions (if any).
+        # Assertions specified through command line and/or spec file. The final definition self._asrt_dict
+        # is obtained by overriding spec definitions (if any) with command line definitions (if any).
         self._asrt_cmdl_dict = None
         self._asrt_spec_dict = None
         self._asrt_dict = None
         
-        # queries -- specified through command line (_cmdl_), spec file (_spec_), and final definition of queries
-        # self._quer_dict, currently obtained by overriding spec definitions (if any) with command line definitions (if any).
+        # Queries specified through command line and/or spec file. The final definition self._quer_dict
+        # is obtained by overriding spec definitions (if any) with command line definitions (if any).
         self._quer_cmdl_dict = None
         self._quer_spec_dict = None
         self._quer_dict = None
         
-        # objectives -- specified through command line (_cmdl_), spec file (_spec_), and final definition of objectives
-        # self._objv_dict, currently obtained by overriding spec definitions (if any) with command line definitions (if any).
+        # Objectives specified through command line and/or spec file. The final definition self._objv_dict
+        # is obtained by overriding spec definitions (if any) with command line definitions (if any).
         self._objv_cmdl_dict = None
         self._objv_spec_dict = None
         self._objv_dict = None
         
-        # alpha -- global constraints on inputs only (free inputs and / or knobs), cmdl, spec and final versions 
-        # defined as self._alpha_global_expr by overriding cmdl spec definition self._alpha_cmdl_expr (if any) 
-        # with command line definition self._alpha_cmdl_expr (if any).
+        # Alpha global constraints on free inputs and/or knobs, in addition to alpha ranges constraints
+        # derived from specification of free inputs in the spec file; to be satisfied in all model
+        # exploration tasks. Defined as self._alpha_global_expr by overriding spec file definition
+        # self._alpha_spec_expr (if any) with command line definition self._alpha_cmdl_expr (if any).
         self._alpha_global_expr = None
         self._alpha_cmdl_expr = None
         self._alpha_spec_expr = None
         
-        # beta -- global constraints on interface -- inputs (free inputs and / or knobs), and outputs (responses) of
-        # the model, to be satisfied during optimization and tuning tasks (not relevant for verification and querying).
-        # defined as self._beta_global_expr by overriding cmdl spec definition self._beta_cmdl_expr (if any) 
+        # Beta global constraints on interface -- free inputs, knobs, and outputs (responses) of the model;
+        # to be satisfied in optimization and knobs' tuning tasks (not relevant for verification and querying).
+        # Defined as self._beta_global_expr by overriding spec file definition self._beta_spec_expr (if any)
         # with command line definition self._beta_cmdl_expr (if any).
         self._beta_global_expr = None 
         self._beta_cmdl_expr = None
         self._beta_spec_expr = None
         
-        # eta -- global constraints on knobs (in addition to eta constraints derived from knob ranges and grids).
+        # Eta global constraints on knobs, in addition to eta constraints derived from knob ranges and knob
+        # grids specification of knobs in the spec file; to be satisfied in all model exploration tasks.
+        # Defined as self._eta_global_expr by overriding spec file definition self._eta_spec_expr (if any)
+        # with command line definition self._eta_cmdl_expr (if any).
         self._eta_global_expr = None
+        self._eta_cmdl_expr = None
+        self._eta_spec_expr = None
         
-        # witnesses to queries, for certify mode; supposed to include assignements to inputs and knobs
+        # Witnesses to queries, for certify mode; supposed to include assignements to inputs and knobs
         self._witn_dict = None
         
-        # configurations to assertions, for verify mode; supposed to include assignements to knobs only (not inputs)
+        # Configurations to assertions, for verify mode; supposed to include assignements to knobs only
         self._config_dict = None
         
         # feilds in spec file defining specification of each variable
@@ -207,11 +213,11 @@ class SmlpSpec:
     # sanity checks on declarations in the spec file
     def sanity_check_spec(self):
         # eta global and grid constraints can only be defined on knobs
-        eta_expr = self.get_spec_global_eta_expr
+        eta_expr = self.get_spec_eta_global_expr
         for var_spec in self.spec:
             for k in var_spec.keys():
                 if k not in [self._SPEC_VARIABLE_LABEL, self._SPEC_VARIABLE_TYPE, self._SPEC_VARIABLE_RANGE, 
-                            self._SPEC_INPUTS_BOUNDS, self._SPEC_KNOBS_GRID, 
+                            self._SPEC_INPUTS_BOUNDS, self._SPEC_KNOBS_GRID,
                             self._SPEC_KNOBS_ABSOLUTE_RADIUS, self._SPEC_KNOBS_RELATIVE_RADIUS]:
                     raise Exception('Unexpected variable specification field ' + '"{}"'.format(str(k)))
             
@@ -244,6 +250,7 @@ class SmlpSpec:
                 if both_radii_defined or no_radii_defined:
                     raise Exception('Either a relative or an absolute radius must be specified for each knop (but not both radii). ' + 
                         'This fails for varaible {}.'.format(var_spec[self._SPEC_VARIABLE_LABEL]))
+                
         # sanity check witnesses: query names in witnesses specification must be among query names
         if self.get_spec_witn_dict is not None and self.get_spec_quer_exprs_dict is not None:
             witn_queries = set(self.get_spec_witn_dict.keys())
@@ -252,7 +259,7 @@ class SmlpSpec:
                 raise Exception('Query names ' + str(witn_queries.difference(queries)) + 
                     ' used for specifying witnesses are not specified among the queries ' + str(queries))
                 
-        # sanity check knob cinfigs: assertion names in knob config specification must be among  assertion names
+        # sanity check knob configs: assertion names in knob config specification must be among  assertion names
         if self.get_spec_config_dict is not None and self.get_spec_asrt_exprs_dict is not None:
             config_asserts = set(self.get_spec_config_dict.keys())
             asserts = set(self.get_spec_asrt_exprs_dict)
@@ -361,7 +368,7 @@ class SmlpSpec:
     def get_spec_inputs(self):
         return [var_spec[self._SPEC_VARIABLE_LABEL] for var_spec in self.spec if 
             var_spec[self._SPEC_VARIABLE_TYPE] == self._SPEC_INPUT_TAG]
-    
+        
     # API to compute the list of inputs in spec
     @property
     def get_spec_interface(self):
@@ -423,6 +430,7 @@ class SmlpSpec:
         non_constant_knobs = []
         knobs_without_range_and_grid = []
         witness = {}
+        
         for var_spec in self.spec:
             if not var_spec[self._SPEC_VARIABLE_LABEL] in spec_knobs:
                 continue
@@ -503,10 +511,10 @@ class SmlpSpec:
             assert self._alpha_spec_expr is None
             assert self._alpha_global_expr is None
             alpha_expr = None
-            
+        
         return alpha_expr
 
-    # API to extract from spec a global beta constraint defind using feild "beta"
+    # API to extract from spec a global beta constraint defined using field "beta"
     @property
     def get_spec_beta_global_expr(self):
         if self._beta_cmdl_expr is not None:
@@ -525,7 +533,27 @@ class SmlpSpec:
             beta_expr = None
             
         return beta_expr
-
+    
+    # API to extract from spec a global eta constraint defined using faild "eta"
+    @property
+    def get_spec_eta_global_expr(self):
+        if self._eta_cmdl_expr is not None:
+            eta_expr = self._eta_cmdl_expr
+        elif self._eta_spec_expr is not None:
+            eta_expr = self._eta_spec_expr
+        elif self._SPEC_DICTIONARY_ETA in self.spec_dict.keys():
+            assert isinstance(self.spec_dict[self._SPEC_DICTIONARY_ETA], str)
+            eta_expr = self.spec_dict[self._SPEC_DICTIONARY_ETA]
+            self._eta_spec_expr = eta_expr
+            self._eta_global_expr = eta_expr
+        else:
+            assert self._eta_cmdl_expr is None
+            assert self._eta_spec_expr is None
+            assert self._eta_global_expr is None
+            eta_expr = None
+            
+        return eta_expr
+    
     def get_cmdl_assertions(self, arg_asrt_names, arg_asrt_exprs, cmdl_cond_sep):
         if arg_asrt_exprs is None:
             return None, None, None
@@ -559,7 +587,7 @@ class SmlpSpec:
         return self._quer_dict, query_names, query_exprs
     
     # When smlp mode is optimize, objectives must be defined. If they are not provided, the default is to use
-    # the reponses as objectives, and the names of objectives are names of the responses prefixed bu 'objv_'.
+    # the responses as objectives, and the names of objectives are names of the responses prefixed by 'objv_'.
     def get_cmdl_objectives(self, arg_objv_names, arg_objv_exprs, resp_names, cmdl_cond_sep):
         if arg_objv_exprs is None:
             return None, None, None
@@ -630,8 +658,8 @@ class SmlpSpec:
         else:
             self._config_dict = None  
         return self._config_dict
-    
-    def get_spec_component_exprs(self, alph_cmdl, beta_cmdl, delta_abs_cmdl, delta_rel_cmdl, asrt_names_cmdl, asrt_exprs_cmdl,
+        
+    def get_spec_component_exprs(self, alph_cmdl, beta_cmdl, eta_cmdl, delta_abs_cmdl, delta_rel_cmdl, asrt_names_cmdl, asrt_exprs_cmdl,
              quer_names_cmdl, quer_exprs_cmdl, objv_names_cmdl, objv_exprs_cmdl, resp_names, cmdl_cond_sep):
         assert self.spec is not None
         # alpha
@@ -646,6 +674,12 @@ class SmlpSpec:
             self._beta_global_expr = beta_cmdl
         beta_expr = self.get_spec_beta_global_expr
 
+        # eta
+        if self._eta_cmdl_expr is None and eta_cmdl is not None:
+            self._eta_cmdl_expr = eta_cmdl
+            self._eta_global_expr = eta_cmdl
+        eta_expr = self.get_spec_eta_global_expr
+                
         # theta radii
         theta_radii_dict = self.get_spec_theta_radii_dict
         
@@ -679,6 +713,7 @@ class SmlpSpec:
         self._spec_logger.info('Computed spec global constraint expressions:')
         self._spec_logger.info('Global alpha : ' + str(alph_expr))
         self._spec_logger.info('Global beta  : ' + str(beta_expr))
+        self._spec_logger.info('Global eta   : ' + str(eta_expr))
         self._spec_logger.info('Radii  theta : ' + str(theta_radii_dict))
         self._spec_logger.info('Delta  const : ' + str(delta_dict))
         if asrt_expr_dict is not None:
@@ -697,6 +732,7 @@ class SmlpSpec:
                 for n, w in asrt_expr_dict.items():
                     if n in config_dict.keys():
                         self._spec_logger.info('Configuration for assertion ' + str(n) + ':\n' + str(config_dict[n]))
+        
         if objv_expr_dict is not None:
             for n, e in objv_expr_dict.items():
                 self._spec_logger.info('Objective ' + str(n) + ': ' + str(e))
@@ -707,7 +743,7 @@ class SmlpSpec:
             self._spec_logger.info('Original system : ' + str(system))
         
         self.sanity_check_spec()
-        return (alph_expr, beta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs, 
+        return (alph_expr, beta_expr, eta_expr, theta_radii_dict, delta_dict, asrt_names, asrt_exprs,
             quer_names, quer_exprs, config_dict, witn_dict, objv_names, objv_exprs, system)
     
         
@@ -760,7 +796,7 @@ class SmlpSpec:
             # first try to get radii values from command line, if they were specified in command line
             if self.radius_relative is not None and self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
                 theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {
-                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: None, 
+                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: None,
                     self._SPEC_KNOBS_RELATIVE_RADIUS: self.radius_relative}
                 continue
             if self.radius_absolute is not None and self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec.keys():
@@ -772,10 +808,11 @@ class SmlpSpec:
             # extract radii values from spec file
             if self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec.keys():
                 theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {
-                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: var_spec[self._SPEC_KNOBS_ABSOLUTE_RADIUS], 
+                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: var_spec[self._SPEC_KNOBS_ABSOLUTE_RADIUS],
                     self._SPEC_KNOBS_RELATIVE_RADIUS: None}
             if self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
-                theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {self._SPEC_KNOBS_ABSOLUTE_RADIUS: None, 
+                theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {
+                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: None,
                     self._SPEC_KNOBS_RELATIVE_RADIUS: var_spec[self._SPEC_KNOBS_RELATIVE_RADIUS]}
         
         self._theta_dict = theta_dict
@@ -871,15 +908,6 @@ class SmlpSpec:
         self._eta_ranges_dict = eta_dict
         self._spec_logger.info('Knob bounds (eta): ' + str(self._eta_ranges_dict))
         return self._eta_ranges_dict
-    
-    # access definition of global eta constraint
-    @property
-    def get_spec_global_eta_expr(self):
-        if self._SPEC_DICTIONARY_ETA in self.spec_dict.keys():
-            self._eta_global_expr = self.spec_dict[self._SPEC_DICTIONARY_ETA]
-            return self._eta_global_expr
-        else:
-            return None
     
     # Compute variables in model exploration constraints -- constraints on model interface
     # (inputs that can be knobs or free inputs, and outputs), assertions, queries, optimization

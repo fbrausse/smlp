@@ -18,7 +18,7 @@
 			"value_in_config": 10.0
 		},
 		"p1": {
-			"value_in_config": 2.0
+			"value_in_config": 4.0
 		},
 		"p2": {
 			"value_in_config": 4.0
@@ -49,7 +49,7 @@
 			"value_in_config": 10.0
 		},
 		"p1": {
-			"value_in_config": 2.0
+			"value_in_config": 4.0
 		},
 		"p2": {
 			"value_in_config": 4.0
@@ -80,7 +80,7 @@
 			"value_in_config": 10.0
 		},
 		"p1": {
-			"value_in_config": 2.0
+			"value_in_config": 4.0
 		},
 		"p2": {
 			"value_in_config": 4.0
@@ -132,7 +132,7 @@
 			"value_in_config": 10.0
 		},
 		"p1": {
-			"value_in_config": 2.0
+			"value_in_config": 4.0
 		},
 		"p2": {
 			"value_in_config": 4.0

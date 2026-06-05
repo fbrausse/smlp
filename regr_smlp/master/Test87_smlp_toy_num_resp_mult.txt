@@ -12,6 +12,8 @@ smlp_logger - INFO - Global alpha : p2==7.0 and x==0 and p1==2.5
 
 smlp_logger - INFO - Global beta  : None
 
+smlp_logger - INFO - Global eta   : None
+
 smlp_logger - INFO - Radii  theta : {}
 
 smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
