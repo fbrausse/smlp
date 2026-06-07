@@ -28,9 +28,12 @@ if(-e /.dockerenv ) then
         set sudo=`which sudo`
     endif
     $sudo apt update
-    $sudo apt install -y python3-pip
+    $sudo apt install -y python3-pip python3-pandas
     rehash
-    pip3.12 install pytest pytest-xdist pandas --target $HOME/.local/lib/python3.12/site-packages
+    set local_lib=$HOME/.local/lib/python3.12/site-packages
+    pip3.12 install pytest pytest-xdist --target $local_lib
+    setenv PYTHONPATH $local_lib
+    sed -i.bak 's/python3/python3.12/' $local_lib/bin/pytest
 else
     set prompt='%U%m%u:%B%~%b%#'
     source $smlp_path:h/bin/activate.csh
