@@ -1,24 +1,40 @@
 #!/usr/bin/tcsh -f
 set script_path=`realpath $0 | xargs dirname`
 set script_name=`realpath $0 | xargs basename`
-set log=$PWD/${script_name}.log
-set diff_report=$log:h/${script_name}_diff_report.log
-git rev-parse --show-toplevel >& /dev/null
+set git_root=`(git rev-parse --show-toplevel) |& grep -v fatal`
 if($status) then
     echo "\nERROR: Current directory is outside git directory tree\n"
     exit(1)
 endif
-set venv_path=$script_path:h:h/scripts/venv/smlp_package_venv
-cd $venv_path/smlp
+set log=$PWD/${script_name}.log
+set diff_report=$log:h/${script_name}_diff_report.log
+if(-e /.dockerenv ) then
+    set smlp_path=$git_root
+else
+    set smlp_path=$script_path:h:h/scripts/venv/smlp_package_venv/smlp
+endif
 \rm -rf regr_smlp/code/{__pycache__,logs.log} >& /dev/null
 if($#argv > 0) then
     if("-clean" == "$argv[1]") then
         exit(0)
     endif
 endif
-set prompt='%U%m%u:%B%~%b%#'
-source ${venv_path}/bin/activate.csh
-cd ${venv_path}/smlp/regr_smlp/code
+cd ${smlp_path}/regr_smlp/code
+if(-e /.dockerenv ) then
+    which sudo > & /dev/null
+    if($status) then
+        set sudo=""
+    else
+        set sudo=`which sudo`
+    endif
+    $sudo apt update
+    $sudo apt install -y python3-pip
+    rehash
+    pip3.12 install pytest pytest-xdist pandas --target $HOME/.local/lib/python3.12/site-packages
+else
+    set prompt='%U%m%u:%B%~%b%#'
+    source $smlp_path:h/bin/activate.csh
+endif
 set pytest=`pip3.12 show pytest | grep Location | awk '{print $2}'`/bin/pytest
 echo "Pytest: $pytest"
 echo "Log file: $log"
