@@ -726,6 +726,8 @@ class Test65(CmdTestCase):
 	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x0,x1,x2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model', 't', '-use_model', 'f', '-model_name', 'test65_model', '-spec', 'smlp_toy_num_resp_noknobs_verify.spec', '-asrt_names', 'asrt1,asrt2', '-asrt_exprs', 'x0**2+y1>4.3;(y1+x2)/2<6', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.real
+@pytest.mark.xfail(True, reason='missing input data',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test66(CmdTestCase):
 	'''
 	basic dt_sklearn  assertion verification test on data with one numeric response
@@ -748,6 +750,8 @@ class Test67(CmdTestCase):
 	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x0,x1,x2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-model_per_response', 't', '-save_model', 't', '-use_model', 'f', '-model_name', 'test67_model', '-spec', 'smlp_toy_num_resp_noknobs_verify.spec', '-asrt_names', 'asrt1,asrt2', '-asrt_exprs', 'x0**2+y1>4.3;(y1+x2)/2<6', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.real
+@pytest.mark.xfail(True, reason='missing input data',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test68(CmdTestCase):
 	'''
 	basic dt_sklearn  assertion verification test on data with one numeric response
@@ -792,6 +796,8 @@ class Test71(CmdTestCase):
 	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x0,x1,x2', '-model', 'nn_keras', '-nnet_encoding', 'nested', '-save_model', 't', '-use_model', 'f', '-model_name', 'test71_model', '-model_per_response', 't', '-spec', 'smlp_toy_num_resp_noknobs_verify.spec', '-asrt_names', 'asrt1', '-asrt_exprs', '(y1**3+x2)/2<6', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-nn_keras_epochs', '20', '-nn_keras_seq_api', 'f', '-solver_path', 'mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
 
 @pytest.mark.real
+@pytest.mark.xfail(True, reason='missing input data',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test72(CmdTestCase):
 	'''
 	nn_keras verification test with re-using saved model_per_response trained model
@@ -847,6 +853,8 @@ class Test76(CmdTestCase):
 	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x0,x1,x2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model', 't', '-use_model', 'f', '-model_name', 'test76_model', '-mrmr_pred', '2', '-model_per_response', 'f', '-spec', 'smlp_toy_num_resp_noknobs_verify.spec', '-asrt_names', 'asrt1,asrt2,asrt3', '-asrt_exprs', '(y2**3+x2)/2<6;y1>=9;y2<0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.real
+@pytest.mark.xfail(True, reason='missing input data',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test77(CmdTestCase):
 	'''
 	verification test run using model_rerun config covering the case when mrmr selcts only a subset of features specified through the command line or config file
@@ -1617,6 +1625,8 @@ class Test144(CmdTestCase):
 
 @pytest.mark.toy
 @pytest.mark.real
+@pytest.mark.xfail(True, reason='wrong spec due to singleton value',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test145(CmdTestCase):
 	'''
 	optimization test with constant knob and no inputs where synthesis is feasible and optimization is performed
@@ -1629,6 +1639,8 @@ class Test145(CmdTestCase):
 
 @pytest.mark.toy
 @pytest.mark.real
+@pytest.mark.xfail(True, reason='wrong spec due to singleton value',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test146(CmdTestCase):
 	'''
 	optimization test with constant knob and no inputs where synthesis is feasible and optimization is performed
@@ -2257,6 +2269,8 @@ class Test200(CmdTestCase):
 	args = ['-mode', 'optimize', '-opt_strategy', 'lazy', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'et_sklearn', '-et_sklearn_max_depth', '2', '-et_sklearn_n_estimators', '100', '-et_sklearn_bootstrap', 'f', '-tree_encoding', 'branched', '-model_per_response', 'f', '-compress_rules', 't', '-save_model', 'f', '-use_model', 'f', '-mrmr_pred', '2', '-spec', 'smlp_toy_num_resp_mult_optsyn.spec', '-epsilon', '0.1', '-delta_rel', '0', '-solver_path', 'mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy
+@pytest.mark.xfail(True, reason='missing input data',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test201(CmdTestCase):
 	'''
 	basic dt_sklearn single objective optimization with the eager algorithm when there are no inputs and there are beta constraints
@@ -2268,6 +2282,8 @@ class Test201(CmdTestCase):
 	args = ['-mode', 'optimize', '-pareto', 't', '-opt_strategy', 'eager', '-resp', 'y1,y2', '-feat', 'p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-compress_rules', 'f', '-spec', 'smlp_toy_num_resp_mult_no_input_beta.spec', '-data_scaler', 'min_max', '-objv_names', 'obj1', '-objv_exprs', '(y1+y2)/2', '-epsilon', '0.05', '-delta_rel', '0.01', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy
+@pytest.mark.xfail(True, reason='missing input data',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test202(CmdTestCase):
 	'''
 	basic dt_sklearn single objective optimization with the eager algorithm when there are no inputs and no beta constraints
@@ -2302,6 +2318,8 @@ class Test204(CmdTestCase):
 
 @pytest.mark.toy
 @pytest.mark.real
+@pytest.mark.xfail(True, reason='missing input data',
+                   raises=subprocess.CalledProcessError, strict=True)
 class Test205(CmdTestCase):
 	'''
 	optimization test with eager strategy and with constant knob and no inputs where synthesis is feasible and optimization is performed adapts test 145

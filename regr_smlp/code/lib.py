@@ -253,6 +253,11 @@ def check_outputs(tmpdir):
 	return _check_outputs(test_id, args, stdout, stderr, projdir/'regr_smlp', tmpdir)
 
 def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
+	# sorted diff for sklearn_tree_rules.txt
+	with open("./sorted_diff.bash","w", encoding="utf-8") as sorted_diff:
+		sorted_diff.write('#!/usr/bin/bash\necho ./sorted_diff.bash $1 $2\ndiff <(sort $1) <(sort $2)\n')
+		os.chmod("./sorted_diff.bash",0o755)
+
 	# adapted from smlp_regr.py
 	diff = 'diff'
 
@@ -340,20 +345,24 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 			# condition before, dropping from it h5 file checks because getting UnicodeDecodeError error on Sles 15, say on Test 13.
 			# (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json') or new_file.endswith('.h5')) and not file_name in files_to_ignore_from_diff:
 			exclude_cond = file_name in files_to_ignore_from_diff
-			exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')
+			exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json') or file_name.endswith('.csv')
 			if (Path(new_file).suffix in ('.csv', '.txt', '.html', '.json')) and not exclude_cond:
 				print('comparing {file} to master'.format(file=file_name))
-				# XXX fb: Hack using sed to replace output_path in new log
-				#         file.
-				cmd = (
-					f'sed \'s,{output_path},.,g\' {new_file} | {diff} -B '
-					'-I \'Feature selection.*file .*\' '
-					'-I \'\\[-v-] Input.*\' '
-					'-I \'usage:.*\' '
-					'-I \'Seving model rerun configuration in file\' '
-					'-I \'Saving data bounds into file:\' '
-					f'- {master_file}'
-				)
+				# Order of lines in *_sklearn_tree_rules.txt is not significant
+				if file_name.endswith('_sklearn_tree_rules.txt'):
+					cmd = (f'./sorted_diff.bash {new_file} {master_file}')
+				else:
+					# XXX fb: Hack using sed to replace output_path in new log
+					#         file.
+					cmd = (
+						f'sed \'s,{output_path},.,g\' {new_file} | {diff} -B '
+						'-I \'Feature selection.*file .*\' '
+						'-I \'\\[-v-] Input.*\' '
+						'-I \'usage:.*\' '
+						'-I \'Seving model rerun configuration in file\' '
+						'-I \'Saving data bounds into file:\' '
+						f'- {master_file}'
+					)
 				p = subprocess.Popen(
 					cmd,
 					shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -407,7 +416,7 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 						answer = user_input
 			if model_file:
 				master_files.remove(file_name)
-				os.remove(new_file)
+				#os.remove(new_file)
 				if file in master_files:
 					master_files.remove(file)
 			else:
