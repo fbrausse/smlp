@@ -1,8 +1,0 @@
-#!/usr/bin/tcsh -f
-set mathsat=mathsat-5.6.8-linux-x86_64-reentrant
-set mathsat_bin_dir=`realpath $0 | xargs dirname`/external/$mathsat/bin
-mkdir -p $mathsat_bin_dir
-wget --tries=5 --timeout=30 --waitretry=2 https://mathsat.fbk.eu/release/${mathsat}.tar.gz -O /tmp/${mathsat}.tar.gz
-cd /tmp
-tar -xvf ${mathsat}.tar.gz  >& ${mathsat}.tar.log 
-cp -p $mathsat/bin/mathsat $mathsat_bin_dir

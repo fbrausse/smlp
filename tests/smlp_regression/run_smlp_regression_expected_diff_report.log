@@ -1,0 +1,833 @@
+=================== Diff report for: Test7_smlp_toy_num_resp_mult_rf_sklearn_tree_rules.txt ==================================
+94d93
+< if (p2 > 0.4000000134110451) and (p1 <= 0.75) and (p2 > 0.7000000178813934) and (x <= 0.6666666716337204) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+96c95
+< if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.4000000134110451) and (p1 <= 0.75) and (p2 > 0.7000000178813934) and (x <= 0.6666666716337204) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+97a97
+> if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+=================== End of Test7_smlp_toy_num_resp_mult_rf_sklearn_tree_rules.txt diff report ================================
+=================== Diff report for: Test10_smlp_toy_num_resp_mult_et_sklearn_tree_rules.txt ==================================
+6d5
+< if (p1 > 0.7673577288013687) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+7a7
+> if (p1 > 0.7673577288013687) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+21d20
+< if (p2 > 0.565498446377692) and (p1 > 0.21566598080828134) and (p2 > 0.7262518305173236) and (x > 0.03081251758592215) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+22a22
+> if (p2 > 0.565498446377692) and (p1 > 0.21566598080828134) and (p2 > 0.7262518305173236) and (x > 0.03081251758592215) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+44d43
+< if (p2 > 0.05282566885129813) and (p1 > 0.9621611074368288) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+45a45
+> if (p2 > 0.05282566885129813) and (p1 > 0.9621611074368288) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+66d65
+< if (p2 > 0.10769168804757841) and (p2 > 0.9843916629018533) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+67a67
+> if (p2 > 0.10769168804757841) and (p2 > 0.9843916629018533) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+73d72
+< if (p1 <= 0.9643084043470717) and (p2 > 0.7106753814549537) and (x <= 0.7383051325780686) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+75c74
+< if (p1 > 0.9643084043470717) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p1 <= 0.9643084043470717) and (p2 > 0.7106753814549537) and (x <= 0.7383051325780686) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+76a76
+> if (p1 > 0.9643084043470717) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+88d87
+< if (p2 > 0.37253817607301204) and (p1 > 0.5069297996847564) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+89a89
+> if (p2 > 0.37253817607301204) and (p1 > 0.5069297996847564) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+96d95
+< if (p1 > 0.8097833990164955) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+97a97
+> if (p1 > 0.8097833990164955) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+103d102
+< if (p2 > 0.30979522099243256) and (p2 > 0.7974478444662528) and (x <= 0.7718040145802331) and (p1 <= 0.9832575130198419) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+105c104
+< if (p2 > 0.30979522099243256) and (p2 > 0.7974478444662528) and (x > 0.7718040145802331) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+---
+> if (p2 > 0.30979522099243256) and (p2 > 0.7974478444662528) and (x <= 0.7718040145802331) and (p1 <= 0.9832575130198419) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+106a106
+> if (p2 > 0.30979522099243256) and (p2 > 0.7974478444662528) and (x > 0.7718040145802331) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+118d117
+< if (p1 > 0.6478692095949636) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+119a119
+> if (p1 > 0.6478692095949636) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+126d125
+< if (p2 > 0.5083941302766997) and (p1 > 0.9604900148513215) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+127a127
+> if (p2 > 0.5083941302766997) and (p1 > 0.9604900148513215) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+134d133
+< if (p2 > 0.38305688667253446) and (p1 > 0.2547155522064844) and (p1 > 0.7231216464299344) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+135a135
+> if (p2 > 0.38305688667253446) and (p1 > 0.2547155522064844) and (p1 > 0.7231216464299344) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+141d140
+< if (p1 <= 0.5519522472992318) and (p2 > 0.33294736609465786) and (p2 > 0.7309142946144038) and (x <= 0.6016799023753295) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+143c142
+< if (p1 > 0.5519522472992318) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p1 <= 0.5519522472992318) and (p2 > 0.33294736609465786) and (p2 > 0.7309142946144038) and (x <= 0.6016799023753295) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+144a144
+> if (p1 > 0.5519522472992318) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+155d154
+< if (p1 <= 0.5757871147132418) and (p2 > 0.39527962049249543) and (p2 > 0.6458938131907435) and (x <= 0.6096057855068803) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+157c156
+< if (p1 > 0.5757871147132418) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p1 <= 0.5757871147132418) and (p2 > 0.39527962049249543) and (p2 > 0.6458938131907435) and (x <= 0.6096057855068803) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+158a158
+> if (p1 > 0.5757871147132418) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+204d203
+< if (p1 <= 0.8026946730924279) and (p2 > 0.05688018773537138) and (p2 > 0.4364986121396114) and (p2 > 0.6777798791052577) and (x <= 0.6717608829535293) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+206c205
+< if (p1 > 0.8026946730924279) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p1 <= 0.8026946730924279) and (p2 > 0.05688018773537138) and (p2 > 0.4364986121396114) and (p2 > 0.6777798791052577) and (x <= 0.6717608829535293) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+207a207
+> if (p1 > 0.8026946730924279) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+218d217
+< if (p2 > 0.5397191641571555) and (p1 <= 0.7132398065706901) and (p2 > 0.634045960603359) and (x <= 0.6156377025174744) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+220c219
+< if (p2 > 0.5397191641571555) and (p1 > 0.7132398065706901) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.5397191641571555) and (p1 <= 0.7132398065706901) and (p2 > 0.634045960603359) and (x <= 0.6156377025174744) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+221a221
+> if (p2 > 0.5397191641571555) and (p1 > 0.7132398065706901) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+233d232
+< if (p1 > 0.6806756624396312) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+234a234
+> if (p1 > 0.6806756624396312) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+241d240
+< if (p2 > 0.4943563777461445) and (p1 > 0.920448066629678) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+242a242
+> if (p2 > 0.4943563777461445) and (p1 > 0.920448066629678) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+264d263
+< if (p1 > 0.7209493553829144) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+265a265
+> if (p1 > 0.7209493553829144) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+286d285
+< if (p2 > 0.9499151226831205) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+287a287
+> if (p2 > 0.9499151226831205) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+300d299
+< if (p2 > 0.4160567286499109) and (p1 <= 0.7821608059025187) and (p2 > 0.7500101945124135) and (x <= 0.8482964849267818) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+302c301
+< if (p2 > 0.4160567286499109) and (p1 > 0.7821608059025187) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.4160567286499109) and (p1 <= 0.7821608059025187) and (p2 > 0.7500101945124135) and (x <= 0.8482964849267818) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+303a303
+> if (p2 > 0.4160567286499109) and (p1 > 0.7821608059025187) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+357d356
+< if (p1 <= 0.6838882522116826) and (p2 > 0.0626814738207876) and (p2 > 0.3422835304420513) and (p2 > 0.6023659933821865) and (x <= 0.7909361110756394) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+359c358
+< if (p1 > 0.6838882522116826) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p1 <= 0.6838882522116826) and (p2 > 0.0626814738207876) and (p2 > 0.3422835304420513) and (p2 > 0.6023659933821865) and (x <= 0.7909361110756394) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+360a360
+> if (p1 > 0.6838882522116826) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+364d363
+< if (p2 > 0.40336603038169727) and (p1 <= 0.7296289325364069) and (p2 > 0.6471116276536257) and (x <= 0.4249370103517018) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+366c365
+< if (p2 > 0.40336603038169727) and (p1 > 0.7296289325364069) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.40336603038169727) and (p1 <= 0.7296289325364069) and (p2 > 0.6471116276536257) and (x <= 0.4249370103517018) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+367a367
+> if (p2 > 0.40336603038169727) and (p1 > 0.7296289325364069) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+379d378
+< if (p1 > 0.5139580394672034) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+380a380
+> if (p1 > 0.5139580394672034) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+387d386
+< if (p2 > 0.8305540819794657) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+388a388
+> if (p2 > 0.8305540819794657) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+395d394
+< if (p2 > 0.9449580902908733) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+396a396
+> if (p2 > 0.9449580902908733) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+410d409
+< if (p1 > 0.5120007179267708) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+411a411
+> if (p1 > 0.5120007179267708) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+417d416
+< if (p1 <= 0.610545704891228) and (p2 > 0.6501177091384854) and (x <= 0.7877861639695688) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+419c418
+< if (p1 > 0.610545704891228) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p1 <= 0.610545704891228) and (p2 > 0.6501177091384854) and (x <= 0.7877861639695688) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+420a420
+> if (p1 > 0.610545704891228) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+424d423
+< if (p2 > 0.45482464342137086) and (p1 <= 0.6847267941034989) and (p2 > 0.7332769920461923) and (x <= 0.7843162575827582) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+426c425
+< if (p2 > 0.45482464342137086) and (p1 > 0.6847267941034989) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.45482464342137086) and (p1 <= 0.6847267941034989) and (p2 > 0.7332769920461923) and (x <= 0.7843162575827582) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+427a427
+> if (p2 > 0.45482464342137086) and (p1 > 0.6847267941034989) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+446d445
+< if (p2 > 0.054852516881587224) and (p1 > 0.8053342741007611) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+447a447
+> if (p2 > 0.054852516881587224) and (p1 > 0.8053342741007611) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+461d460
+< if (p2 > 0.35838276676758324) and (p1 > 0.6469177723149386) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+462a462
+> if (p2 > 0.35838276676758324) and (p1 > 0.6469177723149386) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+476d475
+< if (p1 > 0.6586678422329332) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+477a477
+> if (p1 > 0.6586678422329332) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+483d482
+< if (p2 > 0.6300749409152544) and (p1 <= 0.9968296801656623) and (x <= 0.37232690124052253) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+485c484
+< if (p2 > 0.6300749409152544) and (p1 > 0.9968296801656623) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.6300749409152544) and (p1 <= 0.9968296801656623) and (x <= 0.37232690124052253) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+486a486
+> if (p2 > 0.6300749409152544) and (p1 > 0.9968296801656623) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+497d496
+< if (p2 > 0.37996283470651265) and (p1 <= 0.5025284804881217) and (p2 > 0.7656687748432474) and (x <= 0.5092783321373655) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+499c498
+< if (p2 > 0.37996283470651265) and (p1 > 0.5025284804881217) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.37996283470651265) and (p1 <= 0.5025284804881217) and (p2 > 0.7656687748432474) and (x <= 0.5092783321373655) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+500a500
+> if (p2 > 0.37996283470651265) and (p1 > 0.5025284804881217) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+505d504
+< if (p2 > 0.22414377714700243) and (p1 > 0.904138504017209) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+506a506
+> if (p2 > 0.22414377714700243) and (p1 > 0.904138504017209) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+513d512
+< if (p1 > 0.8937446875002909) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+514a514
+> if (p1 > 0.8937446875002909) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+535d534
+< if (p2 > 0.07422745696931493) and (p2 > 0.545370601481947) and (p2 > 0.9300510326789317) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+536a536
+> if (p2 > 0.07422745696931493) and (p2 > 0.545370601481947) and (p2 > 0.9300510326789317) then (y1 = 1.0) and (y2 = 0.0) | based on 1 samples
+542d541
+< if (p2 > 0.7889165751584417) and (x <= 0.9135558618761394) and (p1 <= 0.8191675724550931) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+544c543
+< if (p2 > 0.7889165751584417) and (x > 0.9135558618761394) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+---
+> if (p2 > 0.7889165751584417) and (x <= 0.9135558618761394) and (p1 <= 0.8191675724550931) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+545a545
+> if (p2 > 0.7889165751584417) and (x > 0.9135558618761394) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+549d548
+< if (p2 > 0.09689574087825406) and (p2 > 0.33636798963203285) and (p1 <= 0.8197608151565123) and (p2 > 0.6876566959859812) and (x <= 0.6647538383146583) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+551c550
+< if (p2 > 0.09689574087825406) and (p2 > 0.33636798963203285) and (p1 > 0.8197608151565123) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.09689574087825406) and (p2 > 0.33636798963203285) and (p1 <= 0.8197608151565123) and (p2 > 0.6876566959859812) and (x <= 0.6647538383146583) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+552a552
+> if (p2 > 0.09689574087825406) and (p2 > 0.33636798963203285) and (p1 > 0.8197608151565123) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+556d555
+< if (p2 > 0.16337258050375272) and (p2 > 0.20940975581022525) and (x <= 0.792321881648303) and (p1 <= 0.574456778622445) and (p2 > 0.7807007138854876) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+558c557
+< if (p2 > 0.16337258050375272) and (p2 > 0.20940975581022525) and (x > 0.792321881648303) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+---
+> if (p2 > 0.16337258050375272) and (p2 > 0.20940975581022525) and (x <= 0.792321881648303) and (p1 <= 0.574456778622445) and (p2 > 0.7807007138854876) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+559a559
+> if (p2 > 0.16337258050375272) and (p2 > 0.20940975581022525) and (x > 0.792321881648303) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+563d562
+< if (p2 > 0.7007179663985585) and (x <= 0.47267748344348626) and (p1 <= 0.5654538877147501) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+565c564
+< if (p2 > 0.7007179663985585) and (x > 0.47267748344348626) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+---
+> if (p2 > 0.7007179663985585) and (x <= 0.47267748344348626) and (p1 <= 0.5654538877147501) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+566a566
+> if (p2 > 0.7007179663985585) and (x > 0.47267748344348626) then (y1 = 0.0) and (y2 = 0.0) | based on 1 samples
+570d569
+< if (p2 > 0.30978463977099613) and (p1 <= 0.6320834037065894) and (p2 > 0.6127691589194908) and (x <= 0.6760619000417248) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+572c571
+< if (p2 > 0.30978463977099613) and (p1 > 0.6320834037065894) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.30978463977099613) and (p1 <= 0.6320834037065894) and (p2 > 0.6127691589194908) and (x <= 0.6760619000417248) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+573a573
+> if (p2 > 0.30978463977099613) and (p1 > 0.6320834037065894) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+578d577
+< if (p1 > 0.6819941814439344) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+579a579
+> if (p1 > 0.6819941814439344) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+600d599
+< if (p1 > 0.5931505284240239) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+601a601
+> if (p1 > 0.5931505284240239) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+631d630
+< if (p2 > 0.3774126001528523) and (p1 <= 0.6553700527434098) and (p2 > 0.7353104082940054) and (x <= 0.4155191624469929) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+633c632
+< if (p2 > 0.3774126001528523) and (p1 > 0.6553700527434098) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.3774126001528523) and (p1 <= 0.6553700527434098) and (p2 > 0.7353104082940054) and (x <= 0.4155191624469929) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+634a634
+> if (p2 > 0.3774126001528523) and (p1 > 0.6553700527434098) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+638d637
+< if (p2 > 0.23018040425618197) and (p1 <= 0.7102524464532046) and (p2 > 0.7248063887234734) and (x <= 0.7892120132227867) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+640c639
+< if (p2 > 0.23018040425618197) and (p1 > 0.7102524464532046) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.23018040425618197) and (p1 <= 0.7102524464532046) and (p2 > 0.7248063887234734) and (x <= 0.7892120132227867) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+641a641
+> if (p2 > 0.23018040425618197) and (p1 > 0.7102524464532046) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+653d652
+< if (p2 > 0.21158053456413584) and (p1 > 0.5586915479780601) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+654a654
+> if (p2 > 0.21158053456413584) and (p1 > 0.5586915479780601) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+661d660
+< if (p1 > 0.6795984351446844) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+662a662
+> if (p1 > 0.6795984351446844) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+677d676
+< if (p1 > 0.8126054242312002) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+678a678
+> if (p1 > 0.8126054242312002) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+684d683
+< if (p2 > 0.26886312862339573) and (p1 <= 0.8950548846717248) and (p2 > 0.6824239181038759) and (x <= 0.7910962169102163) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+686c685
+< if (p2 > 0.26886312862339573) and (p1 > 0.8950548846717248) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.26886312862339573) and (p1 <= 0.8950548846717248) and (p2 > 0.6824239181038759) and (x <= 0.7910962169102163) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+687a687
+> if (p2 > 0.26886312862339573) and (p1 > 0.8950548846717248) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+698d697
+< if (p2 > 0.25803846924474394) and (p1 <= 0.85781003667871) and (p2 > 0.6174925668996046) and (x <= 0.4784058184220548) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+700c699
+< if (p2 > 0.25803846924474394) and (p1 > 0.85781003667871) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.25803846924474394) and (p1 <= 0.85781003667871) and (p2 > 0.6174925668996046) and (x <= 0.4784058184220548) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+701a701
+> if (p2 > 0.25803846924474394) and (p1 > 0.85781003667871) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+705d704
+< if (p2 > 0.16944414757631912) and (p1 <= 0.7608029128801092) and (p2 > 0.31309513934344707) and (p2 > 0.7650359471516853) and (x <= 0.6112039253981838) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+707c706
+< if (p2 > 0.16944414757631912) and (p1 > 0.7608029128801092) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+---
+> if (p2 > 0.16944414757631912) and (p1 <= 0.7608029128801092) and (p2 > 0.31309513934344707) and (p2 > 0.7650359471516853) and (x <= 0.6112039253981838) then (y1 = 1.0) and (y2 = 0.0) | based on 2 samples
+708a708
+> if (p2 > 0.16944414757631912) and (p1 > 0.7608029128801092) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+728d727
+< if (p2 > 0.29657478970316) and (p1 > 0.8279177280272906) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+729a729
+> if (p2 > 0.29657478970316) and (p1 > 0.8279177280272906) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+736d735
+< if (p2 > 0.30543398172847647) and (p1 > 0.7651434488432218) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+737a737
+> if (p2 > 0.30543398172847647) and (p1 > 0.7651434488432218) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+=================== End of Test10_smlp_toy_num_resp_mult_et_sklearn_tree_rules.txt diff report ================================
+=================== Diff report for: Test15_Test5_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+87c87
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/Test5_smlp_toy_num_resp_mult_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/Test5_smlp_toy_num_resp_mult_rerun_model_config.json
+=================== End of Test15_Test5_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+87c87
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/Test8_smlp_toy_num_resp_mult_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/Test8_smlp_toy_num_resp_mult_rerun_model_config.json
+=================== End of Test16_Test8_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test17_Test11_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+87c87
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/Test11_smlp_toy_num_resp_mult_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/Test11_smlp_toy_num_resp_mult_rerun_model_config.json
+=================== End of Test17_Test11_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+87c87
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test19_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test19_model_rerun_model_config.json
+=================== End of Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+75c75
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test20_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test20_model_rerun_model_config.json
+=================== End of Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test22_test22_model_smlp_toy_num_metasymbol_mult_reg_pred_labeled.txt ==================================
+75c75
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test22_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test22_model_rerun_model_config.json
+=================== End of Test22_test22_model_smlp_toy_num_metasymbol_mult_reg_pred_labeled.txt diff report ================================
+=================== Diff report for: Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+87c87
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test24_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test24_model_rerun_model_config.json
+=================== End of Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: test26_model_dt_sklearn_tree_rules.txt ==================================
+6d5
+< if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+7a7
+> if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
+=================== End of test26_model_dt_sklearn_tree_rules.txt diff report ================================
+=================== Diff report for: Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+87c87
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test26_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test26_model_rerun_model_config.json
+=================== End of Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
+75c75
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test20_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test20_model_rerun_model_config.json
+=================== End of Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test47_test47_model_smlp_toy_pf_mult.txt ==================================
+83c83
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test47_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test47_model_rerun_model_config.json
+=================== End of Test47_test47_model_smlp_toy_pf_mult.txt diff report ================================
+=================== Diff report for: Test64_test63_model.txt ==================================
+27c27
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test63_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test63_model_rerun_model_config.json
+=================== End of Test64_test63_model.txt diff report ================================
+=================== Diff report for: Test66_test65_model.txt ==================================
+0a1,97
+> 
+> smlp_logger - INFO - Model exploration specification:
+> {'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x0', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x1', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x2', 'type': 'input', 'range': 'float', 'bounds': [3, 7]}], 'alpha': 'x1==1 or x1==4 or x1==7'}
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: Start
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": Start
+> 
+> smlp_logger - INFO - Computed spec global constraint expressions:
+> 
+> smlp_logger - INFO - Global alpha : x1==1 or x1==4 or x1==7
+> 
+> smlp_logger - INFO - Global beta  : None
+> 
+> smlp_logger - INFO - Radii  theta : {}
+> 
+> smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+> 
+> smlp_logger - INFO - Assertion asrt1: x0**2+y1>4.3
+> 
+> smlp_logger - INFO - Assertion asrt2: (y1+x2)/2<6
+> 
+> smlp_logger - INFO - PREPARE DATA FOR MODELING
+> 
+> smlp_logger - INFO - LOAD TRAINED MODEL
+> 
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test65_model_rerun_model_config.json
+> 
+> smlp_logger - INFO - Creating model exploration base components: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: End
+> 
+> smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x0': {'range': 'float', 'interval': [0, 10]}, 'x1': {'range': 'float', 'interval': [0, 10]}, 'x2': {'range': 'float', 'interval': [3, 7]}}
+> 
+> smlp_logger - INFO - Input bounds (alpha): {'x0': {'min': 0, 'max': 10}, 'x1': {'min': 0, 'max': 10}, 'x2': {'min': 3, 'max': 7}}
+> 
+> smlp_logger - INFO - Knob bounds (eta): {}
+> 
+> smlp_logger - INFO - Knob grids (eta): {}
+> 
+> smlp_logger - INFO - Alpha global   constraints: (or (or (= x1 1) (= x1 4)) (= x1 7))
+> 
+> smlp_logger - INFO - Alpha ranges   constraints: (and (and (and true (and (>= x0 0) (<= x0 10))) (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7)))
+> 
+> smlp_logger - INFO - Alpha combined constraints: (and (and (and (and true (and (>= x0 0) (<= x0 10))) (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7))) (or (or (= x1 1) (= x1 4)) (= x1 7)))
+> 
+> smlp_logger - INFO - Beta  global   constraints: true
+> 
+> smlp_logger - INFO - Eta   ranges   constraints: true
+> 
+> smlp_logger - INFO - Eta   grid     constraints: true
+> 
+> smlp_logger - INFO - Eta   global   constraints: true
+> 
+> smlp_logger - INFO - Eta   combined constraints: true
+> 
+> smlp_logger - INFO - Creating model exploration base components: End
+> 
+> smlp_logger - INFO - Input and knob interface constraints are consistent
+> 
+> smlp_logger - INFO - Building model terms: Start
+> 
+> smlp_logger - INFO - Model operator counts for y1: {'add': 1, 'mul': 15, 'ite': 5, 'and': 9, 'prop': 14, 'const': 50, 'sub': 14, 'var': 14}
+> 
+> smlp_logger - INFO - Model operator counts for y2: {'add': 1, 'mul': 15, 'ite': 5, 'and': 9, 'prop': 14, 'const': 50, 'sub': 14, 'var': 14}
+> 
+> smlp_logger - INFO - Building model terms: End
+> 
+> smlp_logger - INFO - Model interface constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt1:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt2:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying assertion asrt1 <-> x0**2+y1>4.3
+> 
+> smlp_logger - INFO - The configuration is consistent with assertion asrt1
+> 
+> smlp_logger - INFO - Completed with result: PASS
+> 
+> smlp_logger - INFO - Verifying assertion asrt2 <-> (y1+x2)/2<6
+> 
+> smlp_logger - INFO - The configuration is consistent with assertion asrt2
+> 
+> smlp_logger - INFO - Completed with result: FAIL
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": End
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: End
+=================== End of Test66_test65_model.txt diff report ================================
+=================== Diff report for: Test66_test65_model_verify_results.json ==================================
+diff: /app/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
+=================== End of Test66_test65_model_verify_results.json diff report ================================
+=================== Diff report for: Test68_test67_model.txt ==================================
+0a1,97
+> 
+> smlp_logger - INFO - Model exploration specification:
+> {'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x0', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x1', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x2', 'type': 'input', 'range': 'float', 'bounds': [3, 7]}], 'alpha': 'x1==1 or x1==4 or x1==7'}
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: Start
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": Start
+> 
+> smlp_logger - INFO - Computed spec global constraint expressions:
+> 
+> smlp_logger - INFO - Global alpha : x1==1 or x1==4 or x1==7
+> 
+> smlp_logger - INFO - Global beta  : None
+> 
+> smlp_logger - INFO - Radii  theta : {}
+> 
+> smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+> 
+> smlp_logger - INFO - Assertion asrt1: x0**2+y1>4.3
+> 
+> smlp_logger - INFO - Assertion asrt2: (y1+x2)/2<6
+> 
+> smlp_logger - INFO - PREPARE DATA FOR MODELING
+> 
+> smlp_logger - INFO - LOAD TRAINED MODEL
+> 
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test67_model_rerun_model_config.json
+> 
+> smlp_logger - INFO - Creating model exploration base components: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: End
+> 
+> smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x0': {'range': 'float', 'interval': [0, 10]}, 'x1': {'range': 'float', 'interval': [0, 10]}, 'x2': {'range': 'float', 'interval': [3, 7]}}
+> 
+> smlp_logger - INFO - Input bounds (alpha): {'x0': {'min': 0, 'max': 10}, 'x1': {'min': 0, 'max': 10}, 'x2': {'min': 3, 'max': 7}}
+> 
+> smlp_logger - INFO - Knob bounds (eta): {}
+> 
+> smlp_logger - INFO - Knob grids (eta): {}
+> 
+> smlp_logger - INFO - Alpha global   constraints: (or (or (= x1 1) (= x1 4)) (= x1 7))
+> 
+> smlp_logger - INFO - Alpha ranges   constraints: (and (and (and true (and (>= x0 0) (<= x0 10))) (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7)))
+> 
+> smlp_logger - INFO - Alpha combined constraints: (and (and (and (and true (and (>= x0 0) (<= x0 10))) (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7))) (or (or (= x1 1) (= x1 4)) (= x1 7)))
+> 
+> smlp_logger - INFO - Beta  global   constraints: true
+> 
+> smlp_logger - INFO - Eta   ranges   constraints: true
+> 
+> smlp_logger - INFO - Eta   grid     constraints: true
+> 
+> smlp_logger - INFO - Eta   global   constraints: true
+> 
+> smlp_logger - INFO - Eta   combined constraints: true
+> 
+> smlp_logger - INFO - Creating model exploration base components: End
+> 
+> smlp_logger - INFO - Input and knob interface constraints are consistent
+> 
+> smlp_logger - INFO - Building model terms: Start
+> 
+> smlp_logger - INFO - Model operator counts for y1: {'add': 1, 'mul': 7, 'ite': 3, 'and': 3, 'prop': 6, 'const': 24, 'sub': 6, 'var': 6}
+> 
+> smlp_logger - INFO - Model operator counts for y2: {'add': 1, 'mul': 4, 'ite': 2, 'and': 1, 'prop': 3, 'const': 14, 'sub': 3, 'var': 3}
+> 
+> smlp_logger - INFO - Building model terms: End
+> 
+> smlp_logger - INFO - Model interface constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt1:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt2:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying assertion asrt1 <-> x0**2+y1>4.3
+> 
+> smlp_logger - INFO - The configuration is consistent with assertion asrt1
+> 
+> smlp_logger - INFO - Completed with result: PASS
+> 
+> smlp_logger - INFO - Verifying assertion asrt2 <-> (y1+x2)/2<6
+> 
+> smlp_logger - INFO - The configuration is consistent with assertion asrt2
+> 
+> smlp_logger - INFO - Completed with result: FAIL
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": End
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: End
+=================== End of Test68_test67_model.txt diff report ================================
+=================== Diff report for: Test68_test67_model_verify_results.json ==================================
+diff: /app/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
+=================== End of Test68_test67_model_verify_results.json diff report ================================
+=================== Diff report for: Test70_test69_model.txt ==================================
+25c25
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test69_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test69_model_rerun_model_config.json
+=================== End of Test70_test69_model.txt diff report ================================
+=================== Diff report for: Test72_test71_model.txt ==================================
+0a1,84
+> 
+> smlp_logger - INFO - Model exploration specification:
+> {'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x0', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x1', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x2', 'type': 'input', 'range': 'float', 'bounds': [3, 7]}], 'alpha': 'x1==1 or x1==4 or x1==7'}
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: Start
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": Start
+> 
+> smlp_logger - INFO - Computed spec global constraint expressions:
+> 
+> smlp_logger - INFO - Global alpha : x1==1 or x1==4 or x1==7
+> 
+> smlp_logger - INFO - Global beta  : None
+> 
+> smlp_logger - INFO - Radii  theta : {}
+> 
+> smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+> 
+> smlp_logger - INFO - Assertion asrt1: (y2**3+x2)/2<6
+> 
+> smlp_logger - INFO - PREPARE DATA FOR MODELING
+> 
+> smlp_logger - INFO - LOAD TRAINED MODEL
+> 
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test71_model_rerun_model_config.json
+> 
+> smlp_logger - INFO - Creating model exploration base components: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: End
+> 
+> smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x0': {'range': 'float', 'interval': [0, 10]}, 'x1': {'range': 'float', 'interval': [0, 10]}, 'x2': {'range': 'float', 'interval': [3, 7]}}
+> 
+> smlp_logger - INFO - Input bounds (alpha): {'x0': {'min': 0, 'max': 10}, 'x1': {'min': 0, 'max': 10}, 'x2': {'min': 3, 'max': 7}}
+> 
+> smlp_logger - INFO - Knob bounds (eta): {}
+> 
+> smlp_logger - INFO - Knob grids (eta): {}
+> 
+> smlp_logger - INFO - Alpha global   constraints: (or (or (= x1 1) (= x1 4)) (= x1 7))
+> 
+> smlp_logger - INFO - Alpha ranges   constraints: (and (and (and true (and (>= x0 0) (<= x0 10))) (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7)))
+> 
+> smlp_logger - INFO - Alpha combined constraints: (and (and (and (and true (and (>= x0 0) (<= x0 10))) (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7))) (or (or (= x1 1) (= x1 4)) (= x1 7)))
+> 
+> smlp_logger - INFO - Beta  global   constraints: true
+> 
+> smlp_logger - INFO - Eta   ranges   constraints: true
+> 
+> smlp_logger - INFO - Eta   grid     constraints: true
+> 
+> smlp_logger - INFO - Eta   global   constraints: true
+> 
+> smlp_logger - INFO - Eta   combined constraints: true
+> 
+> smlp_logger - INFO - Creating model exploration base components: End
+> 
+> smlp_logger - INFO - Input and knob interface constraints are consistent
+> 
+> smlp_logger - INFO - Building model terms: Start
+> 
+> smlp_logger - INFO - Model operator counts for y1: {'add': 256, 'mul': 472, 'ite': 39, 'prop': 39, 'const': 846, 'sub': 216, 'var': 216}
+> 
+> smlp_logger - INFO - Model operator counts for y2: {'add': 256, 'mul': 472, 'ite': 39, 'prop': 39, 'const': 846, 'sub': 216, 'var': 216}
+> 
+> smlp_logger - INFO - Building model terms: End
+> 
+> smlp_logger - INFO - Model interface constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt1:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+x2)/2<6
+> 
+> smlp_logger - INFO - The configuration is consistent with assertion asrt1
+> 
+> smlp_logger - INFO - Completed with result: FAIL
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": End
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: End
+=================== End of Test72_test71_model.txt diff report ================================
+=================== Diff report for: Test72_test71_model_verify_results.json ==================================
+diff: /app/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
+=================== End of Test72_test71_model_verify_results.json diff report ================================
+=================== Diff report for: Test77_test76_model.txt ==================================
+0a1,110
+> 
+> smlp_logger - INFO - Model exploration specification:
+> {'version': '1.1', 'spec': [{'label': 'y1', 'type': 'response', 'range': 'float'}, {'label': 'y2', 'type': 'response', 'range': 'float'}, {'label': 'x0', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x1', 'type': 'input', 'range': 'float', 'bounds': [0, 10]}, {'label': 'x2', 'type': 'input', 'range': 'float', 'bounds': [3, 7]}], 'alpha': 'x1==1 or x1==4 or x1==7'}
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: Start
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": Start
+> 
+> smlp_logger - INFO - Computed spec global constraint expressions:
+> 
+> smlp_logger - INFO - Global alpha : x1==1 or x1==4 or x1==7
+> 
+> smlp_logger - INFO - Global beta  : None
+> 
+> smlp_logger - INFO - Radii  theta : {}
+> 
+> smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+> 
+> smlp_logger - INFO - Assertion asrt1: (y2**3+x2)/2<6
+> 
+> smlp_logger - INFO - Assertion asrt2: y1>=9
+> 
+> smlp_logger - INFO - Assertion asrt3: y2<0
+> 
+> smlp_logger - INFO - PREPARE DATA FOR MODELING
+> 
+> smlp_logger - INFO - LOAD TRAINED MODEL
+> 
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test76_model_rerun_model_config.json
+> 
+> smlp_logger - INFO - Creating model exploration base components: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: Start
+> 
+> smlp_logger - INFO - Parsing the SPEC: End
+> 
+> smlp_logger - INFO - Variable domains (alpha): {'y1': {'range': 'float', 'interval': None}, 'y2': {'range': 'float', 'interval': None}, 'x0': {'range': 'float', 'interval': [0, 10]}, 'x1': {'range': 'float', 'interval': [0, 10]}, 'x2': {'range': 'float', 'interval': [3, 7]}}
+> 
+> smlp_logger - INFO - Input bounds (alpha): {'x0': {'min': 0, 'max': 10}, 'x1': {'min': 0, 'max': 10}, 'x2': {'min': 3, 'max': 7}}
+> 
+> smlp_logger - INFO - Knob bounds (eta): {}
+> 
+> smlp_logger - INFO - Knob grids (eta): {}
+> 
+> smlp_logger - INFO - Alpha global   constraints: (or (or (= x1 1) (= x1 4)) (= x1 7))
+> 
+> smlp_logger - INFO - Alpha ranges   constraints: (and (and true (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7)))
+> 
+> smlp_logger - INFO - Alpha combined constraints: (and (and (and true (and (>= x1 0) (<= x1 10))) (and (>= x2 3) (<= x2 7))) (or (or (= x1 1) (= x1 4)) (= x1 7)))
+> 
+> smlp_logger - INFO - Beta  global   constraints: true
+> 
+> smlp_logger - INFO - Eta   ranges   constraints: true
+> 
+> smlp_logger - INFO - Eta   grid     constraints: true
+> 
+> smlp_logger - INFO - Eta   global   constraints: true
+> 
+> smlp_logger - INFO - Eta   combined constraints: true
+> 
+> smlp_logger - INFO - Creating model exploration base components: End
+> 
+> smlp_logger - INFO - Input and knob interface constraints are consistent
+> 
+> smlp_logger - INFO - Building model terms: Start
+> 
+> smlp_logger - INFO - Model operator counts for y1: {'add': 1, 'mul': 21, 'ite': 6, 'and': 14, 'prop': 20, 'const': 69, 'sub': 20, 'var': 20}
+> 
+> smlp_logger - INFO - Model operator counts for y2: {'add': 1, 'mul': 21, 'ite': 6, 'and': 14, 'prop': 20, 'const': 69, 'sub': 20, 'var': 20}
+> 
+> smlp_logger - INFO - Building model terms: End
+> 
+> smlp_logger - INFO - Model interface constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt1:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt2:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying consistency of configuration for assertion asrt3:
+>    true
+> 
+> smlp_logger - INFO - Input, knob and configuration constraints are consistent
+> 
+> smlp_logger - INFO - Verifying assertion asrt1 <-> (y2**3+x2)/2<6
+> 
+> smlp_logger - INFO - The configuration is inconsistent with assertion asrt1
+> 
+> smlp_logger - INFO - Completed with result: FAIL
+> 
+> smlp_logger - INFO - Verifying assertion asrt2 <-> y1>=9
+> 
+> smlp_logger - INFO - The configuration is consistent with assertion asrt2
+> 
+> smlp_logger - INFO - Completed with result: FAIL
+> 
+> smlp_logger - INFO - Verifying assertion asrt3 <-> y2<0
+> 
+> smlp_logger - INFO - The configuration is inconsistent with assertion asrt3
+> 
+> smlp_logger - INFO - Completed with result: FAIL
+> 
+> smlp_logger - INFO - Running SMLP in mode "verify": End
+> 
+> smlp_logger - INFO - Executing run_smlp.py script: End
+=================== End of Test77_test76_model.txt diff report ================================
+=================== Diff report for: Test77_test76_model_verify_results.json ==================================
+diff: /app/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
+=================== End of Test77_test76_model_verify_results.json diff report ================================
+=================== Diff report for: Test97_smlp_toy_num_resp_mult.txt ==================================
+252c252
+< smlp_logger - INFO - Model operator counts for y2: {'add': 100, 'mul': 715, 'const': 2547, 'ite': 305, 'and': 408, 'prop': 713, 'sub': 713, 'var': 713}
+---
+> smlp_logger - INFO - Model operator counts for y2: {'add': 100, 'mul': 716, 'const': 2550, 'ite': 305, 'and': 409, 'prop': 714, 'sub': 714, 'var': 714}
+=================== End of Test97_smlp_toy_num_resp_mult.txt diff report ================================
+=================== Diff report for: Test102_test101_model.txt ==================================
+38c38
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test101_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test101_model_rerun_model_config.json
+=================== End of Test102_test101_model.txt diff report ================================
+=================== Diff report for: test110_model_poly_sklearn_formula.txt ==================================
+diff: /app/smlp/regr_smlp/code/test110_model_poly_sklearn_formula.txt: No such file or directory
+=================== End of test110_model_poly_sklearn_formula.txt diff report ================================
+=================== Diff report for: Test111_test110_model_smlp_toy_basic_pred_unlabeled.txt ==================================
+79c79
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test110_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test110_model_rerun_model_config.json
+=================== End of Test111_test110_model_smlp_toy_basic_pred_unlabeled.txt diff report ================================
+=================== Diff report for: Test112_test110_model_smlp_toy_basic_pred_unlabeled.txt ==================================
+79c79
+< smlp_logger - INFO - Seving model rerun configuration in file ../models/test110_model_rerun_model_config.json
+---
+> smlp_logger - INFO - Seving model rerun configuration in file ./../models/test110_model_rerun_model_config.json
+=================== End of Test112_test110_model_smlp_toy_basic_pred_unlabeled.txt diff report ================================

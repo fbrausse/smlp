@@ -1,0 +1,28 @@
+#!/usr/bin/env -S tcsh -f
+set script_path=`realpath $0 | xargs dirname`
+set script_name=`realpath $0 | xargs basename`
+if($#argv < 1 ) then
+    echo "\nUsage: $script_name [<json>] [-clean|-timeout <n>]\n"
+    exit(0)
+endif
+set json=$argv[1]
+set out="$json:t:r_relative_optimized_margin.txt"
+set out_sorted=$out:r_sorted.txt
+set png="$json:t:r.png"
+\rm -f $out_sorted $png >& /dev/null
+if($#argv > 1) then
+    if("-clean" == "$argv[2]") then
+        exit(0)
+    endif
+endif
+if($#argv > 2) then
+    if("-timeout" == "$argv[2]") then
+        set timeout="$argv[3]"
+    endif
+endif
+sort -n -r -k 2 $out >& $out_sorted
+set cmd="$script_path/plot_results.py $out_sorted" 
+if($?timeout) then 
+    set cmd="$cmd -timeout $timeout"
+endif
+$cmd

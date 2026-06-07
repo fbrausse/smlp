@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+./open_virtual_display && env DISPLAY=:99 python3 -c "import matplotlib; print(matplotlib.get_backend())"

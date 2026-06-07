@@ -1,8 +1,11 @@
 # SPDX-License-Identifier: Apache-2.0
 # This file is part of smlp.
 
+print("Loading libraries...")
+
 # imports from SMLP modules
 from .smlp_logs import SmlpLogger, SmlpTracer
+
 from .smlp_utils import str_to_bool, np_JSONEncoder
 from .smlp_models import SmlpModels
 from .smlp_data import SmlpData
@@ -52,7 +55,8 @@ class SmlpFlows:
         self.correlInst = SmlpCorrelations()
         
         # get args
-        args_dict = self.modelInst.model_params_dict | \
+        args_dict = self.configInst.modes_data_dict | \
+                    self.modelInst.model_params_dict | \
                     self.dataInst.data_params_dict | \
                     self.configInst.config_params_dict | \
                     self.loggerInst.logger_params_dict | \

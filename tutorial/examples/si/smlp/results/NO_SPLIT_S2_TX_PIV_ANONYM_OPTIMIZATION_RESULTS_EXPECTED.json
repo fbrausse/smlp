@@ -1,0 +1,679 @@
+{
+	"objv_o0_CH0RANK0Byte0": {
+		"value_in_config": -0.9999999999999993,
+		"threshold_scaled": 0.9222914120756471,
+		"threshold": -1.0102116430165875,
+		"max_in_data": 0.0,
+		"min_in_data": -13.0
+	},
+	"objv_o0_CH0RANK0Byte1": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.05907572768853697,
+		"max_in_data": 0.0,
+		"min_in_data": -13.0
+	},
+	"objv_o0_CH0RANK0Byte2": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.04089858070744867,
+		"max_in_data": 0.0,
+		"min_in_data": -9.0
+	},
+	"objv_o0_CH0RANK0Byte3": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.04998715419799282,
+		"max_in_data": 0.0,
+		"min_in_data": -11.0
+	},
+	"objv_o0_CH0RANK0Byte4": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.04757300186456703,
+		"max_in_data": 0.0,
+		"min_in_data": -10.46875
+	},
+	"objv_o0_CH0RANK0Byte5": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.019313218667406318,
+		"max_in_data": 0.0,
+		"min_in_data": -4.25
+	},
+	"objv_o0_CH0RANK0Byte6": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03181000721690452,
+		"max_in_data": 0.0,
+		"min_in_data": -7.0
+	},
+	"objv_o0_CH0RANK0Byte7": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03181000721690452,
+		"max_in_data": 0.0,
+		"min_in_data": -7.0
+	},
+	"objv_o0_CH0RANK1Byte0": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03181000721690452,
+		"max_in_data": 0.0,
+		"min_in_data": -7.0
+	},
+	"objv_o0_CH0RANK1Byte1": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.019313218667406318,
+		"max_in_data": 0.0,
+		"min_in_data": -4.25
+	},
+	"objv_o0_CH0RANK1Byte2": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.04089858070744867,
+		"max_in_data": 0.0,
+		"min_in_data": -9.0
+	},
+	"objv_o0_CH0RANK1Byte3": {
+		"value_in_config": -1.0,
+		"threshold_scaled": 0.8765869136390813,
+		"threshold": -1.0181579624775798,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o0_CH0RANK1Byte4": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.022721433726360374,
+		"max_in_data": 0.0,
+		"min_in_data": -5.0
+	},
+	"objv_o0_CH0RANK1Byte5": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03749036564849462,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o0_CH0RANK1Byte6": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03749036564849462,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o0_CH0RANK1Byte7": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03749036564849462,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o0_CH1RANK0Byte0": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.019313218667406318,
+		"max_in_data": 0.0,
+		"min_in_data": -4.25
+	},
+	"objv_o0_CH1RANK0Byte1": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03749036564849462,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o0_CH1RANK0Byte2": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.013632860235816224,
+		"max_in_data": 0.0,
+		"min_in_data": -3.0
+	},
+	"objv_o0_CH1RANK0Byte3": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.004544286745272075,
+		"max_in_data": 0.0,
+		"min_in_data": -1.0
+	},
+	"objv_o0_CH1RANK0Byte4": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03181000721690452,
+		"max_in_data": 0.0,
+		"min_in_data": -7.0
+	},
+	"objv_o0_CH1RANK0Byte5": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03181000721690452,
+		"max_in_data": 0.0,
+		"min_in_data": -7.0
+	},
+	"objv_o0_CH1RANK0Byte6": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.02120667147945099,
+		"max_in_data": 0.0,
+		"min_in_data": -4.666666667
+	},
+	"objv_o0_CH1RANK0Byte7": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.022721433726360374,
+		"max_in_data": 0.0,
+		"min_in_data": -5.0
+	},
+	"objv_o0_CH1RANK1Byte0": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.022721433726360374,
+		"max_in_data": 0.0,
+		"min_in_data": -5.0
+	},
+	"objv_o0_CH1RANK1Byte1": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.04089858070744867,
+		"max_in_data": 0.0,
+		"min_in_data": -9.0
+	},
+	"objv_o0_CH1RANK1Byte2": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03749036564849462,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o0_CH1RANK1Byte3": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03749036564849462,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o0_CH1RANK1Byte4": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.022721433726360374,
+		"max_in_data": 0.0,
+		"min_in_data": -5.0
+	},
+	"objv_o0_CH1RANK1Byte5": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.022721433726360374,
+		"max_in_data": 0.0,
+		"min_in_data": -5.0
+	},
+	"objv_o0_CH1RANK1Byte6": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.022721433726360374,
+		"max_in_data": 0.0,
+		"min_in_data": -5.0
+	},
+	"objv_o0_CH1RANK1Byte7": {
+		"value_in_config": 0.0,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -0.03749036564849462,
+		"max_in_data": 0.0,
+		"min_in_data": -8.25
+	},
+	"objv_o1_CH0RANK0Byte0": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.66505445034476,
+		"threshold": -19.23095455338061,
+		"max_in_data": -12.8,
+		"min_in_data": -32.0
+	},
+	"objv_o1_CH0RANK0Byte1": {
+		"value_in_config": -12.8,
+		"threshold_scaled": 0.7499631381518885,
+		"threshold": -12.801887326623309,
+		"max_in_data": 0.0,
+		"min_in_data": -51.2
+	},
+	"objv_o1_CH0RANK0Byte2": {
+		"value_in_config": -12.8,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.887250305509223,
+		"max_in_data": -12.8,
+		"min_in_data": -32.0
+	},
+	"objv_o1_CH0RANK0Byte3": {
+		"value_in_config": -12.800000000000002,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.903079570990108,
+		"max_in_data": -12.8,
+		"min_in_data": -35.48333333
+	},
+	"objv_o1_CH0RANK0Byte4": {
+		"value_in_config": -12.800000000000002,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.903079570990108,
+		"max_in_data": -12.8,
+		"min_in_data": -35.48333333
+	},
+	"objv_o1_CH0RANK0Byte5": {
+		"value_in_config": -19.200000000000003,
+		"threshold_scaled": 0.5699497413635255,
+		"threshold": -19.266251586914056,
+		"max_in_data": 0.0,
+		"min_in_data": -44.8
+	},
+	"objv_o1_CH0RANK0Byte6": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.7998935202040436,
+		"threshold": -19.203407353470606,
+		"max_in_data": -12.8,
+		"min_in_data": -44.8
+	},
+	"objv_o1_CH0RANK0Byte7": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -19.28725030550922,
+		"max_in_data": -19.2,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH0RANK1Byte0": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.7499631381518885,
+		"threshold": -19.200943663311655,
+		"max_in_data": -12.8,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH0RANK1Byte1": {
+		"value_in_config": -16.28333333,
+		"threshold_scaled": 0.6347224339842796,
+		"threshold": -16.364434957504272,
+		"max_in_data": 0.0,
+		"min_in_data": -44.8
+	},
+	"objv_o1_CH0RANK1Byte2": {
+		"value_in_config": -16.28333333,
+		"threshold_scaled": 0.8431069706327154,
+		"threshold": -16.358856882291594,
+		"max_in_data": -12.8,
+		"min_in_data": -35.48333333
+	},
+	"objv_o1_CH0RANK1Byte3": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.7499631381518885,
+		"threshold": -19.200943663311655,
+		"max_in_data": -12.8,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH0RANK1Byte4": {
+		"value_in_config": -12.800000000000002,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.903079570990108,
+		"max_in_data": -12.8,
+		"min_in_data": -35.48333333
+	},
+	"objv_o1_CH0RANK1Byte5": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.49609375,
+		"threshold": -19.349999999999998,
+		"max_in_data": 0.0,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH0RANK1Byte6": {
+		"value_in_config": -16.28333333,
+		"threshold_scaled": 0.8170876751912908,
+		"threshold": -16.31191663632722,
+		"max_in_data": -12.8,
+		"min_in_data": -32.0
+	},
+	"objv_o1_CH0RANK1Byte7": {
+		"value_in_config": -19.200000000000003,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -19.303079570990107,
+		"max_in_data": -19.2,
+		"min_in_data": -41.88333333
+	},
+	"objv_o1_CH1RANK0Byte0": {
+		"value_in_config": -12.800000000000006,
+		"threshold_scaled": 0.8431069706327154,
+		"threshold": -12.839807006703808,
+		"max_in_data": -8.083333333,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH1RANK0Byte1": {
+		"value_in_config": -19.200000000000003,
+		"threshold_scaled": 0.54007080078125,
+		"threshold": -19.26336795907888,
+		"max_in_data": 0.0,
+		"min_in_data": -41.88333333
+	},
+	"objv_o1_CH1RANK0Byte2": {
+		"value_in_config": -12.800000000000002,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.903079570990108,
+		"max_in_data": -12.8,
+		"min_in_data": -35.48333333
+	},
+	"objv_o1_CH1RANK0Byte3": {
+		"value_in_config": -12.8,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.945417175848707,
+		"max_in_data": -12.8,
+		"min_in_data": -44.8
+	},
+	"objv_o1_CH1RANK0Byte4": {
+		"value_in_config": -19.200000000000003,
+		"threshold_scaled": 0.54007080078125,
+		"threshold": -19.26336795907888,
+		"max_in_data": 0.0,
+		"min_in_data": -41.88333333
+	},
+	"objv_o1_CH1RANK0Byte5": {
+		"value_in_config": -19.200000000000003,
+		"threshold_scaled": 0.5699497413635255,
+		"threshold": -19.266251586914056,
+		"max_in_data": 0.0,
+		"min_in_data": -44.8
+	},
+	"objv_o1_CH1RANK0Byte6": {
+		"value_in_config": -12.800000000000002,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.903079570990108,
+		"max_in_data": -12.8,
+		"min_in_data": -35.48333333
+	},
+	"objv_o1_CH1RANK0Byte7": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.777935343950149,
+		"threshold": -19.25838041270962,
+		"max_in_data": -12.8,
+		"min_in_data": -41.88333333
+	},
+	"objv_o1_CH1RANK1Byte0": {
+		"value_in_config": -12.8,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.887250305509223,
+		"max_in_data": -12.8,
+		"min_in_data": -32.0
+	},
+	"objv_o1_CH1RANK1Byte1": {
+		"value_in_config": -19.2,
+		"threshold_scaled": 0.7998935202040436,
+		"threshold": -19.26921330578698,
+		"max_in_data": -14.48333333,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH1RANK1Byte2": {
+		"value_in_config": -12.8,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.887250305509223,
+		"max_in_data": -12.8,
+		"min_in_data": -32.0
+	},
+	"objv_o1_CH1RANK1Byte3": {
+		"value_in_config": -12.8,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.916333740678965,
+		"max_in_data": -12.8,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH1RANK1Byte4": {
+		"value_in_config": -12.8,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.916333740678965,
+		"max_in_data": -12.8,
+		"min_in_data": -38.4
+	},
+	"objv_o1_CH1RANK1Byte5": {
+		"value_in_config": -19.200000000000003,
+		"threshold_scaled": 0.54007080078125,
+		"threshold": -19.26336795907888,
+		"max_in_data": 0.0,
+		"min_in_data": -41.88333333
+	},
+	"objv_o1_CH1RANK1Byte6": {
+		"value_in_config": -12.800000000000002,
+		"threshold_scaled": 0.9954557132547279,
+		"threshold": -12.903079570990108,
+		"max_in_data": -12.8,
+		"min_in_data": -35.48333333
+	},
+	"objv_o1_CH1RANK1Byte7": {
+		"value_in_config": -19.199999999999996,
+		"threshold_scaled": 0.827647435341563,
+		"threshold": -19.205793601641172,
+		"max_in_data": -14.48333333,
+		"min_in_data": -41.88333333
+	},
+	"p1": {
+		"value_in_config": 3.0
+	},
+	"p2": {
+		"value_in_config": 30.0
+	},
+	"p3": {
+		"value_in_config": 34.0
+	},
+	"p0": {
+		"value_in_config": 7.0
+	},
+	"o0_CH1RANK0Byte2": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK1Byte7": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK0Byte4": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK1Byte6": {
+		"value_in_config": -16.28333333
+	},
+	"o1_CH1RANK1Byte1": {
+		"value_in_config": -19.2
+	},
+	"o1_CH0RANK1Byte5": {
+		"value_in_config": -19.2
+	},
+	"o1_CH0RANK0Byte1": {
+		"value_in_config": -12.8
+	},
+	"o0_CH0RANK1Byte6": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK0Byte3": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK1Byte5": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK0Byte1": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK0Byte7": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK1Byte1": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK1Byte2": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK1Byte0": {
+		"value_in_config": -19.2
+	},
+	"o1_CH1RANK1Byte5": {
+		"value_in_config": -19.200000000000003
+	},
+	"o0_CH1RANK0Byte4": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK0Byte3": {
+		"value_in_config": -12.800000000000002
+	},
+	"o0_CH0RANK0Byte5": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK1Byte3": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK0Byte4": {
+		"value_in_config": -12.800000000000002
+	},
+	"o1_CH0RANK0Byte7": {
+		"value_in_config": -19.2
+	},
+	"o0_CH0RANK1Byte3": {
+		"value_in_config": -1.0
+	},
+	"o0_CH1RANK1Byte1": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK1Byte2": {
+		"value_in_config": -16.28333333
+	},
+	"o0_CH1RANK0Byte3": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK0Byte7": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK1Byte4": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK0Byte5": {
+		"value_in_config": -19.200000000000003
+	},
+	"o1_CH1RANK0Byte0": {
+		"value_in_config": -12.800000000000006
+	},
+	"o0_CH1RANK0Byte0": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK1Byte0": {
+		"value_in_config": 0.0
+	},
+	"o1_CH1RANK0Byte4": {
+		"value_in_config": -19.200000000000003
+	},
+	"o1_CH1RANK0Byte6": {
+		"value_in_config": -12.800000000000002
+	},
+	"o1_CH1RANK0Byte5": {
+		"value_in_config": -19.200000000000003
+	},
+	"o1_CH0RANK1Byte1": {
+		"value_in_config": -16.28333333
+	},
+	"o1_CH1RANK1Byte4": {
+		"value_in_config": -12.8
+	},
+	"o0_CH1RANK1Byte2": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK0Byte6": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK1Byte7": {
+		"value_in_config": -19.200000000000003
+	},
+	"o1_CH1RANK0Byte2": {
+		"value_in_config": -12.800000000000002
+	},
+	"o1_CH0RANK1Byte4": {
+		"value_in_config": -12.800000000000002
+	},
+	"o0_CH0RANK1Byte4": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK1Byte6": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK0Byte6": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK0Byte5": {
+		"value_in_config": 0.0
+	},
+	"o1_CH1RANK0Byte7": {
+		"value_in_config": -19.2
+	},
+	"o1_CH1RANK1Byte0": {
+		"value_in_config": -12.8
+	},
+	"o1_CH1RANK1Byte3": {
+		"value_in_config": -12.8
+	},
+	"o1_CH1RANK1Byte7": {
+		"value_in_config": -19.199999999999996
+	},
+	"o1_CH1RANK1Byte6": {
+		"value_in_config": -12.800000000000002
+	},
+	"o1_CH0RANK1Byte3": {
+		"value_in_config": -19.2
+	},
+	"o0_CH0RANK0Byte1": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK1Byte0": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK0Byte2": {
+		"value_in_config": 0.0
+	},
+	"o0_CH1RANK1Byte5": {
+		"value_in_config": 0.0
+	},
+	"o1_CH0RANK0Byte0": {
+		"value_in_config": -19.2
+	},
+	"o1_CH1RANK1Byte2": {
+		"value_in_config": -12.8
+	},
+	"o0_CH0RANK1Byte7": {
+		"value_in_config": 0.0
+	},
+	"o0_CH0RANK0Byte0": {
+		"value_in_config": -0.9999999999999993
+	},
+	"o1_CH1RANK0Byte1": {
+		"value_in_config": -19.200000000000003
+	},
+	"o1_CH1RANK0Byte3": {
+		"value_in_config": -12.8
+	},
+	"o1_CH0RANK0Byte6": {
+		"value_in_config": -19.2
+	},
+	"o1_CH0RANK0Byte2": {
+		"value_in_config": -12.8
+	},
+	"objv_o0_CH0RANK0Byte1_scaled_objv_o0_CH0RANK0Byte2_scaled_objv_o0_CH0RANK0Byte3_scaled_objv_o0_CH0RANK0Byte4_scaled_objv_o0_CH0RANK0Byte5_scaled_objv_o0_CH0RANK0Byte6_scaled_objv_o0_CH0RANK0Byte7_scaled_objv_o0_CH0RANK1Byte0_scaled_objv_o0_CH0RANK1Byte1_scaled_objv_o0_CH0RANK1Byte2_scaled_objv_o0_CH0RANK1Byte4_scaled_objv_o0_CH0RANK1Byte5_scaled_objv_o0_CH0RANK1Byte6_scaled_objv_o0_CH0RANK1Byte7_scaled_objv_o0_CH1RANK0Byte0_scaled_objv_o0_CH1RANK0Byte1_scaled_objv_o0_CH1RANK0Byte2_scaled_objv_o0_CH1RANK0Byte3_scaled_objv_o0_CH1RANK0Byte4_scaled_objv_o0_CH1RANK0Byte5_scaled_objv_o0_CH1RANK0Byte6_scaled_objv_o0_CH1RANK0Byte7_scaled_objv_o0_CH1RANK1Byte0_scaled_objv_o0_CH1RANK1Byte1_scaled_objv_o0_CH1RANK1Byte2_scaled_objv_o0_CH1RANK1Byte3_scaled_objv_o0_CH1RANK1Byte4_scaled_objv_o0_CH1RANK1Byte5_scaled_objv_o0_CH1RANK1Byte6_scaled_objv_o0_CH1RANK1Byte7_scaled_objv_o1_CH0RANK0Byte2_scaled_objv_o1_CH0RANK0Byte3_scaled_objv_o1_CH0RANK0Byte4_scaled_objv_o1_CH0RANK0Byte7_scaled_objv_o1_CH0RANK1Byte4_scaled_objv_o1_CH0RANK1Byte7_scaled_objv_o1_CH1RANK0Byte2_scaled_objv_o1_CH1RANK0Byte3_scaled_objv_o1_CH1RANK0Byte6_scaled_objv_o1_CH1RANK1Byte0_scaled_objv_o1_CH1RANK1Byte2_scaled_objv_o1_CH1RANK1Byte3_scaled_objv_o1_CH1RANK1Byte4_scaled_objv_o1_CH1RANK1Byte6_scaled": {
+		"value_in_config": 0.9999999999999999
+	},
+	"threshold_lo_scaled": {
+		"value_in_config": 0.9954557132547279
+	},
+	"threshold_lo": {
+		"value_in_config": 0.9954557132547279
+	},
+	"threshold_up_scaled": {
+		"value_in_config": 1.0
+	},
+	"threshold_up": {
+		"value_in_config": 1.0
+	},
+	"max_in_data": {
+		"value_in_config": 1.0
+	},
+	"min_in_data": {
+		"value_in_config": 0.0
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true",
+	"synthesis_feasible": "true"
+}

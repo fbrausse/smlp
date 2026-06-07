@@ -4,7 +4,9 @@
 import os
 #os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0" # edded because of warning: 
 os.unsetenv("TF_ENABLE_ONEDNN_OPTS")
+
 import tensorflow as tf
+
 from tensorflow import keras
 from keras.optimizers import Adam
 from keras.models import clone_model # for rounding model weights and biases
@@ -900,3 +902,5 @@ class ModelKeras:
                 seed, weights_coef, model_per_response)
         self._keras_logger.info('keras_main: end')
         return model
+
+    

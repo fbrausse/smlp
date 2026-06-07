@@ -1,0 +1,37 @@
+#!/usr/bin/env -S tcsh -f
+set script_path=`realpath $0 | xargs dirname`
+set script_name=`realpath $0 | xargs basename`
+if($#argv > 0) then
+        if("-clean" == "$argv[1]") then
+            set cleanup
+        endif
+endif
+if( $?cleanup ) then
+    foreach dir (`ls -d ${script_path}/${script_name}_results_* |& grep -v "No match"`)
+        set cmd="/usr/bin/rm -rf $dir"
+        echo $cmd
+        $cmd
+    end
+else
+    set results_dir=${script_name}_results_`date +%s`
+    \rm -rf $results_dir >& /dev/null
+    mkdir $results_dir
+    cd $results_dir
+    echo "\nWorking directory: `realpath $PWD`\n"
+endif
+set examples = ( \
+    ${script_path}/examples/constraint_dora/smlp/run_constraint_dora_poly \
+    ${script_path}/examples/bnh/smlp/run_poly_pareto \
+    ${script_path}/examples/bnh/smlp/run_certify.sh \
+    ${script_path}/examples/eggholder/smlp/run_eggholder \
+    ${script_path}/examples/si/smlp/run_si_tests )
+foreach e ( $examples )
+    if( $?cleanup ) then
+        echo Cleaning $e:h
+        continue
+    endif
+    echo Starting: $e
+    $e
+    echo DONE: $e
+    echo =============================================
+end

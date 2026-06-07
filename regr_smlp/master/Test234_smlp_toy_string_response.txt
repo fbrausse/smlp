@@ -1,0 +1,112 @@
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "subgroups": Start
+
+smlp_logger - INFO - loading training data
+
+smlp_logger - INFO - data summary
+             num        int
+count  12.000000  12.000000
+mean    6.911667   6.500000
+std     3.623546   3.605551
+min     1.500000   1.000000
+25%     3.785000   3.750000
+50%     6.950000   6.500000
+75%     9.975000   9.250000
+max    12.000000  12.000000
+
+smlp_logger - INFO - training data
+      num  int         str str_resp1 str_resp2
+0    1.50    1       apple       yes       yes
+1    2.70    2      banana        no       yes
+2    3.14    3      cherry       yes        no
+3    4.00    4        date        no        no
+4    5.25    5  elderberry       yes        no
+5    6.80    6         fig        no        no
+6    7.10    7       grape       yes       yes
+7    8.60    8    honeydew        no       yes
+8    9.90    9        kiwi       yes       yes
+9   10.20   10       lemon        no        no
+10  11.75   11       mango       yes       yes
+11  12.00   12   nectarine        no        no
+
+smlp_logger - INFO - training data after imputing missing values
+      num  int         str str_resp1 str_resp2
+0    1.50    1       apple       yes       yes
+1    2.70    2      banana        no       yes
+2    3.14    3      cherry       yes        no
+3    4.00    4        date        no        no
+4    5.25    5  elderberry       yes        no
+5    6.80    6         fig        no        no
+6    7.10    7       grape       yes       yes
+7    8.60    8    honeydew        no       yes
+8    9.90    9        kiwi       yes       yes
+9   10.20   10       lemon        no        no
+10  11.75   11       mango       yes       yes
+11  12.00   12   nectarine        no        no
+
+smlp_logger - INFO - training data after processing responses
+      num  int         str  str_resp1  str_resp2
+0    1.50    1       apple          0          0
+1    2.70    2      banana          1          0
+2    3.14    3      cherry          0          1
+3    4.00    4        date          1          1
+4    5.25    5  elderberry          0          1
+5    6.80    6         fig          1          1
+6    7.10    7       grape          0          0
+7    8.60    8    honeydew          1          0
+8    9.90    9        kiwi          0          0
+9   10.20   10       lemon          1          1
+10  11.75   11       mango          0          0
+11  12.00   12   nectarine          1          1
+
+smlp_logger - INFO - PSG Subgroup Discovery started
+
+smlp_logger - INFO - PSG Subgroup Discovery completed
+
+smlp_logger - INFO - Ranges (subgroups) selected by PSG Subgroup Discovery algorithm for response str_resp1:
+0                          str=='nectarine'
+1                              str=='lemon'
+2                           str=='honeydew'
+3                                str=='fig'
+4                               str=='date'
+5                             str=='banana'
+6           num>=10.20 AND str=='nectarine'
+7               num>=10.20 AND str=='lemon'
+8                num<3.14 AND str=='banana'
+9     num: [8.60:10.20[ AND str=='honeydew'
+10         num: [3.14:5.25[ AND str=='date'
+11                 int>=10 AND str=='lemon'
+12                  int<3 AND str=='banana'
+13          int: [8:10[ AND str=='honeydew'
+14               int: [3:5[ AND str=='date'
+Name: subgroup, dtype: object
+
+smlp_logger - INFO - PSG Subgroup Discovery started
+
+smlp_logger - INFO - PSG Subgroup Discovery completed
+
+smlp_logger - INFO - Ranges (subgroups) selected by PSG Subgroup Discovery algorithm for response str_resp2:
+0                           str=='nectarine'
+1                               str=='lemon'
+2                                 str=='fig'
+3                          str=='elderberry'
+4                                str=='date'
+5                              str=='cherry'
+6            num: [5.25:8.60[ AND str=='fig'
+7     num: [5.25:8.60[ AND str=='elderberry'
+8                           num: [3.14:5.25[
+9           num: [3.14:5.25[ AND str=='date'
+10        num: [3.14:5.25[ AND str=='cherry'
+11                                int: [3:5[
+12                int: [3:5[ AND str=='date'
+13              int: [3:5[ AND str=='cherry'
+14           int: [3:5[ AND num: [3.14:5.25[
+Name: subgroup, dtype: object
+
+smlp_logger - WARNING - Range plots are not supported in this version of SMLP
+
+smlp_logger - INFO - Running SMLP in mode "subgroups": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

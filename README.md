@@ -1,344 +1,537 @@
-# About SMLP
+# SMLP - Symbolic Machine Learning Prover
 
-SMLP is a tool for optimization, synthesis and design space exploration. It is
-based on statistical and machine learning techniques combined with formal verification
-approaches that allows selection of optimal configurations with respect to given
-constraints on the inputs and outputs of the system under consideration.  
+SMLP is a general purpose tool for verification and optimisation of systems modelled using machine learning. </br>
+SMLP uses symbolic reasoning for ML model exploration and optimisation under verification and stability constraints.
 
-SMLP has been applied at Intel for hardware design optimization. It is a gneral
-purpose optimization and verification tool applicable to any domain where ML models
-can be trained on data. The supported modes in SMLP include processing data and 
-training models (NNs, tree-based, and polynomial models), querying data and models,
-certifying and verifying assertions, synthesis and pareto-optimization of configurations,
-design of experiments (to simulate systems and produce data), feature selection,
-rule learning/subgroup discovery, root-cause analysis, and more.
-
-If you want to try out SMLP on your optimization problems
-and require support, please contact the developers through 
-the [discussion page](https://github.com/SMLP-Systems/smlp/discussions).
-
-When you use this tool, please cite our corresponding CAV 2024 tool paper,
-a pre-submission version of which is provided on arXiv:
-<https://arxiv.org/abs/2402.01415>
-
-Coming soon: Support for NLP and LLMs in SMLP.
-See [SMLP_manual_v2.pdf](https://github.com/SMLP-Systems/smlp/blob/nlp_text.rebased/SMLP_manual_v2.pdf) for more details.
-
-NLP:
--	NLP based text classification. Applicable to spam detection, sentiment analysis, and more.
--	NLP based root cause analysis: which words or collections of words are most correlative to classification decision (especially, for the positive class).
-
-LLM:
--	LLM training from scratch
--	LLM finetuning
--	RAG (with HuggingFace and with LangChain)
-
-Agentic:
--	SMLP Agent
+<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/smlp_overview.png" alt="SMLP Overview" class="center" width="800">
 
 
-# Platform support
+**Industry adoption:** SMLP is used at **Intel** for optimization of package/board layouts and signal integrity
 
-SMLP has successfully been run without a container or VM on Ubuntu,
-Suse Linux Enterprise Server 15, and Gentoo. The following section provides
-instruction for the installation on Ubuntu.
+<details>
+<summary> SMLP applications in Intel and why stability is important  </summary><br>
 
-## Installation on a stock Ubuntu-22.04
+SMLP has been successfully used at Intel to optimize package and board layouts under noisy, real‑world signal‑integrity data collected in the lab. 
+Because this data is inherently noisy—and because ML models are often intentionally approximate to avoid overfitting—robustness is essential when searching for reliable optimal solutions. 
+SMLP addresses this through its notion of stability, ensuring that selected optima remain valid under data and model uncertainty.
+In most cases the stability radius (*) is actually as large
+as 10% of the value of the variable in the configuration.
+This is because the sampling error from analog equipment
+can be dependent on the intended value itself.
+  
+ [(*)](https://ece.technion.ac.il/wp-content/uploads/2021/01/publication_617-1.pdf) The smallest perturbation 
+ (measured by a norm, e.g., Chebyshev) that makes an optimal solution either non-optimal or infeasible. 
 
-	sudo apt install \
-		python3-pip ninja-build z3 libz3-dev libboost-python-dev texlive \
-		pkg-config libgmp-dev libpython3-all-dev python-is-python3
-	# get a recent version of the meson configure tool
-	pip install --user meson
+</details><br>
 
-	# obtain sources
-	git clone https://github.com/fbrausse/kay.git
-	git clone https://github.com/smlp-systems/smlp.git
-	cd smlp/utils/poly
 
-	# workaround <https://bugs.launchpad.net/ubuntu/+source/swig/+bug/1746755>
-	echo 'export PYTHONPATH=$HOME/.local/lib/python3/dist-packages:$PYTHONPATH' >> ~/.profile
-	# get $HOME/.local/bin into PATH and get PYTHONPATH
-	mkdir -p $HOME/.local/bin
-	source ~/.profile
+**[Combination of robustness and formal assurance of results validity](https://korovin.gitlab.io/pub/fmcad_bkk_2020.pdf)** is a distinctive strength of SMLP, not found in other optimization or model‑analysis tools.
 
-	# setup, build & install libsmlp
-	meson setup -Dkay-prefix=$HOME/kay --prefix $HOME/.local build
-	ninja -C build install
+SMLP exploration modes:
 
-	# tensorflow-2.16 has a change leading to the error:
-	# 'The filepath provided must end in .keras (Keras model format).'
-	pip install --user \
-		pandas tensorflow==2.15.1 scikit-learn pycaret seaborn \
-		mrmr-selection jenkspy pysubgroup pyDOE doepy
+- optimization 
+- verification
+- synthesis
+- query
+- root cause analysis
 
-## Docker support
 
-- Using Docker container with GUI disabled
+Systems analysed by SMLP can be represented as:
 
-```
-docker run -it mdmitry1/python311-dev:latest
-```
+- black-box functions: via sampling input -- output behaviour
+  only tabular data is needed  
+- explicit expressions involving polynomials
+- machine learning models:
+  - neural networks
+  - decision trees
+  - random forests
+  - polynomial models
 
-Within docker container prepend SMLP Python script with `xvfb-run`.
-For example: 
+
+SMLP supports:
+ - symbolic constrains
+ - stability constraints
+ - parameter optimization
+
+<p align="center">
+<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/smlp_arch.png"  alt="SMLP Arch" class="center" width="800">
+</p>
+
+Papers:
+* SMLP: Symbolic Machine Learning Prover, (CAV'24) [[pdf]](https://link.springer.com/content/pdf/10.1007/978-3-031-65627-9_11.pdf) [[bib]](https://dblp.org/rec/conf/cav/BrausseKK24.html?view=bibtex)
+* Combining Constraint Solving and Bayesian Techniques for System Optimization, (IJCAI'22) [[pdf]](https://www.ijcai.org/proceedings/2022/0249.pdf) [[bib]](https://dblp.org/rec/conf/ijcai/BrausseKK22.html?view=bibtex)
+* Selecting Stable Safe Configurations for Systems Modelled by Neural Networks with ReLU Activation, (FMCAD'20), [[pdf]](https://korovin.gitlab.io/pub/fmcad_bkk_2020.pdf) [[bib]](https://dblp.org/rec/conf/fmcad/BrausseKK20.html?view=bibtex)
+
+## Installation
+
+### pip installation (recommended)
+
+ <details>
+ <summary> MacOS </summary>
+ 
+
+ - install Python 3.11; for example via Python version management [[pyenv]](https://github.com/pyenv/pyenv)
+ 
+  ```
+  pyenv install 3.11
+  pyenv local 3.11
+  ```
+  
+ - install smlptech package:
+ 
+ ```
+ pip install smlptech
+ ```
+
+</details>
+
+<details>
+ <summary> Ubuntu 24.04 </summary>
+ 
+
+#### SMLP Installation Guide for Ubuntu 24.04
+
+This guide describes how to install [smlptech](https://pypi.org/project/smlptech/) on Ubuntu 24.04.
+
+---
+
+#### Prerequisites
+
+- Ubuntu 24.04
+- `sudo` access
+- Internet access (for apt, pip, and wget)
+
+---
+
+#### Step 1 — Install system dependencies
 
 ```bash
-xvfb-run smlp/src/run_smlp.py -h
+sudo apt-get update
+sudo apt-get install -y \
+    jq \
+    libgomp1 \
+    tcsh \
+    wget \
 ```
 
-- Entering Docker container with optional VNC support
+| Dependency | Used by | Mandatory
+|---|---|---|
+| jq | Quickstart and Tutorial | No
+| **libgomp1** | **SMLP** | **Yes**
+| tcsh | Tutorial | No
+| wget | Mathsat installation | No
+
+
+---
+
+#### Step 2 — Install Python 3.11 with Tk support
+
+
+```bash
+sudo add-apt-repository -y ppa:deadsnakes/ppa
+sudo apt-get update
+sudo apt-get install -y python3.11 python3.11-venv python3.11-tk
 ```
-bin/enter
+---
+
+#### Step 3 — Install smlptech in virtual environment
+
+Installs smlptech into an isolated virtual environment under `~/.venv`.
+No `sudo` required for the installation itself.
+
+```bash
+python3.11 -m venv ~/.venv
+export PATH=~/.venv/bin:$PATH
+source ~/.venv/bin/activate
+pip3.11 install smlptech
 ```
+
+To make the virtual environment available in every new shell session, add the following line to `~/.bashrc`:
+
+```bash
+export PATH=~/.venv/bin:$PATH
+```
+
+---
+
+#### Step 4 — (Recommended) Validate the installation
+
+Run the following checks to confirm the installation is working:
+
+```bash
+# Confirm smlp is importable and print its version
+python3.11 -c "import smlp; from importlib.metadata import version; print('smlp version:', version('smlptech'))"
+
+# Confirm Tk is available (required for GUI components and PNG files generation in non-GUI environment)
+python3.11 -c "import tkinter; print('tkinter Tcl/Tk:', tkinter.TclVersion)"
+```
+
+Both commands should complete without errors.
+
+---
+
+#### Step 5 — (Optional) Install MathSAT
+
+MathSAT is a Satisfiability Modulo Theories (SMT) solver developed as a joint project between Fondazione Bruno Kessler (FBK) and the University of Trento (DISI) in Italy. It is optionally used by SMLP.
+
+⚠️ **Licensing limitations**
+
+Please, read [MathSat5 license terms](https://mathsat.fbk.eu/download.html) before using MathSat
+
+- *MathSAT5 is available for research and evaluation purposes only.* **It can not be used in a commercial environment, particularly as part of a commercial product, without written permission.** *MathSAT5 is provided as is, without any warranty.*
+
+To install MathSat and validate installation:
+
+```bash
+wget https://raw.githubusercontent.com/SMLP-Systems/smlp/refs/heads/master/scripts/docker/run_mathsat_build
+chmod +x run_mathsat_build
+./run_mathsat_build && rm -rf /tmp/mathsat* && external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat -version
+```
+
+---
+
+#### Summary
+
+| Step | Description | Required |
+|------|-------------|----------|
+| 1 | System dependencies | Yes |
+| 2 | Python 3.11 + Tk via deadsnakes PPA | Yes |
+| 3 | Install smlptech | Yes |
+| 4 | Validate installation | No |
+| 5 | MathSAT SMT solver | Optional |
+
+</details>
+
+
+### Docker
+ <details>
+ <summary> MacOS </summary>
+ 
+  ``` docker run -it mdmitry1/python311-dev-mac:latest ```
+  
+  Within docker container prepend SMLP Python script with `xvfb-run`.  
+  For example: 
+
+  ```bash
+  xvfb-run smlp -h
+  ```
+
+</details>
+
+<details>
+ <summary> Linux </summary>
+ 
+  ```docker run -it mdmitry1/python311-dev:latest```
+  
+ Within docker container prepend SMLP Python script with `xvfb-run`.  
+ For example: 
+
+  ```bash
+  xvfb-run smlp -h
+ ```
+ 
+</details>
+
+<details>
+ <summary> Linux with GUI support using VNC </summary>
+
 
 Starting VNC server within container:
+
 ```
 ./start_vnc
 ```
-Recommended VNC client: `remmina`
+
+```
+scripts/bin/enter_container
+```
+
+Starting VNC server within container:
+
+```
+./start_vnc
+```
+
+Recommended VNC clients: 
+
+- Ubuntu: `remmina`
+- Windows: RealVNC®
+  
+<details>
+ <summary style="padding-left: 1.7em;"> RealVNC® installation instructions for Windows </summary>
+
+#### Step 1:
+
+Download [RealVNC®](https://www.realvnc.com/en/connect/download/viewer)
+
+#### Step 2:
+
+Install RealVNC
+
+#### Step 3: Forward Port 5900 from Windows to WSL2
+
+#### Step 3.1 - in WSL2 window
+
+Get your WSL2 IP address from running below command:
+
+```bash
+hostname -I
+```
+
+#### Step 3.2
+
+Open Command Prompt and choose **Run as administrator** option
+
+#### Step 3.3 - in Windows Command Prompt Window
+
+Use the **first IP** in the output (e.g., `172.31.26.155`). All the rest should be ignored
+Run the following in **powershell**, replacing `<WSL2_IP>` with your IP:
+
+```powershell
+netsh interface portproxy add v4tov4 listenport=5900 listenaddress=0.0.0.0 connectport=5900 connectaddress=<WSL2_IP>
+```
+
+Allow the port through Windows Firewall:
+
+```powershell
+New-NetFirewallRule -DisplayName "WSL2 VNC" -Direction Inbound -Protocol TCP -LocalPort 5900 -Action Allow
+```
+
+Verify the proxy is set:
+
+```powershell
+netsh interface portproxy show all
+```
+
+#### Step 4: Connect with VNC 
+
+**Connection should be performed after running** `./start_vnc` **command within Docker container**
+
+1. Launch VNC
+   Signing in VNC is optional
+2. In VNC connect to: `locahost:5900` 
+- Ignore non-secure connection warning
+
+#### Updating the Port Proxy After WSL2 Restart
+
+WSL2's IP address may change after restart. In this case, **Step 3** should be repeated after the reboot
+
+</details><br>
+
+</details>
+
+
+<details>
+ <summary> Linux with GUI support using X11 </summary>
 
 - Entering Docker container with X11 support on native Linux
+
 ```
-bin/enter_x11
+scripts/bin/enter_container_x11_forwarding
 ```
 
 Dependencies: `socat`
 
 - Entering Docker container with X11 support on wslg
+
 ```
-bin/enter_wslg
+scripts/bin/enter_container_wslg
 ```
 
 Dependencies: `WSL2` with `WSLG` enabled
 
 - Installation test:
 ```
-bin/test_install
+tests/install/test_container_install mdmitry1/python311-dev
 ```
 
-## Quick instructions on testing whether the tool works
+</details>
 
-- Option 1: Native tool installation
-```
-    cd $HOME/smlp/regr_smlp/code
-    ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult" \
-    -out_dir ./ -pref Test83 -mode optimize -pareto t \
-    -resp y1,y2 -feat x,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 \
-    -spec smlp_toy_num_resp_mult_free_inps -data_scaler min_max \
-    -beta "y1>7 and y2>6" -objv_names obj1,objv2,objv3 \
-    -objv_exprs "(y1+y2)/2;y1/2-y2;y2" -epsilon 0.05 -delta_rel 0.01 \
-    -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f \
-    -spec ../specs/smlp_toy_num_resp_mult_free_inps.spec
-```
+## Quickstart
 
-- Option 2: Docker container installation
+###  Problem: find minimal distance between point (2,1) and unit circle<br>
+ 
+ <p align="left">
+<img src="https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/minimal_distance.png"  alt="Minimal Distance Problem" class="center" width="500"></p>
+ 
+ Analytical solution for this problem is:<br>
+ `
+f(x*) = 6 - 2√5 ≈ 1.527864`, where `x* = (2/√5,1/√5) ≈ (0.894427, 0.447214)`
+ <br>
 
-1. Pull Docker container from the Docker repository:
+Let's solve this problem using SMLP.
 
-```
-    docker pull mdmitry1/python311-dev:latest
-```
+Download and unzip [quickstart.zip](https://raw.githubusercontent.com/SMLP-Systems/smlp/master/misc/quickstart.zip)
+(or if you cloned smlp cd to quickstart)
 
-2.  Start Docker container:
-```
-    docker run -it mdmitry1/python311-dev:latest
-```
+Let's treat this problem as black-box function optimization.
 
-3. Run the tool
+<details>
+
+<summary> Step 1: Generate samples of the distance function from the point (2,1) (for simplicity we use square of the distance as this does not change the optimum point):
+</summary>
+
+Run:
 
 ```
-    cd smlp/regr_smlp/code
-    xvfb-run ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult" \
-    -out_dir ./ -pref Test83 -mode optimize -pareto t \
-    -resp y1,y2 -feat x,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 \
-    -spec smlp_toy_num_resp_mult_free_inps -data_scaler min_max \
-    -beta "y1>7 and y2>6" -objv_names obj1,objv2,objv3 \
-    -objv_exprs "(y1+y2)/2;y1/2-y2;y2" -epsilon 0.05 -delta_rel 0.01 \
-    -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f \
-    -spec ../specs/smlp_toy_num_resp_mult_free_inps.spec
+./constraint_dora_dataset.py
 ```
 
-# Running the regression suite
-
-- Option 1: Native tool installation
-
-The regression script has to be run from inside the regression's code directory:
+This should generate `Constraint_dora.csv.gz`, inside `Constraint_dora.csv` we have:
 
 ```
-	cd $HOME/smlp/regr_smlp/code
-	./smlp_regr.py -w 8 -def n -t all -tol 7
+X1,X2,Y1
+-1.5,-1.5,18.5
+-1.495995995995996,-1.5,18.471988004020037
+-1.491991991991992,-1.5,18.4440080721362
+-1.487987987987988,-1.5,18.41606020434849
+......
+```
+</details>
+
+<details>
+
+<summary>
+Step 2: Create specification file (or use provided `constraint_dora.json`) where we specify types and ranges of variables and that the solution should be constrained to the unit circle:
+</summary>
+
+
+```
+{
+  "version": "1.2",
+  "variables": [
+    {"label":"X1", "interface":"knob", "type":"real", "range":[-1.5,2.5], "rad-abs": 0.0},
+    {"label":"X2", "interface":"knob", "type":"real", "range":[-1.5,2.0], "rad-abs": 0.0},
+    {"label":"Y1", "interface":"output", "type":"real"}
+  ],
+  "beta": "X1*X1+X2*X2<=1",
+  "objectives": {
+    "objective1": "-Y1"
+  }
+}
+```
+   <u>Legend:</u><br> 
+
+```
+   X1 - first controllable variable
+   X2 - second controlllable variable
+   Y1 - output function
+   rad-abs - sensitivity radius. 
+             Zero radius means that solution sensitivity check is skipped
+   beta - constraint depending on controllable variables
+   objective1 - optimization goal
 ```
 
-- Option 2: Docker installation
+Note SMLP by default maximizes the objective function so we use `-Y1` as the objective function.
+
+</details>
+
+<details>
+<summary>
+Step 3: Run SMLP on data file and specification file:
+
+</summary>
 
 ```
-	cd /app/smlp/regr_smlp/code
-        xvfb-run ./smlp_regr.py -w 8 -def n -t all -tol 7 -g
+smlp -data ./Constraint_dora.csv.gz -spec ./constraint_dora.json -pref Constraint_dora -out_dir results -mode optimize -model poly_sklearn -epsilon 0.0000005
 ```
 
-The above commands will execute the script, run the regression tests numbered
-1 to 129 (-t all) parallely on 8 cores (-w 8), not overwriting the stored
-reference output (-def n) with a tolerance of 7 decimal fractional digits
-(-tol 10). Note, it needs to be run from the given directory and will place the
-resulting files into that directory as well. It takes about 10 minutes on a
-2.9 GHz laptop with 8 cores utilized.
+SMLP command line arguments:<br>
 
-The output of the command will report on the results of comparing the stored
-known-good results (called 'master' in this directory tree) with those created
-by running the test locally. It should form a sequence of
-
-	comparing $FILE to master
-	Passed!
-
-In case there differences between the current run and the stored files, a diff
-between the generated files will be printed instead.
-
-The actual SMLP commands being run by the script can be obtained by appending
-the parameter -p, e.g.
-
-	./smlp_regr.py -def n -t 1 -p
-
-will produce the SMLP command for the regression test number 1:
-
-	../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult" \
-	-out_dir ./ -pref Test1 -mode train -resp y1 -feat x,p1,p2 \
-	-model dt_caret -save_model_config f -mrmr_pred 0 -plots f \
-	-seed 10 -log_time f
-
-For details about those parameters, please refer to the help messages (-h) of
-both tools, src/run_smlp.py and regr_smlp/code/smlp_regr.py, as well as the
-manual.
-
-SMLP commands run in the regression can be found in ./smlp_regr.csv together
-with a short description of the respective test.
+   ```
+    -data ./Constraint_dora.csv.gz        # input CSV dataset
+    -spec ./constraint_dora.json.json     # JSON spec file
+    -pref Constraint_dora                 # output file prefix
+    -out_dir results                      # output directory
+    -mode optimize                        # operation mode
+    -model poly_sklearn                   # model type
+    -epsilon 0.0000005                    # convergence threshold
+```
 
 
-## Regression tests for SMLP operating modes
+3 graphs will pop-up which show quality of the generated model on train/test/train+test datasets, (these need to be closed to proceed). <br>
+The generated results can be found in `results/` folder.  <br>
 
-The main claims of the paper are about functionality of SMLP which is
-reflected in different operating modes.
+`results/Constraint_dora_Constraint_dora_optimization_results.csv` contains the generated solution:
 
-The smlp_regr.py script supports parameter -m to select the subset of the
-regression tests matching the given operating mode. Supported are the
-following of SMLP's modes:
+```
+X1 = 0.89453125
+X2 = 0.4470043182373047
+Y1 = 1.5278653812777188
+```
 
-- certify
-- query
-- verify
-- synthesize
-- optimize
-- optsyn (optimized synthesis)
-- doe
+Solution found by SMLP corresponds to the analytical solution (`constraint_dora_poly_optimization_results_expected.txt`) with the specified precision:
 
-Detailed outputs of each tests will be generated in the regr_smlp/code directory.
-We refer to the manual for further information. 
+```
+X1 = 0.89453125
+X2 = 0.4470043182373047
+Y1 = 1.5278653812779421
+```
+</details>
 
-## A note on external solvers
+Steps 1 - 3 are wrapped in a script: `./quickstart.sh`
 
-Some regression tests for performance reasons use external solvers, like
-     MathSAT, instead of the default Z3. The list of those tests can be obtained via
+<details>
+<summary> Step 4: As an example, let's modify the problem in order to get solution in rational numbers.</summary>
+<br>
+  Let's change circle radius to 2/√5, so squared radius will be 4/5.<br>
+  In order to do this, edit specification file `constraint_dora.json`  and change the right side of the inequality in the constraint to be 4/5:
+  
+    `"beta": "X1*X1+X2*X2<=4/5,"`
+ 
+  Run the script from current directory 
 
-    grep -- -solver_path ./smlp_regr.csv
+```bash
+./quickstart.sh
+```
 
-Unfortunately, due to licensing restrictions, it is impossible for us to
-include a copy of this particular external solver. However, reviewers are
-free to obtain a copy and put the executable into the path expected by those
-regression tests:
+Expected SMLP results are within 0.03% accuracy for `f(x*)` and `x*`:
+```bash 
+Working directory: <current_directory_realpath>/quickstart/Constraint_dora_results_<timestamp>
+X1 = 0.800048828125
+X2 = 0.3999021053314209
+Y1 = 1.8000002980730385
+```
 
-    $HOME/smlp/regr_smlp/code/../../../external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat
+ [Analytical solution](https://www.wolframalpha.com/input?i=Minimize%3A+f%28x1%2C+x2%29+%3D+%28x1+-+2%29%5E2+%2B+%28x2+-+1%29%5E2+subject+to+x1%5E2+%2B+x2%5E2+-+4%2F5+%3C%3D+0) for this modified problem:<br>
+ 
+ `f(x*) = 9/5 = 1.8`, where `x* = (4/5,2/5) = (0.8, 0.4)`
 
-(or to modify the path given in the above .csv file).
-
-It is also possible to use different SMT solvers, for details please see
-<https://github.com/fbrausse/smlp/tree/master/utils/poly#external-solvers>.
-
-These tests are thus expected to not finish successfully.
-
-## Tests on a real-life data set
-
-In the regr_smlp directory, we also provide two tests on a real-life data set
-as have been used at Intel. To run them from inside the regr_smlp/code
-directory, run the following commands:
-
-    ../../src/run_smlp.py -out_dir ./ -pref smlp_s2_tx_dt -data ../data/smlp_s2_tx \
-    -mode optimize -pareto f -sat_thresh f -resp o0 -feat \
-    Byte,CH,RANK,Timing,i0,i1,i2,i3 -model dt_sklearn -dt_sklearn_max_depth 15 \
-    -data_scaler min_max -epsilon 0.05 -log_time f -plots f \
-    -spec ../specs/smlp_s2_tx
-
-    ../../src/run_smlp.py -out_dir ./ -pref smlp_s2_tx_nn -data ../data/smlp_s2_tx \
-    -mode optimize -pareto f -sat_thresh f -resp o0 \
-    -feat Byte,CH,RANK,Timing,i0,i1,i2,i3 \
-    -model nn_keras -nn_keras_epochs 20 -data_scaler min_max \
-    -epsilon 0.05 -log_time f -plots f  -spec ../specs/smlp_s2_tx 
-
-These runs will take longer than the regression tests provided earlier,
-usually between one and three hours, depending on the machine.
+</details>
 
 
-# Source code organization
+## [Tutorial](https://github.com/SMLP-Systems/smlp/tree/master/tutorial)
 
-SMLP at the moment consists of parts written in Python and in C++ and tiny bits
-of C. The C++ part is compiled into a shared library 'libsmlp', which exports a
-Python module with the same name. Additionally, a small wrapper script around
-it is provided in
+   - Black-box optimization Eggholder Function
+   - Constrained DORA (Distance to Optimal with Radial Adjustment)
+   - Binh and Korn (BNH) Multi-Objective Problem
+   - Intel Signal Integrity domain example
 
-- utils/poly/python/smlp
 
-which contains the proper Python interface consisting of ways to run solvers,
-to construct terms and formulas, and to deal with variable domains.
 
-The source code for this library is located in
+## [Manual](https://github.com/SMLP-Systems/smlp/blob/master/doc/smlp_manual.pdf)
 
-- utils/poly/src
+  
+### Comments/Feedback/Discussions: [[GitHub]](https://github.com/SMLP-Systems/smlp/) or [[Zulip Chat]](https://smlp.zulipchat.com)
 
-and the main files in there include
 
-- algebraics.*: support for algebraic real numbers as solutions to polynomial equations
-- domain.*: definition of the search space (the "domain")
-- expr2.*: definition of internal representation of terms and formulas
-- libsmlp.cc: Python interface library 'libsmlp'
-- reals.hh: support for computable real numbers, a superset of the algebraics
-- solver.*: definition of SMT solver interface
+### Coming soon:
+<details>
+<summary> NLP, LLM, Agentic</summary>
 
-This however is just the backend dealing with the process of solving concrete
-formulas once the semantics has been put in place.
+Current development is in PR [#21](https://github.com/SMLP-Systems/smlp/pull/21)  </br>
+See [Extended Manual](https://raw.githubusercontent.com/SMLP-Systems/smlp/nlp_text.rebased/doc/smlp_manual_extended.pdf) for details.
 
-The core of the project is written in Python, and is located in
+NLP:
+ - NLP based text classification. Applicable to spam detection, sentiment analysis, and more.
+ - NLP based root cause analysis: which words or collections of words are most correlative to classification decision (especially, for the positive class).
 
-- src/smlp_py/
+LLM:
+- LLM training from scratch
+- LLM finetuning
+- RAG (with HuggingFace and with LangChain)
 
-(and subdirectories). It defines the actual algorithms used in SMLP as described
-in the tool paper, and contains code supporting all modes and configurations
-laid out therein. In alphabetical order, these are the main files:
+Agentic:
+- SMLP Agent
 
-- smlp_doe.py: design of experiments
-- smlp_optimize.py: optimization and optimized synthesis
-- smlp_query.py: synthesis, certification, verification and query
-- smlp_subgroups.py: the subgroup discovery algorithm implemented in pysubgroup package
-
-The main entry point is the script
-
-- src/run_smlp.py
-
-It supports the various modes documented in the CAV submission as well as in the
-manual.
-
-SMLP comes with a set of regression tests located in the directory
-
-- regr_smlp
-
-It contains definitions of models, specifications, data sets used for training
-and data constraints for the solving process. A script to run
-the regression tests is provided in
-
-- regr_smlp/code/smlp_regr.py
-
-which basically just builds command lines, runs the tool and compares the
-outputs to the expected results contained in
-
-- regr_smlp/master
-
-Documentation is provided in form of a manual and a description of the .spec
-format as part of the artifact in SMLP_manual.pdf.
+</details>

@@ -1,5 +1,0 @@
-#!/usr/bin/tcsh -f
-set clone_script=run_git_clone
-\rm -f $clone_script >& /dev/null
-\cp -p `realpath $0 | xargs dirname`/../../../package_build/python3.11/22.04/$clone_script .
-env DOCKER_BUILDKIT=1 docker build --no-cache --progress=plain -t smlp-test-build-opensuse_15.5-python311 .

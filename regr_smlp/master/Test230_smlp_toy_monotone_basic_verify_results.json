@@ -1,0 +1,23 @@
+{
+	"assert_incr": {
+		"configuration_consistent": "true",
+		"assertion_status": "PASS",
+		"counter_example": null,
+		"assertion_feasible": true
+	},
+	"assert_decr": {
+		"configuration_consistent": "true",
+		"assertion_status": "FAIL",
+		"counter_example": {
+			"x": 0.25,
+			"x_copy": 0.5,
+			"p": 0.05,
+			"y": 0.25,
+			"y_copy": 0.5
+		},
+		"assertion_feasible": true
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true"
+}

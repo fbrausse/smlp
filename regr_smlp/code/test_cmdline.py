@@ -1935,7 +1935,7 @@ class Test172(CmdTestCase):
 	nr = 172
 	data = 'smlp_toy_num_resp_mult'
 	new_data = ''
-	args = ['-mode', 'verify', '-resp', 'y2', '-feat', 'x,p1,p2', '-model', 'nn_keras', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-nn_keras_epochs', '20', '-nn_keras_seq_api', 'f', '-nnet_encoding', 'layered', '-nn_keras_tuner', 'hyperband', '-nn_keras_layers_grid', '2,2;3,3,3', '-save_model_config', 'f', '-spec', 'smlp_toy_num_resp_mult_y2_verify.spec', '-asrt_names', 'asrt1', '-asrt_exprs', '2*y2>1', '-sw_coef', '4', '-sw_exp', '5', '-sw_int', '0.5', '-solver_path', '/nfs/iil/proj/dt/eva/smlp/external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
+	args = ['-mode', 'verify', '-resp', 'y2', '-feat', 'x,p1,p2', '-model', 'nn_keras', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-nn_keras_epochs', '20', '-nn_keras_seq_api', 'f', '-nnet_encoding', 'layered', '-nn_keras_tuner', 'hyperband', '-nn_keras_layers_grid', '2,2;3,3,3', '-save_model_config', 'f', '-spec', 'smlp_toy_num_resp_mult_y2_verify.spec', '-asrt_names', 'asrt1', '-asrt_exprs', '2*y2>1', '-sw_coef', '4', '-sw_exp', '5', '-sw_int', '0.5', '-solver_path', 'mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
 
 @pytest.mark.toy
 class Test173(CmdTestCase):
@@ -1948,7 +1948,7 @@ class Test173(CmdTestCase):
 	nr = 173
 	data = 'smlp_toy_num_resp_mult'
 	new_data = ''
-	args = ['-mode', 'verify', '-resp', 'y2', '-feat', 'x,p1,p2', '-model', 'nn_keras', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-nn_keras_epochs', '20', '-nn_keras_seq_api', 't', '-nnet_encoding', 'layered', '-nn_keras_tuner', 'hyperband', '-nn_keras_layers_grid', '2,2;3,3,3', '-save_model_config', 'f', '-spec', 'smlp_toy_num_resp_mult_y2_verify.spec', '-asrt_names', 'asrt1', '-asrt_exprs', '2*y2>1', '-sw_coef', '4', '-sw_exp', '5', '-sw_int', '0.5', '-nn_keras_metrics', 'mae', '-solver_path', '/nfs/iil/proj/dt/eva/smlp/external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
+	args = ['-mode', 'verify', '-resp', 'y2', '-feat', 'x,p1,p2', '-model', 'nn_keras', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-nn_keras_epochs', '20', '-nn_keras_seq_api', 't', '-nnet_encoding', 'layered', '-nn_keras_tuner', 'hyperband', '-nn_keras_layers_grid', '2,2;3,3,3', '-save_model_config', 'f', '-spec', 'smlp_toy_num_resp_mult_y2_verify.spec', '-asrt_names', 'asrt1', '-asrt_exprs', '2*y2>1', '-sw_coef', '4', '-sw_exp', '5', '-sw_int', '0.5', '-nn_keras_metrics', 'mae', '-solver_path', 'mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
 
 @pytest.mark.toy
 class Test174(CmdTestCase):
@@ -2047,7 +2047,7 @@ class Test182(CmdTestCase):
 	nr = 182
 	data = 'smlp_toy_num_resp_mult'
 	new_data = ''
-	args = ['-mode', 'optimize', '-pareto', 't', '-opt_strategy', 'lazy', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-compress_rules', 'f', '-tree_encoding', 'flat', '-scale_resp', 'f', '-spec', 'smlp_toy_num_resp_mult_free_inps_beta_objv.spec', '-data_scaler', 'min_max', '-epsilon', '0.05', '-delta_rel', '0.01', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-solver_path', '/nfs/iil/proj/dt/eva/smlp/external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
+	args = ['-mode', 'optimize', '-pareto', 't', '-opt_strategy', 'lazy', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-compress_rules', 'f', '-tree_encoding', 'flat', '-scale_resp', 'f', '-spec', 'smlp_toy_num_resp_mult_free_inps_beta_objv.spec', '-data_scaler', 'min_max', '-epsilon', '0.05', '-delta_rel', '0.01', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-solver_path', 'mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
 
 @pytest.mark.toy
 class Test183(CmdTestCase):
@@ -2219,7 +2219,7 @@ class Test197(CmdTestCase):
 	nr = 197
 	data = 'smlp_toy_num_resp_mult'
 	new_data = ''
-	args = ['-mode', 'optimize', '-pareto', 't', '-opt_strategy', 'lazy', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-compress_rules', 'f', '-tree_encoding', 'branched', '-scale_resp', 'f', '-spec', 'smlp_toy_num_resp_mult_free_inps_beta_objv.spec', '-data_scaler', 'min_max', '-epsilon', '0.05', '-delta_rel', '0.01', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-solver_path', '/nfs/iil/proj/dt/eva/smlp/external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
+	args = ['-mode', 'optimize', '-pareto', 't', '-opt_strategy', 'lazy', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-compress_rules', 'f', '-tree_encoding', 'branched', '-scale_resp', 'f', '-spec', 'smlp_toy_num_resp_mult_free_inps_beta_objv.spec', '-data_scaler', 'min_max', '-epsilon', '0.05', '-delta_rel', '0.01', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f', '-solver_path', 'mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat']
 
 @pytest.mark.toy
 class Test198(CmdTestCase):
@@ -2573,5 +2573,96 @@ class Test227(CmdTestCase):
 	data = 'smlp_toy_basic'
 	new_data = ''
 	args = ['-mode', 'correlate', '-resp', 'y1,y2', '-discr_algo', 'uniform', '-discret_num', 't', '-discr_bins', '6', '-discr_labels', 't', '-discr_type', 'object', '-data_scaler', 'none', '-cont_est', 'pearson,spearman,kendall', '-mi_method', 'normalized', '-mrmr_pred', '0', '-plots', 'f', '-seed', '10', '-log_time', 'f']
+
+@pytest.mark.toy
+class Test228(CmdTestCase):
+	'''
+	test that radii specified in command line properly override the radii specified in the spec file. Here we override both ansolute and relative radii and one can observe that the certification results also change compared to test 116
+	'''
+
+	nr = 228
+	data = 'smlp_toy_basic'
+	new_data = ''
+	args = ['-mode', 'certify', '-resp', 'y1,y2', '-feat', 'x1,x2,p1,p2', '-model', 'system', '-save_model', 'f', '-use_model', 'f', '-mrmr_pred', '2', '-model_per_response', 't', '-spec', 'smlp_toy_system_radii_update_certify.spec', '-rad_rel', '0.005', '-rad_abs', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
+
+@pytest.mark.toy
+@pytest.mark.xfail(True, reason='missing radius spec for p1/p2',
+                   raises=subprocess.CalledProcessError, strict=True)
+class Test229(CmdTestCase):
+	'''
+	basic test for checking that each knob must have either absolute or relative radius specified in the spec file (even if radii are specified in the command line)
+	'''
+
+	nr = 229
+	data = 'smlp_toy_basic'
+	new_data = ''
+	args = ['-mode', 'certify', '-resp', 'y1,y2', '-feat', 'x1,x2,p1,p2', '-model', 'system', '-save_model', 'f', '-use_model', 'f', '-mrmr_pred', '2', '-model_per_response', 't', '-spec', 'smlp_toy_missing_radii.spec', '-rad_rel', '0.005', '-rad_abs', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
+
+@pytest.mark.toy
+class Test230(CmdTestCase):
+	'''
+	tests that outputs in system specificaation might depend on different inuts (knobs and free inputs)
+	'''
+
+	nr = 230
+	data = 'smlp_toy_monotone_basic.csv'
+	new_data = ''
+	args = ['-mode', 'verify', '-spec', 'smlp_toy_system_monotone_knob.05_verify.spec', '-model', 'system', '-seed', '10', '-log_time', 'f']
+
+@pytest.mark.toy
+class Test231(CmdTestCase):
+	'''
+	certification test with monotonicity query with a knob with a grid point
+	'''
+
+	nr = 231
+	data = 'smlp_toy_monotone_basic.csv'
+	new_data = ''
+	args = ['-mode', 'certify', '-spec', 'smlp_toy_system_decreasing_knob.05_certify.spec', '-model', 'system', '-seed', '10', '-log_time', 'f']
+
+@pytest.mark.toy
+class Test232(CmdTestCase):
+	'''
+	running example from smlp manual
+	contains for witnesses to a query
+	covering all possible witness scenarios -- stable witness
+	unstable witness
+	and not a witness cases
+	'''
+
+	nr = 232
+	data = 'smlp_toy_system_running_example_certify'
+	new_data = ''
+	args = ['-mode', 'certify', '-spec', 'smlp_toy_system_running_example_certify.spec', '-model', 'system', '-seed', '10', '-log_time', 'f']
+
+@pytest.mark.toy
+class Test233(CmdTestCase):
+	'''
+	tests subgroup discovery mode when the response has string values
+	e
+	g
+	yes/no
+	pass/fail
+	'''
+
+	nr = 233
+	data = 'smlp_toy_string_response'
+	new_data = ''
+	args = ['-mode', 'subgroups', '-resp', 'str_resp1', '-feat', 'num,int,str', '-pos_val', 'no', '-neg_val', 'yes', '-seed', '10', '-log_time', 'f']
+
+@pytest.mark.toy
+class Test234(CmdTestCase):
+	'''
+	tests subgroup discovery mode when there are two responses with string values
+	e
+	g
+	yes/no
+	pass/fail
+	'''
+
+	nr = 234
+	data = 'smlp_toy_string_response'
+	new_data = ''
+	args = ['-mode', 'subgroups', '-resp', 'str_resp1,str_resp2', '-feat', 'num,int,str', '-pos_val', 'no', '-neg_val', 'yes', '-seed', '10', '-log_time', 'f']
 
 

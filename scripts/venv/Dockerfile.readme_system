@@ -1,0 +1,28 @@
+FROM ubuntu:24.04
+RUN apt-get update
+RUN env DEBIAN_FRONTEND=noninteractive apt-get install -y software-properties-common
+RUN apt-get install -y sudo
+ARG USERNAME=testuser
+ARG USER_UID=1001
+ARG USER_GID=1001
+RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
+ && useradd --uid "${USER_UID}" --gid "${USER_GID}" \
+            --create-home --shell /bin/bash "${USERNAME}" \
+ && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" \
+        > /etc/sudoers.d/${USERNAME} \
+ && chmod 0440 /etc/sudoers.d/${USERNAME}
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+COPY README_system.sourceme .
+RUN bash -c 'source README_system.sourceme'
+RUN printf '#!/usr/bin/env python3.11\n' > z3_version.py \
+    && printf 'from glob import glob\n' >> z3_version.py \
+    && printf 'from ctypes import cdll, c_char_p\n'  >> z3_version.py \
+    && printf 'from os.path import dirname\n' >> z3_version.py \
+    && printf 'from smlp import core\n' >> z3_version.py \
+    && printf 'libz3=cdll.LoadLibrary(glob(dirname(dirname(dirname(core.__file__))) + "/smlptech.libs/" + "libz3*so")[0])\n' >> z3_version.py \
+    && printf 'z3_version=libz3.Z3_get_full_version\n' >> z3_version.py \
+    && printf 'z3_version.restype=c_char_p\n' >> z3_version.py \
+    && printf 'print(z3_version().decode())\n' >> z3_version.py \
+    && chmod +x z3_version.py
+RUN ./z3_version.py

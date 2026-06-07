@@ -1,0 +1,14 @@
+#!/usr/bin/env -S tcsh -f
+set script_path=`realpath $0 | xargs dirname`
+\rm -f bnh.csv.gz bnh_p*_optimization_results.json BNH* *.log >& /dev/null
+foreach v (X1 X2 F1 F2) 
+    \rm -f bnh_pareto_$v.txt >& /dev/null
+end
+if($#argv > 0) then
+    if("-clean" == "$argv[1]") then
+        exit(0)
+    endif
+endif
+${script_path}/bnh_dataset.py
+${script_path}/run_optimize.sh
+${script_path}/plot_results.py -timeout 5

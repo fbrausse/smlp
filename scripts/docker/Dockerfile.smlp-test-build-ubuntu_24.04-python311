@@ -1,0 +1,112 @@
+FROM ubuntu:24.04
+
+# ── Install mode ───────────────────────────────────────────────────────────────
+# INSTALL_MODE=venv   (default) : install into a per-user virtual environment
+# INSTALL_MODE=system           : install system-wide via: sudo pip3.11 install
+ARG INSTALL_MODE=venv
+ARG RELEASE_TYPE
+
+# 1. ── system deps + deadsnakes PPA for Python 3.11 ──────────────────────────────
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        sudo \
+        software-properties-common \
+        git \
+        jq \
+        libgomp1 \
+        locales \
+        tcsh \
+        tzdata \
+        vim \
+        wget \
+        x11-xserver-utils \
+        xvfb \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update && apt-get install -y --no-install-recommends \
+        python3.11 \
+        python3.11-venv \
+        python3.11-tk \
+    &&  python3.11 -m ensurepip \
+    && rm -rf /var/lib/apt/lists/*
+
+# 2. ── non-root user with passwordless sudo ───────────────────────────────────────
+ARG USERNAME=testuser
+ARG USER_UID=1001
+ARG USER_GID=1001
+
+RUN groupadd --gid "${USER_GID}" "${USERNAME}" \
+ && useradd --uid "${USER_UID}" --gid "${USER_GID}" \
+            --create-home --shell /bin/bash "${USERNAME}" \
+ && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" \
+        > /etc/sudoers.d/${USERNAME} \
+ && chmod 0440 /etc/sudoers.d/${USERNAME}
+
+# 3. ── switch to the test user ────────────────────────────────────────────────────
+USER ${USERNAME}
+WORKDIR /home/${USERNAME}
+
+# 4. ── Install smlptech  ──────────────────────────────────────────────────────────
+COPY run_pip_install  .
+COPY smlp_versions.py .
+RUN if [ "$INSTALL_MODE" = "venv" ]; then \
+        python3.11 -m venv .venv \
+     && export PATH=/home/$(whoami)/.venv/bin:${PATH} \
+     && echo "Installing SMLP in user mode" \
+     && . .venv/bin/activate && ./run_pip_install $RELEASE_TYPE; \
+    elif [ "$INSTALL_MODE" = "system" ]; then \
+        echo "Installing SMLP in system mode" \
+     && sudo ./run_pip_install $RELEASE_TYPE; \
+    else \
+        echo "ERROR: unknown INSTALL_MODE=$INSTALL_MODE (expected: venv | system)" >&2; exit 1; \
+    fi
+
+# 5. ── Write validate.sh — python path depends on install mode ───────────────────
+RUN if [ "${INSTALL_MODE}" = "venv" ]; then \
+        PYTHON=".venv/bin/python3.11"; \
+    else \
+        PYTHON="python3.11"; \
+    fi \
+ && printf '#!/bin/bash\nset -e\n' > validate.sh \
+ && printf '%s -c "import smlp; from importlib.metadata import version; print('"'"'smlp version:'"'"', version('"'"'smlptech'"'"'))"\n' "$PYTHON" >> validate.sh \
+ && printf '%s -c "import tkinter; print('"'"'tkinter Tcl/Tk:'"'"', tkinter.TclVersion)"\n' "$PYTHON" >> validate.sh \
+ && printf 'echo "sudo check:"\n' >> validate.sh \
+ && printf 'sudo --non-interactive whoami\n' >> validate.sh \
+ && chmod +x validate.sh
+
+# 6. ─── Validate installation ──────────────────────────────────────────────────────────────
+RUN ./validate.sh
+
+# 7. ─── Validate Z3 version   ──────────────────────────────────────────────────────────────
+ENV PATH=/home/${USERNAME}/.venv/bin:${PATH} 
+RUN printf '#!/usr/bin/env python3.11\n' > z3_version.py \
+    && printf 'from glob import glob\n' >> z3_version.py \
+    && printf 'from ctypes import cdll, c_char_p\n'  >> z3_version.py \
+    && printf 'from os.path import dirname\n' >> z3_version.py \
+    && printf 'import smlp\n' >> z3_version.py \
+    && printf 'libz3=cdll.LoadLibrary(glob(dirname(dirname(smlp.__file__)) + "/smlptech.libs/" + "libz3*so")[0])\n' >> z3_version.py \
+    && printf 'z3_version=libz3.Z3_get_full_version\n' >> z3_version.py \
+    && printf 'z3_version.restype=c_char_p\n' >> z3_version.py \
+    && printf 'print(z3_version().decode())\n' >> z3_version.py \
+    && chmod +x z3_version.py && ./z3_version.py
+
+# 8. ─── Optional: install helper script for virtual display in order to enable non-GUI mode 
+COPY open_virtual_display .
+
+# 9. ─── Optional: install UTF-8 fonts ──────────────────────────────────────────────────────
+RUN sudo locale-gen en_US.UTF-8 && \
+    sudo update-locale LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8 LANGUAGE=en_US:en
+
+# 10. ─── Optional: install MathSAT ───────────────────────────────────────────────────────────────────────────────────
+ARG GIT_BRANCH=master
+RUN wget https://raw.githubusercontent.com/SMLP-Systems/smlp/refs/heads/$GIT_BRANCH/scripts/docker/run_mathsat_build
+RUN chmod +x run_mathsat_build
+RUN ./run_mathsat_build && rm -rf /tmp/mathsat* && external/mathsat-5.6.8-linux-x86_64-reentrant/bin/mathsat -version
+
+# 11. ── For SMLP developers: clone smlp (ARG busts the cache to always get latest) ───────────────────────────────────
+ARG CACHE_BUST_SMLP
+ARG RELEASE_TYPE
+RUN echo "Building image for branch: $GIT_BRANCH"
+COPY run_git_clone .
+RUN ./run_git_clone $GIT_BRANCH
+
+# ── Default command ──────────────────────────────────────────────────────────────────────────────────────────
+CMD ["bash"]

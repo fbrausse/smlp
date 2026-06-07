@@ -1,7 +1,0 @@
-#!/usr/bin/bash
-git clone https://github.com/SMLP-Systems/smlp
-GIT_BRANCH=$1
-cd smlp
-if [ $(git branch -r --list origin/$GIT_BRANCH) ]; then
-    git switch $GIT_BRANCH
-fi

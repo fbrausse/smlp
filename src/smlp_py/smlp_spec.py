@@ -731,37 +731,45 @@ class SmlpSpec:
         self._spec_logger.info('Knob grids (eta): ' + str(self._eta_dict))
         return eta_dict
     
-    # Compute dictionary that maps knobs to theta radii specified in spec file
+    # This function computes a dictionary that maps knobs to theta radii specified in the spec file
+    # and in the command line. Each knob must have an absolute or a relative radius specified
+    # in the spec file, but not both. This defines user intension about which knobs are meant to have
+    # absolute radii and which ones relative radii. This enables a proper update fromm commanad line:
+    # if specified in command line, an absolute radius updates radii of all knobs that have an
+    # absolute radius specified, and similarly for relative radii. This option is mostly for quick
+    # experimentation and has a limited flexibility -- it can set all absolute radii to a specific
+    # value (all absolute radii to the same value), and all relative radii to some other specific value.
     @property
     def get_spec_theta_radii_dict(self):
         if self._theta_dict is not None:
             return self._theta_dict
         
-        assert self.radius_absolute is None or self.radius_relative is None
         theta_dict = {}
         for var_spec in self.spec:
             if var_spec[self._SPEC_VARIABLE_TYPE] != self._SPEC_KNOB_TAG:
                 continue
             
+            # sanity checks -- exactly one radius must be specified for each knob
+            if self._SPEC_KNOBS_ABSOLUTE_RADIUS not in var_spec.keys() and \
+                self._SPEC_KNOBS_RELATIVE_RADIUS not in var_spec.keys():
+                raise Exception('Neither absolute nor relative radius is specified for variable ' + str(var_spec))
+            if self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec.keys() and \
+                self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
+                raise Exception('Both absolute and relative radii are specified for variable ' + str(var_spec))
+                
             # first try to get radii values from command line, if they were specified in command line
             if self.radius_relative is not None and self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
-                theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {self._SPEC_KNOBS_ABSOLUTE_RADIUS: None, 
+                theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {
+                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: None, 
                     self._SPEC_KNOBS_RELATIVE_RADIUS: self.radius_relative}
                 continue
             if self.radius_absolute is not None and self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec.keys():
                 theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {
-                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: var_spec[self.radius_absolute], 
+                    self._SPEC_KNOBS_ABSOLUTE_RADIUS: self.radius_absolute, 
                     self._SPEC_KNOBS_RELATIVE_RADIUS: None}
-            
-            # extract radii values from spec file
-            if self._SPEC_KNOBS_ABSOLUTE_RADIUS not in var_spec.keys() and \
-                self._SPEC_KNOBS_RELATIVE_RADIUS not in var_spec.keys():
                 continue
-            if self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec.keys() and \
-                self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
-                raise Exception('Both absolute and relative radii are specified for variable ' + str(var_spec))
-            assert self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec.keys() or \
-                self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys()
+
+            # extract radii values from spec file
             if self._SPEC_KNOBS_ABSOLUTE_RADIUS in var_spec.keys():
                 theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {
                     self._SPEC_KNOBS_ABSOLUTE_RADIUS: var_spec[self._SPEC_KNOBS_ABSOLUTE_RADIUS], 
@@ -769,9 +777,9 @@ class SmlpSpec:
             if self._SPEC_KNOBS_RELATIVE_RADIUS in var_spec.keys():
                 theta_dict[var_spec[self._SPEC_VARIABLE_LABEL]] = {self._SPEC_KNOBS_ABSOLUTE_RADIUS: None, 
                     self._SPEC_KNOBS_RELATIVE_RADIUS: var_spec[self._SPEC_KNOBS_RELATIVE_RADIUS]}
-                
+        
         self._theta_dict = theta_dict
-        return theta_dict   
+        return self._theta_dict   
     
     # relative and absolute delta constant used for lemma generation in optimization procedures
     def get_spec_delta_dict(self, delta_abs, delta_rel):

@@ -1,0 +1,40 @@
+#!/usr/bin/env -S tcsh -f
+set log=`realpath $0 | xargs basename`.log
+git rev-parse --show-toplevel >& /dev/null
+if($status) then
+    echo "\nERROR: Current directory is outside git directory tree\n"
+    exit(1)
+endif
+set test=s2_tx_piv_anonym
+set test_dir=tests/bench/intel
+set git_root=`git rev-parse --show-toplevel` 
+set pref=no_split
+\rm -f logs.log $log >& /dev/null
+\rm -f ${pref}* >& /dev/null
+if($#argv > 0) then
+    if("-clean" == "$argv[1]") then
+        exit(0)
+    endif
+endif
+smlp -data ${git_root}/${test_dir}/data/${test}.csv.bz2 \
+    -spec ${git_root}/${test_dir}/specs/${test}.spec \
+    -out_dir ./ \
+    -pref $pref \
+    -pred_plots f \
+    -resp_plots f \
+    -delta_abs 0.005 \
+    -rad_rel 0 \
+    -epsilon 0.005 \
+    -mode optimize \
+    -model dt_sklearn \
+    -mrmr_pred 0 \
+    -plots f \
+    -tree_encoding flat \
+    -opt_strategy eager \
+    -seed 10 \
+    -dt_sklearn_max_depth 17 >& $log
+set json=${pref}_${test}_optimization_results.json
+set out=$json:r_relative_optimized_margin.txt
+foreach key (`jq 'keys[] | select(test("objv"))' $json`)
+    if( $key !~ "*scaled*" ) echo $key `jq ".${key}.threshold_scaled" $json` | tr -d '"' | sed 's/objv_//' >> $out
+end

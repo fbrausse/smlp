@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+image=mdmitry1/python311-dev:latest
+if [ $# -gt 0 ]; then 
+    image=$1
+fi
+log=$(realpath $0 | xargs basename).$(echo $image | tr / _ | cut -d: -f1).log
+\rm -f $log &> /dev/null
+success=0
+if [[ "$image" == *wheel* ]]; then
+    docker run --rm $image /bin/bash -c \
+        'auditwheel show dist/smlptech-*-cp311-cp311-manylinux_2_2*_x86_64.manylinux_2_28_x86_64.whl \
+            | grep -B1 -A1 consistent |& tr "\012" " "' &> $log
+    echo "" >> $log
+    if [ "1" -eq $(grep -c consistent $log) ]; then
+        success=1
+    fi
+else
+    docker run --rm $image /bin/bash -c './open_virtual_display && env DISPLAY=:99 smlp -h' &> $log
+    if [ "1" -eq $(grep -c ^usage $log) ]; then
+        success=1
+    fi
+fi
+if (( success > 0 )); then
+    echo ""
+    echo "SMLP installation for $image succeeded"
+    echo ""
+else
+    echo ""
+    echo "ERROR: SMLP installation for $image failed" 
+    echo ""
+    echo "Error messages:"
+    egrep -i "bash|error" $log
+    echo ""
+    exit 1 
+fi

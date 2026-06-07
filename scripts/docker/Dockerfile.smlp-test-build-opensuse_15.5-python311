@@ -1,0 +1,94 @@
+FROM opensuse/leap:15.5
+
+# ---------------------------------------------------------------------------
+# 1. System packages
+# ---------------------------------------------------------------------------
+RUN zypper refresh && zypper install -y \
+        curl \
+        git \
+        jq \
+        libgomp1 \
+        glibc-locale \
+        glibc-locale-base \
+        glibc-i18ndata \
+        gzip \
+        hostname \
+        tar \
+        tcsh \
+        timezone \
+        vim \
+        wget \
+        xorg-x11-fonts \
+        xorg-x11-fonts-core \
+        xorg-x11-server-Xvfb \
+        xvfb-run \
+        xset \
+        procps \
+        python311 \
+        python311-devel \
+        python311-tk && \
+    zypper clean --all
+
+# ---------------------------------------------------------------------------
+# 2. mathsat
+# ---------------------------------------------------------------------------
+WORKDIR /app
+COPY run_mathsat_build .
+RUN ./run_mathsat_build && rm -rf /tmp/mathsat*
+
+# ---------------------------------------------------------------------------
+# 3. Install pip and setuptools for Python 3.11
+# ---------------------------------------------------------------------------
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11 && \
+    python3.11 -m pip install --upgrade setuptools
+
+# ---------------------------------------------------------------------------
+# 4. Clone smlp (ARG busts the cache to always get latest)
+# ---------------------------------------------------------------------------
+ARG CACHE_BUST_SMLP
+ARG GIT_BRANCH=master
+ARG RELEASE_TYPE
+RUN echo "Building image for branch: $GIT_BRANCH"
+COPY run_git_clone .
+RUN cd /app && ./run_git_clone $GIT_BRANCH
+
+# ---------------------------------------------------------------------------
+# 5. Install smlp from wheel
+# ---------------------------------------------------------------------------
+COPY smlp_versions.py .
+COPY run_pip_install  .
+RUN ./run_pip_install $RELEASE_TYPE
+
+# ---------------------------------------------------------------------------
+# 6. Configure UTF-8 locale
+# ---------------------------------------------------------------------------
+RUN localedef -i en_US -f UTF-8 en_US.UTF-8
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+
+# ---------------------------------------------------------------------------
+# 7. SMLP regression patch
+# ---------------------------------------------------------------------------
+COPY smlp_regr_patch .
+RUN ./smlp_regr_patch
+
+# ---------------------------------------------------------------------------
+# 8. Define python version
+# ---------------------------------------------------------------------------
+RUN ln -sf /usr/bin/python3.11 /usr/bin/python && \
+    ln -sf /usr/bin/python3.11 /usr/bin/python3
+
+# ---------------------------------------------------------------------------
+# 9. Copy and run DORA
+# ---------------------------------------------------------------------------
+COPY run_dora /app
+RUN ./run_dora
+
+# ---------------------------------------------------------------------------
+# 10. Copy script for opening virtual display - needed for regression
+# ---------------------------------------------------------------------------
+COPY open_virtual_display /app
+
+# Default command
+CMD ["/usr/bin/bash"]

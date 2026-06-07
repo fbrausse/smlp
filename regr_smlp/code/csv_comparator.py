@@ -41,7 +41,7 @@ def check_values(csv1, csv2):
                 if np.isnan(val2):
                     return False
                 if isinstance(val1, np.float64) and isinstance(val2, np.float64):
-                    diff = abs(abs(val1) - abs(val2))
+                    diff = abs(val1 - val2)
                     max_val = max(abs(val1), abs(val2))
                     diff_ratio = diff / max_val
                     if diff_ratio >= THRESHOLD:
@@ -66,9 +66,13 @@ def compare_csv(csv1, csv2):
 
 
 def main():
-    pass
-    #return comapre_csv(path.join(old_path, file), path.join(new_path, file))
+    if compare_csv(sys.argv[1], sys.argv[2]):
+        print('OK')
+        return 0
+    else:
+        print('Failed')
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

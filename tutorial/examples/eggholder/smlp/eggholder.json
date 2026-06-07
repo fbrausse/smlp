@@ -1,0 +1,11 @@
+{
+  "version": "1.2",
+  "variables": [
+    {"label":"X1", "interface":"knob", "type":"real", "range":[-512,512], "rad-abs": 0.1},
+    {"label":"X2", "interface":"knob", "type":"real", "range":[-512,512], "rad-abs": 0.1},
+    {"label":"Y1", "interface":"output", "type":"real"}
+  ],
+  "objectives": {
+    "objective1": "-Y1"
+  }
+}

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+minor_ver=$1
+
+wget --tries=5 --timeout=30 --waitretry=2 \
+    https://archives.boost.io/release/1.83.0/source/boost_1_83_0.tar.gz \
+    -O /tmp/boost_1_83_0.tar.gz
+
+cd /tmp
+tar -xvf boost_1_83_0.tar.gz >& boost_1_83_0.tar.log
+cd boost_1_83_0
+
+./bootstrap.sh --with-python=/usr/bin/python3.${minor_ver} --with-libraries=python
+./b2 install --prefix="$HOME/boost_py3${minor_ver}" --with-python python=3.${minor_ver}
+
+arch=$(uname -m)
+cp -p "$HOME/boost_py3${minor_ver}/lib/libboost_python3${minor_ver}.a"          /usr/lib/${arch}-linux-gnu/
+cp -p "$HOME/boost_py3${minor_ver}/lib/libboost_python3${minor_ver}.so.1.83.0"  /usr/lib/${arch}-linux-gnu/
+ln -s /usr/lib/${arch}-linux-gnu/libboost_python3${minor_ver}.so.1.83.0 \
+      /usr/lib/${arch}-linux-gnu/libboost_python3${minor_ver}.so

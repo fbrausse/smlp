@@ -273,7 +273,7 @@ class SubgroupDiscovery:
         N = len(in_samples)
 
         # The argument norm_resp denotes the response resp scaled to 0 to 1.
-        # So values close to 0 in resp_norm are vealues close to min of resp
+        # So values close to 0 in resp_norm are values close to min of resp
         # and values close 1 in resp_norm are values close to max in resp.
         # Below such a response will be denoted as resp01. Thus for resp01
         # this function will give high scores (such as WRAcc, PosInRatio, etc.)
@@ -769,7 +769,6 @@ class SubgroupDiscovery:
     # function to visualize the selected ranges).
     def _smlp_subgroups_single_response(self, feat_df:pd.DataFrame, resp_df:pd.DataFrame, 
             resp_name:str, pos_value:int, qf:str, dim:int, top_n:int):
-        assert pos_value == 0 or pos_value == 1
         cls_reg_mode = get_response_type(resp_df, resp_name)
         assert cls_reg_mode == CLASSIFICATION or cls_reg_mode == REGRESSION
         if cls_reg_mode == REGRESSION:
@@ -777,7 +776,7 @@ class SubgroupDiscovery:
             feat_resp_df = pd.concat([feat_df, resp_df], axis=1);
         else:
             # keep resp_df as is, to use in fs_ranking_with_frequencies (thus the use of inplace=False)
-            pf_resp_df = resp_df[resp_name].replace({pos_value: self._psg_positive_value, 
+            pf_resp_df = resp_df[resp_name].replace({pos_value: self._psg_positive_value,
                 1-pos_value: self._psg_negative_value}, inplace=False)
             target = ps.BinaryTarget(resp_name, self._psg_positive_value)
             feat_resp_df = pd.concat([feat_df, pf_resp_df], axis=1)
@@ -919,14 +918,14 @@ class SubgroupDiscovery:
             
             # merge the thred's result into the main output file and remove the former
             
-            # export important features file per response -- TODO !!!
+            # TODO export important features file per response
             
             # sanity check of class samples table for the current response
             cls_reg_mode = get_response_type(pd.DataFrame(resp), resp_name)
-            # TOD0 !!! dummy = sanity_check_class_sample_tables(fs_ranking_df, cls_reg_mode)
+            # TOD0 dummy = sanity_check_class_sample_tables(fs_ranking_df, cls_reg_mode)
 
             # join ranked features and selected ranges files of multiple responses
-            # TODO !!! need support for ranked_fs_summary_df, currently it is None as
+            # TODO need support for ranked_fs_summary_df, currently it is None as
             # feature selection heuristics (Pearson, etc.) are not implemented
             if resp_name == resp_names[0]: #is.null(multi_fs_summary_df)
                 multi_fs_summary_df = ranked_fs_summary_df
@@ -934,9 +933,9 @@ class SubgroupDiscovery:
             else:
                 if not multi_fs_summary_df is None:
                     #multi_fs_summary_df = merge_by_important_features(multi_fs_summary_df, ranked_fs_summary_df)
-                    # TODO !!! : usage of pd.conacat() instead of merge_by_important_features() has not been tested
+                    # TODO: usage of pd.conacat() instead of merge_by_important_features() has not been tested
                     multi_fs_summary_df = pd.concat([multi_fs_summary_df, ranked_fs_summary_df], axis=1)
-                # TODO !!! usage of merge instead of safe_rbind_all_columns has not been tested
+                # TODO usage of merge instead of safe_rbind_all_columns has not been tested
                 #multi_fs_ranking_df = safe_rbind_all_columns(multi_fs_ranking_df, fs_ranking_df)
                 multi_fs_ranking_df = multi_fs_ranking_df.merge(fs_ranking_df, how = 'outer')
         
@@ -979,27 +978,33 @@ class SubgroupDiscovery:
                 self._psg_logger.warning('Range plots are not supported in this version of SMLP')
             else:
                 plots_dir = self.get_range_plots_dir()
-                plots_config = '' # TODO !!!: this is the default value, need to understand why config is required and 
-                                  # decide whether a command line option name is useful
-                pos_is_low = pos_value == STAT_NEGATIVE_VALUE #False # TODO !!!: need to define the command line option for this
-                summary_table = False # TODO !!!: using default value, need to decide whether a command line option
-                                      # is useful and in fact understand whether to support this table in the future
+                plots_config = '' # TODO: using default value; decide whether a command line option is useful
+                pos_is_low = pos_value == STAT_NEGATIVE_VALUE
+                summary_table = False # TODO: using default value, decide whether a command line option is
+                                      # useful and decide whether to support this table in the future
                 html_file = self.instRangePlots.mainRun(fs_ranking_csv_filename, plots_dir, plots_config, pos_is_low, summary=summary_table)
-                ''' TODO !!!" we might want plots interactive by opening plots html and pausing excution
-                    till user notifies so interactively. The code below is to open the html link but does
-                    not work properly if a firefox window is already open in user's environment
-                # import module
-                import webbrowser
-                # open html file
-                #webbrowser.open(html_file) 
-                webbrowser.open_new_tab(html_file)
-                '''        
+                #TODO: we might want to support interactive plots here
         return multi_fs_ranking_df, multi_fs_summary_df        
 
     # counterpart of rules, except data preparation is done outside (before this call) and also
-    # it also covers pysubgroup and not other subgroup iplementations like prim or cn2 
-    def smlp_subgroups(self, feat_df:pd.DataFrame, resps_df:pd.DataFrame, resp_names:list, 
-            pos_value:int, neg_value:int, qf:str, dim:int, top_n:int, plots:bool):
+    # it covers pysubgroup and not other subgroup iplementations like prim or cn2
+    def smlp_subgroups(self, feat_df:pd.DataFrame, resps_df:pd.DataFrame, resp_names:list[str], 
+            pos_value, neg_value, qf:str, dim:int, top_n:int, plots:bool):
+        # At this point data processing has been performed, and user specified positive_value and
+        # negative_value have already been replaced by STAT_POSITIVE_VALUE and STAT_NEGATIVE_VALUE
+        # respectively, in the responses in the CLASSIFICATION mode
+        cls_reg_mode = get_response_type(resps_df, resp_names[0])
+        assert cls_reg_mode == CLASSIFICATION or cls_reg_mode == REGRESSION
+        if cls_reg_mode == CLASSIFICATION:
+            pos_value = STAT_POSITIVE_VALUE
+            neg_value = STAT_NEGATIVE_VALUE
+        
+        # According to the description of positive_value and negative_value options in regression
+        # mode, only values 0 1n 1 are allowed for them. This assertion checks that this is indeed
+        # the case (so they were specified correctly and their values did not change). In case of
+        # classification, the assertion holds due to updating pos_value and neg_value above.
+        assert {pos_value, neg_value} == {STAT_POSITIVE_VALUE, STAT_NEGATIVE_VALUE}
+        
         results_dict = {}
         fs_ranking_df = None
         for rn in resp_names:
@@ -1011,7 +1016,7 @@ class SubgroupDiscovery:
         
         full_fs_list = results_dict
         extracted_resp_feat_list_full = {'features':feat_df, 'responses':resps_df}
-        # TODO !!!: we might want to keep features_df as a seprate item in extracted_resp_feat_list_full 
+        # TODO: we might want to keep features_df as a seprate item in extracted_resp_feat_list_full
         # and do not include in extracted_resp_feat_list_full[rn] for every response rn. In addition,
         # include resp_feat_dict which will specify the relevant features (selcted through MRMR for eaxmple) 
         # per response.
@@ -1021,7 +1026,7 @@ class SubgroupDiscovery:
         number_of_responses = len(resp_names)
         i_start = 1
         mode = "features"
-        output_file = None # TODO !!! complete implementation
+        output_file = None # TODO complete implementation
         fs_ranking_df, fs_summary_df = self._fs_multi_response_ensemble_summary( 
             full_fs_list, extracted_resp_feat_list_full, number_of_responses, i_start, 
             pos_value, neg_value, plots, mode, output_file)

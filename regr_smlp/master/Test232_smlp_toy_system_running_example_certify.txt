@@ -1,0 +1,205 @@
+
+smlp_logger - INFO - Model exploration specification:
+{'version': '1.2', 'variables': [{'label': 'y', 'interface': 'output', 'type': 'real'}, {'label': 'x', 'interface': 'input', 'type': 'real', 'range': [-1, 1]}, {'label': 'p', 'interface': 'knob', 'type': 'real', 'range': [-2, 2], 'rad-abs': Fraction(1, 5)}], 'system': {'y': '0 if (p<=0 and x<=0) else x if x>0 else p'}, 'queries': {'query_stable_witness': 'y<=0', 'query_unstable_witness': 'y<=0', 'query_non_witness_neg': 'y<=0', 'query_non_witness_pos': 'y<=0'}, 'witnesses': {'query_stable_witness': {'x': Fraction(-1, 2), 'p': -1}, 'query_unstable_witness': {'x': Fraction(-1, 2), 'p': 0}, 'query_non_witness_neg': {'x': Fraction(-1, 2), 'p': 1}, 'query_non_witness_pos': {'x': Fraction(1, 2), 'p': 1}}}
+
+smlp_logger - INFO - Executing run_smlp.py script: Start
+
+smlp_logger - INFO - Running SMLP in mode "certify": Start
+
+smlp_logger - INFO - Computed spec global constraint expressions:
+
+smlp_logger - INFO - Global alpha : None
+
+smlp_logger - INFO - Global beta  : None
+
+smlp_logger - INFO - Radii  theta : {'p': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
+
+smlp_logger - INFO - Delta  const : {'delta_abs': 0.0, 'delta_rel': 0.01}
+
+smlp_logger - INFO - Query query_stable_witness: y<=0
+
+smlp_logger - INFO - Query query_unstable_witness: y<=0
+
+smlp_logger - INFO - Query query_non_witness_neg: y<=0
+
+smlp_logger - INFO - Query query_non_witness_pos: y<=0
+
+smlp_logger - INFO - Witness to query query_stable_witness
+{'x': Fraction(-1, 2), 'p': -1}
+
+smlp_logger - INFO - Witness to query query_unstable_witness
+{'x': Fraction(-1, 2), 'p': 0}
+
+smlp_logger - INFO - Witness to query query_non_witness_neg
+{'x': Fraction(-1, 2), 'p': 1}
+
+smlp_logger - INFO - Witness to query query_non_witness_pos
+{'x': Fraction(1, 2), 'p': 1}
+
+smlp_logger - INFO - Original system : {'y': '0 if (p<=0 and x<=0) else x if x>0 else p'}
+
+smlp_logger - INFO - PREPARE DATA FOR MODELING
+
+smlp_logger - INFO - Preparing training data for modeling: start
+
+smlp_logger - INFO - loading training data
+
+smlp_logger - INFO - data summary
+              p         x         y
+count  3.000000  3.000000  3.000000
+mean   0.333333  0.333333  0.666667
+std    0.577350  0.577350  0.577350
+min    0.000000  0.000000  0.000000
+25%    0.000000  0.000000  0.500000
+50%    0.000000  0.000000  1.000000
+75%    0.500000  0.500000  1.000000
+max    1.000000  1.000000  1.000000
+
+smlp_logger - INFO - training data
+   p  x  y
+0  1  0  1
+1  0  1  1
+2  0  0  0
+
+smlp_logger - INFO - training data after imputing missing values
+   x  p  y
+0  0  1  1
+1  1  0  1
+2  0  0  0
+
+smlp_logger - INFO - training data after processing responses
+   x  p  y
+0  0  1  1
+1  1  0  1
+2  0  0  0
+
+smlp_logger - INFO - MRMR feature selection for response y : start
+
+smlp_logger - INFO - MRMR selected feature scores (in the ranked order) for response y :
+  Feature     Score
+0       x  0.333333
+1       p  0.333333
+
+smlp_logger - INFO - MRMR feature selection for response y : end
+
+smlp_logger - INFO - training data after encoding levels of categorical features with integers
+   x  p  y
+0  0  1  1
+1  1  0  1
+2  0  0  0
+
+smlp_logger - INFO - training data after scaling (normalizing) features and responses
+     x    p    y
+0  0.0  1.0  1.0
+1  1.0  0.0  1.0
+2  0.0  0.0  0.0
+
+smlp_logger - INFO - Sampling from training data: start
+
+smlp_logger - INFO - Sampling from training data: end
+
+smlp_logger - INFO - X_train after sampling: (2, 2)
+
+smlp_logger - INFO - y_train after sampling: (2, 1)
+
+smlp_logger - INFO - Preparing training data for modeling: end
+
+smlp_logger - INFO - Saving data bounds into file:./Test232_smlp_toy_system_running_example_certify_data_bounds.json
+
+smlp_logger - INFO - {'x': {'min': 0.0, 'max': 1.0}, 'p': {'min': 0.0, 'max': 1.0}, 'y': {'min': 0.0, 'max': 1.0}}
+
+smlp_logger - INFO - Creating model exploration base components: Start
+
+smlp_logger - INFO - Parsing the SPEC: Start
+
+smlp_logger - INFO - Parsing the SPEC: End
+
+smlp_logger - INFO - Variable domains (alpha): {'y': {'range': 'real', 'interval': None}, 'x': {'range': 'real', 'interval': [-1, 1]}, 'p': {'range': 'real', 'interval': [-2, 2]}}
+
+smlp_logger - INFO - Input bounds (alpha): {'x': {'min': -1, 'max': 1}}
+
+smlp_logger - INFO - Knob bounds (eta): {'p': {'min': -2, 'max': 2}}
+
+smlp_logger - INFO - Knob grids (eta): {}
+
+smlp_logger - INFO - Alpha global   constraints: true
+
+smlp_logger - INFO - Alpha ranges   constraints: (and true (and (>= x (- 1)) (<= x 1)))
+
+smlp_logger - INFO - Alpha combined constraints: (let ((|:0| true)) (and (and |:0| (and (>= x (- 1)) (<= x 1))) |:0|))
+
+smlp_logger - INFO - Beta  global   constraints: true
+
+smlp_logger - INFO - Eta   ranges   constraints: (and true (and (>= p (- 2)) (<= p 2)))
+
+smlp_logger - INFO - Eta   grid     constraints: true
+
+smlp_logger - INFO - Eta   global   constraints: true
+
+smlp_logger - INFO - Eta   combined constraints: (let ((|:0| true)) (and (and (and |:0| (and (>= p (- 2)) (<= p 2))) |:0|) |:0|))
+
+smlp_logger - INFO - Creating model exploration base components: End
+
+smlp_logger - INFO - Input and knob interface constraints are consistent
+
+smlp_logger - INFO - Building system terms: Start
+
+smlp_logger - INFO - System terms dictionary: {'y': <smlp.core.libsmlp.term2 (ite (and (<= p 0) (<= x 0)) 0 (ite (> x 0) x p))>}
+
+smlp_logger - INFO - Building system terms: End
+
+smlp_logger - INFO - Building model terms: Start
+
+smlp_logger - INFO - Model operator counts for y: {'ite': 2, 'and': 1, 'prop': 3, 'var': 5, 'const': 4}
+
+smlp_logger - INFO - Building model terms: End
+
+smlp_logger - INFO - Model interface constraints are consistent
+
+smlp_logger - INFO - Certifying consistency of witness for query query_stable_witness:
+   (and (= x (/ (- 1) 2)) (= p (- 1)))
+
+smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
+
+smlp_logger - INFO - Certifying consistency of witness for query query_unstable_witness:
+   (and (= x (/ (- 1) 2)) (= p 0))
+
+smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
+
+smlp_logger - INFO - Certifying consistency of witness for query query_non_witness_neg:
+   (and (= x (/ (- 1) 2)) (= p 1))
+
+smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
+
+smlp_logger - INFO - Certifying consistency of witness for query query_non_witness_pos:
+   (and (= x (/ 1 2)) (= p 1))
+
+smlp_logger - INFO - Input, knob and concrete witness constraints are consistent
+
+smlp_logger - INFO - Certifying stability of witness for query query_stable_witness:
+   {'x': Fraction(-1, 2), 'p': -1}
+
+smlp_logger - INFO - Witness to query query_stable_witness is a valid witness; checking its stability
+
+smlp_logger - INFO - Witness to query query_stable_witness is stable for radii {'p': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
+
+smlp_logger - INFO - Certifying stability of witness for query query_unstable_witness:
+   {'x': Fraction(-1, 2), 'p': 0}
+
+smlp_logger - INFO - Witness to query query_unstable_witness is a valid witness; checking its stability
+
+smlp_logger - INFO - Witness to query query_unstable_witness is not stable for radii {'p': {'rad-abs': Fraction(1, 5), 'rad-rel': None}}
+
+smlp_logger - INFO - Certifying stability of witness for query query_non_witness_neg:
+   {'x': Fraction(-1, 2), 'p': 1}
+
+smlp_logger - INFO - Witness to query query_non_witness_neg is not a valid witness (even without stability requirements)
+
+smlp_logger - INFO - Certifying stability of witness for query query_non_witness_pos:
+   {'x': Fraction(1, 2), 'p': 1}
+
+smlp_logger - INFO - Witness to query query_non_witness_pos is not a valid witness (even without stability requirements)
+
+smlp_logger - INFO - Running SMLP in mode "certify": End
+
+smlp_logger - INFO - Executing run_smlp.py script: End

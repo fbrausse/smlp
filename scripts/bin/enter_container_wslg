@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+image=mdmitry1/python311-dev:latest
+if [ $# -gt 0 ]; then 
+    image=$1
+    shift
+fi
+
+mkdir -p "$HOME/shared"
+
+if [[ -z "${TZ}" ]]; then
+    TZ=$(readlink /etc/localtime | sed 's@/usr/share/zoneinfo/@@')
+fi
+docker run -e TZ=$TZ -e DISPLAY=$DISPLAY \
+           -v /tmp/.X11-unix:/tmp/.X11-unix:rw \
+           -v /mnt/wslg:/mnt/wslg:rw \
+           -v "$HOME/shared:/shared" \
+           -it $image "$@"

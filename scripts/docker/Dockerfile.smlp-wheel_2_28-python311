@@ -1,0 +1,77 @@
+FROM quay.io/pypa/manylinux_2_28_x86_64
+
+# ---------------------------------------------------------------------------
+# 1. System packages
+# ---------------------------------------------------------------------------
+RUN dnf install -y \
+        wget git make m4 pkg-config && \
+    dnf clean all
+
+# ---------------------------------------------------------------------------
+# 2. Set Python 3.11 from pre-installed pypa versions
+# ---------------------------------------------------------------------------
+ENV PATH="/opt/python/cp311-cp311/bin:${PATH}"
+ENV PYTHON=/opt/python/cp311-cp311/bin/python3.11
+ENV PIP=/opt/python/cp311-cp311/bin/pip
+
+# ---------------------------------------------------------------------------
+# 3. Python build tools
+# --------------------------------------------------------------------------
+RUN /opt/python/cp311-cp311/bin/pip install --upgrade pip && \
+    /opt/python/cp311-cp311/bin/pip install \
+        auditwheel \
+        patchelf && \
+    ln -sf /opt/python/cp311-cp311/bin/python3.11 /usr/local/bin/python3.11 && \
+    ln -sf /opt/python/cp311-cp311/bin/pip /usr/local/bin/pip3.11
+
+# ---------------------------------------------------------------------------
+# Z3 configuration
+# ---------------------------------------------------------------------------
+ARG Z3_VERSION=z3-4.8.12
+ARG Z3_PREFIX=/usr/local
+ARG Z3_SRC_DIR=/tmp/z3
+
+ENV Z3_PREFIX=${Z3_PREFIX}
+ENV LD_LIBRARY_PATH=${Z3_PREFIX}/lib:${LD_LIBRARY_PATH}
+
+# ---------------------------------------------------------------------------
+# 3.1 Build Z3 from source (for bundling)
+# ---------------------------------------------------------------------------
+WORKDIR /tmp
+RUN git clone --branch ${Z3_VERSION} \
+        https://github.com/Z3Prover/z3.git ${Z3_SRC_DIR} && \
+    cd ${Z3_SRC_DIR} && \
+    ${PYTHON} scripts/mk_make.py \
+        --prefix=${Z3_PREFIX} \
+        --optimize && \
+    cd build && \
+    make -j$(nproc) && \
+    make install && \
+    rm -rf ${Z3_SRC_DIR}
+RUN ${Z3_PREFIX}/bin/z3 --version
+
+# ---------------------------------------------------------------------------
+# 4. Add ~/.local/bin to PATH
+# ---------------------------------------------------------------------------
+ENV PATH="/root/.local/bin:${PATH}"
+
+# ---------------------------------------------------------------------------
+# 5. Clone smlp and optionally switch to branch
+# ---------------------------------------------------------------------------
+WORKDIR /app
+COPY run_git_clone .
+ARG CACHE_BUST_SMLP
+ARG GIT_BRANCH=master
+RUN echo "Building image for branch: $GIT_BRANCH"
+RUN ./run_git_clone $GIT_BRANCH
+
+# ---------------------------------------------------------------------------
+# 6. Build wheel
+# ---------------------------------------------------------------------------
+WORKDIR smlp
+COPY repair_wheel.py /app
+RUN /opt/python/cp311-cp311/bin/python3.11 -m pip -v wheel . -w dist/ && \
+    /opt/python/cp311-cp311/bin/python3.11 /app/repair_wheel.py dist/ --plat manylinux_2_28_x86_64
+
+CMD ["/usr/bin/bash"]
+# The manylinux wheel is in /app/smlp/dist/
