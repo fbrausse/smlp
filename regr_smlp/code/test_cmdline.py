@@ -2623,7 +2623,7 @@ class Test230(CmdTestCase):
 	'''
 
 	nr = 230
-	data = 'smlp_toy_monotone_basic.csv'
+	data = 'smlp_toy_monotone_basic'
 	new_data = ''
 	args = ['-mode', 'verify', '-spec', 'smlp_toy_system_monotone_knob.05_verify.spec', '-model', 'system', '-seed', '10', '-log_time', 'f']
 
@@ -2634,7 +2634,7 @@ class Test231(CmdTestCase):
 	'''
 
 	nr = 231
-	data = 'smlp_toy_monotone_basic.csv'
+	data = 'smlp_toy_monotone_basic'
 	new_data = ''
 	args = ['-mode', 'certify', '-spec', 'smlp_toy_system_decreasing_knob.05_certify.spec', '-model', 'system', '-seed', '10', '-log_time', 'f']
 
