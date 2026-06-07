@@ -29,6 +29,8 @@ if(-e /.dockerenv ) then
     endif
     $sudo apt update
     $sudo apt install -y python3-pip python3-pandas
+    # Workaround for Ubuntu issue - extra package is installed
+    $sudo rm -rf /usr/lib/python3/dist-packages/tables* >& /dev/null
     rehash
     set local_lib=$HOME/.local/lib/python3.12/site-packages
     pip3.12 install pytest pytest-xdist --target $local_lib
