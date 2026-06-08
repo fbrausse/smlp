@@ -602,7 +602,7 @@ def main():
                                 test_errors.append(['Build', 'DOE file does not exist'])
                         else:
                             test_data_path = path.join(data_path, test_data).replace('\\', '/')
-                            print('test_data_path', test_data_path); print('test_data', test_data)
+                            #print('test_data_path', test_data_path); print('test_data', test_data)
                             if path.exists(test_data_path):
                                 test_data_path = '-data \"{0}\"'.format(test_data_path)
                             elif path.exists(test_data_path + '.csv'):
