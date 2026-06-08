@@ -8,6 +8,18 @@
 97a97
 > if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
 =================== End of Test7_smlp_toy_num_resp_mult_rf_sklearn_tree_rules.txt diff report ================================
+=================== Diff report for: Test9_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_args_config.json ==================================
+106c106
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test9_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_args_config.json diff report ================================
+=================== Diff report for: test20_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test20_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test10_smlp_toy_num_resp_mult_et_sklearn_tree_rules.txt ==================================
 6d5
 < if (p1 > 0.7673577288013687) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
@@ -332,6 +344,12 @@
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/Test11_smlp_toy_num_resp_mult_rerun_model_config.json
 =================== End of Test17_Test11_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: test19_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test19_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
 87c87
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test19_model_rerun_model_config.json
@@ -344,12 +362,24 @@
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test20_model_rerun_model_config.json
 =================== End of Test20_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: test22_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test22_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test22_test22_model_smlp_toy_num_metasymbol_mult_reg_pred_labeled.txt ==================================
 75c75
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test22_model_rerun_model_config.json
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test22_model_rerun_model_config.json
 =================== End of Test22_test22_model_smlp_toy_num_metasymbol_mult_reg_pred_labeled.txt diff report ================================
+=================== Diff report for: test24_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test24_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
 87c87
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test24_model_rerun_model_config.json
@@ -362,24 +392,48 @@
 7a7
 > if (p2 > 0.4000000134110451) and (p1 > 0.75) then (y1 = 1.0) and (y2 = 1.0) | based on 1 samples
 =================== End of test26_model_dt_sklearn_tree_rules.txt diff report ================================
+=================== Diff report for: test26_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test26_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
 87c87
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test26_model_rerun_model_config.json
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test26_model_rerun_model_config.json
 =================== End of Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test31_smlp_toy_num_resp_mult_args_config.json ==================================
+106c106
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test31_smlp_toy_num_resp_mult_args_config.json diff report ================================
 =================== Diff report for: Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt ==================================
 75c75
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test20_model_rerun_model_config.json
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test20_model_rerun_model_config.json
 =================== End of Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt diff report ================================
+=================== Diff report for: Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_args_config.json ==================================
+106c106
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_args_config.json diff report ================================
 =================== Diff report for: Test47_test47_model_smlp_toy_pf_mult.txt ==================================
 83c83
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test47_model_rerun_model_config.json
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test47_model_rerun_model_config.json
 =================== End of Test47_test47_model_smlp_toy_pf_mult.txt diff report ================================
+=================== Diff report for: test63_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test63_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test64_test63_model.txt ==================================
 27c27
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test63_model_rerun_model_config.json
@@ -487,7 +541,7 @@
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test66_test65_model.txt diff report ================================
 =================== Diff report for: Test66_test65_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
 =================== End of Test66_test65_model_verify_results.json diff report ================================
 =================== Diff report for: Test68_test67_model.txt ==================================
 0a1,97
@@ -590,8 +644,14 @@ diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regres
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test68_test67_model.txt diff report ================================
 =================== Diff report for: Test68_test67_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
 =================== End of Test68_test67_model_verify_results.json diff report ================================
+=================== Diff report for: test69_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test69_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test70_test69_model.txt ==================================
 25c25
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test69_model_rerun_model_config.json
@@ -686,7 +746,7 @@ diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regres
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test72_test71_model.txt diff report ================================
 =================== Diff report for: Test72_test71_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
 =================== End of Test72_test71_model_verify_results.json diff report ================================
 =================== Diff report for: Test77_test76_model.txt ==================================
 0a1,110
@@ -802,23 +862,44 @@ diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regres
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test77_test76_model.txt diff report ================================
 =================== Diff report for: Test77_test76_model_verify_results.json ==================================
-diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/scripts/venv/smlp_package_venv/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
 =================== End of Test77_test76_model_verify_results.json diff report ================================
-=================== Diff report for: Test97_smlp_toy_num_resp_mult.txt ==================================
-252c252
-< smlp_logger - INFO - Model operator counts for y2: {'add': 100, 'mul': 715, 'const': 2547, 'ite': 305, 'and': 408, 'prop': 713, 'sub': 713, 'var': 713}
+=================== Diff report for: Test87_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
 ---
-> smlp_logger - INFO - Model operator counts for y2: {'add': 100, 'mul': 716, 'const': 2550, 'ite': 305, 'and': 409, 'prop': 714, 'sub': 714, 'var': 714}
-=================== End of Test97_smlp_toy_num_resp_mult.txt diff report ================================
+>     "output_directory": ".",
+=================== End of Test87_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
+=================== Diff report for: Test92_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test92_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
+=================== Diff report for: test101_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test101_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test102_test101_model.txt ==================================
 38c38
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test101_model_rerun_model_config.json
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test101_model_rerun_model_config.json
 =================== End of Test102_test101_model.txt diff report ================================
-=================== Diff report for: test110_model_poly_sklearn_formula.txt ==================================
-diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regression_venv/smlp/regr_smlp/code/test110_model_poly_sklearn_formula.txt: No such file or directory
-=================== End of test110_model_poly_sklearn_formula.txt diff report ================================
+=================== Diff report for: test103_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test103_model_rerun_model_config.json diff report ================================
+=================== Diff report for: test110_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test110_model_rerun_model_config.json diff report ================================
 =================== Diff report for: Test111_test110_model_smlp_toy_basic_pred_unlabeled.txt ==================================
 79c79
 < smlp_logger - INFO - Seving model rerun configuration in file ../models/test110_model_rerun_model_config.json
@@ -831,3 +912,9 @@ diff: /home/mdmitry/github/smlp_subgroups_assertion_fix/scripts/venv/smlp_regres
 ---
 > smlp_logger - INFO - Seving model rerun configuration in file ./../models/test110_model_rerun_model_config.json
 =================== End of Test112_test110_model_smlp_toy_basic_pred_unlabeled.txt diff report ================================
+=================== Diff report for: test113_model_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of test113_model_rerun_model_config.json diff report ================================

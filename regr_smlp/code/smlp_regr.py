@@ -963,7 +963,7 @@ def main():
                                 test_files_check.append((file_name, 'Passed'))
                         if model_file:
                             master_files.remove(file_name)
-                            remove(new_file)
+                            #remove(new_file)
                             if file in master_files:
                                 master_files.remove(file)
                         else:
