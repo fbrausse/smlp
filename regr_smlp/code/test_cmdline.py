@@ -1530,7 +1530,7 @@ class Test136(CmdTestCase):
 	'''
 
 	nr = 136
-	data = 'smlp_toy_num_resp_mult_compressed.csv.gz'
+	data = 'smlp_toy_num_resp_mult_gzipped.csv.gz'
 	new_data = 'smlp_toy_num_resp_mult_pred_labeled'
 	args = ['-mode', 'predict', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
@@ -1542,7 +1542,7 @@ class Test137(CmdTestCase):
 
 	nr = 137
 	data = 'smlp_toy_num_resp_mult_compressed'
-	new_data = 'smlp_toy_num_resp_mult_compressed.csv.bz2'
+	new_data = 'smlp_toy_num_resp_mult_pred_labeled'
 	args = ['-mode', 'synthesize', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model_config', 'f', '-spec', 'smlp_toy_num_resp_mult_synthesize.spec', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy

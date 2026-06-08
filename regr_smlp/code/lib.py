@@ -88,7 +88,14 @@ class CmdTestCase:
 		pre = []
 
 		if self.data:
-			pre += ['-data', self.data + '.csv']
+			if Path(regrdir / "data" / self.data).exists():
+				pre += ['-data', self.data]
+			elif Path(regrdir / "data" / f'{self.data}.csv.gz').exists():
+				pre += ['-data', self.data + '.csv.gz']
+			elif Path(regrdir / "data" / f'{self.data}.csv.bz2').exists():
+				pre += ['-data', self.data + '.csv.bz2']
+			else:
+				pre += ['-data', self.data + '.csv']
 
 		pre += ['-out_dir', str(tmpdir)]
 		pre += ['-pref', f'Test{self.nr}']
