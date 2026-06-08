@@ -4,30 +4,30 @@ Running test 1 test type: train, description: basic dt_caret training and test o
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test1 -mode train -resp y1 -feat x,p1,p2 -model dt_caret -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f  
 
 Initiating 1 worker...
-Running test 2 test type: prediction, description: basic rf_sklearn prediction test on labeled and new data with numeric labelsInitiating 2 worker...
-
+Running test 2 test type: prediction, description: basic rf_sklearn prediction test on labeled and new data with numeric labels
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test2 -mode predict -resp y1 -feat x,p1,p2 -model rf_sklearn -rf_sklearn_max_depth 15 -save_model_config f -mrmr_pred 0 -plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
+Initiating 2 worker...
 Initiating 3 worker...
 Running test 3 test type: prediction, description: basic poly_sklearn prediction test on labeled and new data with numeric response in training/test data only
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test3 -mode predict -resp y1 -feat x,p1,p2 -model poly_sklearn -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_unlabeled.csv" 
 
 Initiating 4 worker...
-Initiating 5 worker...
 Running test 4 test type: prediction, description: basic nn_keras prediction test on labeled and new data with numeric labels and one response
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test4 -mode predict -resp y2 -feat x,p1,p2 -model nn_keras -nn_keras_weights_precision 2 -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f -nn_keras_epochs 20 -nn_keras_seq_api f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
-Initiating 6 worker...
-Running test 6 test type: prediction, description: basic dt_sklearn prediction test on labeled and new data with numeric labels
-../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test6 -mode predict -resp y1,y2 -feat x,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
-
-Initiating 7 worker...
+Initiating 5 worker...
 Running test 5 test type: prediction, description: basic dt_caret prediction test on labeled and new data with numeric labels
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test5 -mode predict -resp y1 -feat x,p1,p2 -model dt_caret -save_model t -use_model f -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f   -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
+Running test 6 test type: prediction, description: basic dt_sklearn prediction test on labeled and new data with numeric labels
+../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test6 -mode predict -resp y1,y2 -feat x,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
+
+Initiating 6 worker...
 Running test 7 test type: prediction, description: basic rf_sklearn prediction test on labeled and new data with numeric labels
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test7 -mode predict -resp y1,y2 -feat x,p1,p2 -model rf_sklearn -rf_sklearn_max_depth 15 -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
+Initiating 7 worker...
 Running test 8 test type: prediction, description: basic nn_keras prediction test on labeled and new data with numeric labels and two responses
 ../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult.csv" -out_dir ./ -pref Test8 -mode predict -resp y1,y2 -feat x,p1,p2 -model nn_keras -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -nn_keras_epochs 20 -nn_keras_seq_api f -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
 
@@ -471,6 +471,14 @@ spec_fn smlp_toy_configuration_verify.spec
 specs_path ../specs
 Running test 129 test type: verify, description: verification example with demonstrating all basic result scenarious for assertions
 ../../src/run_smlp.py -data "../data/smlp_toy_ctg_num_resp.csv" -out_dir ./ -pref Test129 -mode verify -resp y1,y2 -feat x,p1,p2 -model poly_sklearn -save_model f -use_model f -model_per_response f -spec ../specs/smlp_toy_configuration_verify.spec -asrt_names assert_stable_config,assert_grid_conflict,assert_unstable_config,assert_infeasible -asrt_exprs "y2<=90;y1>=9;y1>=(-10);y1>20" -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  
+
+Running test 136 test type: prediction, description: tests usage of compressed data files as well as data files without .csv suffix
+../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult_gzipped.csv.gz" -out_dir ./ -pref Test136 -mode predict -resp y1,y2 -feat x,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 -tree_encoding nested -compress_rules f -save_model_config f -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_pred_labeled.csv" 
+
+spec_fn smlp_toy_num_resp_mult_synthesize.spec
+specs_path ../specs
+Running test 137 test type: synthesize, description: tests usage of compressed data files as well as data files without .csv suffix
+../../src/run_smlp.py -data "../data/smlp_toy_num_resp_mult_compressed.csv.bz2" -out_dir ./ -pref Test137 -mode synthesize -resp y1,y2 -feat x,p1,p2 -model dt_sklearn -dt_sklearn_max_depth 15 -tree_encoding nested -compress_rules f -save_model_config f -spec ../specs/smlp_toy_num_resp_mult_synthesize.spec -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f  -new_dat "../data/smlp_toy_num_resp_mult_compressed.csv.bz2" 
 
 spec_fn smlp_toy_system_stable_verify.spec
 specs_path ../specs
@@ -1056,7 +1064,6 @@ Passed!
 comparing Test9_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt to master
 Passed!
 comparing Test9_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_args_config.json to master
-Passed!
 comparing Test9_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_labeled_prediction_precisions.csv to master
 Passed!
 comparing Test9_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled_labeled_predictions_summary.csv to master
@@ -1084,7 +1091,6 @@ Passed!
 comparing test20_model_model_levels_dict.json to master
 Passed!
 comparing test20_model_rerun_model_config.json to master
-Passed!
 comparing Test10_smlp_toy_num_resp_mult_smlp_toy_num_resp_mult_pred_labeled.txt to master
 Passed!
 comparing Test10_smlp_toy_num_resp_mult_data_bounds.json to master
@@ -1258,7 +1264,6 @@ Passed!
 comparing test19_model_model_levels_dict.json to master
 Passed!
 comparing test19_model_rerun_model_config.json to master
-Passed!
 comparing Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled.txt to master
 comparing Test19_test19_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json to master
 Passed!
@@ -1311,7 +1316,6 @@ Passed!
 comparing test22_model_poly_sklearn_formula.txt to master
 Passed!
 comparing test22_model_rerun_model_config.json to master
-Passed!
 comparing Test22_test22_model_smlp_toy_num_metasymbol_mult_reg_pred_labeled.txt to master
 File master Test22_test22_model_smlp_toy_num_metasymbol_mult_reg_pred_labeled_eval_poly_sklearn_new-col-PF .png does not exist
 File master Test22_test22_model_smlp_toy_num_metasymbol_mult_reg_pred_labeled_eval_poly_sklearn_new-col-|PF |.png does not exist
@@ -1351,7 +1355,6 @@ Passed!
 comparing test24_model_model_levels_dict.json to master
 Passed!
 comparing test24_model_rerun_model_config.json to master
-Passed!
 comparing Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled.txt to master
 comparing Test24_test24_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json to master
 Passed!
@@ -1387,7 +1390,6 @@ Passed!
 comparing test26_model_model_levels_dict.json to master
 Passed!
 comparing test26_model_rerun_model_config.json to master
-Passed!
 comparing Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled.txt to master
 comparing Test26_test26_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json to master
 Passed!
@@ -1472,7 +1474,6 @@ Passed!
 comparing Test31_smlp_toy_num_resp_mult.txt to master
 Passed!
 comparing Test31_smlp_toy_num_resp_mult_args_config.json to master
-Passed!
 comparing Test31_smlp_toy_num_resp_mult_features_ranking.csv to master
 Passed!
 comparing Test31_smlp_toy_num_resp_mult_missing_values_dict.json to master
@@ -1481,7 +1482,6 @@ comparing Test31_smlp_toy_num_resp_mult_ranking_resp_feat.csv to master
 Passed!
 comparing Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled.txt to master
 comparing Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_args_config.json to master
-Passed!
 comparing Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json to master
 Passed!
 comparing Test32_test20_model_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv to master
@@ -1739,7 +1739,6 @@ Passed!
 comparing test63_model_model_levels_dict.json to master
 Passed!
 comparing test63_model_rerun_model_config.json to master
-Passed!
 File master test63_model_y1_smlp_full_model_term.json does not exist
 File master test63_model_y1_smlp_model_term.json does not exist
 comparing Test64_test63_model.txt to master
@@ -1785,7 +1784,6 @@ Passed!
 comparing test69_model_model_levels_dict.json to master
 Passed!
 comparing test69_model_rerun_model_config.json to master
-Passed!
 File master test69_model_y2_smlp_full_model_term.json does not exist
 File master test69_model_y2_smlp_model_term.json does not exist
 comparing Test70_test69_model.txt to master
@@ -2063,7 +2061,6 @@ Passed!
 comparing Test87_smlp_toy_num_resp_mult_model_levels_dict.json to master
 Passed!
 comparing Test87_smlp_toy_num_resp_mult_rerun_model_config.json to master
-Passed!
 File master Test87_smlp_toy_num_resp_mult_smlp_full_model_term.json does not exist
 comparing Test87_smlp_toy_num_resp_mult_test_prediction_precisions.csv to master
 Passed!
@@ -2215,7 +2212,6 @@ Passed!
 comparing Test92_smlp_toy_num_resp_mult_model_levels_dict.json to master
 Passed!
 comparing Test92_smlp_toy_num_resp_mult_rerun_model_config.json to master
-Passed!
 comparing Test92_smlp_toy_num_resp_mult_test_prediction_precisions.csv to master
 Passed!
 comparing Test92_smlp_toy_num_resp_mult_test_predictions_summary.csv to master
@@ -2380,6 +2376,7 @@ Passed!
 File master Test96_smlp_toy_num_resp_mult_y2_smlp_full_model_term.json does not exist
 File master Test96_smlp_toy_num_resp_mult_y2_smlp_model_term.json does not exist
 comparing Test97_smlp_toy_num_resp_mult.txt to master
+Passed!
 comparing Test97_smlp_toy_num_resp_mult_data_bounds.json to master
 Passed!
 File master Test97_smlp_toy_num_resp_mult_et_sklearn_y1_tree_rules.txt does not exist
@@ -2544,7 +2541,6 @@ Passed!
 comparing test101_model_model_levels_dict.json to master
 Passed!
 comparing test101_model_rerun_model_config.json to master
-Passed!
 File master test101_model_y1_smlp_full_model_term.json does not exist
 File master test101_model_y1_smlp_model_term.json does not exist
 File master test101_model_y2_smlp_full_model_term.json does not exist
@@ -2581,7 +2577,6 @@ Passed!
 comparing test103_model_model_levels_dict.json to master
 Passed!
 comparing test103_model_rerun_model_config.json to master
-Passed!
 File master test103_model_smlp_full_model_term.json does not exist
 comparing Test104_smlp_toy_num_resp_mult_dt_sklearn_tree_rules.txt to master
 Passed!
@@ -2773,8 +2768,8 @@ Passed!
 comparing test110_model_model_levels_dict.json to master
 Passed!
 comparing test110_model_poly_sklearn_formula.txt to master
-comparing test110_model_rerun_model_config.json to master
 Passed!
+comparing test110_model_rerun_model_config.json to master
 comparing Test111_test110_model_smlp_toy_basic_pred_unlabeled.txt to master
 comparing Test111_test110_model_smlp_toy_basic_pred_unlabeled_new_predictions_summary.csv to master
 Passed!
@@ -2813,7 +2808,6 @@ Passed!
 comparing test113_model_model_levels_dict.json to master
 Passed!
 comparing test113_model_rerun_model_config.json to master
-Passed!
 File master test113_model_smlp_full_model_term.json does not exist
 comparing Test114_smlp_toy_basic_dt_sklearn_tree_rules.txt to master
 Passed!
@@ -3099,14 +3093,44 @@ Data file does not exist
 Test 135 Failed:
 Error in Build stage:
 Data file does not exist
-Test 136 Failed:
-Error in Build stage:
-Data file does not exist
-Test 137 Failed:
-Error in Build stage:
-Data file does not exist
-Error in Build stage:
-New data file does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled.txt does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_data_bounds.json does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_dt_sklearn_model_complete.pkl does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_dt_sklearn_tree_rules.txt does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_features_scaler.pkl does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_model_features_dict.json does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_model_levels_dict.json does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_responses_scaler.pkl does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_labeled_prediction_precisions.csv does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_labeled_predictions_summary.csv does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_missing_values_dict.json does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_new_prediction_precisions.csv does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_new_predictions_summary.csv does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_test_prediction_precisions.csv does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_test_predictions_summary.csv does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_training_prediction_precisions.csv does not exist
+File master Test136_smlp_toy_num_resp_mult_gzipped_smlp_toy_num_resp_mult_pred_labeled_training_predictions_summary.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed.txt does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_data_bounds.json does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_dt_sklearn_model_complete.pkl does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_dt_sklearn_tree_rules.txt does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_features_scaler.pkl does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_model_features_dict.json does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_model_levels_dict.json does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_responses_scaler.pkl does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_full_model_term.json does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_model_term.json does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_labeled_prediction_precisions.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_labeled_predictions_summary.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_missing_values_dict.json does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_new_prediction_precisions.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_new_predictions_summary.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_synthesize_results.json does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_test_prediction_precisions.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_test_predictions_summary.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_trace.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_training_prediction_precisions.csv does not exist
+File master Test137_smlp_toy_num_resp_mult_compressed_smlp_toy_num_resp_mult_compressed_training_predictions_summary.csv does not exist
 Test 138 Failed:
 Error in Build stage:
 Data file does not exist
@@ -4429,5 +4453,5 @@ Passed!
 master log file does not exist!
 Do you wish to copy the new log file to master?
 (yes/no|y/n): No new tests crashed (not in the masters)
-Time: 35.39404908021291 minutes
+Time: 31.979506186644237 minutes
 End of regression
