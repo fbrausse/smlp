@@ -22,5 +22,5 @@ set prompt='%U%m%u:%B%~%b%#'
 source ${venv_path}/bin/activate.csh
 cd ${venv_path}/smlp/regr_smlp/code
 echo "Log file: $log"
-echo n | env CUDA_VISIBLE_DEVICES=-1 ./smlp_regr.py -w 8 -def n -t all -tol 7 -g |& tee $log
+echo n | env CUDA_VISIBLE_DEVICES=-1 ./smlp_regr.py -w 8 -def n -t all -tol 6 -g |& tee $log
 ${script_path}/create_diff_report >& $diff_report

@@ -32,7 +32,7 @@ if( $python3_version != 11 ) then
     chmod +x  $local_script
     set regression_script=$local_script
 endif
-echo n | env CUDA_VISIBLE_DEVICES=-1 python3.11 ./${regression_script} -w 8 -def n -t all -tol 7 -g |& tee $log
+echo n | env CUDA_VISIBLE_DEVICES=-1 python3.11 ./${regression_script} -w 8 -def n -t all -tol 6 -g |& tee $log
 ${script_path}/create_diff_report >& $diff_report
 cleanup:
     \rm -f $local_script >& /dev/null
