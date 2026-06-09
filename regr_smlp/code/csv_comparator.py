@@ -22,7 +22,7 @@ def check_features(csv1, csv2):
 
 def set_threshold(t):
     global THRESHOLD
-    THRESHOLD = t
+    THRESHOLD = 10**(-t)
 
 
 def check_values(csv1, csv2):
