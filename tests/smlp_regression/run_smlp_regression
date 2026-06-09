@@ -11,7 +11,7 @@ if($status) then
 endif
 cd `git rev-parse --show-toplevel`
 \rm -f regr_smlp/models/test{63,101}_model_y*_smlp_* >& /dev/null
-\rm -rf regr_smlp/code/*{test,Test}* >& /dev/null
+\rm -rf regr_smlp/code/*{test,Test}[0-9]* >& /dev/null
 \rm -rf regr_smlp/code/{__pycache__,all_log.txt,logs.log,_doe.csv} >& /dev/null
 if($#argv > 0) then
     if("-clean" == "$argv[1]") then
