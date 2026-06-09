@@ -44,7 +44,7 @@ def check_values(csv1, csv2):
                     diff = abs(val1 - val2)
                     max_val = max(abs(val1), abs(val2))
                     diff_ratio = diff / max_val
-                    if diff_ratio >= THRESHOLD:
+                    if diff_ratio >= THRESHOLD and abs(diff) > np.finfo(np.float64).eps*10:
                         return False
                     else:
                         continue

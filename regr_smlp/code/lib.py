@@ -12,7 +12,13 @@ import csv_comparator as csv_cmp
 
 from pathlib import Path
 
-files_to_ignore_from_diff = ['Test41_doe_two_levels_doe.csv', 'Test42_doe_two_levels_doe.csv']
+files_to_ignore_from_diff = ['Test34_doe_four_levels_real_doe.csv', 'Test35_doe_four_levels_real_doe.csv', \
+			     'Test36_doe_four_levels_real_doe.csv', 'Test37_doe_three_levels_real_nan_doe.csv', \
+			     'Test38_doe_two_levels_doe.csv', 'Test39_doe_two_levels_doe.csv', \
+                             'Test40_doe_two_levels_doe.csv', 'Test41_doe_two_levels_doe.csv', \
+                             'Test42_doe_two_levels_doe.csv', 'Test43_doe_two_levels_doe.csv', \
+                             'Test44_doe_two_levels_doe.csv', 'Test45_doe_two_levels_doe.csv', \
+			    ]
 
 def _cwd_rel(path):
 	return Path(path).relative_to(Path('.').absolute(), walk_up=True)
@@ -352,7 +358,7 @@ def _check_outputs(test_id, smlp_args, stdout, stderr, regrdir, output_path):
 			# condition before, dropping from it h5 file checks because getting UnicodeDecodeError error on Sles 15, say on Test 13.
 			# (new_file.endswith('.csv') or new_file.endswith('.txt') or  new_file.endswith('.html') or new_file.endswith('.json') or new_file.endswith('.h5')) and not file_name in files_to_ignore_from_diff:
 			exclude_cond = file_name in files_to_ignore_from_diff
-			exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json') or file_name.endswith('.csv')
+			exclude_cond = file_name in files_to_ignore_from_diff or file_name.endswith('_model_term.json')
 			if (Path(new_file).suffix in ('.csv', '.txt', '.html', '.json')) and not exclude_cond:
 				print('comparing {file} to master'.format(file=file_name))
 				# Order of lines in *_sklearn_tree_rules.txt is not significant
