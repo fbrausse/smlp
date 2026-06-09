@@ -22,7 +22,13 @@ SOLVERS_PATH = '../../../external' # Path to external solvers
     
 DEBUG = False
 # used for excluding from diff reports that involve randomness
-files_to_ignore_from_diff = ['Test41_doe_two_levels_doe.csv', 'Test42_doe_two_levels_doe.csv']
+files_to_ignore_from_diff = ['Test34_doe_four_levels_real_doe.csv', 'Test35_doe_four_levels_real_doe.csv', \
+                             'Test36_doe_four_levels_real_doe.csv', 'Test37_doe_three_levels_real_nan_doe.csv', \
+                             'Test38_doe_two_levels_doe.csv', 'Test39_doe_two_levels_doe.csv', \
+                             'Test40_doe_two_levels_doe.csv', 'Test41_doe_two_levels_doe.csv', \
+                             'Test42_doe_two_levels_doe.csv', 'Test43_doe_two_levels_doe.csv', \
+                             'Test44_doe_two_levels_doe.csv', 'Test45_doe_two_levels_doe.csv', \
+                            ]
 
 RELEASE = False # to run regression with SMLP from release area
 def ignored_files(src, filenames):
