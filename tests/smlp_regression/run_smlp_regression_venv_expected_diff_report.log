@@ -870,6 +870,18 @@ diff: /home/mdmitry/github/smlp_regr-pytest_my/scripts/venv/smlp_package_venv/sm
 ---
 >     "output_directory": ".",
 =================== End of Test87_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
+=================== Diff report for: Test87_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test87_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
+=================== Diff report for: Test92_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test92_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
 =================== Diff report for: Test92_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
 107c107
 <     "output_directory": "./",

@@ -58,7 +58,7 @@ class Test5(CmdTestCase):
 	nr = 5
 	data = 'smlp_toy_num_resp_mult'
 	new_data = 'smlp_toy_num_resp_mult_pred_labeled'
-	args = ['-mode', 'predict', '-resp', 'y1', '-feat', 'x,p1,p2', '-model', 'dt_caret', '-save_model', 't', '-use_model', 'f', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
+	args = ['-mode', 'predict', '-resp', 'y1', '-feat', 'x,p1,p2', '-model', 'dt_caret', '-save_model', 't', '-model_name', 'Test5_smlp_toy_num_resp_mult','-use_model', 'f', '-save_model_config', 'f', '-mrmr_pred', '0', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy
 class Test6(CmdTestCase):
@@ -977,7 +977,7 @@ class Test87(CmdTestCase):
 	nr = 87
 	data = 'smlp_toy_num_resp_mult'
 	new_data = ''
-	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model', 't', '-mrmr_pred', '2', '-model_per_response', 'f', '-spec', 'smlp_toy_num_resp_mult_alpha_asrt_verify.spec', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
+	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model', 't', '-model_name', 'Test87_smlp_toy_num_resp_mult','-mrmr_pred', '2', '-model_per_response', 'f', '-spec', 'smlp_toy_num_resp_mult_alpha_asrt_verify.spec', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy
 class Test88(CmdTestCase):
@@ -1033,7 +1033,7 @@ class Test92(CmdTestCase):
 	nr = 92
 	data = 'smlp_toy_num_resp_mult'
 	new_data = ''
-	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model', 't', '-mrmr_pred', '2', '-model_per_response', 'f', '-spec', 'smlp_toy_num_resp_mult_verify_vacuous.spec', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
+	args = ['-mode', 'verify', '-resp', 'y1,y2', '-feat', 'x,p1,p2', '-model', 'dt_sklearn', '-dt_sklearn_max_depth', '15', '-tree_encoding', 'nested', '-compress_rules', 'f', '-save_model', 't', '-model_name', 'Test92_smlp_toy_num_resp_mult','-mrmr_pred', '2', '-model_per_response', 'f', '-spec', 'smlp_toy_num_resp_mult_verify_vacuous.spec', '-plots', 'f', '-pred_plots', 'f', '-resp_plots', 'f', '-seed', '10', '-log_time', 'f']
 
 @pytest.mark.toy
 class Test93(CmdTestCase):

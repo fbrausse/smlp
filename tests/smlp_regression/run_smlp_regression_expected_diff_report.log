@@ -541,7 +541,7 @@
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test66_test65_model.txt diff report ================================
 =================== Diff report for: Test66_test65_model_verify_results.json ==================================
-diff: /app/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/regr_smlp/code/Test66_test65_model_verify_results.json: No such file or directory
 =================== End of Test66_test65_model_verify_results.json diff report ================================
 =================== Diff report for: Test68_test67_model.txt ==================================
 0a1,97
@@ -644,7 +644,7 @@ diff: /app/smlp/regr_smlp/code/Test66_test65_model_verify_results.json: No such 
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test68_test67_model.txt diff report ================================
 =================== Diff report for: Test68_test67_model_verify_results.json ==================================
-diff: /app/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/regr_smlp/code/Test68_test67_model_verify_results.json: No such file or directory
 =================== End of Test68_test67_model_verify_results.json diff report ================================
 =================== Diff report for: test69_model_rerun_model_config.json ==================================
 107c107
@@ -746,7 +746,7 @@ diff: /app/smlp/regr_smlp/code/Test68_test67_model_verify_results.json: No such 
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test72_test71_model.txt diff report ================================
 =================== Diff report for: Test72_test71_model_verify_results.json ==================================
-diff: /app/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/regr_smlp/code/Test72_test71_model_verify_results.json: No such file or directory
 =================== End of Test72_test71_model_verify_results.json diff report ================================
 =================== Diff report for: Test77_test76_model.txt ==================================
 0a1,110
@@ -862,7 +862,7 @@ diff: /app/smlp/regr_smlp/code/Test72_test71_model_verify_results.json: No such 
 > smlp_logger - INFO - Executing run_smlp.py script: End
 =================== End of Test77_test76_model.txt diff report ================================
 =================== Diff report for: Test77_test76_model_verify_results.json ==================================
-diff: /app/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
+diff: /home/mdmitry/github/smlp_regr-pytest_my/regr_smlp/code/Test77_test76_model_verify_results.json: No such file or directory
 =================== End of Test77_test76_model_verify_results.json diff report ================================
 =================== Diff report for: Test87_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
 107c107
@@ -870,6 +870,18 @@ diff: /app/smlp/regr_smlp/code/Test77_test76_model_verify_results.json: No such 
 ---
 >     "output_directory": ".",
 =================== End of Test87_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
+=================== Diff report for: Test87_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test87_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
+=================== Diff report for: Test92_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
+107c107
+<     "output_directory": "./",
+---
+>     "output_directory": ".",
+=================== End of Test92_smlp_toy_num_resp_mult_rerun_model_config.json diff report ================================
 =================== Diff report for: Test92_smlp_toy_num_resp_mult_rerun_model_config.json ==================================
 107c107
 <     "output_directory": "./",
