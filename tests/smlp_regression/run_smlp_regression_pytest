@@ -13,7 +13,7 @@ if(-e /.dockerenv ) then
 else
     set smlp_path=$script_path:h:h/scripts/venv/smlp_package_venv/smlp
 endif
-\rm -rf regr_smlp/code/{__pycache__,logs.log} >& /dev/null
+\rm -rf ${smlp_path}/regr_smlp/code/{__pycache__,logs.log,sorted_diff.bash} >& /dev/null
 if($#argv > 0) then
     if("-clean" == "$argv[1]") then
         exit(0)
