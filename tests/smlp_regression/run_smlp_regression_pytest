@@ -7,7 +7,6 @@ if($status) then
     exit(1)
 endif
 set log=$PWD/${script_name}.log
-set diff_report=$log:h/${script_name}_diff_report.log
 if(-e /.dockerenv ) then
     set smlp_path=$git_root
 else
