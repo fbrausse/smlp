@@ -965,7 +965,7 @@ def main():
                             if file in master_files:
                                 master_files.remove(file)
                         else:
-                            if os.path.isfile(file):
+                            if os.path.isfile(new_file):
                                 master_files.remove(file)
                     else:
                         # not comparing directories; such as the range plots directory in mode subgroups 
