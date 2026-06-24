@@ -238,6 +238,8 @@ class CmdTestCase:
 				                    stdout=o, stderr=e, check=True,
 				                    **self.more_subproc_run_args())
 
+			#Recommended in order to avoid OSError: [Errno 26] Text file busy
+			os.sync()
 			#check_outputs(str(self.nr), args, pr.stdout, pr.stderr, regrdir, tmp_path)
 			assert check_outputs(tmp_path), (
 				'checking against master failed, '
