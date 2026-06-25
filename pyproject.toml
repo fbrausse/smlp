@@ -59,6 +59,7 @@ markers = [
     "toy: Toy example tests (deselect with '-m \"not toy\"')",
     "real: Tests on real world data (deselect with '-m \"not real\"')",
     "test: ?? TODO: description (deselect with '-m \"not test\"')",
+    "stuck: Tests, which are currently stuck (deselect with '-m \"not stuck\"')",
 ]
 
 # ---------------------------------------------------------------------------
