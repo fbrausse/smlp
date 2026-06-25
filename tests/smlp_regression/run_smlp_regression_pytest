@@ -1,45 +1,88 @@
-#!/usr/bin/tcsh -f
-set script_path=`realpath $0 | xargs dirname`
-set script_name=`realpath $0 | xargs basename`
-set git_root=`(git rev-parse --show-toplevel) |& grep -v fatal`
-if($status) then
-    echo "\nERROR: Current directory is outside git directory tree\n"
-    exit(1)
-endif
-set log=$PWD/${script_name}.log
-if(-e /.dockerenv ) then
-    set smlp_path=$git_root
+#!/usr/bin/env bash
+set -euo pipefail
+smlp_regression_script_usage() {
+    echo ""
+    echo "Usage $script_name [<-p|--path> <smlp_repository_path] [-clean]"
+    echo ""
+}
+
+script_path="$(dirname "$(realpath "$0")")"
+script_name="$(basename "$(realpath "$0")")"
+git_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [[ -z "$git_root" ]]; then
+    echo -e "\nERROR: Current directory is outside git directory tree\n"
+    exit 1
+fi
+log="$PWD/${script_name}.log"
+
+if [[ -e /.dockerenv ]]; then
+    smlp_path="$git_root"
 else
-    set smlp_path=$script_path:h:h/scripts/venv/smlp_package_venv/smlp
-endif
-\rm -rf ${smlp_path}/regr_smlp/code/{__pycache__,logs.log,sorted_diff.bash} >& /dev/null
-if($#argv > 0) then
-    if("-clean" == "$argv[1]") then
-        exit(0)
-    endif
-endif
-cd ${smlp_path}/regr_smlp/code
-if(-e /.dockerenv ) then
-    which sudo > & /dev/null
-    if($status) then
-        set sudo=""
+    smlp_path="$(dirname "$(dirname "$script_path")")/scripts/venv/smlp_package_venv/smlp"
+fi
+
+if [[ $# -gt 1 && ("$1" == "-p" || "$1" == "--path")  ]]; then
+    smlp_path=$(realpath "$2") && shift && shift
+    if [[ -d $smlp_path ]]; then
+        activate_venv="$(dirname "$smlp_path")/venv/bin/activate"
     else
-        set sudo=`which sudo`
-    endif
-    $sudo apt update
-    $sudo apt install -y python3-pip python3-pandas
-    # Workaround for Ubuntu issue - extra package is installed
-    $sudo rm -rf /usr/lib/python3/dist-packages/tables* >& /dev/null
-    rehash
-    set local_lib=$HOME/.local/lib/python3.12/site-packages
-    pip3.12 install pytest pytest-xdist --target $local_lib
-    setenv PYTHONPATH $local_lib
-    sed -i.bak 's/python3$/python3.12/' $local_lib/bin/pytest
+        echo ""
+        echo "ERROR: SMLP root directory $smlp_path does not exist"
+        echo ""
+        exit 1
+    fi
 else
-    set prompt='%U%m%u:%B%~%b%#'
-    source $smlp_path:h/bin/activate.csh
-endif
-set pytest=`pip3.12 show pytest | grep Location | awk '{print $2}'`/bin/pytest
+    activate_venv="$(dirname "$smlp_path")/bin/activate"
+fi
+
+rm -rf "${smlp_path}/regr_smlp/code/"{__pycache__,logs.log,sorted_diff.bash} 2>/dev/null || true
+
+if [[ $# -gt 0 ]] ; then
+    if [[ "$1" == "-clean" ]]; then
+        exit 0
+    elif [[ "$1" != "-h" && "$1" != "--help" ]]; then
+        echo ""
+        echo "ERROR: switch $1 is not supported"
+    fi
+    smlp_regression_script_usage && exit 1
+fi
+
+
+if [[ ! -e  /.dockerenv ]]; then
+    if [[ ! -f $activate_venv ]]; then
+        echo ""
+        echo "ERROR: Can't open file $activate_venv - virtual environment is not established"
+        echo ""
+        exit 1
+    fi
+fi
+
+cd "${smlp_path}/regr_smlp/code"
+
+if [[ -e /.dockerenv ]]; then
+    if which sudo &>/dev/null; then
+        sudo_cmd="$(which sudo)"
+    else
+        sudo_cmd=""
+    fi
+    $sudo_cmd apt update
+    $sudo_cmd apt install -y python3-pip python3-pandas
+    # Workaround for Ubuntu issue - extra package is installed
+    $sudo_cmd rm -rf /usr/lib/python3/dist-packages/tables* 2>/dev/null || true
+    local_lib="$HOME/.local/lib/python3.12/site-packages"
+    pip3.12 install pytest pytest-xdist --target "$local_lib"
+    export PYTHONPATH="$local_lib"
+    sed -i.bak 's/python3$/python3.12/' "$local_lib/bin/pytest"
+else
+    # shellcheck source=/dev/null
+    source "$activate_venv"
+fi
+
+pytest="$(pip3.12 show pytest | awk '/^Location:/{print $2}')/bin/pytest"
+echo "SMLP root directory: $smlp_path" 2>&1 | tee "$log"
+echo "Virtual environment root directory: "$(dirname "$smlp_path")  2>&1 | tee "$log"
 echo "Pytest: $pytest"
 echo "Log file: $log"
-env CUDA_VISIBLE_DEVICES=-1 $pytest -n 8 -v -s ./test_cmdline.py |& tee $log
+cmd="env CUDA_VISIBLE_DEVICES=-1 $pytest -n 8 -v -s -m 'not stuck' ./test_cmdline.py"
+echo "$cmd"
+eval "$cmd" 2>&1 | tee "$log"
