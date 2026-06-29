@@ -3,6 +3,12 @@ smlp_logger - INFO - Executing run_smlp.py script: Start
 
 smlp_logger - INFO - Running SMLP in mode "doe": Start
 
+smlp_logger - INFO - Latin Hypercube: 3 factors, 30 samples, distribution=Exponential, seed=10
+
+smlp_logger - INFO - Applying distribution: Exponential
+
+smlp_logger - INFO - Generated 30 LHS samples.
+
 smlp_logger - INFO - DOE table with 30 entries has been generated
 
 smlp_logger - INFO - Running SMLP in mode "doe": End

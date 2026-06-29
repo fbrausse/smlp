@@ -1,0 +1,286 @@
+stage,solver,p1,p2,y1,y2
+interface_consistency,sat,0,0
+model_consistency,sat,0,0,0,0
+synthesis_feasibility
+synthesis,synthesis_feasibility
+ca,sat,0,0,0,0
+ce,unsat
+pareto_iteration,0,objv1__objv2,None__None
+single_objective_u0_l0, 1 : 0
+eager opt iter, objective_thresholds_ue_le_ucand_lstab, 1 : 0 : inf : -inf
+ca_eager,sat,0,0,0,0
+bin_opt_max start, objective_thresholds_u0_l0, 1 : 0
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1 : 0 : inf : -inf
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : 0 : inf : -inf : 1
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : 0 : 1 : -inf
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1 : -inf : 0
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 1 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1 : 0 : 0.5
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.5 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.5 : 0 : 0.25
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.25 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.25 : 0 : 0.125
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.125 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.125 : 0 : 0.0625
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.0625 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.0625 : 0 : 0.03125
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.03125 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.03125 : 0 : 0.015625
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.015625 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.015625 : 0 : 0.0078125
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.0078125 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.0078125 : 0 : 0.00390625
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.00390625 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.00390625 : 0 : 0.001953125
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.001953125 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.001953125 : 0 : 0.0009765625
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.0009765625 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.0009765625 : 0 : 0.00048828125
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.00048828125 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.00048828125 : 0 : 0.000244140625
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.000244140625 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.000244140625 : 0 : 0.0001220703125
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 0.0001220703125 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 0.0001220703125 : 0 : 6.103515625e-05
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 6.103515625e-05 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 6.103515625e-05 : 0 : 3.0517578125e-05
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 3.0517578125e-05 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 3.0517578125e-05 : 0 : 1.52587890625e-05
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 1.52587890625e-05 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1.52587890625e-05 : 0 : 7.62939453125e-06
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 7.62939453125e-06 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 7.62939453125e-06 : 0 : 3.814697265625e-06
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 3.814697265625e-06 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 3.814697265625e-06 : 0 : 1.9073486328125e-06
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 1.9073486328125e-06 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1.9073486328125e-06 : 0 : 9.5367431640625e-07
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 9.5367431640625e-07 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 9.5367431640625e-07 : 0 : 4.76837158203125e-07
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 4.76837158203125e-07 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 4.76837158203125e-07 : 0 : 2.384185791015625e-07
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 2.384185791015625e-07 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 2.384185791015625e-07 : 0 : 1.1920928955078125e-07
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 1.1920928955078125e-07 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1.1920928955078125e-07 : 0 : 5.960464477539063e-08
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 5.960464477539063e-08 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 5.960464477539063e-08 : 0 : 2.9802322387695312e-08
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 2.9802322387695312e-08 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 2.9802322387695312e-08 : 0 : 1.4901161193847656e-08
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 2 : -2 : 1.4901161193847656e-08 : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2 : -2 : 1.4901161193847656e-08 : 0 : 7.450580596923828e-09
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max end, p_cand_l_u, {'p1': Fraction(0, 1), 'p2': Fraction(0, 1)} : 0 : 7.450580596923828e-09
+phi_cex_cand,unsat
+bin_opt_min start, objective_thresholds_u0_l0, 7.450580596923828e-09 : 0
+bin_opt_max start, objective_thresholds_u0_l0, 0 : -7.450580596923828e-09
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 0 : -7.450580596923828e-09 : inf : -inf
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 7.450580596923828e-09 : -7.450580596923828e-09 : inf : -inf : 0
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 7.450580596923828e-09 : -7.450580596923828e-09 : inf : 0
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 2.2351741790771484e-08 : -7.450580596923828e-09 : inf : 0 : 7.450580596923828e-09
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max end, p_cand_l_u, {'p1': Fraction(0, 1), 'p2': Fraction(0, 1)} : 0 : 7.450580596923828e-09
+bin_opt_min end, p_cand_l_u, {'p1': Fraction(0, 1), 'p2': Fraction(0, 1)} : -7.450580596923828e-09 : 0
+eager opt iter, objective_thresholds_ue_le_ucand_lstab, 7.450580596923828e-09 : -7.450580596923828e-09 : 7.450580596923828e-09 : -7.450580596923828e-09
+ca_eager,unsat
+eager opt end, optimization result cannot be improved
+activity check, objective objv1 threshold -7.450580596923828e-09
+synthesis,thresholds_2.549419403076172e-09_-7.450580596923828e-09_check
+ca,sat,0,0,0,0
+ce,unsat
+pareto_iteration,1,objv1__objv2,None__-7.450580596923828e-09
+single_objective_u0_l0, 1 : 2.549419403076172e-09
+eager opt iter, objective_thresholds_ue_le_ucand_lstab, 1 : 2.549419403076172e-09 : inf : -inf
+ca_eager,sat,0,0,0,0
+bin_opt_max start, objective_thresholds_u0_l0, 1 : 2.549419403076172e-09
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1 : 2.549419403076172e-09 : inf : -inf
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : 2.549419403076172e-09 : inf : -inf : 1
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : 2.549419403076172e-09 : 1 : -inf
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 1 : -inf : 2.549419403076172e-09
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 1 : 2.549419403076172e-09
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 1 : 2.549419403076172e-09 : 0.5000000012747097
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 1 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 1 : 0.5000000012747097 : 0.7500000006373548
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.7500000006373548 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.7500000006373548 : 0.5000000012747097 : 0.6250000009560323
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.6250000009560323 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.6250000009560323 : 0.5000000012747097 : 0.5625000011153709
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5625000011153709 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5625000011153709 : 0.5000000012747097 : 0.5312500011950403
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5312500011950403 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5312500011950403 : 0.5000000012747097 : 0.515625001234875
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.515625001234875 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.515625001234875 : 0.5000000012747097 : 0.5078125012547923
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5078125012547923 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5078125012547923 : 0.5000000012747097 : 0.503906251264751
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.503906251264751 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.503906251264751 : 0.5000000012747097 : 0.5019531262697303
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5019531262697303 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5019531262697303 : 0.5000000012747097 : 0.50097656377222
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.50097656377222 : 0.5000000012747097
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.50097656377222 : 0.5000000012747097 : 0.5004882825234649
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.50097656377222 : 0.5004882825234649
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.50097656377222 : 0.5004882825234649 : 0.5007324231478425
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5007324231478425 : 0.5004882825234649
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5007324231478425 : 0.5004882825234649 : 0.5006103528356537
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5007324231478425 : 0.5006103528356537
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5007324231478425 : 0.5006103528356537 : 0.5006713879917482
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006713879917482 : 0.5006103528356537
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006713879917482 : 0.5006103528356537 : 0.5006408704137009
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006713879917482 : 0.5006408704137009
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006713879917482 : 0.5006408704137009 : 0.5006561292027245
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006561292027245 : 0.5006408704137009
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006561292027245 : 0.5006408704137009 : 0.5006484998082127
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006484998082127 : 0.5006408704137009
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006484998082127 : 0.5006408704137009 : 0.5006446851109567
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006484998082127 : 0.5006446851109567
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006484998082127 : 0.5006446851109567 : 0.5006465924595846
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006465924595846 : 0.5006446851109567
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006465924595846 : 0.5006446851109567 : 0.5006456387852707
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006465924595846 : 0.5006456387852707
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006465924595846 : 0.5006456387852707 : 0.5006461156224277
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006456387852707
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006456387852707 : 0.5006458772038491
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006458772038491
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006458772038491 : 0.5006459964131384
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006459964131384
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006459964131384 : 0.500646056017783
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.500646056017783
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.500646056017783 : 0.5006460858201054
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006460858201054
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006460858201054 : 0.5006461007212666
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006461007212666
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, 1.9999999974505807 : -1.9999999923517418 : 0.5006461156224277 : 0.5006461007212666 : 0.5006461081718472
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max end, p_cand_l_u, {'p1': Fraction(0, 1), 'p2': Fraction(0, 1)} : 0.5006461007212666 : 0.5006461081718472
+phi_cex_cand,unsat
+bin_opt_min start, objective_thresholds_u0_l0, 0.5006461081718472 : 0.5006461007212666
+bin_opt_max start, objective_thresholds_u0_l0, -0.5006461007212666 : -0.5006461081718472
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, -0.5006461007212666 : -0.5006461081718472 : inf : -inf
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, -0.500646093270686 : -0.5006461081718472 : inf : -inf : -0.5006461007212666
+max_ca,unsat
+bin_opt_max iter, unsat
+bin_opt_max iter, objective_thresholds_u0_l0_u_l, -0.500646093270686 : -0.5006461081718472 : -0.5006461007212666 : -inf
+adjusted thresholds, objective_thresholds_u0_l0_u_l_T, -0.500646093270686 : -0.5006461230730084 : -0.5006461007212666 : -inf : -0.5006461081718472
+max_ca,sat,0,0,0,0
+bin_opt_max iter, sat
+bin_opt_max end, p_cand_l_u, {'p1': Fraction(0, 1), 'p2': Fraction(0, 1)} : -0.5006461081718472 : -0.5006461007212666
+bin_opt_min end, p_cand_l_u, {'p1': Fraction(0, 1), 'p2': Fraction(0, 1)} : 0.5006461007212666 : 0.5006461081718472
+eager opt iter, objective_thresholds_ue_le_ucand_lstab, 0.5006461081718472 : 0.5006461007212666 : 0.5006461081718472 : 0.5006461007212666
+eager opt end, optimization converged with required accuracy

@@ -33,7 +33,7 @@ class SmlpRefine:
         self._report_file_prefix = report_file_prefix
         self._modelInst.set_report_file_prefix(report_file_prefix)
         
-    def generate_doe_samples(self, config_dict, doe_method='latin_hypercube'):
+    def generate_doe_samples(self, config_dict, random_seed:int, doe_method='latin_hypercube', prob_distribution='Uniform'):
         doe_generator = self.doe_generator
         num_samples = self.num_samples
         
@@ -59,12 +59,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=num_samples,
                 report_file_prefix='',  # No file output needed
-                prob_distribution= 'normal', #'uniform',  # Assuming uniform distribution for simplicity
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.FULL_FACTORIAL:
             doe_samples_df = doe_generator.sample_doepy(
@@ -72,12 +73,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=None,  # Not used for full factorial
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.BOX_BEHNKEN:
             doe_samples_df = doe_generator.sample_doepy(
@@ -85,12 +87,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=None,  # Not used for Box-Behnken
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=1  # Default value, adjust if needed
+                box_behnken_centers=1,  # Default value, adjust if needed
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.CENTRAL_COMPOSITE:
             doe_samples_df = doe_generator.sample_doepy(
@@ -98,12 +101,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=None,  # Not used for Central Composite
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center='2,2',  # Default value, adjust if needed
                 central_composite_face='ccf',  # Default value, adjust if needed
                 central_composite_alpha='o',  # Default value, adjust if needed
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.PLACKETT_BURMAN:
             doe_samples_df = doe_generator.sample_doepy(
@@ -111,12 +115,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=None,  # Not used for Plackett-Burman
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.TWO_LEVEL_FRACTIONAL_FACTORIAL:
             doe_samples_df = doe_generator.sample_doepy(
@@ -124,12 +129,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=None,  # Not used for two-level fractional factorial
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=3,  # Example value, adjust if needed
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.SUKHAREV_GRID:
             doe_samples_df = doe_generator.sample_doepy(
@@ -137,12 +143,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=num_samples,
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == self.doe_generator.BOX_WILSON: #doe_method == self.doe_generator.CENTRAL_COMPOSITE or 
             # Handle CENTRAL_COMPOSITE and BOX_WILSON (alias)
@@ -151,12 +158,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=None,  # Not used for Central Composite
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center='2,2',  # Default value, adjust if needed
                 central_composite_face='ccf',  # Default value, adjust if needed
                 central_composite_alpha='o',  # Default value, adjust if needed
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             ) 
         elif doe_method == doe_generator.LATIN_HYPERCUBE_SPACE_FILLING:
             doe_samples_df = doe_generator.sample_doepy(
@@ -164,12 +172,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=num_samples,
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.RANDOM_K_MEANS:
             doe_samples_df = doe_generator.sample_doepy(
@@ -177,12 +186,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=num_samples,
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.MAXMIN_RECONSTRUCTION:
             doe_samples_df = doe_generator.sample_doepy(
@@ -190,12 +200,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=num_samples,
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.HALTON_SEQUENCE:
             doe_samples_df = doe_generator.sample_doepy(
@@ -203,12 +214,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=num_samples,
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         elif doe_method == doe_generator.UNIFORM_RANDOM_MATRIX:
             doe_samples_df = doe_generator.sample_doepy(
@@ -216,12 +228,13 @@ class SmlpRefine:
                 doe_spec=doe_spec_dict,
                 num_samples=num_samples,
                 report_file_prefix='',
-                prob_distribution=None,
+                prob_distribution=prob_distribution,
                 fractional_factorial_resolution=None,
                 central_composite_center=None,
                 central_composite_face=None,
                 central_composite_alpha=None,
-                box_behnken_centers=None
+                box_behnken_centers=None,
+                random_seed=random_seed
             )
         else:
             # Add additional elif blocks for other DOE methods here
@@ -242,6 +255,7 @@ class SmlpRefine:
         for resp, syst in system_expr_dict.items():
             true_values = samples_df.apply(lambda row: eval(syst, {}, row.to_dict()), axis=1)
             true_values_dict[resp] = true_values
+            
         return pd.DataFrame.from_dict(true_values_dict)
 
     #_model_predict(self, model, X:pd.DataFrame, y:pd.DataFrame, resp_names:list, algo:str, model_per_response:bool)
@@ -262,17 +276,17 @@ class SmlpRefine:
             pred_values_df = self._modelInst._model_predict(model, samples_df, None, resp_names, algo, model_per_response)
         else:
             pred_values_df = self._modelInst._model_predict(model, samples_df, None, resp_names, algo, model_per_response)
-            #assert False
+            
         return pred_values_df
     
     def compute_rmse(self, config_dict:dict, model, algo:str, model_features_dict:dict, resp_names:list[str], 
             model_per_response:bool, system_expr_dict:dict, mm_scaler_resp, 
-            interactive_plots:bool, prediction_plots:bool, doe_method='latin_hypercube'):
+            interactive_plots:bool, prediction_plots:bool, random_seed:int, doe_method='latin_hypercube', ):
         if system_expr_dict is not None:
             assert list(system_expr_dict.keys()) == resp_names
         else:
             return
-        samples_df = self.generate_doe_samples(config_dict, doe_method)
+        samples_df = self.generate_doe_samples(config_dict, random_seed, doe_method)
         
         model_predictions = self.evaluate_model(model, algo, samples_df, model_features_dict, resp_names, model_per_response)
         true_values = self.evaluate_system_expr(system_expr_dict, samples_df)
@@ -283,4 +297,5 @@ class SmlpRefine:
         responses = zip(list(true_values.keys()), model_predictions.keys())
         for resp_syst, resp_modl in responses:
             rmse = np.sqrt(mean_squared_error(true_values[resp_syst], model_predictions[resp_modl]))
+        
         return rmse

@@ -238,7 +238,7 @@ class SmlpFlows:
             doe_out_df = self.doeInst.sample_doepy(args.doe_algo, args.doe_spec_file, args.doe_num_samples, 
                 self.configInst.report_file_prefix, args.doe_prob_distribution, args.doe_design_resolution, 
                 args.doe_central_composite_center, args.doe_central_composite_face, 
-                args.doe_central_composite_alpha, args.doe_box_behnken_centers) 
+                args.doe_central_composite_alpha, args.doe_box_behnken_centers, args.seed)
             if args.analytics_mode == 'doe':
                 self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
                 self.logger.info('Executing run_smlp.py script: End')
@@ -251,7 +251,7 @@ class SmlpFlows:
                 new_file_path = self.configInst.report_file_prefix + '_doe_data.csv'
                 doe_out_df.to_csv(new_file_path, index=False)
                 self.data_fname = new_file_path
-        
+
         if args.analytics_mode == 'discretize':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
@@ -401,7 +401,8 @@ class SmlpFlows:
                     if 'final' in self.optInst.best_config_dict:
                         stability_region_dict = self.specInst.get_spec_stability_ragion_bounds_dict(self.optInst.best_config_dict['final'])
                         self.refineInst.compute_rmse(stability_region_dict, model, args.model, model_features_dict, resp_names, 
-                            args.model_per_response, syst_expr_dict, mm_scaler_resp, args.interactive_plots, args.prediction_plots)
+                            args.model_per_response, syst_expr_dict, mm_scaler_resp, args.interactive_plots, args.prediction_plots,
+                            args.seed)
             elif args.analytics_mode == 'optsyn':
                 self.optInst.smlp_optsyn(syst_expr_dict, args.model, model, 
                     self.dataInst.unscaled_training_features, self.dataInst.unscaled_training_responses, 

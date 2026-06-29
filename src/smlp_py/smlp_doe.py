@@ -5,7 +5,6 @@ from pyDOE import *
 # build failed, need to rebuild from designofexperiment import *
 from doepy import build, read_write
 
-from typing import Union
 import os
 import pandas as pd
 import numpy as np
@@ -21,6 +20,7 @@ from .smlp_utils import list_unique_unordered
 class SmlpDoepy:
     def __init__(self):
         self._doepy_logger = None
+        self.DOE_NUM_SAMPLES = 100
         self.FULL_FACTORIAL = 'full_factorial'
         self.TWO_LEVEL_FRACTIONAL_FACTORIAL = 'fractional_factorial' #two_level_
         self.PLACKET_BURMAN = 'plackett_burman'
@@ -33,7 +33,7 @@ class SmlpDoepy:
         self.BOX_WILSON_FACE = 'ccf'
         self.LATIN_HYPERCUBE = 'latin_hypercube'
         self.LATIN_HYPERCUBE_SPACE_FILLING = 'latin_hypercube_sf'
-        self.LATIN_HYPERCUBE_PROB_DISTR = 'Normal'
+        self.LATIN_HYPERCUBE_PROB_DISTR = 'Uniform'
         self.RANDOM_K_MEANS = 'random_k_means'
         self.MAXMIN_RECONSTRUCTION = 'maximin_reconstruction'
         self.HALTON_SEQUENCE = 'halton_sequence'
@@ -57,8 +57,8 @@ class SmlpDoepy:
                     'Example: {"Pressure":[50,60,70],"Temperature":[290, 320, 350],"Flow rate":[0.9,1.0]}. ' +
                     'DOE algorithms that work with two levels only treat these levels as the min and max '
                     'of the rage of a numeric variable. [default: {}]'.format(str(None))},
-            'doe_num_samples': {'abbr':'doe_samples', 'type':int,
-                'help':'Number of samples (experiments) to be generated [default: {}]'.format(str(None))},
+            'doe_num_samples': {'abbr':'doe_samples', 'default':self.DOE_NUM_SAMPLES, 'type':int,
+                'help':'Number of samples (experiments) to be generated [default: {}]'.format(str(self.DOE_NUM_SAMPLES))},
             'doe_design_resolution':{'abbr':'doe_resolution', 'default':None, 'type':int,
                 'help': '''\
                      Desired design resolution [default: Half of features count in doe_factor_level_ranges]:
@@ -385,31 +385,208 @@ class SmlpDoepy:
                 doe_spec_dict[k].sort()
         return doe_spec_dict
         
+    
+    def _latin_hypercube_deterministic(self, doe_spec_dict, num_samples, prob_distribution, random_seed):
+        from scipy.stats import qmc
+        from scipy import stats
+
+        if num_samples is None or num_samples <= 0:
+            raise Exception('num_samples must be a positive integer for latin_hypercube algorithm')
+
+        bounds = []
+        factor_names = []
+        for factor_name, factor_range in doe_spec_dict.items():
+            factor_names.append(factor_name)
+            if len(factor_range) >= 2:
+                bounds.append([min(factor_range), max(factor_range)])
+            else:
+                bounds.append([factor_range[0], factor_range[0]])
+
+        num_factors = len(factor_names)
+        self._doepy_logger.info(f'Latin Hypercube: {num_factors} factors, {num_samples} samples, distribution={prob_distribution}, seed={random_seed}')
+
+        # Use int seed directly (proven deterministic)
+        if random_seed is None:
+            sampler = qmc.LatinHypercube(d=num_factors)
+        else:
+            sampler = qmc.LatinHypercube(d=num_factors, seed=int(random_seed))
+
+        # Generate uniform samples
+        uniform_samples = sampler.random(n=int(num_samples))
+
+        # Apply distribution
+        if prob_distribution and prob_distribution != 'Uniform':
+            self._doepy_logger.info(f'Applying distribution: {prob_distribution}')
+
+            dist_map = {
+                'Normal': stats.norm,
+                'Poisson': stats.poisson,
+                'Exponential': stats.expon,
+                'Beta': stats.beta,
+                'Gamma': stats.gamma
+            }
+
+            if prob_distribution not in dist_map:
+                self._doepy_logger.warning(f'Unknown distribution, using Uniform')
+                l_bounds = np.array([b[0] for b in bounds])
+                u_bounds = np.array([b[1] for b in bounds])
+                scaled_samples = l_bounds + uniform_samples * (u_bounds - l_bounds)
+            else:
+                dist = dist_map[prob_distribution]
+                scaled_samples = np.zeros_like(uniform_samples)
+
+                for i in range(num_factors):
+                    l_bound, u_bound = bounds[i][0], bounds[i][1]
+
+                    if prob_distribution == 'Normal':
+                        transformed = dist.ppf(uniform_samples[:, i])
+                        if transformed.max() > transformed.min():
+                            transformed_norm = (transformed - transformed.min()) / (transformed.max() - transformed.min())
+                        else:
+                            transformed_norm = transformed
+                        scaled_samples[:, i] = l_bound + transformed_norm * (u_bound - l_bound)
+
+                    elif prob_distribution == 'Exponential':
+                        transformed = dist.ppf(uniform_samples[:, i])
+                        transformed = np.minimum(transformed, 100)
+                        if transformed.max() > transformed.min():
+                            transformed_norm = (transformed - transformed.min()) / (transformed.max() - transformed.min())
+                        else:
+                            transformed_norm = transformed
+                        scaled_samples[:, i] = l_bound + transformed_norm * (u_bound - l_bound)
+
+                    elif prob_distribution == 'Gamma':
+                        transformed = dist.ppf(uniform_samples[:, i], a=2)
+                        transformed = np.minimum(transformed, 100)
+                        if transformed.max() > transformed.min():
+                            transformed_norm = (transformed - transformed.min()) / (transformed.max() - transformed.min())
+                        else:
+                            transformed_norm = transformed
+                        scaled_samples[:, i] = l_bound + transformed_norm * (u_bound - l_bound)
+
+                    elif prob_distribution == 'Poisson':
+                        transformed = dist.ppf(uniform_samples[:, i])
+                        if transformed.max() > transformed.min():
+                            transformed_norm = (transformed - transformed.min()) / (transformed.max() - transformed.min())
+                        else:
+                            transformed_norm = transformed
+                        scaled_samples[:, i] = l_bound + transformed_norm * (u_bound - l_bound)
+
+                    elif prob_distribution == 'Beta':
+                        transformed = dist.ppf(uniform_samples[:, i], a=2, b=2)
+                        scaled_samples[:, i] = l_bound + transformed * (u_bound - l_bound)
+        else:
+            l_bounds = np.array([b[0] for b in bounds])
+            u_bounds = np.array([b[1] for b in bounds])
+            scaled_samples = l_bounds + uniform_samples * (u_bounds - l_bounds)
+
+        doe_out_df = pd.DataFrame(scaled_samples, columns=factor_names)
+        self._doepy_logger.info(f'Generated {doe_out_df.shape[0]} LHS samples.')
+
+        return doe_out_df
+    
+    # Space-filling LHS with deterministic seeding
+    def _latin_hypercube_space_filling_deterministic(self, doe_spec_dict, num_samples, random_seed):
+        from scipy.stats import qmc
+
+        if num_samples is None or num_samples <= 0:
+            raise Exception('num_samples must be a positive integer')
+
+        # Get bounds and factor names
+        bounds = []
+        factor_names = []
+        for factor_name, factor_range in doe_spec_dict.items():
+            factor_names.append(factor_name)
+            if len(factor_range) >= 2:
+                bounds.append([min(factor_range), max(factor_range)])
+            else:
+                bounds.append([factor_range[0], factor_range[0]])
+
+        num_factors = len(factor_names)
+        self._doepy_logger.info(f'Space-Filling LHS: {num_factors} factors, {num_samples} samples, seed={random_seed}')
+
+        # Use LatinHypercube with seed for space-filling behavior
+        if random_seed is None:
+            sampler = qmc.LatinHypercube(d=num_factors, optimization="lloyd")  # es = energy statistics (space-filling)
+        else:
+            sampler = qmc.LatinHypercube(d=num_factors, seed=int(random_seed), optimization="lloyd")
+
+        # Generate uniform samples
+        uniform_samples = sampler.random(n=int(num_samples))
+
+        # Scale to actual bounds
+        l_bounds = np.array([b[0] for b in bounds])
+        u_bounds = np.array([b[1] for b in bounds])
+        scaled_samples = l_bounds + uniform_samples * (u_bounds - l_bounds)
+
+        doe_out_df = pd.DataFrame(scaled_samples, columns=factor_names)
+        self._doepy_logger.info(f'Generated {doe_out_df.shape[0]} space-filling LHS samples')
+
+        return doe_out_df
+
+    # Uniform random sampling with deterministic seeding
+    def _uniform_random_deterministic(self, doe_spec_dict, num_samples, random_seed):
+        if num_samples is None or num_samples <= 0:
+            raise Exception('num_samples must be a positive integer')
+
+        # Get bounds and factor names
+        bounds = []
+        factor_names = []
+        for factor_name, factor_range in doe_spec_dict.items():
+            factor_names.append(factor_name)
+            if len(factor_range) >= 2:
+                bounds.append([min(factor_range), max(factor_range)])
+            else:
+                bounds.append([factor_range[0], factor_range[0]])
+
+        num_factors = len(factor_names)
+        self._doepy_logger.info(f'Uniform Random: {num_factors} factors, {num_samples} samples, seed={random_seed}')
+
+        # Create seeded random generator
+        if random_seed is None:
+            self._doepy_logger.warning('random_seed is None - DOE will NOT be deterministic!')
+            rng = np.random.default_rng()
+        else:
+            rng = np.random.default_rng(int(random_seed))
+
+        # Generate uniform random samples in [0, 1]
+        uniform_samples = rng.uniform(0, 1, size=(int(num_samples), num_factors))
+
+        # Scale to actual bounds
+        l_bounds = np.array([b[0] for b in bounds])
+        u_bounds = np.array([b[1] for b in bounds])
+        scaled_samples = l_bounds + uniform_samples * (u_bounds - l_bounds)
+
+        doe_out_df = pd.DataFrame(scaled_samples, columns=factor_names)
+        self._doepy_logger.info(f'Generated {doe_out_df.shape[0]} uniform random samples')
+
+        return doe_out_df
+    
     # main doepy function, applies doe_algo to generate experiemntal design (tests) in a smart way.
     # All supported doe algorithms require doe_spec as an argument to specify sampling points for 
     # each feature in the data, and most functions also take num_samples as argument to spcify 
     # how many tests (feature-value tuples) to generate, while for other algorithms this number
     # is determined directly from doe_spec. Argument report_file_prefix, after adding suffix .csv, 
     # is path to the output file where the denerated design / tests dataframe are saved.
-    def sample_doepy(self, doe_algo:str, doe_spec, num_samples:int, report_file_prefix:str, #:Union([dict, str])
+    def sample_doepy(self, doe_algo:str, doe_spec, num_samples:int, report_file_prefix:str,
                 prob_distribution:str, fractional_factorial_resolution:int, 
                 central_composite_center, central_composite_face:str, 
-                central_composite_alpha:str, box_behnken_centers:int): #Union([dict, str])
+                central_composite_alpha:str, box_behnken_centers:int, random_seed:int):
         if type(doe_spec) == str:
-            doe_spec_fname = doe_spec# + '.csv'
+            doe_spec_fname = doe_spec
             if os.path.isfile(doe_spec_fname):
                 doe_spec_dict = pd.read_csv(doe_spec_fname)
                 doe_spec_dict = doe_spec_dict.to_dict(orient='list')
             else:
-                raise Exception('DOE levels grid file ' + str(doe_spec) + ' does not eist')
+                raise Exception('DOE levels grid file ' + str(doe_spec) + ' does not exist')
         elif type(doe_spec) == dict:
             doe_spec_dict = doe_spec
         else:
             raise Exception('doe_spec argument in function sample_doepy is ' + 
                 str(type(doe_spec)) + ' (must be either file path or a dictionary')
-        
-        doe_spec_dict = self._process_doe_spec(doe_algo, doe_spec_dict);
-        
+
+        doe_spec_dict = self._process_doe_spec(doe_algo, doe_spec_dict)
+
         if doe_algo == self.FULL_FACTORIAL:
             doe_out_df = build.full_fact(doe_spec_dict)
         elif doe_algo == self.TWO_LEVEL_FRACTIONAL_FACTORIAL:
@@ -424,8 +601,8 @@ class SmlpDoepy:
             doe_out_df = build.box_behnken(doe_spec_dict, box_behnken_centers)
         elif doe_algo == self.BOX_WILSON:
             assert isinstance(central_composite_center, str)
-            # central_composite_center is a string of a form a,b where a and be are integers. 
-            # We need to convert this string to 1-by-2 np.ndarray object 
+            # central_composite_center is a string of a form a,b where a and be are integers.
+            # We need to convert this string to 1-by-2 np.ndarray object
             center_pair = central_composite_center.split(",")
             center_pair = ([int(e) for e in center_pair])
             assert len(center_pair) == 2
@@ -433,10 +610,9 @@ class SmlpDoepy:
             doe_out_df = build.central_composite(doe_spec_dict, center_pair, 
                 central_composite_alpha, central_composite_face)
         elif doe_algo == self.LATIN_HYPERCUBE:
-            doe_out_df = build.lhs(doe_spec_dict, num_samples=num_samples, 
-                prob_distribution=prob_distribution)
+            doe_out_df = self._latin_hypercube_deterministic(doe_spec_dict, num_samples, prob_distribution, random_seed)
         elif doe_algo == self.LATIN_HYPERCUBE_SPACE_FILLING:
-            doe_out_df = build.space_filling_lhs(doe_spec_dict, num_samples=num_samples)
+            doe_out_df = self._latin_hypercube_space_filling_deterministic(doe_spec_dict, num_samples, random_seed)
         elif doe_algo == self.RANDOM_K_MEANS:
             doe_out_df = build.random_k_means(doe_spec_dict, num_samples=num_samples)
         elif doe_algo == self.MAXMIN_RECONSTRUCTION:
@@ -444,17 +620,16 @@ class SmlpDoepy:
         elif doe_algo == self.HALTON_SEQUENCE:
             doe_out_df = build.halton(doe_spec_dict, num_samples=num_samples)
         elif doe_algo == self.UNIFORM_RANDOM_MATRIX:
-            doe_out_df = build.uniform_random(doe_spec_dict, num_samples=num_samples)
+            doe_out_df = self._uniform_random_deterministic(doe_spec_dict, num_samples, random_seed)
         else:
             raise Exception('Unsupported DOE algorithm ' + str(doe_algo))
-         
+
         self._doepy_logger.info('DOE table with ' + str(doe_out_df.shape[0]) + ' entries has been generated')
         assert report_file_prefix is not None
-        
+
         # report_file_prefix can be passed as "" to indicate that the doe file should not be printed out.
         # This is the case for model refinement flow where generated DOE is used to augment the training data.
         if report_file_prefix != "":
             doe_out_df.to_csv(self.get_doe_results_file_name(report_file_prefix), index=False)
-        return doe_out_df
 
-        
+        return doe_out_df
