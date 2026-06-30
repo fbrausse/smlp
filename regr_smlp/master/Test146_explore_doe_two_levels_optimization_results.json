@@ -1,0 +1,61 @@
+{
+	"objective1": {
+		"value_in_config": 11.999999999999998,
+		"threshold_scaled": 0.5,
+		"threshold": 7.76935858503203,
+		"max_in_data": 14.274829633808995,
+		"min_in_data": 1.2638875362550652
+	},
+	"objective2": {
+		"value_in_config": 7.0000000000000036,
+		"threshold_scaled": 0.5,
+		"threshold": 5.0157155150241275,
+		"max_in_data": 9.983341897826278,
+		"min_in_data": 0.0480891322219766
+	},
+	"p1": {
+		"value_in_config": 7.0
+	},
+	"p2": {
+		"value_in_config": 4.0
+	},
+	"x1": {
+		"value_in_config": 10.0
+	},
+	"y1": {
+		"value_in_config": 7.0000000000000036,
+		"value_in_system": 7.0
+	},
+	"x2": {
+		"value_in_config": -1.0
+	},
+	"y2": {
+		"value_in_config": 16.999999999999993,
+		"value_in_system": 17.0
+	},
+	"objective1_scaled_objective2_scaled": {
+		"value_in_config": 0.6997215905613835
+	},
+	"threshold_lo_scaled": {
+		"value_in_config": 0.5
+	},
+	"threshold_lo": {
+		"value_in_config": 0.5
+	},
+	"threshold_up_scaled": {
+		"value_in_config": 1
+	},
+	"threshold_up": {
+		"value_in_config": 1
+	},
+	"max_in_data": {
+		"value_in_config": 1.0
+	},
+	"min_in_data": {
+		"value_in_config": 0.0
+	},
+	"smlp_execution": "completed",
+	"interface_consistent": "true",
+	"model_consistent": "true",
+	"synthesis_feasible": "true"
+}

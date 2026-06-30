@@ -373,7 +373,7 @@ class SmlpOptimize:
                 phi_cex = self._smlpTermsInst.smlp_and(theta_p_cand, alpha)
                 l_stab_prev = l_stab # remember l_stab before it gets updated -- just fpr reporting
                 p_cex, y_cex, l_stab, u_cex = self.bin_opt_min(smlp_domain, model_full_term_dict, phi_cex, objv_name, objv_expr, objv_term, l_e, u_e, epsilon, solver_logic)
-                
+                assert l_stab_prev <= l_stab, f"Updated lower bound {l_stab} should not be smaller than the previous proven bound {l_stab_prev}."
                 self._opt_logger.info('Increasing threshold lower bound for objective ' + str(objv_name) + ' from ' + str(l_stab_prev) + ' to ' + str(l_stab))
                 #if objv_expr is not None:
                 stable_witness_terms = p_cex | y_cex
@@ -455,7 +455,7 @@ class SmlpOptimize:
             stable_witness_status = quer_res['query_status']
             stable_witness_terms = quer_res['witness']
             if stable_witness_status == 'UNSAT':
-                assert T <= u
+                assert T <= u, f"Updated upper bound {T} should not be greater than the previous proven bound {u}."
                 self._opt_logger.info('Decreasing threshold upper bound for objective ' + str(objv_name) + ' from ' + str(u) + ' to ' + str(T))
                 u = T
                 # only the last value in P is used, and we want it to contain at least one element even if lower bound
@@ -506,6 +506,7 @@ class SmlpOptimize:
                 #assert objv_witn_val >= T
                 #l = objv_witn_val
                 l = T
+                assert l_prev <= l, f"Updated lower bound {l} should not be smaller than the previous proven bound {l_prev}."
                 self._opt_logger.info('Increasing threshold lower bound for objective ' + str(objv_name) + ' from ' + str(l_prev) + ' to ' + str(l))
                 #if objv_expr is not None:
                 
@@ -635,7 +636,8 @@ class SmlpOptimize:
             l0 = subset_threshold; l = l0
         else:
             l0 = 0; l = -np.inf
-        u0 = 1; u = np.inf
+        u0 = 1 if l0 < 1 else l0 + 1 # fix: was u0 = 1
+        u = np.inf
         '''
         if len(t_vals) > 0:
             objv_bounds = {min_name: {'min':subset_threshold, 'max' :1}}

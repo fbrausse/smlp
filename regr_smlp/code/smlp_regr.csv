@@ -32,18 +32,18 @@ d,data,new_data,switches,description
 31,smlp_toy_num_resp_mult,,"-mode subgroups -psg_dim 3 -psg_top 10 -resp y1,y2 -resp2b ""y1<6;y2>6"" -feat x,p1,p2 -plots t -seed 10 -log_time f -save_config t",testing resp2b in subgroup discovery mode
 32,test20_model,smlp_toy_num_resp_mult_pred_labeled,"-config test20_model_rerun_model_config.json", test reusing saved model by using configuration file
 33,smlp_toy_num_resp_mult,,"-config Test31_smlp_toy_num_resp_mult_args_config.json",testing -config option with subgroups mode
-34,doe_four_levels_real,,"-mode doe -doe_algo full_factorial -log_time f", doe test with four levels with full_factorial method
-35,doe_four_levels_real,,"-mode doe -doe_algo plackett_burman -log_time f", doe test with four levels with plackett_burman
-36,doe_four_levels_real,,"-mode doe -doe_algo sukharev_grid -doe_samples 125 -log_time f", doe test with four levels with sukharev_grid
-37,doe_three_levels_real_nan,,"-mode doe -doe_algo box_behnken -log_time f", doe test with four levels with box_behnken
-38,doe_two_levels,,"-mode doe -doe_algo box_wilson -doe_cc_face ccc  -doe_cc_alpha r -doe_cc_center 2,3 -log_time f", doe test with four levels with box_wilson
-39,doe_two_levels,,"-mode doe -doe_algo latin_hypercube -doe_prob_distr Exponential -doe_samples 30 -log_time f", doe test with four levels with latin_hypercube 
-40,doe_two_levels,,"-mode doe -doe_algo latin_hypercube_sf -doe_samples 20 -log_time f", doe test with four levels with latin_hypercube_space_filling
-41,doe_two_levels,,"-mode doe -doe_algo random_k_means -doe_samples 20 -log_time f", doe test with four levels with random_k_means
-42,doe_two_levels,,"-mode doe -doe_algo maximin_reconstruction -doe_samples 20 -log_time f", doe test with four levels with maximin_reconstruction
-43,doe_two_levels,,"-mode doe -doe_algo halton_sequence -doe_samples 20 -log_time f", doe test with four levels with halton_sequence
-44,doe_two_levels,,"-mode doe -doe_algo uniform_random_matrix -doe_samples 20 -log_time f", doe test with four levels with uniform_random_matrix
-45,doe_two_levels_real,,"-mode doe -doe_algo fractional_factorial -doe_resolution 5 -log_time f", doe test with four levels with fractional_factorial
+34,doe_four_levels_real,,"-mode doe -doe_algo full_factorial -seed 10 -log_time f", doe test with four levels with full_factorial method
+35,doe_four_levels_real,,"-mode doe -doe_algo plackett_burman -seed 10 -log_time f", doe test with four levels with plackett_burman
+36,doe_four_levels_real,,"-mode doe -doe_algo sukharev_grid -doe_samples 125 -seed 10 -log_time f", doe test with four levels with sukharev_grid
+37,doe_three_levels_real_nan,,"-mode doe -doe_algo box_behnken -seed 10 -log_time f", doe test with four levels with box_behnken
+38,doe_two_levels,,"-mode doe -doe_algo box_wilson -doe_cc_face ccc  -doe_cc_alpha r -doe_cc_center 2,3 -seed 10 -log_time f", doe test with four levels with box_wilson
+39,doe_two_levels,,"-mode doe -doe_algo latin_hypercube -doe_prob_distr Exponential -doe_samples 30 -seed 10 -log_time f", doe test with four levels with latin_hypercube
+40,doe_two_levels,,"-mode doe -doe_algo latin_hypercube_sf -doe_samples 20 -seed 10 -log_time f", doe test with four levels with latin_hypercube_space_filling
+41,doe_two_levels,,"-mode doe -doe_algo random_k_means -doe_samples 20 -seed 10 -log_time f", doe test with four levels with random_k_means
+42,doe_two_levels,,"-mode doe -doe_algo maximin_reconstruction -doe_samples 20 -seed 10 -log_time f", doe test with four levels with maximin_reconstruction
+43,doe_two_levels,,"-mode doe -doe_algo halton_sequence -doe_samples 20 -seed 10 -log_time f", doe test with four levels with halton_sequence
+44,doe_two_levels,,"-mode doe -doe_algo uniform_random_matrix -doe_samples 20 -seed 10 -log_time f", doe test with four levels with uniform_random_matrix
+45,doe_two_levels_real,,"-mode doe -doe_algo fractional_factorial -doe_resolution 5 -seed 10 -log_time f", doe test with four levels with fractional_factorial
 46,smlp_toy_pf_mult,smlp_toy_pf_mult,"-mode predict -resp ""PF,PF1"" -model poly_sklearn -save_model t -save_model_config f -use_model f -model_name test47_model -data_scaler none  -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f -pos_val fail -neg_val pass",tests options -pos_val and -neg_val
 47,test47_model,smlp_toy_pf_mult,"-mode predict -resp ""PF,PF1"" -model poly_sklearn -save_model f -use_model t -data_scaler none  -mrmr_pred 0 -plots f -pred_plots f -resp_plots f -seed 10 -log_time f -pos_val fail -neg_val pass",tests options -pos_val and -neg_val when re-using saved model
 48,smlp_toy_mult_discr,,"-mode discretize -resp ""PF,PF1"" -discr_algo uniform -discr_bins 6 -discr_labels t -discr_type object -data_scaler none  -mrmr_pred 0 -plots f -seed 10 -log_time f -pos_val fail -neg_val pass",tests discretization options
