@@ -22,6 +22,7 @@ from .smlp_query import SmlpQuery
 from .smlp_optimize import SmlpOptimize
 from .smlp_refine import SmlpRefine
 from .smlp_correlations import SmlpCorrelations
+from .smlp_range_analysis import RangeAnalysis
 
 # Combining simulation results, optimization, uncertainty analysis, sequential experiments
 # https://foqus.readthedocs.io/en/3.1.0/chapt_intro/index.html
@@ -53,6 +54,7 @@ class SmlpFlows:
         self.optInst.set_smlp_query_inst(self.queryInst)
         self.refineInst = SmlpRefine()
         self.correlInst = SmlpCorrelations()
+        self.raInst = RangeAnalysis()
         
         # get args
         args_dict = self.configInst.modes_data_dict | \
@@ -70,7 +72,8 @@ class SmlpFlows:
                     self.queryInst.query_params_dict | \
                     self.verifyInst.asrt_params_dict | \
                     self.optInst.opt_params_dict | \
-                    self.solverInst.solver_params_dict #| \
+                    self.solverInst.solver_params_dict | \
+                    self.raInst.range_analysis_params_dict
                     
         self.args = self.configInst.args_dict_parse(argv, args_dict)
         self.log_file = self.configInst.report_file_prefix + '.txt'
@@ -90,6 +93,8 @@ class SmlpFlows:
         self.queryInst.set_logger(self.logger)
         self.refineInst.set_logger(self.logger)
         self.correlInst.set_logger(self.logger)
+        self.raInst.set_logger(self.logger)
+
         
         # set report and model files / file prefixes
         self.psgInst.set_report_file_prefix(self.configInst.report_file_prefix)
@@ -106,6 +111,7 @@ class SmlpFlows:
         self.queryInst.set_model_file_prefix(self.configInst.model_file_prefix)
         self.refineInst.set_report_file_prefix(self.configInst.report_file_prefix)
         self.correlInst.set_report_file_prefix(self.configInst.report_file_prefix)
+        self.raInst.set_report_file_prefix(self.configInst.report_file_prefix)
         
         # set spec file / spec and term params
         self.modelTernaInst.set_spec_file(self.args.spec)
