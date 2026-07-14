@@ -132,7 +132,7 @@ class SmlpFlows:
         self.model_prediction_modes = ['train', 'predict']
         self.model_exploration_modes = ['optimize', 'synthesize', 'verify', 'query', 'optsyn', 'certify']
         self.data_exploration_modes = ['frontier']
-        self.supervised_modes = ['subgroups', 'discretize', 'correlate'] + self.model_prediction_modes + \
+        self.supervised_modes = ['subgroups', 'discretize', 'correlate', 'range_analysis'] + self.model_prediction_modes + \
             self.model_exploration_modes + self.data_exploration_modes
         
         # create and set tracer (to profile steps of system/model exploration algorithm)
@@ -287,6 +287,15 @@ class SmlpFlows:
             fs_ranking_df, fs_summary_df, results_dict = self.psgInst.smlp_subgroups(X, y, resp_names, 
                 args.positive_value, args.negative_value, args.psg_quality_target, args.psg_max_dimension, 
                 args.psg_top_ranked, args.interactive_plots) 
+            self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
+            self.logger.info('Executing run_smlp.py script: End')
+            return None
+
+        if args.analytics_mode == 'range_analysis':
+            X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
+                feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+            self.raInst.smlp_range_analysis(X, y, feat_names, resp_names, args.m, args.k)
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
