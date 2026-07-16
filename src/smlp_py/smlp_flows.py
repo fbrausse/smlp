@@ -295,7 +295,10 @@ class SmlpFlows:
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
                 args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
-            self.raInst.smlp_range_analysis(X, y, feat_names, resp_names, args.m, args.k)
+            
+            self.raInst.smlp_range_analysis(X, y, feat_names, resp_names, 
+                args.bins_count, args.adjacent_bins_count, args.positive_sample_criterion)
+            
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
             return None
