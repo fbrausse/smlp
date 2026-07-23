@@ -262,7 +262,7 @@ class SmlpFlows:
         if args.analytics_mode == 'discretize':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
-                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool, args.custom_na_value)
             self.discrInst.smlp_discretize_df(X, algo=args.discretization_algo, 
                 bins=args.discretization_bins, labels=args.discretization_labels,
                 result_type=args.discretization_type)
@@ -272,7 +272,7 @@ class SmlpFlows:
         if args.analytics_mode == 'correlate':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
-                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool, args.custom_na_value)
             self.correlInst.smlp_correlate(X, y, feat_names, resp_names, feat_names_dict, args.discretization_algo, 
                 args.discretization_bins, args.discretization_labels, args.discretization_type, 
                 args.discretize_numeric_features, args.continuous_correlation_estimators, 
@@ -284,7 +284,7 @@ class SmlpFlows:
         if args.analytics_mode == 'subgroups':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
-                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool, args.custom_na_value)
             fs_ranking_df, fs_summary_df, results_dict = self.psgInst.smlp_subgroups(X, y, resp_names, 
                 args.positive_value, args.negative_value, args.psg_quality_target, args.psg_max_dimension, 
                 args.psg_top_ranked, args.interactive_plots) 
@@ -295,12 +295,20 @@ class SmlpFlows:
         if args.analytics_mode == 'range_analysis':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
-                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool, args.custom_na_value)
             
             assert len(resp_names) == 1, "Range analysis mode supports only one response"
 
-            self.raInst.smlp_range_analysis(X, y, feat_names, resp_names[0], 
-                args.bins_count, args.adjacent_bins_count, args.discretization)
+            self.raInst.smlp_range_analysis(
+                X, 
+                y, 
+                feat_names, 
+                resp_names[0], 
+                args.bins_count, 
+                args.adjacent_bins_count, 
+                args.discretization, 
+                args.representatives_threshold,
+                args.representatives_selection)
             
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
@@ -309,7 +317,7 @@ class SmlpFlows:
         if args.analytics_mode == 'frontier':
             X, y, feat_names, resp_names, feat_names_dict = self.dataInst.preprocess_data(self.data_fname, 
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
-                args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
+                args.positive_value, args.negative_value, args.response_map, args.response_to_bool, args.custom_na_value)
             self.frontierInst.select_pareto_frontier(
                 X, y, None, feat_names, resp_names, objv_names, objv_exprs, args.optimize_pareto, 
                 args.optimization_strategy, quer_names, quer_exprs, 

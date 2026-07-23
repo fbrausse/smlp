@@ -3,4 +3,3 @@ docker.sh
 docker-run.sh
 docker-stop.sh
 .dockerignore
-run-command.sh
