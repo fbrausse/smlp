@@ -4,6 +4,7 @@
 print("Loading libraries...")
 
 # imports from SMLP modules
+from re import A
 from .smlp_logs import SmlpLogger, SmlpTracer
 
 from .smlp_utils import str_to_bool, np_JSONEncoder
@@ -296,8 +297,10 @@ class SmlpFlows:
                 feat_names, resp_names, None, args.keep_features, args.impute_responses, 'training', 
                 args.positive_value, args.negative_value, args.response_map, args.response_to_bool)
             
-            self.raInst.smlp_range_analysis(X, y, feat_names, resp_names, 
-                args.bins_count, args.adjacent_bins_count, args.positive_sample_criterion)
+            assert len(resp_names) == 1, "Range analysis mode supports only one response"
+
+            self.raInst.smlp_range_analysis(X, y, feat_names, resp_names[0], 
+                args.bins_count, args.adjacent_bins_count, args.discretization)
             
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')
