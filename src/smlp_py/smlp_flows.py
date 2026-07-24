@@ -308,7 +308,8 @@ class SmlpFlows:
                 args.adjacent_bins_count, 
                 args.discretization, 
                 args.representatives_threshold,
-                args.representatives_selection)
+                args.representatives_selection,
+                args.correlation_method)
             
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')

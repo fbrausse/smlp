@@ -5,7 +5,8 @@ import pandas as pd
 
 from .ra.algorithm import RaAlgorithm
 from .ra.discretization import DefaultDiscretizationAlgorithm
-from .ra.representatives_selector import DefaultRepresentativesSelectionAlgorithm, RandomRepresentativesSelectionAlgorirthm
+from .ra.representatives_selection import DefaultRepresentativesSelectionAlgorithm, RandomRepresentativesSelectionAlgorirthm
+from .ra.correlation_method import PearsonCorrelationMethod
 
 class RangeAnalysis:
     def __init__(self):
@@ -18,6 +19,7 @@ class RangeAnalysis:
         
         self._DEF_REPRESENTATIVES_THRESHOLD = 0.95
         self._DEF_REPRESENTATIVES_SELECTION = 'default'
+        self._DEF_CORRELATION_METHOD = 'pearson'
 
         self.range_analysis_params_dict = {
             'bins_count': {
@@ -49,6 +51,12 @@ class RangeAnalysis:
                 'default': self._DEF_REPRESENTATIVES_THRESHOLD,
                 'type': float,
                 'help': f'Threshold for selecting representatives [default: {self._DEF_REPRESENTATIVES_THRESHOLD}]'
+            },
+            'correlation_method': {
+                'abbr': 'correlation_method',
+                'default': self._DEF_CORRELATION_METHOD,
+                'type': str,
+                'help': f'Correlation method to use for representatives selection [default: {self._DEF_CORRELATION_METHOD}]'
             }
         }
 
@@ -68,7 +76,8 @@ class RangeAnalysis:
         adjacent_bins_count: int,
         discretization: str,
         representatives_threshold: float,
-        representatives_selection: str
+        representatives_selection: str,
+        correlation_method: str
     ): 
         self._range_logger.info(f"Starting SMLP range analysis with discretization: {discretization}")
 
@@ -76,6 +85,7 @@ class RangeAnalysis:
             discretization, 
             representatives_selection, 
             representatives_threshold, 
+            correlation_method,
             bins_count, 
             adjacent_bins_count)
 
@@ -87,6 +97,7 @@ class RangeAnalysis:
         discretization: str, 
         representatives_selection: str, 
         representatives_threshold: float, 
+        correlation_method: str,
         bins_count: int, 
         adjacent_bins_count: int) -> RaAlgorithm:
         if discretization == self._DEF_DISCRETIZATION:
@@ -95,7 +106,12 @@ class RangeAnalysis:
             raise ValueError(f"The specified discretization algorithm is not supported: {discretization}")
 
         if representatives_selection == self._DEF_REPRESENTATIVES_SELECTION:
-            representatives_selection_algorithm = DefaultRepresentativesSelectionAlgorithm(self._range_logger, representatives_threshold)
+            if correlation_method == self._DEF_CORRELATION_METHOD:
+                correlation_method = PearsonCorrelationMethod()
+            else:
+                raise ValueError(f"The specified correlation method is not supported: {correlation_method}")
+
+            representatives_selection_algorithm = DefaultRepresentativesSelectionAlgorithm(self._range_logger, representatives_threshold, correlation_method)
         elif representatives_selection == "random":
             representatives_selection_algorithm = RandomRepresentativesSelectionAlgorirthm(self._range_logger, representatives_threshold)
         else:

@@ -842,13 +842,13 @@ class SubgroupDiscovery:
         
         ranges_map = self._psg_ranges_to_single_ranges_map(psg_ranges_map_df, feat_df)
         levels_df = self.feature_and_range_to_in_range(feat_df, ranges_map.keys(), ranges_map); 
+
         psg_results_dict = {'psg_df':psg_df, 
                             'psg_ranges_map_df':psg_ranges_map_df, 
                             'psg_pairs_map_df':psg_pairs_map_df, 
                             'psg_triplets_map_df':psg_triplets_map_df}
         smlp_psg_results_dict = self._psg_rules_to_ranking_df(resp_name, resp_df, 
             psg_results_dict, feat_df, levels_df, cls_reg_mode) #ranges_map,
-        
         
         # prepare argumnets to run fs_ranking_with_frequencies()
         fs_ranking_df = smlp_psg_results_dict['fs_ranking_df']
