@@ -24,17 +24,14 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
     def select(self, feat_df: pd.DataFrame, feat_names: list[str]) -> list[str]:
         self.logger.info(f"Starting default representatives selection with threshold {self.representatives_threshold}")
 
-        features = feat_names.copy()
-
         representatives = []
-        while len(features) > 0:
-            next_feat_name = features.pop(0)
-            other_features = [f for f in features if f != next_feat_name]
+        while len(feat_names) > 0:
+            next_feat_name = feat_names.pop(0)
+            other_features = [f for f in feat_names if f != next_feat_name]
             
             subset = self._select_subset(next_feat_name, other_features, feat_df)
-        
             representatives.append(next_feat_name)    
-            features = [f for f in features if f not in subset]
+            feat_names = [f for f in feat_names if f not in subset]
                 
         return representatives
 

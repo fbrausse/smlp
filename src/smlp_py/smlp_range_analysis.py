@@ -23,7 +23,8 @@ class RangeAnalysis:
         self._DEF_REPRESENTATIVES_SELECTION = 'default'
         self._DEF_CORRELATION_METHOD = 'pearson'
         self._DEF_RANKING = 'efs' # stands for ensmble feature selection
-        self._DEF_TOP_FEATURES_COUNT = 15
+        self._DEF_TOP_RANKING_FEATURES_COUNT = 15
+        self._DEF_TOP_FINAL_FEATURES_COUNT = 5
 
         self.range_analysis_params_dict = {
             'bins_count': {
@@ -68,11 +69,17 @@ class RangeAnalysis:
                 'type': str,
                 'help': f'Ranking algorithm to use [default: {self._DEF_RANKING}]'
             },
-            'top_features_count': {
-                'abbr': 'top_features_count',
-                'default': self._DEF_TOP_FEATURES_COUNT,
+            'top_ranking_features_count': {
+                'abbr': 'top_ranking_features_count',
+                'default': self._DEF_TOP_RANKING_FEATURES_COUNT,
                 'type': int,
-                'help': f'Number of top features to select [default: {self._DEF_TOP_FEATURES_COUNT}]'
+                'help': f'Number of top features to select [default: {self._DEF_TOP_RANKING_FEATURES_COUNT}]'
+            },
+            'top_final_features_count': {
+                'abbr': 'top_final_features_count',
+                'default': self._DEF_TOP_FINAL_FEATURES_COUNT,
+                'type': int,
+                'help': f'Number of top features to select [default: {self._DEF_TOP_FINAL_FEATURES_COUNT}]'
             }
         }
 
@@ -95,7 +102,8 @@ class RangeAnalysis:
         representatives_selection: str,
         correlation_method: str,
         ranking: str,
-        top_features_count: int
+        top_ranking_features_count: int,
+        top_final_features_count: int
     ): 
         self._range_logger.info(f"Starting SMLP range analysis...")
 
@@ -108,7 +116,8 @@ class RangeAnalysis:
             adjacent_bins_count,
             ranking)
 
-        result = ra.run(feat_df, feat_names, resp_df, resp_name, top_features_count)
+        result = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count)
+        self._range_logger.info(f"Feature range analysis completed. The selected features are {result}")
 
         self._range_logger.info('SMLP range analysis completed.')
 
