@@ -7,6 +7,7 @@ from .ra.algorithm import RaAlgorithm
 from .ra.discretization import DefaultDiscretizationAlgorithm
 from .ra.representatives_selection import DefaultRepresentativesSelectionAlgorithm, RandomRepresentativesSelectionAlgorirthm
 from .ra.correlation_method import PearsonCorrelationMethod
+from .ra.ranking import DefaultRankingAlgorithm
 
 class RangeAnalysis:
     def __init__(self):
@@ -20,6 +21,8 @@ class RangeAnalysis:
         self._DEF_REPRESENTATIVES_THRESHOLD = 0.95
         self._DEF_REPRESENTATIVES_SELECTION = 'default'
         self._DEF_CORRELATION_METHOD = 'pearson'
+        self._DEF_RANKING = 'efs' # stands for ensmble feature selection
+        self._DEF_TOP_FEATURES_COUNT = 15
 
         self.range_analysis_params_dict = {
             'bins_count': {
@@ -57,6 +60,18 @@ class RangeAnalysis:
                 'default': self._DEF_CORRELATION_METHOD,
                 'type': str,
                 'help': f'Correlation method to use for representatives selection [default: {self._DEF_CORRELATION_METHOD}]'
+            },
+            'ranking': {
+                'abbr': 'ranking',
+                'default': self._DEF_RANKING,
+                'type': str,
+                'help': f'Ranking algorithm to use [default: {self._DEF_RANKING}]'
+            },
+            'top_features_count': {
+                'abbr': 'top_features_count',
+                'default': self._DEF_TOP_FEATURES_COUNT,
+                'type': int,
+                'help': f'Number of top features to select [default: {self._DEF_TOP_FEATURES_COUNT}]'
             }
         }
 
@@ -77,19 +92,23 @@ class RangeAnalysis:
         discretization: str,
         representatives_threshold: float,
         representatives_selection: str,
-        correlation_method: str
+        correlation_method: str,
+        ranking: str,
+        top_features_count: int
     ): 
-        self._range_logger.info(f"Starting SMLP range analysis with discretization: {discretization}")
+        self._range_logger.info(f"Starting SMLP range analysis...")
 
-        ra = self._setup(
+        ra: RaAlgorithm = self._setup(
             discretization, 
             representatives_selection, 
             representatives_threshold, 
             correlation_method,
             bins_count, 
-            adjacent_bins_count)
+            adjacent_bins_count,
+            ranking,
+            top_features_count)
 
-        result = ra.run(feat_df, feat_names, resp_df, resp_name)
+        result = ra.run(feat_df, feat_names, resp_df, resp_name, top_features_count)
 
         self._range_logger.info('SMLP range analysis completed.')
 
@@ -99,7 +118,13 @@ class RangeAnalysis:
         representatives_threshold: float, 
         correlation_method: str,
         bins_count: int, 
-        adjacent_bins_count: int) -> RaAlgorithm:
+        adjacent_bins_count: int,
+        ranking: str) -> RaAlgorithm:
+        if ranking == self._DEF_RANKING:
+            ranking_algorithm = DefaultRankingAlgorithm(self._range_logger)
+        else:
+            raise ValueError(f"The specified ranking algorithm is not supported: {ranking}")
+
         if discretization == self._DEF_DISCRETIZATION:
             discretization_algorithm = DefaultDiscretizationAlgorithm(self._range_logger, bins_count, adjacent_bins_count)
         else:
@@ -117,5 +142,9 @@ class RangeAnalysis:
         else:
             raise ValueError(f"The specified representatives selection algorithm is not supported: {representatives_threshold}")
 
-        return RaAlgorithm(discretization_algorithm, representatives_selection_algorithm, self._range_logger)
+        return RaAlgorithm(
+            discretization_algorithm,
+            representatives_selection_algorithm,
+            ranking_algorithm,
+            self._range_logger)
 

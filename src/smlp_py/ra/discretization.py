@@ -35,9 +35,7 @@ class DefaultDiscretizationAlgorithm(DiscretizationAlgorithm):
         resp_df: pd.DataFrame,
         resp_name: str
     ) -> dict[str, list[Range]]:
-        self.logger.info(f"Discretizing features: {feat_names} with response: {resp_name}")
-        self.logger.info(f"Bins count: {self.bins_count}")
-        self.logger.info(f"Adjacent bins count: {self.adjacent_bins_count}")
+        self.logger.info(f"Starting default discretization with bins count {self.bins_count} and adjacent bins count {self.adjacent_bins_count}")
 
         return self._form_ranges(feat_df, feat_names, resp_df, resp_name)
     

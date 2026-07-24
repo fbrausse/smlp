@@ -22,7 +22,7 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
         self.correlation_method = correlation_method
 
     def select(self, feat_df: pd.DataFrame, feat_names: list[str]) -> list[str]:
-        self.logger.info(f"Selecting representatives with threshold: {self.representatives_threshold}")
+        self.logger.info(f"Starting default representatives selection with threshold {self.representatives_threshold}")
 
         features = feat_names.copy()
 
@@ -97,9 +97,6 @@ def default_representatives_selection_algorithm_should_select_representatives_ba
 
     # assert
     expected = ['F1', 'F3', 'F8']
-    
-    print(f"Actual: {actual}")
-    print(f"Expected: {expected}")
 
     assert len(actual) == len(expected)
 
