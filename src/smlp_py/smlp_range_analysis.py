@@ -4,10 +4,11 @@
 import pandas as pd
 
 from .ra.algorithm import RaAlgorithm
-from .ra.discretization import DefaultDiscretizationAlgorithm
+from .ra.discretization import DefaultDiscretizationMethod
 from .ra.representatives_selection import DefaultRepresentativesSelectionAlgorithm, RandomRepresentativesSelectionAlgorirthm
 from .ra.correlation_method import PearsonCorrelationMethod
 from .ra.ranking import DefaultRankingAlgorithm
+from .ra.range_features import RangeFeaturesFormer
 
 class RangeAnalysis:
     def __init__(self):
@@ -105,8 +106,7 @@ class RangeAnalysis:
             correlation_method,
             bins_count, 
             adjacent_bins_count,
-            ranking,
-            top_features_count)
+            ranking)
 
         result = ra.run(feat_df, feat_names, resp_df, resp_name, top_features_count)
 
@@ -126,9 +126,10 @@ class RangeAnalysis:
             raise ValueError(f"The specified ranking algorithm is not supported: {ranking}")
 
         if discretization == self._DEF_DISCRETIZATION:
-            discretization_algorithm = DefaultDiscretizationAlgorithm(self._range_logger, bins_count, adjacent_bins_count)
+            discretization_method = DefaultDiscretizationMethod(self._range_logger, bins_count, adjacent_bins_count)
+            range_features_former = RangeFeaturesFormer(self._range_logger, discretization_method)
         else:
-            raise ValueError(f"The specified discretization algorithm is not supported: {discretization}")
+            raise ValueError(f"The specified discretization method is not supported: {discretization}")
 
         if representatives_selection == self._DEF_REPRESENTATIVES_SELECTION:
             if correlation_method == self._DEF_CORRELATION_METHOD:
@@ -143,7 +144,7 @@ class RangeAnalysis:
             raise ValueError(f"The specified representatives selection algorithm is not supported: {representatives_threshold}")
 
         return RaAlgorithm(
-            discretization_algorithm,
+            range_features_former,
             representatives_selection_algorithm,
             ranking_algorithm,
             self._range_logger)

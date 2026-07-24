@@ -2,16 +2,16 @@ from logging import Logger
 import pandas as pd
 
 from .representatives_selection import RepresentativesSelectionAlgorithm
-from .discretization import DiscretizationAlgorithm
+from .range_features import RangeFeaturesFormer
 from .ranking import RankingAlgorithm
 
 class RaAlgorithm:
     def __init__(self, 
-    discretization: DiscretizationAlgorithm,
+    range_features_former: RangeFeaturesFormer,
     representatives_selector: RepresentativesSelectionAlgorithm,
     ranking: RankingAlgorithm,
     logger: Logger):
-        self.discretization = discretization
+        self.range_features_former = range_features_former
         self.representatives_selector = representatives_selector
         self.ranking = ranking
         self.logger = logger
@@ -35,4 +35,4 @@ class RaAlgorithm:
         self.logger.info(f"Selected features are {features_selected}")
 
     def _top(self, features_scores: dict[str, float], top_features_count: int) -> list[str]:
-        return sorted(features_scores.items(), key=lambda x: x[1], reverse=True)[:top_features_count]
+        return list(map(lambda x: x[0], sorted(features_scores.items(), key=lambda x: x[1], reverse=True)[:top_features_count]))

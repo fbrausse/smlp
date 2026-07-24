@@ -5,7 +5,7 @@ from math import isclose
 
 from .range import Range, InverseRange
 
-class DiscretizationAlgorithm(ABC):
+class DiscretizationMethod(ABC):
     def __init__(
         self, 
         logger: logging.Logger,
@@ -15,6 +15,10 @@ class DiscretizationAlgorithm(ABC):
         self.logger = logger
         self.bins_count = bins_count
         self.adjacent_bins_count = adjacent_bins_count
+
+    @abstractmethod
+    def name(self) -> str:
+        pass
     
     @abstractmethod
     def discretize(
@@ -27,7 +31,7 @@ class DiscretizationAlgorithm(ABC):
         pass
 
 
-class DefaultDiscretizationAlgorithm(DiscretizationAlgorithm):
+class DefaultDiscretizationMethod(DiscretizationMethod):
     def discretize(
         self,
         feat_df: pd.DataFrame,
@@ -38,6 +42,9 @@ class DefaultDiscretizationAlgorithm(DiscretizationAlgorithm):
         self.logger.info(f"Starting default discretization with bins count {self.bins_count} and adjacent bins count {self.adjacent_bins_count}")
 
         return self._form_ranges(feat_df, feat_names, resp_df, resp_name)
+    
+    def name(self) -> str:
+        return "default"
     
     def _form_ranges(self, feat_df: pd.DataFrame, feat_names: list[str], resp_df: pd.DataFrame, resp_name: str) -> dict[str, list[Range]]:
         ranges_map = {}
@@ -100,9 +107,9 @@ class DefaultDiscretizationAlgorithm(DiscretizationAlgorithm):
 
 # BELOW ARE THE TESTS FOR THE DEFAULT DISCRETIZATION ALGORITHM
 def run_tests():
-    default_discretization_algorithm_should_form_ranges_with_inverse_ranges_and_prune_bins()
+    default_discretization_method_should_form_ranges_with_inverse_ranges_and_prune_bins()
 
-def default_discretization_algorithm_should_form_ranges_with_inverse_ranges_and_prune_bins():
+def default_discretization_method_should_form_ranges_with_inverse_ranges_and_prune_bins():
     # arrange
     df = pd.DataFrame({'F': range(11), 'R': [0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0]})
     feat_df = df[['F']]
@@ -112,7 +119,7 @@ def default_discretization_algorithm_should_form_ranges_with_inverse_ranges_and_
     adjacent_bins_count = 2
 
     logger = logging.getLogger(__name__)
-    sut = DefaultDiscretizationAlgorithm(logger, bins_count, adjacent_bins_count)
+    sut = DefaultDiscretizationMethod(logger, bins_count, adjacent_bins_count)
 
     # act
     result = sut.discretize(feat_df, ['F'], resp_df, 'R')
