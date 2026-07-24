@@ -13,8 +13,15 @@ class Range:
 
     __repr__ = __str__
 
-    def contains(self, value) -> bool:
-        return (self.start <= value) & (self.end >= value)
+    def contains(self, value, is_left_inclusive: bool = True, is_right_inclusive: bool = True) -> bool:
+        if is_left_inclusive and is_right_inclusive:
+            return (self.start <= value) & (self.end >= value)
+        elif is_left_inclusive and not is_right_inclusive:
+            return (self.start <= value) & (self.end > value)
+        elif not is_left_inclusive and is_right_inclusive:
+            return (self.start < value) & (self.end >= value)
+       
+        return (self.start < value) & (self.end > value)
 
 class InverseRange(Range):
     def __init__(self, start: float, end: float, minf: float, maxf: float):
@@ -22,11 +29,11 @@ class InverseRange(Range):
         self.minf = minf
         self.maxf = maxf
 
-    def contains(self, value) -> bool:
+    def contains(self, value, is_left_inclusive: bool = True, is_right_inclusive: bool = True) -> bool:
         lower_complement = Range(self.minf, self.end)
         upper_complement = Range(self.start, self.maxf)
 
-        return lower_complement.contains(value) | upper_complement.contains(value)
+        return lower_complement.contains(value, True, False) | upper_complement.contains(value, False, True)
 
 # BELOW ARE THE TESTS FOR THE RANGE AND INVERSE RANGE CLASSES
 def run_tests():

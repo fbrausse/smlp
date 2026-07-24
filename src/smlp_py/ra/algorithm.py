@@ -34,5 +34,16 @@ class RaAlgorithm:
         features_selected = self._top(features_scores, top_features_count)
         self.logger.info(f"Selected features are {features_selected}")
 
+        single_range_features_df = self.range_features_former.form_single_range_features(feat_df, features_selected, resp_df, resp_name)
+        self.logger.info(f"Formed {len(single_range_features_df.columns)} single range features")
+
+        single_range_features_representatives = self.representatives_selector.select(single_range_features_df, single_range_features_df.columns)
+        self.logger.info(f"Selected representatives from single range features are {single_range_features_representatives}")
+
+        single_range_features_scores = self.ranking.rank(single_range_features_df, single_range_features_representatives, resp_df, resp_name)
+
+        single_range_features_selected = self._top(single_range_features_scores, top_features_count)
+        self.logger.info(f"Selected single range features are {single_range_features_selected}")
+
     def _top(self, features_scores: dict[str, float], top_features_count: int) -> list[str]:
         return list(map(lambda x: x[0], sorted(features_scores.items(), key=lambda x: x[1], reverse=True)[:top_features_count]))
