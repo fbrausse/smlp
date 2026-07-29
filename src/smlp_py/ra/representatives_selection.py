@@ -27,17 +27,18 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
         representatives = []
         while len(feat_names) > 0:
             next_feat_name = feat_names.pop(0)
-            other_features = [f for f in feat_names if f != next_feat_name]
-            
-            subset = self._select_subset(next_feat_name, other_features, feat_df)
+            subset = self._select_subset(next_feat_name, feat_names, feat_df)
             representatives.append(next_feat_name)    
             feat_names = [f for f in feat_names if f not in subset]
                 
         return representatives
 
-    def _select_subset(self, feat_name: str, other_features: list[str], feat_df: pd.DataFrame) -> bool:
+    def _select_subset(self, feat_name: str, feat_names: list[str], feat_df: pd.DataFrame) -> bool:
         subset = [feat_name]
-        for other_feature in other_features:
+        for other_feature in feat_names:
+            if other_feature == feat_name:
+                continue
+            
             corr = self.correlation_method.compute_correlation(feat_df[feat_name].values, feat_df[other_feature].values)
             
             if corr >= self.representatives_threshold:
@@ -47,11 +48,10 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
 
 class RandomRepresentativesSelectionAlgorirthm(RepresentativesSelectionAlgorithm):
     def select(self, feat_df: pd.DataFrame, feat_names: list[str]) -> list[str]:
-        k = 4
+        k = 20
         n = len(feat_names)
         
-        return r.choices(feat_names, k = k if n > k else n)
-
+        return r.sample(feat_names, k = k if n > k else n)
 
 # BELOW ARE THE TESTS FOR THE DEFAULT REPRESENTATIVES SELECTION ALGORITHM
 def run_tests():

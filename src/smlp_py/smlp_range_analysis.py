@@ -9,6 +9,8 @@ from .ra.representatives_selection import DefaultRepresentativesSelectionAlgorit
 from .ra.correlation_method import PearsonCorrelationMethod
 from .ra.ranking import DefaultRankingAlgorithm
 from .ra.range_features import RangeFeaturesFormer
+from .smlp_basis import SmlpBasisAlgorithm
+from .smlp_mrmr import SmlpMrmr
 
 class RangeAnalysis:
     def __init__(self):
@@ -23,6 +25,7 @@ class RangeAnalysis:
         self._DEF_REPRESENTATIVES_SELECTION = 'default'
         self._DEF_CORRELATION_METHOD = 'pearson'
         self._DEF_RANKING = 'efs' # stands for ensmble feature selection
+        self._DEF_BASIS = 'mrmr'
         self._DEF_TOP_RANKING_FEATURES_COUNT = 15
         self._DEF_TOP_FINAL_FEATURES_COUNT = 5
 
@@ -80,6 +83,12 @@ class RangeAnalysis:
                 'default': self._DEF_TOP_FINAL_FEATURES_COUNT,
                 'type': int,
                 'help': f'Number of top features to select [default: {self._DEF_TOP_FINAL_FEATURES_COUNT}]'
+            },
+            'basis': {
+                'abbr': 'basis',
+                'default': self._DEF_BASIS,
+                'type': str,
+                'help': f'Basis algorithm to use [default: {self._DEF_BASIS}]'
             }
         }
 
@@ -103,7 +112,8 @@ class RangeAnalysis:
         correlation_method: str,
         ranking: str,
         top_ranking_features_count: int,
-        top_final_features_count: int
+        top_final_features_count: int,
+        basis: str
     ): 
         self._range_logger.info(f"Starting SMLP range analysis...")
 
@@ -114,10 +124,11 @@ class RangeAnalysis:
             correlation_method,
             bins_count, 
             adjacent_bins_count,
-            ranking)
+            ranking,
+            basis)
 
         result = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count)
-        self._range_logger.info(f"Feature range analysis completed. The selected features are {result}")
+        self._range_logger.info(f"Feature range analysis completed. The result: \n {result}")
 
         self._range_logger.info('SMLP range analysis completed.')
 
@@ -128,7 +139,8 @@ class RangeAnalysis:
         correlation_method: str,
         bins_count: int, 
         adjacent_bins_count: int,
-        ranking: str) -> RaAlgorithm:
+        ranking: str,
+        basis: str) -> RaAlgorithm:
         if ranking == self._DEF_RANKING:
             ranking_algorithm = DefaultRankingAlgorithm(self._range_logger)
         else:
@@ -152,9 +164,18 @@ class RangeAnalysis:
         else:
             raise ValueError(f"The specified representatives selection algorithm is not supported: {representatives_threshold}")
 
+        if basis == self._DEF_BASIS:
+            mrmr = SmlpMrmr()
+            mrmr.set_logger(self._range_logger)
+
+            basis_algorithm = SmlpBasisAlgorithm(self._range_logger, mrmr)
+        else:
+            raise ValueError(f"The specified basis algorithm is not supported: {basis}")
+
         return RaAlgorithm(
             range_features_former,
             representatives_selection_algorithm,
             ranking_algorithm,
+            basis_algorithm,
             self._range_logger)
 
