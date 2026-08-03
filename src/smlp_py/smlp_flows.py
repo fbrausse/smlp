@@ -313,7 +313,10 @@ class SmlpFlows:
                 args.ranking,
                 args.top_ranking_features_count,
                 args.top_final_features_count,
-                args.basis)
+                args.basis,
+                args.quality_function)
+
+            
             
             self.logger.info('Running SMLP in mode "{}": End'.format(args.analytics_mode))
             self.logger.info('Executing run_smlp.py script: End')

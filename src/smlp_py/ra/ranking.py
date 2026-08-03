@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import logging
 import pandas as pd
-import random
 
 class RankingAlgorithm(ABC):
     def __init__(self, logger: logging.Logger):
@@ -10,17 +9,3 @@ class RankingAlgorithm(ABC):
     @abstractmethod
     def rank(self, feat_df: pd.DataFrame, feat_names: list[str], resp_df: pd.DataFrame, resp_name: str) -> pd.DataFrame:
         pass
-
-class DefaultRankingAlgorithm(RankingAlgorithm):
-    def rank(self, feat_df: pd.DataFrame, feat_names: list[str], resp_df: pd.DataFrame, resp_name: str) -> pd.DataFrame:
-        if (len(feat_names) == 0):
-            return pd.DataFrame(columns=['Feature', 'Score'])
-        
-        self.logger.info(f"Starting default ranking of features with respect to response {resp_name}")
-
-        # assign randomly scores to the features
-        scores = {feat_name: random.random() for feat_name in feat_names}
-        
-        result_df = pd.DataFrame(scores.items(), columns=['Feature', 'Score'])
-
-        return result_df
