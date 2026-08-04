@@ -29,8 +29,9 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
         representatives = []
         while len(feat_names) > 0:
             next_feat_name = feat_names.pop(0)
-            subset = self._select_subset(next_feat_name, feat_names, feat_df)
             representatives.append(next_feat_name)
+
+            subset = self._select_subset(next_feat_name, feat_names, feat_df)
             feat_names = [f for f in feat_names if f not in subset]
 
         endTime = time()
@@ -38,18 +39,20 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
                 
         return representatives
 
-    def _select_subset(self, feat_name: str, feat_names: list[str], feat_df: pd.DataFrame) -> bool:
+    def _select_subset(self, feat_name: str, other_features: list[str], feat_df: pd.DataFrame) -> bool:
         startTime = time()
-        subset = []
-        
-        for other_feature in feat_names:
-            if other_feature == feat_name:
-                continue
-            
-            corr = self.correlation_method.compute_correlation(feat_df[feat_name].values, feat_df[other_feature].values)
-            
-            if corr >= self.representatives_threshold:
-                subset.append(other_feature)
+
+        corr = feat_df[other_features].corrwith(feat_df[feat_name], method=self.correlation_method)
+
+        corrEndTime = time()
+        self.logger.info(f"Computed the correlations within {corrEndTime - startTime} seconds")
+
+        strong_corr = corr.abs() >= self.representatives_threshold
+
+        # at this stage the strong_corr contains only True and False values
+        # therefore by passing its values to the loc[] we can retrieve the list of
+        # indexes (in this case features) which are correlating strongly with the target feature
+        subset = list(strong_corr.loc[strong_corr.values].index)
         
         endTime = time()
         self.logger.info(f"Computed the subset of {len(subset)} features for feature {feat_name} within {endTime - startTime} seconds")
