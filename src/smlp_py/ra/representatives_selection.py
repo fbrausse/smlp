@@ -26,7 +26,7 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
 
         startTime = time()
 
-        representatives = []
+        representatives = set(feat_names)
         while len(feat_names) > 0:
             next_feat_name = feat_names.pop(0)
             representatives.append(next_feat_name)
@@ -39,7 +39,7 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
                 
         return representatives
 
-    def _select_subset(self, feat_name: str, other_features: list[str], feat_df: pd.DataFrame) -> bool:
+    def _select_subset(self, feat_name: str, other_features: list[str], feat_df: pd.DataFrame) -> list[str]:
         startTime = time()
 
         corr = feat_df[other_features].corrwith(feat_df[feat_name], method=self.correlation_method)
