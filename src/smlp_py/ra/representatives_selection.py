@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 
 import logging
 import pandas as pd
-from scipy import stats
 import random as r
+from time import time
 
 from .correlation_method import CorrelationMethod
 
@@ -17,24 +17,31 @@ class RepresentativesSelectionAlgorithm(ABC):
         pass
 
 class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm):
-    def __init__(self, logger: logging.Logger, representatives_threshold: float, correlation_method: CorrelationMethod):
+    def __init__(self, logger: logging.Logger, representatives_threshold: float, correlation_method: str):
         super().__init__(logger, representatives_threshold)
         self.correlation_method = correlation_method
 
     def select(self, feat_df: pd.DataFrame, feat_names: list[str]) -> list[str]:
         self.logger.info(f"Starting default representatives selection with threshold {self.representatives_threshold}")
 
+        startTime = time()
+
         representatives = []
         while len(feat_names) > 0:
             next_feat_name = feat_names.pop(0)
             subset = self._select_subset(next_feat_name, feat_names, feat_df)
-            representatives.append(next_feat_name)    
+            representatives.append(next_feat_name)
             feat_names = [f for f in feat_names if f not in subset]
+
+        endTime = time()
+        self.logger.info(f"Computed the {len(representatives)} representatives within {endTime - startTime} seconds")
                 
         return representatives
 
     def _select_subset(self, feat_name: str, feat_names: list[str], feat_df: pd.DataFrame) -> bool:
-        subset = [feat_name]
+        startTime = time()
+        subset = []
+        
         for other_feature in feat_names:
             if other_feature == feat_name:
                 continue
@@ -43,6 +50,9 @@ class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm
             
             if corr >= self.representatives_threshold:
                 subset.append(other_feature)
+        
+        endTime = time()
+        self.logger.info(f"Computed the subset of {len(subset)} features for feature {feat_name} within {endTime - startTime} seconds")
         
         return subset
 
