@@ -1,8 +1,8 @@
-import logging
-import pandas as pd
-
 from .discretization import DiscretizationMethod
 from .range import Range, InverseRange
+
+import logging
+import pandas as pd
 
 class RangeFeaturesFormer:
     def __init__(self, logger: logging.Logger, discretization_method: DiscretizationMethod):

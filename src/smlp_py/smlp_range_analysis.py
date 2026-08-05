@@ -6,7 +6,6 @@ import pandas as pd
 from .ra.algorithm import RaAlgorithm
 from .ra.discretization import DefaultDiscretizationMethod
 from .ra.representatives_selection import DefaultRepresentativesSelectionAlgorithm, RandomRepresentativesSelectionAlgorirthm
-from .ra.correlation_method import PearsonCorrelationMethod
 from .ra.range_features import RangeFeaturesFormer
 
 from .smlp_basis import SmlpBasisAlgorithm
@@ -27,7 +26,6 @@ class RangeAnalysis:
         
         self._DEF_REPRESENTATIVES_THRESHOLD = 0.95
         self._DEF_REPRESENTATIVES_SELECTION = 'default'
-        self._DEF_CORRELATION_METHOD = 'pearson'
         self._DEF_RANKING = 'efs' # stands for ensmble feature selection
         self._DEF_BASIS = 'mrmr'
         self._DEF_TOP_RANKING_FEATURES_COUNT = 15
@@ -65,12 +63,6 @@ class RangeAnalysis:
                 'default': self._DEF_REPRESENTATIVES_THRESHOLD,
                 'type': float,
                 'help': f'Threshold for selecting representatives [default: {self._DEF_REPRESENTATIVES_THRESHOLD}]'
-            },
-            'correlation_method': {
-                'abbr': 'correlation_method',
-                'default': self._DEF_CORRELATION_METHOD,
-                'type': str,
-                'help': f'Correlation method to use for representatives selection [default: {self._DEF_CORRELATION_METHOD}]'
             },
             'ranking': {
                 'abbr': 'ranking',
@@ -121,7 +113,6 @@ class RangeAnalysis:
         discretization: str,
         representatives_threshold: float,
         representatives_selection: str,
-        correlation_method: str,
         ranking: str,
         top_ranking_features_count: int,
         top_final_features_count: int,
@@ -136,7 +127,6 @@ class RangeAnalysis:
             discretization, 
             representatives_selection, 
             representatives_threshold, 
-            correlation_method,
             bins_count, 
             adjacent_bins_count,
             ranking,
@@ -152,7 +142,6 @@ class RangeAnalysis:
         discretization: str, 
         representatives_selection: str, 
         representatives_threshold: float, 
-        correlation_method: str,
         bins_count: int, 
         adjacent_bins_count: int,
         ranking: str,
@@ -160,7 +149,7 @@ class RangeAnalysis:
         ranking_algorithm = self._setup_ranking(ranking)
         range_features_former = self._setup_discretization(discretization, bins_count, adjacent_bins_count)
         representatives_selection_algorithm = self._setup_representatives_selection(
-            representatives_selection, representatives_threshold, correlation_method)
+            representatives_selection, representatives_threshold)
         basis_algorithm = self._setup_basis(basis)
         quality = self._setup_quality()
 
@@ -192,15 +181,9 @@ class RangeAnalysis:
         self,
         representatives_selection: str,
         representatives_threshold: float,
-        correlation_method: str
     ):
         if representatives_selection == self._DEF_REPRESENTATIVES_SELECTION:
-            # if correlation_method == self._DEF_CORRELATION_METHOD:
-                # correlation_method = PearsonCorrelationMethod()
-            # else:
-                # raise ValueError(f"The specified correlation method is not supported: {correlation_method}")
-
-            return DefaultRepresentativesSelectionAlgorithm(self._range_logger, representatives_threshold, correlation_method)
+            return DefaultRepresentativesSelectionAlgorithm(self._range_logger, representatives_threshold)
         elif representatives_selection == "random":
             return RandomRepresentativesSelectionAlgorirthm(self._range_logger, representatives_threshold)
         else:

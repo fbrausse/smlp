@@ -54,7 +54,6 @@ class RaAlgorithm:
         
         # Select single range features
         single_range_features_representatives = self.representatives_selector.select(single_range_features_df, list(single_range_features_df.columns))
-        return
         self.logger.info(f"Selected representatives from single range features are {single_range_features_representatives}")
 
         single_range_features_corr = self.ranking.rank(single_range_features_df, single_range_features_representatives, resp_df, resp_name)

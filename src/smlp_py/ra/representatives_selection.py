@@ -3,9 +3,7 @@ from abc import ABC, abstractmethod
 import logging
 import pandas as pd
 import random as r
-from time import time
-
-from .correlation_method import CorrelationMethod
+import numpy as np
 
 class RepresentativesSelectionAlgorithm(ABC):
     def __init__(self, logger: logging.Logger, representatives_threshold: float):
@@ -17,47 +15,42 @@ class RepresentativesSelectionAlgorithm(ABC):
         pass
 
 class DefaultRepresentativesSelectionAlgorithm(RepresentativesSelectionAlgorithm):
-    def __init__(self, logger: logging.Logger, representatives_threshold: float, correlation_method: str):
+    def __init__(self, logger: logging.Logger, representatives_threshold: float):
         super().__init__(logger, representatives_threshold)
-        self.correlation_method = correlation_method
 
     def select(self, feat_df: pd.DataFrame, feat_names: list[str]) -> list[str]:
         self.logger.info(f"Starting default representatives selection with threshold {self.representatives_threshold}")
 
-        startTime = time()
+        corr_matrix = self._compute_corr_matrix(feat_df, feat_names)
 
-        representatives = set(feat_names)
-        while len(feat_names) > 0:
-            next_feat_name = feat_names.pop(0)
+        representatives = []
+        remaining = set(feat_names)
+        while remaining:
+            next_feat_name = remaining.pop()
             representatives.append(next_feat_name)
 
-            subset = self._select_subset(next_feat_name, feat_names, feat_df)
-            feat_names = [f for f in feat_names if f not in subset]
-
-        endTime = time()
-        self.logger.info(f"Computed the {len(representatives)} representatives within {endTime - startTime} seconds")
+            # select the stronly correlating features with the next_feat_name
+            corr = corr_matrix.loc[next_feat_name, list(remaining)]
+            subset = set(corr[corr >= self.representatives_threshold].index)
+            
+            # subset is a set of features that next_feat_name represents
+            # therefore they can be removed from the features set and be rapleced 
+            # by their representative
+            remaining -= subset
                 
         return representatives
 
-    def _select_subset(self, feat_name: str, other_features: list[str], feat_df: pd.DataFrame) -> list[str]:
-        startTime = time()
+    def _compute_corr_matrix(self, feat_df: pd.DataFrame, feat_names: list[str]):
+        corr_matrix = np.corrcoef(feat_df[feat_names].to_numpy(dtype=np.float64), rowvar=False)
+        corr_matrix = np.abs(corr_matrix)
 
-        corr = feat_df[other_features].corrwith(feat_df[feat_name], method=self.correlation_method)
+        corr_matrix = pd.DataFrame(
+            corr_matrix,
+            index=feat_names,
+            columns=feat_names
+        )
 
-        corrEndTime = time()
-        self.logger.info(f"Computed the correlations within {corrEndTime - startTime} seconds")
-
-        strong_corr = corr.abs() >= self.representatives_threshold
-
-        # at this stage the strong_corr contains only True and False values
-        # therefore by passing its values to the loc[] we can retrieve the list of
-        # indexes (in this case features) which are correlating strongly with the target feature
-        subset = list(strong_corr.loc[strong_corr.values].index)
-        
-        endTime = time()
-        self.logger.info(f"Computed the subset of {len(subset)} features for feature {feat_name} within {endTime - startTime} seconds")
-        
-        return subset
+        return corr_matrix
 
 class RandomRepresentativesSelectionAlgorirthm(RepresentativesSelectionAlgorithm):
     def select(self, feat_df: pd.DataFrame, feat_names: list[str]) -> list[str]:
@@ -66,21 +59,9 @@ class RandomRepresentativesSelectionAlgorirthm(RepresentativesSelectionAlgorithm
         
         return r.sample(feat_names, k = k if n > k else n)
 
-# BELOW ARE THE TESTS FOR THE DEFAULT REPRESENTATIVES SELECTION ALGORITHM
+# TODO: TO BE FIXED. BELOW ARE THE TESTS FOR THE DEFAULT REPRESENTATIVES SELECTION ALGORITHM
 def run_tests():
     default_representatives_selection_algorithm_should_select_representatives_based_on_correlation_threshold()
-
-class TestCorrelationMethod(CorrelationMethod):
-    def compute_correlation(self, var1, var2) -> float:
-        v1 = var1[0]
-        v2 = var2[0]
-
-        if (v1 == 1 and v2 in [2, 5, 6]) or \
-            (v1 == 3 and v2 in [4, 7]):
-            return 0.95
-        
-        return 0.94
-
 
 def default_representatives_selection_algorithm_should_select_representatives_based_on_correlation_threshold():
     # arrange
@@ -97,7 +78,7 @@ def default_representatives_selection_algorithm_should_select_representatives_ba
     feat_names = list(df.columns)
 
     representatives_threshold = 0.95
-    correlation_method = TestCorrelationMethod()
+    correlation_method = None
 
     logger = logging.getLogger(__name__)
     sut = DefaultRepresentativesSelectionAlgorithm(logger, representatives_threshold, correlation_method)

@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
-import pandas as pd
-import logging
 from math import isclose
 
 from .range import Range, InverseRange
+
+import pandas as pd
+import logging
+
 
 class DiscretizationMethod(ABC):
     def __init__(

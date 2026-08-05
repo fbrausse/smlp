@@ -309,7 +309,6 @@ class SmlpFlows:
                 args.discretization, 
                 args.representatives_threshold,
                 args.representatives_selection,
-                args.correlation_method,
                 args.ranking,
                 args.top_ranking_features_count,
                 args.top_final_features_count,
