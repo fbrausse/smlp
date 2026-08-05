@@ -132,7 +132,6 @@ class RangeAnalysis:
             ranking,
             basis)
 
-
         result = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count, quality_function)
         path = self._save_result(result)
 
