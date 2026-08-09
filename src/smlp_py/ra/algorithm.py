@@ -57,7 +57,7 @@ class RaAlgorithm:
 
         single_range_features_corr = self.ranking.rank(single_range_features_df, single_range_features_representatives, resp_df, resp_name)
         single_range_features_basis = self.basis.rank(single_range_features_df, single_range_features_representatives, resp_df, resp_name)
-        single_range_features_quality = self.quality.rank(single_range_features_representatives, quality_function, single_range_features_df, resp_df, resp_name)
+        single_range_features_quality = self.quality.rank(single_range_features_representatives, single_range_features_df, resp_df, resp_name)
 
         self._normalize_score(single_range_features_corr)
         self._normalize_score(single_range_features_basis)
@@ -83,7 +83,7 @@ class RaAlgorithm:
 
         range_pairs_corr = self.ranking.rank(range_pairs_df, range_pairs_representatives, resp_df, resp_name)
         range_pairs_basis = self.basis.rank(range_pairs_df, range_pairs_representatives, resp_df, resp_name)
-        range_pairs_quality = self.quality.rank(range_pairs_representatives, quality_function, range_pairs_df, resp_df, resp_name)
+        range_pairs_quality = self.quality.rank(range_pairs_representatives, range_pairs_df, resp_df, resp_name)
 
         self._normalize_score(range_pairs_corr)
         self._normalize_score(range_pairs_basis)
@@ -109,7 +109,7 @@ class RaAlgorithm:
 
         range_triplets_corr = self.ranking.rank(range_triplets_df, range_triplets_representatives, resp_df, resp_name)
         range_triplets_basis = self.basis.rank(range_triplets_df, range_triplets_representatives, resp_df, resp_name)
-        range_triplets_quality = self.quality.rank(range_triplets_representatives, quality_function, range_triplets_df, resp_df, resp_name)
+        range_triplets_quality = self.quality.rank(range_triplets_representatives, range_triplets_df, resp_df, resp_name)
 
         self._normalize_score(range_triplets_corr)
         self._normalize_score(range_triplets_basis)

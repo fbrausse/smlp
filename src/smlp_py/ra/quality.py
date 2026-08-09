@@ -9,5 +9,5 @@ class Quality(ABC):
         self.quality_function = quality_function
 
     @abstractmethod
-    def rank(self, feat_names: list[str], quality_function: str, feat_df: pd.DataFrame, resp_df: pd.DataFrame, resp_name: str):
+    def rank(self, feat_names: list[str], feat_df: pd.DataFrame, resp_df: pd.DataFrame, resp_name: str):
         pass

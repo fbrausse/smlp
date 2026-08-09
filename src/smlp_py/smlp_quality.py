@@ -9,8 +9,8 @@ class SmlpQuality(Quality):
         super().__init__(logger, quality_function)
         self.sd = sd
 
-    def rank(self, feat_names: list[str], quality_function: str, feat_df: pd.DataFrame, resp_df: pd.DataFrame, resp_name: str):
-        self.logger.info(f"Ranking based on quality metrics with a quality function {quality_function}")
+    def rank(self, feat_names: list[str], feat_df: pd.DataFrame, resp_df: pd.DataFrame, resp_name: str):
+        self.logger.info(f"Ranking based on quality metrics with a quality function {self.quality_function}")
         
         resp = resp_df[resp_name]
         result = {
