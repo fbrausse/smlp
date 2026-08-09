@@ -14,7 +14,7 @@ class RangeFeaturesFormer:
         feat_df: pd.DataFrame, 
         feat_names: list[str], 
         resp_df: pd.DataFrame, 
-        resp_name: str) -> tuple[pd.DataFrame, dict[str, str]]:
+        resp_name: str) -> tuple[pd.DataFrame, dict]:
         self.logger.info(f"Forming single range features with {self.discretization_method.name()} discretization method")
         ranges_map = self.discretization_method.discretize(feat_df, feat_names, resp_df, resp_name)
 
@@ -37,7 +37,7 @@ class RangeFeaturesFormer:
 
         return single_ranges_df, single_range_feature_to_feature_map
     
-    def form_range_pairs(self, single_range_features_df: pd.DataFrame, single_range_feature_names: list[str], single_range_feature_to_feature_map: dict[str, str]) -> pd.DataFrame:
+    def form_range_pairs(self, single_range_features_df: pd.DataFrame, single_range_feature_names: list[str], single_range_feature_to_feature_map: dict[str, str]) -> tuple[pd.DataFrame, dict]:
         range_pairs_df = pd.DataFrame()
         range_pairs_to_features_map = {}
         while len(single_range_feature_names) > 0:
@@ -74,7 +74,7 @@ class RangeFeaturesFormer:
         single_range_features_df: pd.DataFrame,
         single_range_feature_names: list[str],
         single_range_feature_to_feature_map: dict[str, str],
-        ) -> pd.DataFrame:
+        ) -> tuple[pd.DataFrame, dict]:
         range_triplets_df = pd.DataFrame()
         range_triplets_to_features_map  = {}
         while len(range_pairs_names) > 0:

@@ -55,20 +55,26 @@ class RaAlgorithm:
         single_range_features_representatives = self.representatives_selector.select(single_range_features_df, list(single_range_features_df.columns))
         self.logger.info(f"Selected representatives from single range features are {single_range_features_representatives}")
 
+        single_range_quality_metrics = self.quality.compute_metrics(single_range_features_representatives, single_range_features_df, resp_df, resp_name)
+
         single_range_features_corr = self.ranking.rank(single_range_features_df, single_range_features_representatives, resp_df, resp_name)
         single_range_features_basis = self.basis.rank(single_range_features_df, single_range_features_representatives, resp_df, resp_name)
-        single_range_features_quality = self.quality.rank(single_range_features_representatives, single_range_features_df, resp_df, resp_name)
+        single_range_features_quality = self.quality.rank(single_range_quality_metrics)
 
         self._normalize_score(single_range_features_corr)
         self._normalize_score(single_range_features_basis)
         self._normalize_score(single_range_features_quality)
 
-        single_range_features_selected_df = self._concat(
-            self._top(single_range_features_quality, top_ranking_features_count),
+        # the call of the _add_quality_metrics is added solely to provide quality metrics for all selected features
+        single_range_features_selected_df = self._add_quality_metrics(
             self._concat(
-                self._top(single_range_features_corr, top_ranking_features_count), 
-                self._top(single_range_features_basis, top_ranking_features_count)
-            )
+                self._top(single_range_features_quality, top_ranking_features_count),
+                self._concat(
+                    self._top(single_range_features_corr, top_ranking_features_count), 
+                    self._top(single_range_features_basis, top_ranking_features_count)
+                )
+            ),
+            single_range_quality_metrics
         )
         single_range_features_selected = list(single_range_features_selected_df['Feature'])
         self.logger.info(f"Selected single range features are {single_range_features_selected}")
@@ -81,51 +87,63 @@ class RaAlgorithm:
         range_pairs_representatives = self.representatives_selector.select(range_pairs_df, list(range_pairs_df.columns))
         self.logger.info(f"Selected representatives from range pairs are {range_pairs_representatives}")
 
+        range_pairs_quality_metrics = self.quality.compute_metrics(range_pairs_representatives, range_pairs_df, resp_df, resp_name)
+
         range_pairs_corr = self.ranking.rank(range_pairs_df, range_pairs_representatives, resp_df, resp_name)
         range_pairs_basis = self.basis.rank(range_pairs_df, range_pairs_representatives, resp_df, resp_name)
-        range_pairs_quality = self.quality.rank(range_pairs_representatives, range_pairs_df, resp_df, resp_name)
+        range_pairs_quality = self.quality.rank(range_pairs_quality_metrics)
 
         self._normalize_score(range_pairs_corr)
         self._normalize_score(range_pairs_basis)
         self._normalize_score(range_pairs_quality)
 
-        range_pairs_selected_df = self._concat(
-            self._top(range_pairs_quality, top_ranking_features_count),
+        # the call of the _add_quality_metrics is added solely to provide quality metrics for all selected features
+        range_pairs_selected_df = self._add_quality_metrics(
             self._concat(
-                self._top(range_pairs_corr, top_ranking_features_count),
-                self._top(range_pairs_basis, top_ranking_features_count)
-            )
+                self._top(range_pairs_quality, top_ranking_features_count),
+                self._concat(
+                    self._top(range_pairs_corr, top_ranking_features_count),
+                    self._top(range_pairs_basis, top_ranking_features_count)
+                )
+            ),
+            range_pairs_quality_metrics
         )
         range_pairs_selected = list(range_pairs_selected_df['Feature'])
         self.logger.info(f"Selected range pairs are {range_pairs_selected}")
 
         # Form range triplets
-        range_triplets_df = self.range_features_former.form_range_triplets(range_pairs_df, range_pairs_selected.copy(), range_pairs_to_features_map, single_range_features_df, single_range_features_selected.copy(), single_range_feature_to_feature_map)
+        range_triplets_df, range_triplets_to_features_map = self.range_features_former.form_range_triplets(range_pairs_df, range_pairs_selected.copy(), range_pairs_to_features_map, single_range_features_df, single_range_features_selected.copy(), single_range_feature_to_feature_map)
         self.logger.info(f"Formed {len(range_triplets_df.columns)} range triplets")
 
         # Select range triplets
         range_triplets_representatives = self.representatives_selector.select(range_triplets_df, list(range_triplets_df.columns))
         self.logger.info(f"Selected representatives from range triplets are {range_triplets_representatives}")
 
+        range_triplets_quality_metrics = self.quality.compute_metrics(range_triplets_representatives, range_triplets_df, resp_df, resp_name)
+
         range_triplets_corr = self.ranking.rank(range_triplets_df, range_triplets_representatives, resp_df, resp_name)
         range_triplets_basis = self.basis.rank(range_triplets_df, range_triplets_representatives, resp_df, resp_name)
-        range_triplets_quality = self.quality.rank(range_triplets_representatives, range_triplets_df, resp_df, resp_name)
+        range_triplets_quality = self.quality.rank(range_triplets_quality_metrics)
 
         self._normalize_score(range_triplets_corr)
         self._normalize_score(range_triplets_basis)
         self._normalize_score(range_triplets_quality)
 
-        range_triplets_selected_df = self._concat(
-            self._top(range_triplets_quality, top_ranking_features_count),
+        # the call of the _add_quality_metrics is added solely to provide quality metrics for all selected features
+        range_triplets_selected_df = self._add_quality_metrics(
             self._concat(
-                self._top(range_triplets_corr, top_ranking_features_count), 
-                self._top(range_triplets_basis, top_ranking_features_count)
-            )
+                self._top(range_triplets_quality, top_ranking_features_count),
+                self._concat(
+                    self._top(range_triplets_corr, top_ranking_features_count), 
+                    self._top(range_triplets_basis, top_ranking_features_count)
+                )
+            ),
+            range_triplets_quality_metrics
         )
         range_triplets_selected = list(range_triplets_selected_df['Feature'])
         self.logger.info(f"Selected range triplets are {range_triplets_selected}")
 
-        return self._concat(
+        result_df = self._concat(
             self._top(range_triplets_selected_df, top_final_features_count), 
             self._concat(
                 self._top(range_pairs_selected_df, top_final_features_count), 
@@ -135,6 +153,17 @@ class RaAlgorithm:
                 )
             )
         ).sort_values(by='Score', ascending=False)
+
+        # this function call is added to have the response type similar to the SubgroupDiscovery's result in smlp_subgroups.py file
+        self._add_extensive_features_metrics(
+            result_df,
+            feat_df,
+            single_range_feature_to_feature_map,
+            range_pairs_to_features_map,
+            range_triplets_to_features_map
+        )
+
+        return result_df
     
     def _top(self, df: pd.DataFrame, top_n: int) -> pd.DataFrame:
         return df \
@@ -150,4 +179,104 @@ class RaAlgorithm:
     def _normalize_score(self, df: pd.DataFrame):
         df['Score'] = (df['Score'] - df['Score'].mean()) / df['Score'].std()
 
+    def _add_quality_metrics(self, features_df: pd.DataFrame, quality_metrics_df: pd.DataFrame):
+        selected_features = features_df['Feature']
+        selected_quality_metrics_df = quality_metrics_df[quality_metrics_df['Feature'].isin(selected_features)]
+
+        return features_df.merge(selected_quality_metrics_df, on='Feature', how='left')
+
+    def _add_extensive_features_metrics(
+        self, 
+        result_df: pd.DataFrame, 
+        feat_df: pd.DataFrame, 
+        single_ranges_map: dict, 
+        range_pairs_map: dict, 
+        range_triplets_map: dict):
+
+        metrics = {
+            'Feature_1': [],
+            'Range_start_1': [],
+            'Range_end_1': [],
+            'Min_1': [],
+            'Max_1': [],
+            'Mean_1': [],
+            'Std_1': [],
+            'Feature_2': [],
+            'Range_start_2': [],
+            'Range_end_2': [],
+            'Min_2': [],
+            'Max_2': [],
+            'Mean_2': [],
+            'Std_2': [],
+            'Feature_3': [],
+            'Range_start_3': [],
+            'Range_end_3': [],
+            'Min_3': [],
+            'Max_3': [],
+            'Mean_3': [],
+            'Std_3': [],
+        }
+        for row in result_df.itertuples():
+            feature = row.Feature
+
+            is_range_triplet = feature in range_triplets_map.keys()
+            if is_range_triplet:
+                single_ranges = range_triplets_map[feature]
+
+                for i, single_range in enumerate(single_ranges):
+                    self._add_feature_extensive_metrics(feat_df, single_ranges_map[single_range], i + 1, metrics)
+                
+                continue
+
+            is_range_pair = feature in range_pairs_map.keys()
+            if is_range_pair: 
+                single_ranges = range_pairs_map[feature]
+
+                for i, single_range in enumerate(single_ranges):
+                    self._add_feature_extensive_metrics(feat_df, single_ranges_map[single_range], i + 1, metrics)
+                
+                self._add_empty_feature_extensive_metrics(3, metrics)
+                continue
+
+            is_single_range_feature = feature in single_ranges_map.keys()
+            if is_single_range_feature:
+                self._add_feature_extensive_metrics(feat_df, single_ranges_map[feature], 1, metrics)
+                self._add_empty_feature_extensive_metrics(2, metrics)
+                self._add_empty_feature_extensive_metrics(3, metrics)
+                continue
+
+            self._add_empty_feature_extensive_metrics(1, metrics)
+            self._add_empty_feature_extensive_metrics(2, metrics)
+            self._add_empty_feature_extensive_metrics(3, metrics)
+
+        # append metrics to the result_df
+        for key in metrics.keys():
+            result_df[key] = metrics[key]
+
+    def _add_feature_extensive_metrics(
+        self, 
+        feat_df: pd.DataFrame,
+        feat: dict,
+        feat_count: int,
+        metrics: dict
+    ):          
+        feat_series = feat_df[feat['name']]
+
+        metrics[f'Feature_{feat_count}'].append(feat['name'])
+        metrics[f'Range_start_{feat_count}'].append(feat['range_start'])
+        metrics[f'Range_end_{feat_count}'].append(feat['range_end'])
+        metrics[f'Min_{feat_count}'].append(feat_series.min())
+        metrics[f'Max_{feat_count}'].append(feat_series.max())
+        metrics[f'Mean_{feat_count}'].append(feat_series.mean())
+        metrics[f'Std_{feat_count}'].append(feat_series.std())
+    
+    def _add_empty_feature_extensive_metrics(self, feat_count: int, metrics: {}):
+        metrics[f'Feature_{feat_count}'].append(None)
+        metrics[f'Range_start_{feat_count}'].append(None)
+        metrics[f'Range_end_{feat_count}'].append(None)
+        metrics[f'Min_{feat_count}'].append(None)
+        metrics[f'Max_{feat_count}'].append(None)
+        metrics[f'Mean_{feat_count}'].append(None)
+        metrics[f'Std_{feat_count}'].append(None)
+                
 # TODO: Add unit tests for the RaAlgorithm

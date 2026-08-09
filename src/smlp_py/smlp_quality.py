@@ -9,8 +9,8 @@ class SmlpQuality(Quality):
         super().__init__(logger, quality_function)
         self.sd = sd
 
-    def rank(self, feat_names: list[str], feat_df: pd.DataFrame, resp_df: pd.DataFrame, resp_name: str):
-        self.logger.info(f"Ranking based on quality metrics with a quality function {self.quality_function}")
+    def compute_metrics(self, feat_names: list[str], feat_df: pd.DataFrame, resp_df: pd.DataFrame, resp_name: str):
+        self.logger.info(f"Computing quality metrics")
         
         resp = resp_df[resp_name]
         result = {
@@ -42,8 +42,17 @@ class SmlpQuality(Quality):
             result['F1Score'].append(scores['F1Score'])
             result['Acc'].append(scores['Accuracy'])
             result['Kappa'].append(scores['CohenKappa'])
-            result['Score'].append(result[self.quality_function][-1])
 
-        result_df = pd.DataFrame(result, columns = ['Feature', 'TPR', 'PPV', 'Lift', 'ROCAcc', 'NPLR', 'WRAcc', 'F1Score', 'Acc', 'Kappa', 'Score'])
+        quality_metrics_df = pd.DataFrame(result, columns = ['Feature', 'TPR', 'PPV', 'Lift', 'ROCAcc', 'NPLR', 'WRAcc', 'F1Score', 'Acc', 'Kappa'])
 
-        return result_df            
+        return quality_metrics_df            
+
+    def rank(self, quality_metrics_df: pd.DataFrame) -> pd.DataFrame:
+        self.logger.info(f"Ranking based on the quality metric {self.quality_function}")
+
+        result_df = pd.DataFrame()
+
+        result_df['Feature'] = quality_metrics_df['Feature']
+        result_df['Score'] = quality_metrics_df[self.quality_function]
+
+        return result_df
