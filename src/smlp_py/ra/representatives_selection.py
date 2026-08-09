@@ -59,39 +59,4 @@ class RandomRepresentativesSelectionAlgorirthm(RepresentativesSelectionAlgorithm
         
         return r.sample(feat_names, k = k if n > k else n)
 
-# TODO: TO BE FIXED. BELOW ARE THE TESTS FOR THE DEFAULT REPRESENTATIVES SELECTION ALGORITHM
-def run_tests():
-    default_representatives_selection_algorithm_should_select_representatives_based_on_correlation_threshold()
-
-def default_representatives_selection_algorithm_should_select_representatives_based_on_correlation_threshold():
-    # arrange
-    df = pd.DataFrame({
-        'F1': [1], # representative
-        'F2': [2], # subset of 1
-        'F3': [3], # representative
-        'F4': [4], # subset of 3
-        'F5': [5], # subset of 1
-        'F6': [6], # subset of 1
-        'F7': [7], # subset of 3
-        'F8': [8] # representative
-    })
-    feat_names = list(df.columns)
-
-    representatives_threshold = 0.95
-    correlation_method = None
-
-    logger = logging.getLogger(__name__)
-    sut = DefaultRepresentativesSelectionAlgorithm(logger, representatives_threshold, correlation_method)
-
-    # act
-    actual = sut.select(df, feat_names)
-
-    # assert
-    expected = ['F1', 'F3', 'F8']
-
-    assert len(actual) == len(expected)
-
-    for actual_feat_name, expected_feat_name in zip(actual, expected):
-        assert actual_feat_name == expected_feat_name
-
-    print("✅ Passed")
+# TODO: Add unit tests for the DefaultRepresentativesSelectionAlgorithm

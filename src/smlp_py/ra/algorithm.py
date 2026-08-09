@@ -149,3 +149,5 @@ class RaAlgorithm:
 
     def _normalize_score(self, df: pd.DataFrame):
         df['Score'] = (df['Score'] - df['Score'].mean()) / df['Score'].std()
+
+# TODO: Add unit tests for the RaAlgorithm

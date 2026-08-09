@@ -121,8 +121,12 @@ def default_discretization_method_should_form_ranges_with_inverse_ranges_and_pru
     expected = [
         Range(0.0, 3.33),
         Range(6.67, 10.0),
-        # inverse ranges
+        # inverse ranges, pruning algorithm should not touch them
+        InverseRange(0.0, 3.33, 0.0, 10.0),
+        InverseRange(0.0, 6.67, 0.0, 10.0),
         InverseRange(3.33, 6.67, 0.0, 10.0),
+        InverseRange(3.33, 10.0, 0.0, 10.0),
+        InverseRange(6.67, 10.0, 0.0, 10.0)
     ]
 
     assert len(actual) == len(expected)

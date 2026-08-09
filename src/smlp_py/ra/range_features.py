@@ -25,7 +25,11 @@ class RangeFeaturesFormer:
             for r in ranges:
                 new_feat_name = f"{feat}_{r}"
                 
-                single_range_feature_to_feature_map[new_feat_name] = feat
+                single_range_feature_to_feature_map[new_feat_name] = {
+                    'name': feat,
+                    'range_start': r.start,
+                    'range_end': r.end
+                }
                 single_ranges_df[new_feat_name] = r.contains(feat_df[feat])
 
         # convert True to 1 and False to 0
@@ -38,12 +42,12 @@ class RangeFeaturesFormer:
         range_pairs_to_features_map = {}
         while len(single_range_feature_names) > 0:
             single_range_feat_name = single_range_feature_names.pop(0)
-            feat_name = single_range_feature_to_feature_map[single_range_feat_name]
+            feat = single_range_feature_to_feature_map[single_range_feat_name]
 
             other_features_single_range_features = [
-                other_feat_single_feat_range_name  \
+                other_feat_single_feat_range_name \
                 for other_feat_single_feat_range_name in single_range_feature_names \
-                if single_range_feature_to_feature_map[other_feat_single_feat_range_name] != feat_name
+                if single_range_feature_to_feature_map[other_feat_single_feat_range_name]['name'] != feat['name']
             ]
 
             for other_feat_single_feat_range_name in other_features_single_range_features:
@@ -72,6 +76,7 @@ class RangeFeaturesFormer:
         single_range_feature_to_feature_map: dict[str, str],
         ) -> pd.DataFrame:
         range_triplets_df = pd.DataFrame()
+        range_triplets_to_features_map  = {}
         while len(range_pairs_names) > 0:
             range_pair_name = range_pairs_names.pop(0)
             range_pair_features = range_pairs_to_features_map[range_pair_name]
@@ -86,6 +91,11 @@ class RangeFeaturesFormer:
             for other_feat_single_feat_range_name in other_features_single_range_features:
                 new_feat_name = f"{range_pair_name}_{other_feat_single_feat_range_name}"
                 range_triplets_df[new_feat_name] = range_pairs_df[range_pair_name] & single_range_features_df[other_feat_single_feat_range_name]
+                range_triplets_to_features_map[new_feat_name] = [
+                    range_pairs_to_features_map[range_pair_name][0],
+                    range_pairs_to_features_map[range_pair_name][1],
+                    other_feat_single_feat_range_name
+                ]
 
         # convert True to 1 and False to 0
         range_triplets_df = range_triplets_df.astype(int)
@@ -94,8 +104,9 @@ class RangeFeaturesFormer:
         for range_triplet_name in range_triplets_df.columns:
             if not self._is_consistent_range_feature(range_triplets_df, range_triplet_name):
                 range_triplets_df.drop(range_triplet_name, axis=1, inplace=True)
+                range_triplets_to_features_map.pop(range_triplet_name)
 
-        return range_triplets_df
+        return range_triplets_df, range_triplets_to_features_map
             
     # consistent range feature is a range feature that 
     # has at least one sample that is in the range and at least one sample that is not in the range
@@ -149,8 +160,16 @@ def single_range_feature_should_contain_1_if_value_is_within_the_range_and_0_oth
     }))
 
     assert map == {
-        'F1_[1, 5]': 'F1',
-        'F2_[8, 6]': 'F2',
+        'F1_[1, 5]': {
+            'name': 'F1',
+            'range_start': 1,
+            'range_end': 5
+        },
+        'F2_[8, 6]': {
+            'name': 'F2',
+            'range_start': 8,
+            'range_end': 6
+        }
     }
 
     print("✅ Passed")
@@ -164,9 +183,21 @@ def range_pairs_should_contain_1_both_single_range_features_contain_1_and_0_othe
     })
     single_range_feature_names = ['F1_[1, 5]', 'F2_[5, 6]', 'F3_[2, 4]']
     single_range_feature_to_feature_map = {
-        'F1_[1, 5]': 'F1',
-        'F2_[5, 6]': 'F2',
-        'F3_[2, 4]': 'F3',
+        'F1_[1, 5]': {
+            'name': 'F1',
+            'range_start': 1,
+            'range_end': 5
+        },
+        'F2_[5, 6]': {
+            'name': 'F2',
+            'range_start': 5,
+            'range_end': 6
+        },
+        'F3_[2, 4]': {
+            'name': 'F3',
+            'range_start': 2,
+            'range_end': 4
+        },
     }
 
     logger = logging.getLogger(__name__)
@@ -208,22 +239,46 @@ def range_triplets_should_contain_1_all_range_pairs_and_single_range_features_co
     })
     single_range_feature_names = ['F4_[2, 4]', 'F1_[6, 8]', 'F1_[1, 5]', 'F2_[5, 6]', 'F3_[2, 4]']
     single_range_feature_to_feature_map = {
-        'F4_[2, 4]': 'F4',
-        'F1_[6, 8]': 'F1',
-        'F1_[1, 5]': 'F1',
-        'F2_[5, 6]': 'F2',
-        'F3_[2, 4]': 'F3',
+        'F4_[2, 4]': {
+            'name': 'F4',
+            'range_start': 2,
+            'range_end': 4
+        },
+        'F1_[6, 8]': {
+            'name': 'F1',
+            'range_start': 6,
+            'range_end': 8
+        },
+        'F1_[1, 5]': {
+            'name': 'F1',
+            'range_start': 1,
+            'range_end': 5
+        },
+        'F2_[5, 6]': {
+            'name': 'F2',
+            'range_start': 5,
+            'range_end': 6
+        },
+        'F3_[2, 4]': {
+            'name': 'F3',
+            'range_start': 2,
+            'range_end': 4
+        },
     }
 
     logger = logging.getLogger(__name__)
     sut = RangeFeaturesFormer(logger, TestDiscretizationMethod(logger, 1, 1))
 
     # act
-    result = sut.form_range_triplets(range_pairs_df, range_pairs_names, range_pairs_to_features_map, single_range_features_df, single_range_feature_names, single_range_feature_to_feature_map)
+    result, map = sut.form_range_triplets(range_pairs_df, range_pairs_names, range_pairs_to_features_map, single_range_features_df, single_range_feature_names, single_range_feature_to_feature_map)
 
     # assert
     assert result.equals(pd.DataFrame({
         'F1_[1, 5]_F3_[2, 4]_F4_[2, 4]': [0, 1, 1, 1, 0, 0, 0, 0, 0, 0],
     }))
+
+    assert map == {
+        'F1_[1, 5]_F3_[2, 4]_F4_[2, 4]': ['F1_[1, 5]', 'F3_[2, 4]', 'F4_[2, 4]']
+    }
 
     print("✅ Passed")
