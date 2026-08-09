@@ -73,20 +73,8 @@ class DefaultDiscretizationMethod(DiscretizationMethod):
                     ))
 
             # add inverse ranges
-            for range1 in list(ranges):
-                has_lower_complement = False
-                has_upper_complement = False
-                for range2 in ranges:
-                    if range1 == range2:
-                        continue
-
-                    if range2.start == minf and range2.end == range1.start:
-                        has_lower_complement = True
-                    if range2.end == maxf and range2.start == range1.end:
-                        has_upper_complement = True
-
-                if has_lower_complement and has_upper_complement:
-                    ranges.append(InverseRange(range1.start, range1.end, minf, maxf))
+            for r in list(ranges):
+                ranges.append(InverseRange(r.start, r.end, minf, maxf))
 
             # range pruning
             for bin in bins:

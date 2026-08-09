@@ -5,8 +5,8 @@ import logging
 import pandas as pd
 
 class SmlpQuality(Quality):
-    def __init__(self, logger: logging.Logger,  sd: SubgroupDiscovery) -> None:
-        super().__init__(logger)
+    def __init__(self, logger: logging.Logger,  quality_function: str, sd: SubgroupDiscovery) -> None:
+        super().__init__(logger, quality_function)
         self.sd = sd
 
     def rank(self, feat_names: list[str], quality_function: str, feat_df: pd.DataFrame, resp_df: pd.DataFrame, resp_name: str):
@@ -42,7 +42,7 @@ class SmlpQuality(Quality):
             result['F1Score'].append(scores['F1Score'])
             result['Acc'].append(scores['Accuracy'])
             result['Kappa'].append(scores['CohenKappa'])
-            result['Score'].append(result[quality_function][-1])
+            result['Score'].append(result[self.quality_function][-1])
 
         result_df = pd.DataFrame(result, columns = ['Feature', 'TPR', 'PPV', 'Lift', 'ROCAcc', 'NPLR', 'WRAcc', 'F1Score', 'Acc', 'Kappa', 'Score'])
 

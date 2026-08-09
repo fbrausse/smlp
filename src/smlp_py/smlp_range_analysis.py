@@ -130,9 +130,10 @@ class RangeAnalysis:
             bins_count, 
             adjacent_bins_count,
             ranking,
-            basis)
+            basis,
+            quality_function)
 
-        result = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count, quality_function)
+        result = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count)
         path = self._save_result(result)
 
         self._range_logger.info(f'SMLP range analysis completed. Result is saved in {path}')
@@ -144,13 +145,14 @@ class RangeAnalysis:
         bins_count: int, 
         adjacent_bins_count: int,
         ranking: str,
-        basis: str) -> RaAlgorithm:
+        basis: str,
+        quality_function: str) -> RaAlgorithm:
         ranking_algorithm = self._setup_ranking(ranking)
         range_features_former = self._setup_discretization(discretization, bins_count, adjacent_bins_count)
         representatives_selection_algorithm = self._setup_representatives_selection(
             representatives_selection, representatives_threshold)
         basis_algorithm = self._setup_basis(basis)
-        quality = self._setup_quality()
+        quality = self._setup_quality(quality_function)
 
         return RaAlgorithm(
             range_features_former,
@@ -197,11 +199,11 @@ class RangeAnalysis:
         else:
             raise ValueError(f"The specified basis algorithm is not supported: {basis}")
 
-    def _setup_quality(self) -> SmlpQuality:
+    def _setup_quality(self, quality_function: str) -> SmlpQuality:
         sd = SubgroupDiscovery()
         sd.set_logger(self._range_logger)
 
-        return SmlpQuality(self._range_logger, sd)
+        return SmlpQuality(self._range_logger, quality_function, sd)
 
     def _validate_args(self, bins_count: int, adjacent_bins_count: int, top_ranking_features_count, top_final_features_count, quality_function: str):
         if bins_count <= 0:

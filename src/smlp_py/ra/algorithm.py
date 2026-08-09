@@ -29,8 +29,7 @@ class RaAlgorithm:
         resp_df: pd.DataFrame,
         resp_name: str,
         top_ranking_features_count: int,
-        top_final_features_count: int,
-        quality_function: str
+        top_final_features_count: int
     ) -> pd.DataFrame:
         self.logger.info(f"Starting the execution of the feature range analysis algorithm...")
 
