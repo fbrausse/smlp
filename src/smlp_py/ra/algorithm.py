@@ -1,4 +1,5 @@
 from logging import Logger
+import logging
 import pandas as pd
 
 from .representatives_selection import RepresentativesSelectionAlgorithm
@@ -278,5 +279,3 @@ class RaAlgorithm:
         metrics[f'Max_{feat_count}'].append(None)
         metrics[f'Mean_{feat_count}'].append(None)
         metrics[f'Std_{feat_count}'].append(None)
-                
-# TODO: Add unit tests for the RaAlgorithm

@@ -59,4 +59,35 @@ class RandomRepresentativesSelectionAlgorirthm(RepresentativesSelectionAlgorithm
         
         return r.sample(feat_names, k = k if n > k else n)
 
-# TODO: Add unit tests for the DefaultRepresentativesSelectionAlgorithm
+# Below are the tests for the DefaultRepresentativesSelectionAlgorithm
+def run_tests():
+    default_representatives_selection_select_features_that_correlate_strongly_with_other_features()
+
+def default_representatives_selection_select_features_that_correlate_strongly_with_other_features():
+    # arrange
+    feat_df = pd.DataFrame({
+        # F1, F2, F3 strongly correlate with each other (|corr| > 0.95)
+        'F1': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        'F2': [0.0, 1.05, 1.95, 3.02, 3.98, 5.01, 5.97, 7.03, 8.01, 8.99],
+        'F3': [0.02, 0.98, 2.03, 2.97, 4.01, 4.99, 6.02, 6.98, 8.04, 9.01],
+        # F4 does not correlate strongly with the others (|corr| < 0.95)
+        'F4': [1, -1, 1, -1, 1, -1, 1, -1, 1, -1],
+    })
+    feat_names = ['F1', 'F2', 'F3', 'F4']
+
+    sut = DefaultRepresentativesSelectionAlgorithm(logging.Logger(__name__), 0.95)
+
+    # act
+    actual = sut.select(feat_df, feat_names)
+
+    # assert
+    assert len(actual) == 2
+
+    assert 'F4' in actual
+
+    assert \
+        ('F1' in actual and 'F2' not in actual and 'F3' not in actual) or \
+        ('F2' in actual and 'F1' not in actual and 'F3' not in actual) or \
+        ('F3' in actual and 'F1' not in actual and 'F2' not in actual)
+
+    print("✅ Passed")
