@@ -31,7 +31,7 @@ class RaAlgorithm:
         resp_name: str,
         top_ranking_features_count: int,
         top_final_features_count: int
-    ) -> pd.DataFrame:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         self.logger.info(f"Starting the execution of the feature range analysis algorithm...")
 
         # Select features
@@ -144,7 +144,7 @@ class RaAlgorithm:
         range_triplets_selected = list(range_triplets_selected_df['Feature'])
         self.logger.info(f"Selected range triplets are {range_triplets_selected}")
 
-        result_df = self._concat(
+        result_summary_df = self._concat(
             self._top(range_triplets_selected_df, top_final_features_count), 
             self._concat(
                 self._top(range_pairs_selected_df, top_final_features_count), 
@@ -157,14 +157,22 @@ class RaAlgorithm:
 
         # this function call is added to have the response type similar to the SubgroupDiscovery's result in smlp_subgroups.py file
         self._add_extensive_features_metrics(
-            result_df,
+            result_summary_df,
             feat_df,
             single_range_feature_to_feature_map,
             range_pairs_to_features_map,
             range_triplets_to_features_map
         )
 
-        return result_df
+        result_df = self._form_result_dataframe(
+            result_summary_df,
+            feat_df,
+            single_range_features_df,
+            range_pairs_df,
+            range_triplets_df
+        )
+
+        return result_df, result_summary_df
     
     def _top(self, df: pd.DataFrame, top_n: int) -> pd.DataFrame:
         return df \
@@ -180,6 +188,50 @@ class RaAlgorithm:
     def _normalize_score(self, df: pd.DataFrame):
         df['Score'] = (df['Score'] - df['Score'].mean()) / df['Score'].std()
 
+    def _form_result_dataframe(
+        self, 
+        result_summary_df: pd.DataFrame,
+        feat_df: pd.DataFrame,
+        single_ranges_df: pd.DataFrame,
+        range_pairs_df: pd.DataFrame,
+        range_triplets_df: pd.DataFrame):
+        single_ranges = []
+        range_pairs = []
+        range_triplets = []
+        features = []
+
+        result = {}
+        for row in result_summary_df.itertuples():
+            feature = row.Feature
+            
+            if row.Feature_1 and row.Feature_2 and row.Feature_3:
+                range_triplets.append(feature)
+                continue
+
+            if row.Feature_1 and row.Feature_2:
+                range_pairs.append(feature)
+                continue
+
+            if row.Feature_1:
+                single_ranges.append(feature)
+                continue
+            
+            features.append(feature)
+
+        for feature in features:
+            result[feature] = feat_df[feature]
+        
+        for feature in single_ranges:
+            result[feature] = single_ranges_df[feature]
+
+        for feature in range_pairs:
+            result[feature] = range_pairs_df[feature]
+        
+        for feature in range_triplets:
+            result[feature] = range_triplets_df[feature]
+
+        return pd.DataFrame(result, columns=list(result.keys()))
+
     def _add_quality_metrics(self, features_df: pd.DataFrame, quality_metrics_df: pd.DataFrame):
         selected_features = features_df['Feature']
         selected_quality_metrics_df = quality_metrics_df[quality_metrics_df['Feature'].isin(selected_features)]
@@ -193,7 +245,6 @@ class RaAlgorithm:
         single_ranges_map: dict, 
         range_pairs_map: dict, 
         range_triplets_map: dict):
-
         metrics = {
             'Feature_1': [],
             'Range_start_1': [],

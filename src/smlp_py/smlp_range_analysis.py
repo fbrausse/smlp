@@ -4,7 +4,9 @@
 import pandas as pd
 
 from .ra.algorithm import RaAlgorithm
+from .ra.basis import BasisAlgorithm, RandomBasisAlgorithm
 from .ra.discretization import DefaultDiscretizationMethod
+from .ra.ranking import RankingAlgorithm, RandomRankingAlgorithm
 from .ra.representatives_selection import DefaultRepresentativesSelectionAlgorithm, RandomRepresentativesSelectionAlgorirthm
 from .ra.range_features import RangeFeaturesFormer
 
@@ -133,10 +135,10 @@ class RangeAnalysis:
             basis,
             quality_function)
 
-        result = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count)
-        path = self._save_result(result)
+        result_df, result_summary_df = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count)
+        path_result, path_summary = self._save_result(result_df, result_summary_df)
 
-        self._range_logger.info(f'SMLP range analysis completed. Result is saved in {path}')
+        self._range_logger.info(f'SMLP range analysis completed. Result dataset is saved in {path_result} and the summary is saved in {path_summary}')
 
     def _setup(self, 
         discretization: str, 
@@ -162,12 +164,14 @@ class RangeAnalysis:
             quality,
             self._range_logger)
 
-    def _setup_ranking(self, ranking: str) -> SmlpRankingAlgorithm:
+    def _setup_ranking(self, ranking: str) -> RankingAlgorithm:
         if ranking == self._DEF_RANKING:
             correlations = SmlpCorrelations()
             correlations.set_logger(self._range_logger)
 
             return SmlpRankingAlgorithm(self._range_logger, correlations)
+        elif ranking == "random":
+            return RandomRankingAlgorithm(self._range_logger)
         else:
             raise ValueError(f"The specified ranking algorithm is not supported: {ranking}")
 
@@ -190,12 +194,14 @@ class RangeAnalysis:
         else:
             raise ValueError(f"The specified representatives selection algorithm is not supported: {representatives_threshold}")
 
-    def _setup_basis(self, basis: str) -> SmlpBasisAlgorithm:
+    def _setup_basis(self, basis: str) -> BasisAlgorithm:
         if basis == self._DEF_BASIS:
             mrmr = SmlpMrmr()
             mrmr.set_logger(self._range_logger)
 
             return SmlpBasisAlgorithm(self._range_logger, mrmr)
+        elif basis == "random":
+            return RandomBasisAlgorithm(self._range_logger)
         else:
             raise ValueError(f"The specified basis algorithm is not supported: {basis}")
 
@@ -221,8 +227,11 @@ class RangeAnalysis:
         if quality_function not in self._POSSIBLE_QUALITY_FUNCTIONS:
             raise ValueError(f"The quality function must be one of {self._POSSIBLE_QUALITY_FUNCTIONS}")
 
-    def _save_result(self, result: pd.DataFrame):
-        path = self._report_file_prefix + '_range_analysis.csv'
-        result.to_csv(path)
+    def _save_result(self, result_df: pd.DataFrame, result_summary_df: pd.DataFrame):
+        path_result = self._report_file_prefix + '_range_analysis.csv'
+        path_summary = self._report_file_prefix + '_range_analysis_summary.csv'
+        
+        result_df.to_csv(path_result)
+        result_summary_df.to_csv(path_summary)
 
-        return path
+        return path_result, path_summary
