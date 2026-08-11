@@ -169,7 +169,9 @@ class RaAlgorithm:
             feat_df,
             single_range_features_df,
             range_pairs_df,
-            range_triplets_df
+            range_triplets_df,
+            resp_df,
+            resp_name
         )
 
         return result_df, result_summary_df
@@ -194,7 +196,9 @@ class RaAlgorithm:
         feat_df: pd.DataFrame,
         single_ranges_df: pd.DataFrame,
         range_pairs_df: pd.DataFrame,
-        range_triplets_df: pd.DataFrame):
+        range_triplets_df: pd.DataFrame,
+        resp_df: pd.DataFrame,
+        resp_name: str):
         single_ranges = []
         range_pairs = []
         range_triplets = []
@@ -229,6 +233,8 @@ class RaAlgorithm:
         
         for feature in range_triplets:
             result[feature] = range_triplets_df[feature]
+
+        result[resp_name] = resp_df[resp_name]
 
         return pd.DataFrame(result, columns=list(result.keys()))
 
