@@ -231,7 +231,7 @@ class RangeAnalysis:
         path_result = self._report_file_prefix + '_range_analysis.csv'
         path_summary = self._report_file_prefix + '_range_analysis_summary.csv'
         
-        result_df.to_csv(path_result)
-        result_summary_df.to_csv(path_summary)
+        result_df.to_csv(path_result, index = False)
+        result_summary_df.to_csv(path_summary, index = False)
 
         return path_result, path_summary
