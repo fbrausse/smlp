@@ -43,7 +43,7 @@ class SmlpRankingAlgorithm(RankingAlgorithm):
             not range_features, 
             'normalized',
             True, 
-            len(relevant_features), 
+            0, # MRMR is already executed in the smlp_basis, therefore, there is no need to run one more time it here
             [PEARSON, SPEARMAN])
         
         result_df = pd.DataFrame()

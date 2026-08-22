@@ -188,7 +188,14 @@ class RaAlgorithm:
         return df.groupby('Feature', as_index=False).max()
 
     def _normalize_score(self, df: pd.DataFrame):
-        df['Score'] = (df['Score'] - df['Score'].mean()) / df['Score'].std()
+        score_min = df['Score'].min()
+        score_max = df['Score'].max()
+        score_range = score_max - score_min
+
+        if score_range == 0:
+            df['Score'] = 0.0
+        else:
+            df['Score'] = (df['Score'] - score_min) / score_range
 
     def _form_result_dataframe(
         self, 
