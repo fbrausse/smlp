@@ -27,6 +27,7 @@ class DiscretizationMethod(ABC):
         self,
         feat_df: pd.DataFrame,
         feat_names: list[str],
+        categorial_feats: list[str],
         resp_df: pd.DataFrame,
         resp_name: str
     ) -> dict[str, list[Range]]:
@@ -38,20 +39,29 @@ class DefaultDiscretizationMethod(DiscretizationMethod):
         self,
         feat_df: pd.DataFrame,
         feat_names: list[str],
+        categorial_feats: list[str],
         resp_df: pd.DataFrame,
         resp_name: str
     ) -> dict[str, list[Range]]:
         self.logger.info(f"Starting default discretization with bins count {self.bins_count} and adjacent bins count {self.adjacent_bins_count}")
 
-        return self._form_ranges(feat_df, feat_names, resp_df, resp_name)
+        return self._form_ranges(feat_df, feat_names, categorial_feats, resp_df, resp_name)
     
     def name(self) -> str:
         return "default"
     
-    def _form_ranges(self, feat_df: pd.DataFrame, feat_names: list[str], resp_df: pd.DataFrame, resp_name: str) -> dict[str, list[Range]]:
+    def _form_ranges(self, feat_df: pd.DataFrame, feat_names: list[str], categorial_feats: list[str], resp_df: pd.DataFrame, resp_name: str) -> dict[str, list[Range]]:
         ranges_map = {}
 
         for feat_name in feat_names:
+            # the categorial feature F2 should not be considered for the discretization
+            # its range features are formed based on the original values
+            # see the implementation of the form_single_range_features function in the range_features.py file
+            # for more details
+            if feat_name in categorial_feats:
+                self.logger.info(f"The feature {feat_name} is categorial, therefore the discretizatoin is not applicable")
+                continue
+
             minf = feat_df[feat_name].min()
             maxf = feat_df[feat_name].max()
             step = (maxf - minf) / self.bins_count
@@ -97,12 +107,16 @@ class DefaultDiscretizationMethod(DiscretizationMethod):
 
 # BELOW ARE THE TESTS FOR THE DEFAULT DISCRETIZATION ALGORITHM
 def run_tests():
-    default_discretization_method_should_form_ranges_with_inverse_ranges_and_prune_bins()
+    default_discretization_method_should_form_ranges_with_inverse_ranges_and_prune_bins_only_if_the_feature_is_numeric()
 
-def default_discretization_method_should_form_ranges_with_inverse_ranges_and_prune_bins():
+def default_discretization_method_should_form_ranges_with_inverse_ranges_and_prune_bins_only_if_the_feature_is_numeric():
     # arrange
-    df = pd.DataFrame({'F': range(11), 'R': [0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0]})
-    feat_df = df[['F']]
+    df = pd.DataFrame({
+        'F1': range(11),
+        'F2': [1, 0, 0, 1, 2, 3, 1, 0, 2, 3, 1], # it is a cateogiral feature, should not be considered for discretization
+        'R': [0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0]
+    })
+    feat_df = df[['F1']]
     resp_df = df[['R']]
 
     bins_count = 3
@@ -112,10 +126,14 @@ def default_discretization_method_should_form_ranges_with_inverse_ranges_and_pru
     sut = DefaultDiscretizationMethod(logger, bins_count, adjacent_bins_count)
 
     # act
-    result = sut.discretize(feat_df, ['F'], resp_df, 'R')
+    result = sut.discretize(feat_df, ['F1', 'F2'], ['F2'], resp_df, 'R')
 
     # assert
-    actual = result['F']
+
+    # the categorial feature F2 should not be considered for the discretization
+    assert 'F2' not in result.keys() 
+
+    actual = result['F1']
 
     # [3.33, 6.67] should be pruned
     expected = [

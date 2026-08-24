@@ -27,6 +27,7 @@ class RaAlgorithm:
         self,
         feat_df: pd.DataFrame,
         feat_names: list[str],
+        categorial_feats: list[str],
         resp_df: pd.DataFrame,
         resp_name: str,
         top_ranking_features_count: int,
@@ -49,7 +50,7 @@ class RaAlgorithm:
         self.logger.info(f"Selected features are {features_selected}")
 
         # Form single range features
-        single_range_features_df, single_range_feature_to_feature_map = self.range_features_former.form_single_range_features(feat_df, features_selected.copy(), resp_df, resp_name)
+        single_range_features_df, single_range_feature_to_feature_map = self.range_features_former.form_single_range_features(feat_df, features_selected.copy(), categorial_feats, resp_df, resp_name)
         self.logger.info(f"Formed {len(single_range_features_df.columns)} single range features")
         
         # Select single range features

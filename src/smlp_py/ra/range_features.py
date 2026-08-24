@@ -12,25 +12,51 @@ class RangeFeaturesFormer:
     def form_single_range_features(
         self, 
         feat_df: pd.DataFrame, 
-        feat_names: list[str], 
+        feat_names: list[str],
+        categorial_feats: list[str],
         resp_df: pd.DataFrame, 
         resp_name: str) -> tuple[pd.DataFrame, dict]:
         self.logger.info(f"Forming single range features with {self.discretization_method.name()} discretization method")
-        ranges_map = self.discretization_method.discretize(feat_df, feat_names, resp_df, resp_name)
+
+        ranges_map = self.discretization_method.discretize(feat_df, feat_names, categorial_feats, resp_df, resp_name)
 
         single_ranges_df = pd.DataFrame()
         single_range_feature_to_feature_map = {}
         for feat in feat_names:
-            ranges = ranges_map[feat]
+            is_categorial = feat in categorial_feats
+            if is_categorial:
+                # if the feature is categorized
+                # then its unique values are used to define the range features
+                ranges = feat_df[feat].unique().tolist()
+            else:
+                # if the feature is numeric then it was discretized
+                # therefore, its ranges are present in the ranges_map
+                ranges = ranges_map[feat]
+            
             for r in ranges:
                 new_feat_name = f"{feat}_{r}"
                 
-                single_range_feature_to_feature_map[new_feat_name] = {
-                    'name': feat,
-                    'range_start': r.start,
-                    'range_end': r.end
-                }
-                single_ranges_df[new_feat_name] = r.contains(feat_df[feat])
+                if is_categorial:
+                    single_range_feature_to_feature_map[new_feat_name] = {
+                        'name': feat,
+                        # because r is in this case a category, 
+                        # it neither has a beginning
+                        # nor an end. It is a fixed value
+                        'range_start': r,
+                        'range_end': r
+                    }
+
+                    # if the feature is categorial then
+                    # for a category c you can form a single range feature such that 
+                    # for a sample R, R(S) = T if S = c, and R(S) = F if otherwise
+                    single_ranges_df[new_feat_name] = r == feat_df[feat]
+                else:
+                    single_range_feature_to_feature_map[new_feat_name] = {
+                        'name': feat,
+                        'range_start': r.start,
+                        'range_end': r.end
+                    }
+                    single_ranges_df[new_feat_name] = r.contains(feat_df[feat])
 
         # convert True to 1 and False to 0
         single_ranges_df = single_ranges_df.astype(int)
@@ -121,12 +147,12 @@ class RangeFeaturesFormer:
 
 # BELOW ARE THE TESTS FOR THE RANGE FEATURES FORMER CLASS
 def run_tests():
-    single_range_feature_should_contain_1_if_value_is_within_the_range_and_0_otherwise()
+    single_range_feature_should_contain_1_if_value_is_within_the_range_or_if_categorial_equals_the_class_and_0_otherwise()
     range_pairs_should_contain_1_both_single_range_features_contain_1_and_0_otherwise()
     range_triplets_should_contain_1_all_range_pairs_and_single_range_features_contain_1_and_0_otherwise()
 
 class TestDiscretizationMethod(DiscretizationMethod):
-    def discretize(self, feat_df: pd.DataFrame, feat_names: list[str], resp_df: pd.DataFrame, resp_name: str) -> dict[str, list[Range]]:
+    def discretize(self, feat_df: pd.DataFrame, feat_names: list[str], categorial_feats: list[str], resp_df: pd.DataFrame, resp_name: str) -> dict[str, list[Range]]:
         return {
             'F1': [Range(1, 5)],
             'F2': [InverseRange(6, 8, 0, 10)],
@@ -135,15 +161,17 @@ class TestDiscretizationMethod(DiscretizationMethod):
     def name(self) -> str:
         return "test"
 
-def single_range_feature_should_contain_1_if_value_is_within_the_range_and_0_otherwise():
+def single_range_feature_should_contain_1_if_value_is_within_the_range_or_if_categorial_equals_the_class_and_0_otherwise():
     # arrange
     feat_df = pd.DataFrame({
         'F1': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
         'F2': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+        'F3': [1, 0, 2, 3, 1, 0, 2, 3, 0, 1]
     })
-    feat_names = ['F1', 'F2']
+    feat_names = ['F1', 'F2', 'F3']
+    categorial_feats = ['F3']
     resp_df = pd.DataFrame({
-        'R': [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        'R': pd.Series([1, 1, 1, 1, 1, 0, 0, 0, 0, 0]).astype('category'),
     })
     resp_name = 'R'
 
@@ -151,12 +179,16 @@ def single_range_feature_should_contain_1_if_value_is_within_the_range_and_0_oth
     sut = RangeFeaturesFormer(logger, TestDiscretizationMethod(logger, 1, 1))
 
     # act
-    result, map = sut.form_single_range_features(feat_df, feat_names, resp_df, resp_name)
+    result, map = sut.form_single_range_features(feat_df, feat_names, categorial_feats, resp_df, resp_name)
 
     # assert
     assert result.equals(pd.DataFrame({
         'F1_[1, 5]': [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
         'F2_[8, 6]': [1, 1, 1, 1, 1, 0, 0, 0, 1, 1],
+        'F3_1': [1, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        'F3_0': [0, 1, 0, 0, 0, 1, 0, 0, 1, 0],
+        'F3_2': [0, 0, 1, 0, 0, 0, 1, 0, 0, 0],
+        'F3_3': [0, 0, 0, 1, 0, 0, 0, 1, 0, 0]
     }))
 
     assert map == {
@@ -169,6 +201,26 @@ def single_range_feature_should_contain_1_if_value_is_within_the_range_and_0_oth
             'name': 'F2',
             'range_start': 8,
             'range_end': 6
+        },
+        'F3_1': {
+            'name': 'F3',
+            'range_start': 1,
+            'range_end': 1
+        },
+        'F3_0': {
+            'name': 'F3',
+            'range_start': 0,
+            'range_end': 0
+        },
+        'F3_2': {
+            'name': 'F3',
+            'range_start': 2,
+            'range_end': 2
+        },
+        'F3_3': {
+            'name': 'F3',
+            'range_start': 3,
+            'range_end': 3
         }
     }
 

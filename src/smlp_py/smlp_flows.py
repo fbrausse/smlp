@@ -208,6 +208,8 @@ class SmlpFlows:
                     feat_names = None
             else:
                 feat_names = args.features.split(',')
+            categorial_feats = [] if not args.categorial_feats else args.categorial_feats.split(',')
+                
         
         if args.analytics_mode in self.model_exploration_modes or args.analytics_mode in self.data_exploration_modes or \
             (args.model == 'system' and args.analytics_mode in self.model_prediction_modes):
@@ -303,7 +305,8 @@ class SmlpFlows:
                 X, 
                 y, 
                 feat_names, 
-                resp_names[0], 
+                categorial_feats,
+                resp_names[0],
                 args.bins_count, 
                 args.adjacent_bins_count, 
                 args.discretization, 

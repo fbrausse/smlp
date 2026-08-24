@@ -34,6 +34,7 @@ class RangeAnalysis:
         self._DEF_TOP_FINAL_FEATURES_COUNT = 5
         self._DEF_QUALITY_FUNCTION = 'TPR'
         self._POSSIBLE_QUALITY_FUNCTIONS = ['TPR', 'PPV', 'Lift', 'ROCAcc', 'NPLR', 'WRAcc', 'F1Score', 'Acc', 'Kappa']
+        self._DEF_CATEGORIAL_FEATS = ''
 
         self.range_analysis_params_dict = {
             'bins_count': {
@@ -95,6 +96,12 @@ class RangeAnalysis:
                 'default': self._DEF_QUALITY_FUNCTION,
                 'type': str,
                 'help': f'Quality function to be used in the quality ranking [default: {self._DEF_QUALITY_FUNCTION}]'
+            },
+            'categorial_feats': {
+                'abbr': 'categorial_feats', 
+                'default': self._DEF_CATEGORIAL_FEATS, 
+                'type': str,
+                'help': 'Comma separated names of the categorial features [default {}]'.format(self._DEF_CATEGORIAL_FEATS)
             }
         }
 
@@ -109,6 +116,7 @@ class RangeAnalysis:
         feat_df: pd.DataFrame,
         resp_df: pd.DataFrame,
         feat_names: list[str],
+        categorial_feats: list[str],
         resp_name: str,
         bins_count: int,
         adjacent_bins_count: int,
@@ -123,7 +131,15 @@ class RangeAnalysis:
     ): 
         self._range_logger.info(f"Starting SMLP range analysis...")
 
-        self._validate_args(bins_count, adjacent_bins_count, top_ranking_features_count, top_final_features_count, quality_function)
+        self._validate_args(
+            bins_count, 
+            adjacent_bins_count, 
+            top_ranking_features_count, 
+            top_final_features_count, 
+            quality_function,
+            feat_names,
+            categorial_feats
+        )
 
         ra: RaAlgorithm = self._setup(
             discretization, 
@@ -135,7 +151,16 @@ class RangeAnalysis:
             basis,
             quality_function)
 
-        result_df, result_summary_df = ra.run(feat_df, feat_names, resp_df, resp_name, top_ranking_features_count, top_final_features_count)
+        result_df, result_summary_df = ra.run(
+            feat_df, 
+            feat_names,
+            categorial_feats,
+            resp_df, 
+            resp_name,
+            top_ranking_features_count, 
+            top_final_features_count
+        )
+        
         path_result, path_summary = self._save_result(result_df, result_summary_df)
 
         self._range_logger.info(f'SMLP range analysis completed. Result dataset is saved in {path_result} and the summary is saved in {path_summary}')
@@ -211,7 +236,16 @@ class RangeAnalysis:
 
         return SmlpQuality(self._range_logger, quality_function, sd)
 
-    def _validate_args(self, bins_count: int, adjacent_bins_count: int, top_ranking_features_count, top_final_features_count, quality_function: str):
+    def _validate_args(
+        self, 
+        bins_count: int, 
+        adjacent_bins_count: int, 
+        top_ranking_features_count: int, 
+        top_final_features_count: int, 
+        quality_function: str,
+        feat_names: list[str],
+        categorial_feats: list[str]
+    ):
         if bins_count <= 0:
             raise ValueError("The bins_count argument must be greater than 0")
 
@@ -226,6 +260,11 @@ class RangeAnalysis:
         
         if quality_function not in self._POSSIBLE_QUALITY_FUNCTIONS:
             raise ValueError(f"The quality function must be one of {self._POSSIBLE_QUALITY_FUNCTIONS}")
+
+        if len(categorial_feats) != 0:
+            for categorial_feat in categorial_feats:
+                if categorial_feat not in feat_names:
+                    raise ValueError(f"The categorial feature {categorial_feat} is not provided in the list of all features")
 
     def _save_result(self, result_df: pd.DataFrame, result_summary_df: pd.DataFrame):
         path_result = self._report_file_prefix + '_range_analysis.csv'
