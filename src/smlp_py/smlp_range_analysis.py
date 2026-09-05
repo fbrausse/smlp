@@ -130,6 +130,7 @@ class RangeAnalysis:
         quality_function: str
     ): 
         self._range_logger.info(f"Starting SMLP range analysis...")
+        self._range_logger.info(f"The dataset contains {categorial_feats} categorial features")
 
         self._validate_args(
             bins_count, 

@@ -106,12 +106,12 @@ class RangeFeaturesFormer:
         while len(range_pairs_names) > 0:
             range_pair_name = range_pairs_names.pop(0)
             range_pair_features = range_pairs_to_features_map[range_pair_name]
-            range_pair_features_names = [single_range_feature_to_feature_map[feat_name] for feat_name in range_pair_features]
+            range_pair_features_names = [single_range_feature_to_feature_map[feat_name]['name'] for feat_name in range_pair_features]
 
             other_features_single_range_features = [
                 other_feat_single_feat_range_name  \
                 for other_feat_single_feat_range_name in single_range_feature_names \
-                if single_range_feature_to_feature_map[other_feat_single_feat_range_name] not in range_pair_features_names
+                if single_range_feature_to_feature_map[other_feat_single_feat_range_name]['name'] not in range_pair_features_names
             ]
 
             for other_feat_single_feat_range_name in other_features_single_range_features:
