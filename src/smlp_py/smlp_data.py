@@ -66,6 +66,9 @@ class SmlpData:
         # features that must be used in training models (assuming they are within initially defined input features)
         self._DEF_KEEP_FEATURES = []
         
+        # value to be used to replace missing values in the data
+        self._DEF_CUSTOM_NA_VALUE = None
+        
         # Dictionary with features (names) that have a missing values as dictionary keys and row indices of the 
         # missing values as dictionary values. It is computed just before imputing missing values in features. 
         # IMPORTANT: ensure rows are not dropped beyond this point or if they are, row indices are not reset so 
@@ -270,7 +273,9 @@ class SmlpData:
             'response_plots': {'abbr':'resp_plots', 'default': self._DEF_RESPONSE_PLOTS, 'type':str_to_bool,
                 'help': 'Should response value distribution plots be genrated during data processing? ' +
                     'A related option interactive_plots controls whether the generated plots should be ' +
-                    'displayed interactively during runtime [default: ' + str(self._DEF_RESPONSE_PLOTS) + ']'}
+                    'displayed interactively during runtime [default: ' + str(self._DEF_RESPONSE_PLOTS) + ']'},
+            'custom_na_value': {'abbr':'custom_na_value', 'default':self._DEF_CUSTOM_NA_VALUE, 'type':str,
+                'help':'Value to be used to replace missing values in the data [default: {}]'.format(str(self._DEF_CUSTOM_NA_VALUE))}
             } | self._mrmrInst.mrmr_params_dict
         self.data_bounds_dict = None
         
@@ -730,9 +735,13 @@ class SmlpData:
         return
         
     def preprocess_data(self, data_file:str, feat_names:list[str], resp_names:list[str], feat_names_dict:dict, 
-            keep_feat:list[str], impute_resp:bool, data_version_str:str, pos_value:int, neg_value:int, resp_map:str, resp_to_bool:str):
+            keep_feat:list[str], impute_resp:bool, data_version_str:str, pos_value:int, neg_value:int, resp_map:str, resp_to_bool:str, custom_na_value: str):
         self._data_logger.info('loading ' + data_version_str + ' data')
-        data = pd.read_csv(data_file)
+        if custom_na_value is not None:
+            data = pd.read_csv(data_file, na_values=[custom_na_value])
+        else:
+            data = pd.read_csv(data_file)
+
         self._data_logger.info('data summary\n' + str(data.describe()))
         #plot_data_columns(data)
         self._data_logger.info(data_version_str + ' data\n' + str(data))

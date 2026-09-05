@@ -1178,8 +1178,11 @@ class SmlpCorrelations:
             else:
                 self._corr_logger.info("Skipping MRMR-classic feature selection as there are only " + str(feat_cnt) + 
        " features to select from")
-                mrmr_incr_feat_num = mrmr_tbl_num = None
-                mrmr_incr_feat_ord = mrmr_tbl_ord = None
+            
+            mrmr_incr_feat_num = [] 
+            mrmr_tbl_num = None
+            mrmr_incr_feat_ord = [] 
+            mrmr_tbl_ord = None
         else:
             cond_adapt_types = resp.nunique() <= 2
 
